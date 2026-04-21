@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply font-sans text-neutral-800 antialiased;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-6 py-3 bg-primary-500 text-white font-semibold rounded-lg hover:bg-primary-600 transition-colors duration-200 shadow-md hover:shadow-lg;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center px-6 py-3 border-2 border-primary-500 text-primary-500 font-semibold rounded-lg hover:bg-primary-50 transition-colors duration-200;
+  }
+  .section-heading {
+    @apply text-3xl md:text-4xl font-bold text-neutral-900 text-center;
+  }
+  .section-subheading {
+    @apply text-lg text-neutral-600 text-center max-w-2xl mx-auto mt-4;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
