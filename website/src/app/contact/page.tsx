@@ -1,10 +1,10 @@
 import { getDictionary } from "@/i18n/dictionaries";
-import type { Locale } from "@/i18n/config";
+import { getLocale } from "@/i18n/getLocale";
 import ContactForm from "@/components/ContactForm";
 import { Mail, Phone, MapPin, Clock, MessageSquare } from "lucide-react";
 
-export default async function ContactPage({ params }: { params: { lang: Locale } }) {
-  const dict = await getDictionary(params.lang);
+export default async function ContactPage() {
+  const dict = await getDictionary(getLocale());
   const t = dict.contact;
 
   return (

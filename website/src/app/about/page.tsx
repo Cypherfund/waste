@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 import { Leaf, Heart, Lightbulb, Recycle, ShieldCheck, Users } from "lucide-react";
 import { getDictionary } from "@/i18n/dictionaries";
-import type { Locale } from "@/i18n/config";
+import { getLocale } from "@/i18n/getLocale";
 
-export async function generateMetadata({ params }: { params: { lang: Locale } }): Promise<Metadata> {
-  const dict = await getDictionary(params.lang);
+export async function generateMetadata(): Promise<Metadata> {
+  const dict = await getDictionary(getLocale());
   return { title: dict.about.metaTitle, description: dict.about.metaDesc };
 }
 
-export default async function AboutPage({ params }: { params: { lang: Locale } }) {
-  const dict = await getDictionary(params.lang);
+export default async function AboutPage() {
+  const dict = await getDictionary(getLocale());
   const t = dict.about;
 
   const values = [

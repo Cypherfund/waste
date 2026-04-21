@@ -9,13 +9,13 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { getDictionary } from "@/i18n/dictionaries";
-import type { Locale } from "@/i18n/config";
+import { getLocale } from "@/i18n/getLocale";
 import FAQSection from "@/components/FAQSection";
 
-export default async function GuidesPage({ params }: { params: { lang: Locale } }) {
-  const dict = await getDictionary(params.lang);
+export default async function GuidesPage() {
+  const dict = await getDictionary(getLocale());
   const t = dict.guides;
-  const p = `/${params.lang}`;
+  const p = "";
 
   const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
     Smartphone, CalendarCheck, MapPin, Camera, Star, WifiOff,

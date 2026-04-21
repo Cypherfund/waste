@@ -2,17 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Shield, FileText, AlertCircle } from "lucide-react";
 import { getDictionary } from "@/i18n/dictionaries";
-import type { Locale } from "@/i18n/config";
+import { getLocale } from "@/i18n/getLocale";
 
-export async function generateMetadata({ params }: { params: { lang: Locale } }): Promise<Metadata> {
-  const dict = await getDictionary(params.lang);
+export async function generateMetadata(): Promise<Metadata> {
+  const dict = await getDictionary(getLocale());
   return { title: dict.terms.metaTitle, description: dict.terms.metaDesc };
 }
 
-export default async function TermsPage({ params }: { params: { lang: Locale } }) {
-  const dict = await getDictionary(params.lang);
+export default async function TermsPage() {
+  const dict = await getDictionary(getLocale());
   const t = dict.terms;
-  const p = `/${params.lang}`;
+  const p = "";
 
   return (
     <>

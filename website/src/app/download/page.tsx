@@ -2,17 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Smartphone, CheckCircle, ArrowRight, Leaf, Shield, Wifi, Battery, Download } from "lucide-react";
 import { getDictionary } from "@/i18n/dictionaries";
-import type { Locale } from "@/i18n/config";
+import { getLocale } from "@/i18n/getLocale";
 
-export async function generateMetadata({ params }: { params: { lang: Locale } }): Promise<Metadata> {
-  const dict = await getDictionary(params.lang);
+export async function generateMetadata(): Promise<Metadata> {
+  const dict = await getDictionary(getLocale());
   return { title: dict.download.metaTitle, description: dict.download.metaDesc };
 }
 
-export default async function DownloadPage({ params }: { params: { lang: Locale } }) {
-  const dict = await getDictionary(params.lang);
+export default async function DownloadPage() {
+  const dict = await getDictionary(getLocale());
   const t = dict.download;
-  const p = `/${params.lang}`;
+  const p = "";
 
   const appFeatures = [t.f1, t.f2, t.f3, t.f4, t.f5, t.f6];
   const requirements = [

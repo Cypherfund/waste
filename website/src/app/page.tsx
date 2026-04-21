@@ -13,12 +13,13 @@ import {
   Users,
 } from "lucide-react";
 import { getDictionary } from "@/i18n/dictionaries";
-import type { Locale } from "@/i18n/config";
+import { getLocale } from "@/i18n/getLocale";
 
-export default async function Home({ params }: { params: { lang: Locale } }) {
-  const dict = await getDictionary(params.lang);
+export default async function Home() {
+  const lang = getLocale();
+  const dict = await getDictionary(lang);
   const t = dict.home;
-  const p = `/${params.lang}`;
+  const p = "";
 
   const features = [
     { icon: CalendarCheck, title: t.scheduleTitle, description: t.scheduleDesc },

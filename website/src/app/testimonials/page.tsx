@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { Star, Users, Quote } from "lucide-react";
 import { getDictionary } from "@/i18n/dictionaries";
-import type { Locale } from "@/i18n/config";
+import { getLocale } from "@/i18n/getLocale";
 
-export async function generateMetadata({ params }: { params: { lang: Locale } }): Promise<Metadata> {
-  const dict = await getDictionary(params.lang);
+export async function generateMetadata(): Promise<Metadata> {
+  const dict = await getDictionary(getLocale());
   return { title: dict.testimonials.metaTitle, description: dict.testimonials.metaDesc };
 }
 
@@ -22,8 +22,8 @@ const locations = [
 ];
 const ratings = [5, 5, 5, 5, 4, 5, 5, 4];
 
-export default async function TestimonialsPage({ params }: { params: { lang: Locale } }) {
-  const dict = await getDictionary(params.lang);
+export default async function TestimonialsPage() {
+  const dict = await getDictionary(getLocale());
   const t = dict.testimonials;
   const quotes = [t.t1, t.t2, t.t3, t.t4, t.t5, t.t6, t.t7, t.t8];
 

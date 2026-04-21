@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Menu, X, Leaf, Globe } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 
@@ -23,27 +23,30 @@ interface HeaderProps {
 
 export default function Header({ lang, dict }: HeaderProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const pathname = usePathname();
+  const router = useRouter();
 
-  const prefix = `/${lang}`;
   const navLinks = [
-    { href: `${prefix}`, label: dict.nav.home },
-    { href: `${prefix}/download`, label: dict.nav.download },
-    { href: `${prefix}/testimonials`, label: dict.nav.testimonials },
-    { href: `${prefix}/about`, label: dict.nav.about },
-    { href: `${prefix}/guides`, label: dict.nav.guides },
-    { href: `${prefix}/contact`, label: dict.nav.contact },
+    { href: "/", label: dict.nav.home },
+    { href: "/download", label: dict.nav.download },
+    { href: "/testimonials", label: dict.nav.testimonials },
+    { href: "/about", label: dict.nav.about },
+    { href: "/guides", label: dict.nav.guides },
+    { href: "/contact", label: dict.nav.contact },
   ];
 
   const switchLang = lang === "en" ? "fr" : "en";
-  const switchPath = pathname.replace(`/${lang}`, `/${switchLang}`);
+
+  const handleSwitchLang = () => {
+    document.cookie = `NEXT_LOCALE=${switchLang};path=/;max-age=31536000`;
+    router.refresh();
+  };
 
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-neutral-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href={prefix} className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2">
             <Leaf className="h-8 w-8 text-primary-500" />
             <span className="text-xl font-bold text-primary-700">KmerTrash</span>
           </Link>
@@ -59,14 +62,15 @@ export default function Header({ lang, dict }: HeaderProps) {
                 {link.label}
               </Link>
             ))}
-            <Link
-              href={switchPath}
-              className="flex items-center gap-1 text-sm font-medium text-neutral-500 hover:text-primary-500 transition-colors"
+            <button
+              onClick={handleSwitchLang}
+              className="flex items-center gap-1 text-sm font-medium text-neutral-500 hover:text-primary-500 transition-colors notranslate"
+              translate="no"
             >
               <Globe className="h-4 w-4" />
               {switchLang.toUpperCase()}
-            </Link>
-            <Link href={`${prefix}/download`} className="btn-primary text-sm py-2 px-4">
+            </button>
+            <Link href="/download" className="btn-primary text-sm py-2 px-4">
               {dict.nav.getApp}
             </Link>
           </nav>
@@ -96,16 +100,16 @@ export default function Header({ lang, dict }: HeaderProps) {
                 {link.label}
               </Link>
             ))}
-            <Link
-              href={switchPath}
-              className="flex items-center gap-1 text-sm font-medium text-neutral-500 hover:text-primary-500 py-2"
-              onClick={() => setMobileOpen(false)}
+            <button
+              onClick={() => { setMobileOpen(false); handleSwitchLang(); }}
+              className="flex items-center gap-1 text-sm font-medium text-neutral-500 hover:text-primary-500 py-2 notranslate text-left"
+              translate="no"
             >
               <Globe className="h-4 w-4" />
               {switchLang === "fr" ? "Français" : "English"}
-            </Link>
+            </button>
             <Link
-              href={`${prefix}/download`}
+              href="/download"
               className="btn-primary text-sm mt-2"
               onClick={() => setMobileOpen(false)}
             >

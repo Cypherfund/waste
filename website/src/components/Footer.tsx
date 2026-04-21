@@ -3,15 +3,14 @@ import { Leaf, Mail } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 
 interface FooterProps {
-  lang: Locale;
+  lang?: Locale;
   dict: {
     nav: { home: string; download: string; testimonials: string; about: string; guides: string; contact: string };
     footer: { tagline: string; quickLinks: string; resources: string; howToGuides: string; faqs: string; terms: string; getInTouch: string; copyright: string };
   };
 }
 
-export default function Footer({ lang, dict }: FooterProps) {
-  const p = `/${lang}`;
+export default function Footer({ dict }: FooterProps) {
   return (
     <footer className="bg-neutral-900 text-neutral-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -42,10 +41,10 @@ export default function Footer({ lang, dict }: FooterProps) {
           <div>
             <h4 className="text-white font-semibold mb-4">{dict.footer.quickLinks}</h4>
             <ul className="space-y-2 text-sm">
-              <li><Link href={p} className="hover:text-primary-400 transition-colors">{dict.nav.home}</Link></li>
-              <li><Link href={`${p}/download`} className="hover:text-primary-400 transition-colors">{dict.nav.download}</Link></li>
-              <li><Link href={`${p}/about`} className="hover:text-primary-400 transition-colors">{dict.nav.about}</Link></li>
-              <li><Link href={`${p}/testimonials`} className="hover:text-primary-400 transition-colors">{dict.nav.testimonials}</Link></li>
+              <li><Link href="/" className="hover:text-primary-400 transition-colors">{dict.nav.home}</Link></li>
+              <li><Link href="/download" className="hover:text-primary-400 transition-colors">{dict.nav.download}</Link></li>
+              <li><Link href="/about" className="hover:text-primary-400 transition-colors">{dict.nav.about}</Link></li>
+              <li><Link href="/testimonials" className="hover:text-primary-400 transition-colors">{dict.nav.testimonials}</Link></li>
             </ul>
           </div>
 
@@ -53,10 +52,10 @@ export default function Footer({ lang, dict }: FooterProps) {
           <div>
             <h4 className="text-white font-semibold mb-4">{dict.footer.resources}</h4>
             <ul className="space-y-2 text-sm">
-              <li><Link href={`${p}/guides`} className="hover:text-primary-400 transition-colors">{dict.footer.howToGuides}</Link></li>
-              <li><Link href={`${p}/guides#faq`} className="hover:text-primary-400 transition-colors">{dict.footer.faqs}</Link></li>
-              <li><Link href={`${p}/terms`} className="hover:text-primary-400 transition-colors">{dict.footer.terms}</Link></li>
-              <li><Link href={`${p}/contact`} className="hover:text-primary-400 transition-colors">{dict.nav.contact}</Link></li>
+              <li><Link href="/guides" className="hover:text-primary-400 transition-colors">{dict.footer.howToGuides}</Link></li>
+              <li><Link href="/guides#faq" className="hover:text-primary-400 transition-colors">{dict.footer.faqs}</Link></li>
+              <li><Link href="/terms" className="hover:text-primary-400 transition-colors">{dict.footer.terms}</Link></li>
+              <li><Link href="/contact" className="hover:text-primary-400 transition-colors">{dict.nav.contact}</Link></li>
             </ul>
           </div>
 
