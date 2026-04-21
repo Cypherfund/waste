@@ -2,35 +2,48 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Menu, X, Leaf, Globe } from "lucide-react";
-import { useDictionary } from "@/i18n/DictionaryProvider";
+import type { Locale } from "@/i18n/config";
 
-export default function Header() {
+interface HeaderProps {
+  lang: Locale;
+  dict: {
+    nav: {
+      home: string;
+      download: string;
+      testimonials: string;
+      about: string;
+      guides: string;
+      contact: string;
+      getApp: string;
+    };
+  };
+}
+
+export default function Header({ lang, dict }: HeaderProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { dict, locale, switchLocale } = useDictionary();
-  const nav = dict.common.nav;
+  const pathname = usePathname();
 
+  const prefix = `/${lang}`;
   const navLinks = [
-    { href: "/", label: nav.home },
-    { href: "/download", label: nav.download },
-    { href: "/testimonials", label: nav.testimonials },
-    { href: "/about", label: nav.about },
-    { href: "/guides", label: nav.guides },
-    { href: "/contact", label: nav.contact },
+    { href: `${prefix}`, label: dict.nav.home },
+    { href: `${prefix}/download`, label: dict.nav.download },
+    { href: `${prefix}/testimonials`, label: dict.nav.testimonials },
+    { href: `${prefix}/about`, label: dict.nav.about },
+    { href: `${prefix}/guides`, label: dict.nav.guides },
+    { href: `${prefix}/contact`, label: dict.nav.contact },
   ];
 
-  const otherLocale = locale === "en" ? "fr" : "en";
-
-  const handleSwitchLang = () => {
-    switchLocale(otherLocale);
-  };
+  const switchLang = lang === "en" ? "fr" : "en";
+  const switchPath = pathname.replace(`/${lang}`, `/${switchLang}`);
 
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-neutral-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
+          <Link href={prefix} className="flex items-center gap-2">
             <Leaf className="h-8 w-8 text-primary-500" />
             <span className="text-xl font-bold text-primary-700">KmerTrash</span>
           </Link>
@@ -46,15 +59,15 @@ export default function Header() {
                 {link.label}
               </Link>
             ))}
-            <button
-              onClick={handleSwitchLang}
+            <Link
+              href={switchPath}
               className="flex items-center gap-1 text-sm font-medium text-neutral-500 hover:text-primary-500 transition-colors"
             >
               <Globe className="h-4 w-4" />
-              <span translate="no">{otherLocale.toUpperCase()}</span>
-            </button>
-            <Link href="/download" className="btn-primary text-sm py-2 px-4">
-              {nav.getApp}
+              {switchLang.toUpperCase()}
+            </Link>
+            <Link href={`${prefix}/download`} className="btn-primary text-sm py-2 px-4">
+              {dict.nav.getApp}
             </Link>
           </nav>
 
@@ -83,22 +96,20 @@ export default function Header() {
                 {link.label}
               </Link>
             ))}
-            <button
-              onClick={() => {
-                handleSwitchLang();
-                setMobileOpen(false);
-              }}
+            <Link
+              href={switchPath}
               className="flex items-center gap-1 text-sm font-medium text-neutral-500 hover:text-primary-500 py-2"
+              onClick={() => setMobileOpen(false)}
             >
               <Globe className="h-4 w-4" />
-              <span translate="no">{otherLocale === "fr" ? "Français" : "English"}</span>
-            </button>
+              {switchLang === "fr" ? "Français" : "English"}
+            </Link>
             <Link
-              href="/download"
+              href={`${prefix}/download`}
               className="btn-primary text-sm mt-2"
               onClick={() => setMobileOpen(false)}
             >
-              {nav.getApp}
+              {dict.nav.getApp}
             </Link>
           </nav>
         </div>

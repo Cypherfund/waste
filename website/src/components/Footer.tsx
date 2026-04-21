@@ -1,13 +1,17 @@
-"use client";
-
 import Link from "next/link";
 import { Leaf, Mail } from "lucide-react";
-import { useDictionary } from "@/i18n/DictionaryProvider";
+import type { Locale } from "@/i18n/config";
 
-export default function Footer() {
-  const { dict } = useDictionary();
-  const nav = dict.common.nav;
-  const f = dict.common.footer;
+interface FooterProps {
+  lang: Locale;
+  dict: {
+    nav: { home: string; download: string; testimonials: string; about: string; guides: string; contact: string };
+    footer: { tagline: string; quickLinks: string; resources: string; howToGuides: string; faqs: string; terms: string; getInTouch: string; copyright: string };
+  };
+}
+
+export default function Footer({ lang, dict }: FooterProps) {
+  const p = `/${lang}`;
   return (
     <footer className="bg-neutral-900 text-neutral-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -19,7 +23,7 @@ export default function Footer() {
               <span className="text-lg font-bold text-white">KmerTrash</span>
             </div>
             <p className="text-sm text-neutral-400 leading-relaxed">
-              {f.tagline}
+              {dict.footer.tagline}
             </p>
             <div className="flex gap-4 mt-4">
               <a href="#" aria-label="Facebook" className="hover:text-primary-400 transition-colors">
@@ -36,29 +40,29 @@ export default function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h4 className="text-white font-semibold mb-4">{f.quickLinks}</h4>
+            <h4 className="text-white font-semibold mb-4">{dict.footer.quickLinks}</h4>
             <ul className="space-y-2 text-sm">
-              <li><Link href="/" className="hover:text-primary-400 transition-colors">{nav.home}</Link></li>
-              <li><Link href="/download" className="hover:text-primary-400 transition-colors">{nav.download}</Link></li>
-              <li><Link href="/about" className="hover:text-primary-400 transition-colors">{nav.about}</Link></li>
-              <li><Link href="/testimonials" className="hover:text-primary-400 transition-colors">{nav.testimonials}</Link></li>
+              <li><Link href={p} className="hover:text-primary-400 transition-colors">{dict.nav.home}</Link></li>
+              <li><Link href={`${p}/download`} className="hover:text-primary-400 transition-colors">{dict.nav.download}</Link></li>
+              <li><Link href={`${p}/about`} className="hover:text-primary-400 transition-colors">{dict.nav.about}</Link></li>
+              <li><Link href={`${p}/testimonials`} className="hover:text-primary-400 transition-colors">{dict.nav.testimonials}</Link></li>
             </ul>
           </div>
 
           {/* Resources */}
           <div>
-            <h4 className="text-white font-semibold mb-4">{f.resources}</h4>
+            <h4 className="text-white font-semibold mb-4">{dict.footer.resources}</h4>
             <ul className="space-y-2 text-sm">
-              <li><Link href="/guides" className="hover:text-primary-400 transition-colors">{f.howToGuides}</Link></li>
-              <li><Link href="/guides#faq" className="hover:text-primary-400 transition-colors">{f.faqs}</Link></li>
-              <li><Link href="/terms" className="hover:text-primary-400 transition-colors">{f.terms}</Link></li>
-              <li><Link href="/contact" className="hover:text-primary-400 transition-colors">{nav.contact}</Link></li>
+              <li><Link href={`${p}/guides`} className="hover:text-primary-400 transition-colors">{dict.footer.howToGuides}</Link></li>
+              <li><Link href={`${p}/guides#faq`} className="hover:text-primary-400 transition-colors">{dict.footer.faqs}</Link></li>
+              <li><Link href={`${p}/terms`} className="hover:text-primary-400 transition-colors">{dict.footer.terms}</Link></li>
+              <li><Link href={`${p}/contact`} className="hover:text-primary-400 transition-colors">{dict.nav.contact}</Link></li>
             </ul>
           </div>
 
           {/* Contact */}
           <div>
-            <h4 className="text-white font-semibold mb-4">{f.getInTouch}</h4>
+            <h4 className="text-white font-semibold mb-4">{dict.footer.getInTouch}</h4>
             <ul className="space-y-2 text-sm">
               <li className="flex items-center gap-2">
                 <Mail className="h-4 w-4" />
@@ -73,7 +77,7 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-neutral-800 mt-10 pt-8 text-center text-sm text-neutral-500">
-          <p>&copy; {new Date().getFullYear()} {f.copyright}</p>
+          <p>&copy; {new Date().getFullYear()} {dict.footer.copyright}</p>
         </div>
       </div>
     </footer>
