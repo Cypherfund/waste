@@ -35,8 +35,8 @@ export default async function ContactPage() {
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-neutral-900">{t.email}</p>
-                    <a href="mailto:hello@kmertrash.cm" className="text-sm text-primary-500 hover:underline">
-                      hello@kmertrash.cm
+                    <a href="mailto:info@kmertrash.com" className="text-sm text-primary-500 hover:underline">
+                      info@kmertrash.com
                     </a>
                   </div>
                 </div>
@@ -47,7 +47,7 @@ export default async function ContactPage() {
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-neutral-900">{t.phone}</p>
-                    <p className="text-sm text-neutral-600">+237 6XX XXX XXX</p>
+                    <p className="text-sm text-neutral-600">+237 650 931 636</p>
                   </div>
                 </div>
 
