@@ -160,10 +160,10 @@ export class JobsService {
   async acceptJob(jobId: string, collectorId: string): Promise<JobResponseDto> {
     // Pessimistic lock to prevent race with timeout/reassignment (Phase 2 §4.2)
     const result = await this.jobRepo.manager.transaction(async (manager) => {
+      // Lock without relations to avoid FOR UPDATE on nullable outer join (collector)
       const job = await manager.findOne(Job, {
         where: { id: jobId },
         lock: { mode: 'pessimistic_write' },
-        relations: ['household', 'collector'],
       });
 
       if (!job) {
@@ -184,9 +184,12 @@ export class JobsService {
       return job;
     });
 
-    this.emitEvent(JobEvents.ACCEPTED, result);
+    // Reload with relations for the response DTO
+    const fullJob = await this.loadJob(result.id);
 
-    return this.toResponseDto(result);
+    this.emitEvent(JobEvents.ACCEPTED, fullJob);
+
+    return this.toResponseDto(fullJob);
   }
 
   async rejectJob(

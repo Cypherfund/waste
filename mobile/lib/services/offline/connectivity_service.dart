@@ -30,10 +30,12 @@ class ConnectivityService {
     });
   }
 
-  bool _hasConnection(ConnectivityResult result) {
-    return result == ConnectivityResult.wifi ||
-        result == ConnectivityResult.mobile ||
-        result == ConnectivityResult.ethernet;
+  bool _hasConnection(List<ConnectivityResult> result) {
+    return result.any((r) => 
+      r == ConnectivityResult.wifi ||
+      r == ConnectivityResult.mobile ||
+      r == ConnectivityResult.ethernet
+    );
   }
 
   void dispose() {

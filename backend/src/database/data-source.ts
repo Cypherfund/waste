@@ -1,7 +1,9 @@
 import { DataSource } from 'typeorm';
 import * as dotenv from 'dotenv';
 
-dotenv.config();
+// Load .env.test if DOTENV_CONFIG_PATH is set (for test environment)
+const envPath = process.env.DOTENV_CONFIG_PATH || undefined;
+dotenv.config({ path: envPath });
 
 export default new DataSource({
   type: 'postgres',
