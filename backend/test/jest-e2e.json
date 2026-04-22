@@ -1,0 +1,29 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": ".",
+  "testEnvironment": "node",
+  "testRegex": ".e2e\\.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "moduleNameMapper": {
+    "^@common/(.*)$": "<rootDir>/../src/common/$1",
+    "^@config/(.*)$": "<rootDir>/../src/config/$1",
+    "^@database/(.*)$": "<rootDir>/../src/database/$1",
+    "^@auth/(.*)$": "<rootDir>/../src/auth/$1",
+    "^@users/(.*)$": "<rootDir>/../src/users/$1",
+    "^@jobs/(.*)$": "<rootDir>/../src/jobs/$1",
+    "^@assignment/(.*)$": "<rootDir>/../src/assignment/$1",
+    "^@ratings/(.*)$": "<rootDir>/../src/ratings/$1",
+    "^@files/(.*)$": "<rootDir>/../src/files/$1",
+    "^@earnings/(.*)$": "<rootDir>/../src/earnings/$1",
+    "^@notifications/(.*)$": "<rootDir>/../src/notifications/$1",
+    "^@websocket/(.*)$": "<rootDir>/../src/websocket/$1"
+  },
+  "collectCoverageFrom": ["../src/**/*.(t|j)s"],
+  "coverageDirectory": "../coverage/e2e",
+  "setupFiles": ["dotenv/config"],
+  "setupFilesAfterEnv": ["./test-setup.ts"],
+  "testTimeout": 60000,
+  "maxWorkers": 1
+}
