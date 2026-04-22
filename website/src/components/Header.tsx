@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Menu, X, Leaf, Globe } from "lucide-react";
+import { Menu, X, Globe } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 
 interface HeaderProps {
@@ -47,7 +47,7 @@ export default function Header({ lang, dict }: HeaderProps) {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <Leaf className="h-8 w-8 text-primary-500" />
+            <img src="/logo.png" alt="KmerTrash Logo" className="h-8 w-auto" />
             <span className="text-xl font-bold text-primary-700">KmerTrash</span>
           </Link>
 

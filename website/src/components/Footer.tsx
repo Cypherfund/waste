@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Leaf, Mail } from "lucide-react";
+import { Mail } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 
 interface FooterProps {
@@ -18,7 +18,7 @@ export default function Footer({ dict }: FooterProps) {
           {/* Brand */}
           <div className="col-span-1 md:col-span-1">
             <div className="flex items-center gap-2 mb-4">
-              <Leaf className="h-7 w-7 text-primary-400" />
+              <img src="/logo-white.png" alt="KmerTrash Logo" className="h-7 w-auto" />
               <span className="text-lg font-bold text-white">KmerTrash</span>
             </div>
             <p className="text-sm text-neutral-400 leading-relaxed">

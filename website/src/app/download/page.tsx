@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Smartphone, CheckCircle, ArrowRight, Leaf, Shield, Wifi, Battery, Download } from "lucide-react";
+import { Smartphone, CheckCircle, ArrowRight, Shield, Wifi, Battery, Download } from "lucide-react";
 import { getDictionary } from "@/i18n/dictionaries";
 import { getLocale } from "@/i18n/getLocale";
 
@@ -49,6 +49,9 @@ export default async function DownloadPage() {
               <p className="mt-4 text-sm text-neutral-500">{t.freeNote}</p>
             </div>
             <div className="flex flex-col items-center gap-8">
+              <div className="w-64 h-64 flex items-center justify-center">
+                <img src="/logo-2.png" alt="KmerTrash App" className="w-full h-auto drop-shadow-2xl" />
+              </div>
               <div className="text-center">
                 <p className="text-sm font-semibold text-neutral-700 mb-3">{t.scanToDownload}</p>
                 <div className="grid grid-cols-2 gap-6">
@@ -117,7 +120,7 @@ export default async function DownloadPage() {
 
       <section className="py-16 bg-primary-500">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <Leaf className="h-12 w-12 text-white/80 mx-auto mb-4" />
+          <img src="/logo-white-h-2.png" alt="KmerTrash" className="h-12 w-auto mx-auto mb-4 opacity-80" />
           <h2 className="text-2xl md:text-3xl font-bold text-white">{t.ctaHeading}</h2>
           <p className="mt-3 text-primary-100">{t.ctaDesc}</p>
           <Link href={`${p}/guides`} className="mt-6 inline-flex items-center gap-2 bg-white text-primary-600 font-semibold px-6 py-3 rounded-lg hover:bg-neutral-100 transition-colors">
