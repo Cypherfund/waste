@@ -20,13 +20,13 @@ class MockFilesApi extends Mock implements FilesApi {}
 
 class MockWebSocketService extends Mock implements WebSocketService {}
 
-class MockLocationService extends Mock implements LocationTrackingService {}
+class MockLocationTrackingService extends Mock implements LocationTrackingService {}
 
 void main() {
   late MockJobsApi mockJobsApi;
   late MockFilesApi mockFilesApi;
   late MockWebSocketService mockWsService;
-  late MockLocationService mockLocationService;
+  late MockLocationTrackingService mockLocationService;
   late CollectorJobsProvider provider;
   late StreamController<JobStatusUpdate> wsStatusController;
   late StreamController<CollectorAssignedEvent> wsAssignedController;
@@ -54,7 +54,7 @@ void main() {
     mockJobsApi = MockJobsApi();
     mockFilesApi = MockFilesApi();
     mockWsService = MockWebSocketService();
-    mockLocationService = MockLocationService();
+    mockLocationService = MockLocationTrackingService();
     wsStatusController = StreamController<JobStatusUpdate>.broadcast();
     wsAssignedController =
         StreamController<CollectorAssignedEvent>.broadcast();
@@ -65,8 +65,7 @@ void main() {
         .thenAnswer((_) => wsAssignedController.stream);
     when(() => mockWsService.subscribeToJob(any())).thenReturn(null);
     when(() => mockWsService.unsubscribeFromJob(any())).thenReturn(null);
-    when(() => mockLocationService.activeJobId).thenReturn(null);
-    when(() => mockLocationService.dispose()).thenReturn(null);
+    when(() => mockLocationService.dispose()).thenAnswer((_) {});
 
     provider = CollectorJobsProvider(
       jobsApi: mockJobsApi,
@@ -74,6 +73,10 @@ void main() {
       wsService: mockWsService,
       locationService: mockLocationService,
     );
+  });
+
+  setUpAll(() {
+    registerFallbackValue(JobStatus.ASSIGNED);
   });
 
   tearDown(() {

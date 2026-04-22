@@ -9,11 +9,11 @@ class MockConnectivity extends Mock implements Connectivity {}
 void main() {
   late MockConnectivity mockConnectivity;
   late ConnectivityService service;
-  late StreamController<ConnectivityResult> connectivityController;
+  late StreamController<List<ConnectivityResult>> connectivityController;
 
   setUp(() {
     mockConnectivity = MockConnectivity();
-    connectivityController = StreamController<ConnectivityResult>.broadcast();
+    connectivityController = StreamController<List<ConnectivityResult>>.broadcast();
 
     when(() => mockConnectivity.onConnectivityChanged)
         .thenAnswer((_) => connectivityController.stream);
@@ -27,7 +27,7 @@ void main() {
   group('ConnectivityService', () {
     test('initializes as online when wifi connected', () async {
       when(() => mockConnectivity.checkConnectivity())
-          .thenAnswer((_) async => ConnectivityResult.wifi);
+          .thenAnswer((_) async => [ConnectivityResult.wifi]);
 
       service = ConnectivityService(connectivity: mockConnectivity);
       await service.initialize();
@@ -37,7 +37,7 @@ void main() {
 
     test('initializes as online when mobile connected', () async {
       when(() => mockConnectivity.checkConnectivity())
-          .thenAnswer((_) async => ConnectivityResult.mobile);
+          .thenAnswer((_) async => [ConnectivityResult.mobile]);
 
       service = ConnectivityService(connectivity: mockConnectivity);
       await service.initialize();
@@ -47,7 +47,7 @@ void main() {
 
     test('initializes as offline when no connection', () async {
       when(() => mockConnectivity.checkConnectivity())
-          .thenAnswer((_) async => ConnectivityResult.none);
+          .thenAnswer((_) async => [ConnectivityResult.none]);
 
       service = ConnectivityService(connectivity: mockConnectivity);
       await service.initialize();
@@ -57,7 +57,7 @@ void main() {
 
     test('emits true when connectivity changes to wifi', () async {
       when(() => mockConnectivity.checkConnectivity())
-          .thenAnswer((_) async => ConnectivityResult.none);
+          .thenAnswer((_) async => [ConnectivityResult.none]);
 
       service = ConnectivityService(connectivity: mockConnectivity);
       await service.initialize();
@@ -66,7 +66,7 @@ void main() {
       final events = <bool>[];
       service.onConnectivityChanged.listen(events.add);
 
-      connectivityController.add(ConnectivityResult.wifi);
+      connectivityController.add([ConnectivityResult.wifi]);
       await Future.delayed(const Duration(milliseconds: 50));
 
       expect(service.isOnline, true);
@@ -75,7 +75,7 @@ void main() {
 
     test('emits false when connectivity changes to none', () async {
       when(() => mockConnectivity.checkConnectivity())
-          .thenAnswer((_) async => ConnectivityResult.wifi);
+          .thenAnswer((_) async => [ConnectivityResult.wifi]);
 
       service = ConnectivityService(connectivity: mockConnectivity);
       await service.initialize();
@@ -84,7 +84,7 @@ void main() {
       final events = <bool>[];
       service.onConnectivityChanged.listen(events.add);
 
-      connectivityController.add(ConnectivityResult.none);
+      connectivityController.add([ConnectivityResult.none]);
       await Future.delayed(const Duration(milliseconds: 50));
 
       expect(service.isOnline, false);
@@ -93,7 +93,7 @@ void main() {
 
     test('does not emit when status stays the same', () async {
       when(() => mockConnectivity.checkConnectivity())
-          .thenAnswer((_) async => ConnectivityResult.wifi);
+          .thenAnswer((_) async => [ConnectivityResult.wifi]);
 
       service = ConnectivityService(connectivity: mockConnectivity);
       await service.initialize();
@@ -101,7 +101,7 @@ void main() {
       final events = <bool>[];
       service.onConnectivityChanged.listen(events.add);
 
-      connectivityController.add(ConnectivityResult.mobile);
+      connectivityController.add([ConnectivityResult.mobile]);
       await Future.delayed(const Duration(milliseconds: 50));
 
       // Still online (wifi -> mobile), no event emitted

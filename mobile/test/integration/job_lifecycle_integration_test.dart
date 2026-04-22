@@ -59,6 +59,10 @@ void main() {
     );
   });
 
+  setUpAll(() {
+    registerFallbackValue(JobStatus.REQUESTED);
+  });
+
   tearDown(() {
     wsController.close();
     provider.dispose();
