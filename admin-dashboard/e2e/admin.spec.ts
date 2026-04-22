@@ -1,6 +1,15 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Admin Dashboard E2E Tests', () => {
+  test.beforeEach(async ({ page }) => {
+    // Login as admin
+    await page.goto('/login');
+    await page.fill('input[type="tel"]', '+237600000000');
+    await page.fill('input[type="password"]', 'admin123456');
+    await page.click('button[type="submit"]');
+    await page.waitForURL('/');
+  });
+
   test('dashboard loads and displays key metrics', async ({ page }) => {
     await page.goto('/');
     
@@ -84,15 +93,22 @@ test.describe('Admin Dashboard E2E Tests', () => {
   });
 
   test('fraud flags page displays fraud reports', async ({ page }) => {
-    await page.goto('/fraud');
+    await page.goto('/fraud-flags');
     
-    // Check for fraud heading
-    await expect(page.getByRole('heading', { name: /fraud/i })).toBeVisible();
+    // Wait for page to load
+    await page.waitForLoadState('networkidle');
     
-    // Check for fraud table or list
+    // Check for fraud heading using role selector (h1)
+    await expect(page.getByRole('heading', { name: 'Fraud Flags' })).toBeVisible();
+    
+    // Check for table
     const table = page.getByRole('table');
-    const list = page.locator('.fraud-list');
-    await expect(table.or(list)).toBeVisible();
+    await expect(table).toBeVisible();
+    
+    // Check for either table data or empty message
+    const emptyMessage = page.locator('td').filter({ hasText: 'No fraud flags found' });
+    const hasData = page.locator('tbody tr:not(:has-text("No fraud flags found"))');
+    await expect(emptyMessage.or(hasData.first())).toBeVisible();
   });
 
   test('config page displays configuration options', async ({ page }) => {
