@@ -50,7 +50,7 @@ void main() {
       // This would require authentication first
       // For integration tests, we'd typically use mock credentials
       // or a test environment with pre-configured users
-    }, skip: true); // Skip for now as it requires backend
+    }, skip: true) // Skip for now as it requires backend
   });
 
   group('Offline Sync Integration Tests', () => {
@@ -60,6 +60,6 @@ void main() {
 
       // Would need to navigate to sync queue screen
       // This requires authentication
-    }, skip: true); // Skip for now as it requires authentication
+    }, skip: true) // Skip for now as it requires authentication
   });
 }
