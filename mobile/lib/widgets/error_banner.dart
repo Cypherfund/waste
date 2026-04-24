@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../config/app_theme.dart';
 
+/// A styled error banner showing error messages with dismiss action.
 class ErrorBanner extends StatelessWidget {
   final String message;
   final VoidCallback? onDismiss;
@@ -14,27 +16,27 @@ class ErrorBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
       decoration: BoxDecoration(
-        color: Colors.red.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.red.shade200),
+        color: AppColors.error.withOpacity(0.08),
+        borderRadius: AppRadius.cardBorder,
+        border: Border.all(color: AppColors.error.withOpacity(0.2)),
       ),
       child: Row(
         children: [
-          Icon(Icons.error_outline, color: Colors.red.shade700, size: 20),
-          const SizedBox(width: 10),
+          Icon(Icons.error_outline, color: AppColors.error, size: 20),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               message,
-              style: TextStyle(color: Colors.red.shade800, fontSize: 14),
+              style: AppTypography.body.copyWith(color: AppColors.error),
             ),
           ),
           if (onDismiss != null)
             GestureDetector(
               onTap: onDismiss,
-              child: Icon(Icons.close, color: Colors.red.shade400, size: 18),
+              child: Icon(Icons.close, color: AppColors.error.withOpacity(0.6), size: 18),
             ),
         ],
       ),

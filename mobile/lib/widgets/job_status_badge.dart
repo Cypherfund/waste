@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import '../config/app_theme.dart';
 import '../models/job.dart';
 
+/// A styled status badge for job states.
+///
+/// Displays the job status as a colored pill badge.
 class JobStatusBadge extends StatelessWidget {
   final JobStatus status;
 
@@ -9,17 +13,17 @@ class JobStatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       decoration: BoxDecoration(
         color: _backgroundColor,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.badgeBorder,
       ),
       child: Text(
         _label,
-        style: TextStyle(
+        style: AppTypography.overline.copyWith(
           color: _textColor,
-          fontSize: 12,
           fontWeight: FontWeight.w600,
+          fontSize: 11,
         ),
       ),
     );
@@ -49,42 +53,42 @@ class JobStatusBadge extends StatelessWidget {
   Color get _backgroundColor {
     switch (status) {
       case JobStatus.REQUESTED:
-        return Colors.blue.shade50;
+        return AppColors.badgeRequested.withOpacity(0.1);
       case JobStatus.ASSIGNED:
-        return Colors.orange.shade50;
+        return AppColors.badgeAssigned.withOpacity(0.1);
       case JobStatus.IN_PROGRESS:
-        return Colors.amber.shade50;
+        return AppColors.badgeInProgress.withOpacity(0.1);
       case JobStatus.COMPLETED:
-        return Colors.green.shade50;
+        return AppColors.badgeCompleted.withOpacity(0.1);
       case JobStatus.VALIDATED:
-        return Colors.teal.shade50;
+        return AppColors.badgeValidated.withOpacity(0.1);
       case JobStatus.RATED:
-        return Colors.purple.shade50;
+        return AppColors.badgeRated.withOpacity(0.1);
       case JobStatus.CANCELLED:
-        return Colors.red.shade50;
+        return AppColors.badgeCancelled.withOpacity(0.1);
       case JobStatus.DISPUTED:
-        return Colors.deepOrange.shade50;
+        return AppColors.badgeDisputed.withOpacity(0.1);
     }
   }
 
   Color get _textColor {
     switch (status) {
       case JobStatus.REQUESTED:
-        return Colors.blue.shade700;
+        return AppColors.badgeRequested;
       case JobStatus.ASSIGNED:
-        return Colors.orange.shade700;
+        return AppColors.badgeAssigned;
       case JobStatus.IN_PROGRESS:
-        return Colors.amber.shade800;
+        return AppColors.badgeInProgress;
       case JobStatus.COMPLETED:
-        return Colors.green.shade700;
+        return AppColors.badgeCompleted;
       case JobStatus.VALIDATED:
-        return Colors.teal.shade700;
+        return AppColors.badgeValidated;
       case JobStatus.RATED:
-        return Colors.purple.shade700;
+        return AppColors.badgeRated;
       case JobStatus.CANCELLED:
-        return Colors.red.shade700;
+        return AppColors.badgeCancelled;
       case JobStatus.DISPUTED:
-        return Colors.deepOrange.shade700;
+        return AppColors.badgeDisputed;
     }
   }
 }

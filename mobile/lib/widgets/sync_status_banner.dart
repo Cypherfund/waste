@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../config/app_theme.dart';
 import '../providers/offline_queue_provider.dart';
 import '../services/offline/sync_service.dart';
 
+/// A top-bar banner showing the current sync/connectivity status.
 class SyncStatusBanner extends StatelessWidget {
   const SyncStatusBanner({super.key});
 
@@ -17,7 +19,7 @@ class SyncStatusBanner extends StatelessWidget {
         subtitle: queue.pendingCount > 0
             ? '${queue.pendingCount} action(s) queued'
             : null,
-        color: Colors.orange,
+        color: AppColors.warning,
       );
     }
 
@@ -26,7 +28,7 @@ class SyncStatusBanner extends StatelessWidget {
         icon: Icons.sync,
         message: 'Syncing...',
         subtitle: '${queue.pendingCount} action(s) remaining',
-        color: Colors.blue,
+        color: AppColors.info,
         showProgress: true,
       );
     }
@@ -36,7 +38,7 @@ class SyncStatusBanner extends StatelessWidget {
         icon: Icons.sync_problem,
         message: 'Sync failed',
         subtitle: '${queue.pendingCount} action(s) pending',
-        color: Colors.red,
+        color: AppColors.error,
         action: TextButton(
           onPressed: () => queue.retrySync(),
           child: const Text('Retry', style: TextStyle(color: Colors.white)),
@@ -51,7 +53,7 @@ class SyncStatusBanner extends StatelessWidget {
         icon: Icons.cloud_done,
         message: 'Sync complete',
         subtitle: '${queue.lastResult!.synced} action(s) synced',
-        color: Colors.green,
+        color: AppColors.success,
       );
     }
 
@@ -80,7 +82,7 @@ class _Banner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 10),
       color: color.withOpacity(0.9),
       child: SafeArea(
         bottom: false,
@@ -105,7 +107,7 @@ class _Banner extends StatelessWidget {
                 children: [
                   Text(
                     message,
-                    style: const TextStyle(
+                    style: AppTypography.caption.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
                       fontSize: 13,
@@ -114,9 +116,8 @@ class _Banner extends StatelessWidget {
                   if (subtitle != null)
                     Text(
                       subtitle!,
-                      style: const TextStyle(
+                      style: AppTypography.overline.copyWith(
                         color: Colors.white70,
-                        fontSize: 11,
                       ),
                     ),
                 ],
@@ -130,6 +131,7 @@ class _Banner extends StatelessWidget {
   }
 }
 
+/// Small badge showing offline queue count.
 class OfflineBadge extends StatelessWidget {
   const OfflineBadge({super.key});
 
@@ -142,7 +144,7 @@ class OfflineBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: queue.isOnline ? Colors.blue : Colors.orange,
+        color: queue.isOnline ? AppColors.info : AppColors.warning,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(

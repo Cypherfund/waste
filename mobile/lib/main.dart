@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'config/app_theme.dart';
+import 'features/onboarding/onboarding_flow.dart';
 import 'services/storage/secure_storage.dart';
 import 'services/api/api_client.dart';
 import 'services/api/auth_api.dart';
@@ -33,19 +35,32 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final connectivityService = ConnectivityService();
   await connectivityService.initialize();
-  runApp(WasteWiseApp(connectivityService: connectivityService));
+
+  // Check onboarding status before launching
+  final onboardingDone = await isOnboardingCompleted();
+
+  runApp(WasteWiseApp(
+    connectivityService: connectivityService,
+    onboardingCompleted: onboardingDone,
+  ));
 }
 
 class WasteWiseApp extends StatefulWidget {
   final ConnectivityService connectivityService;
+  final bool onboardingCompleted;
 
-  const WasteWiseApp({super.key, required this.connectivityService});
+  const WasteWiseApp({
+    super.key,
+    required this.connectivityService,
+    required this.onboardingCompleted,
+  });
 
   @override
   State<WasteWiseApp> createState() => _WasteWiseAppState();
 }
 
 class _WasteWiseAppState extends State<WasteWiseApp> {
+  late bool _onboardingCompleted;
   late final SecureStorageService _storage;
   late final ApiClient _apiClient;
   late final AuthApi _authApi;
@@ -65,6 +80,7 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
   @override
   void initState() {
     super.initState();
+    _onboardingCompleted = widget.onboardingCompleted;
     _storage = SecureStorageService();
     _apiClient = ApiClient(storage: _storage);
     _authApi = AuthApi(_apiClient);
@@ -143,34 +159,35 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
         ChangeNotifierProvider.value(value: _offlineQueueProvider),
       ],
       child: MaterialApp(
-        title: 'WasteWise',
+        title: 'KmerTrash',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF2E7D32),
-            brightness: Brightness.light,
-          ),
-          useMaterial3: true,
-          appBarTheme: const AppBarTheme(
-            centerTitle: true,
-            elevation: 0,
-          ),
-        ),
-        home: Consumer<AuthProvider>(
-          builder: (context, auth, _) {
-            switch (auth.status) {
-              case AuthStatus.unknown:
-                return const _SplashScreen();
-              case AuthStatus.authenticated:
-                if (auth.user?.isCollector == true) {
-                  return const CollectorHomeScreen();
-                }
-                return const HomeScreen();
-              case AuthStatus.unauthenticated:
-                return const LoginScreen();
-            }
-          },
-        ),
+        theme: AppTheme.lightTheme,
+        home: _onboardingCompleted
+            ? Consumer<AuthProvider>(
+                builder: (context, auth, _) {
+                  switch (auth.status) {
+                    case AuthStatus.unknown:
+                      return const _SplashScreen();
+                    case AuthStatus.authenticated:
+                      if (auth.user?.isCollector == true) {
+                        return const CollectorHomeScreen();
+                      }
+                      return const HomeScreen();
+                    case AuthStatus.unauthenticated:
+                      return const LoginScreen();
+                  }
+                },
+              )
+            : OnboardingFlow(
+                onComplete: () {
+                  setState(() => _onboardingCompleted = true);
+                },
+                onLogin: () {
+                  setState(() => _onboardingCompleted = true);
+                  // Mark as completed so they don't see it again
+                  markOnboardingCompleted();
+                },
+              ),
         routes: {
           '/login': (_) => const LoginScreen(),
           '/register': (_) => const RegisterScreen(),
@@ -195,23 +212,58 @@ class _SplashScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
+      backgroundColor: AppColors.primary,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.eco, size: 64, color: Color(0xFF2E7D32)),
-            SizedBox(height: 16),
-            Text(
-              'WasteWise',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF2E7D32),
+            // Logo
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.eco,
+                size: 44,
+                color: AppColors.primary,
               ),
             ),
-            SizedBox(height: 24),
-            CircularProgressIndicator(),
+            const SizedBox(height: 24),
+            Text(
+              'KmerTrash',
+              style: AppTypography.heading1.copyWith(
+                color: Colors.white,
+                fontSize: 28,
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Collect. Clean. Earn. Together.',
+              style: AppTypography.body.copyWith(
+                color: Colors.white70,
+              ),
+            ),
+            const SizedBox(height: 40),
+            const SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
+              ),
+            ),
           ],
         ),
       ),

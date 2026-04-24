@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../../config/app_theme.dart';
 import '../../models/job.dart';
 import '../../providers/jobs_provider.dart';
+import '../../widgets/app_card.dart';
 import '../../widgets/job_status_badge.dart';
+import '../../widgets/loading_button.dart';
 
 class JobDetailScreen extends StatelessWidget {
   const JobDetailScreen({super.key});
@@ -20,110 +23,129 @@ class JobDetailScreen extends StatelessWidget {
     );
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Collection Details'),
+        backgroundColor: AppColors.surface,
+        title: Text('Collection Details', style: AppTypography.heading3),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Status header
-            Center(child: JobStatusBadge(status: currentJob.status)),
-            const SizedBox(height: 24),
-
-            // Location
-            _DetailSection(
-              icon: Icons.location_on,
-              title: 'Pickup Address',
-              value: currentJob.locationAddress,
+            // Status header card
+            AppCard(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: AppColors.primarySurface,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      _statusIcon(currentJob.status),
+                      color: AppColors.primary,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Status', style: AppTypography.caption),
+                      const SizedBox(height: 4),
+                      JobStatusBadge(status: currentJob.status),
+                    ],
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
 
-            // Schedule
-            _DetailSection(
-              icon: Icons.calendar_today,
-              title: 'Scheduled Date',
-              value: _formatDate(currentJob.scheduledDate),
+            // Details card
+            AppCard(
+              child: Column(
+                children: [
+                  _DetailRow(
+                    icon: Icons.location_on_outlined,
+                    title: 'Pickup Address',
+                    value: currentJob.locationAddress,
+                  ),
+                  const Divider(height: 24, color: AppColors.divider),
+                  _DetailRow(
+                    icon: Icons.calendar_today_outlined,
+                    title: 'Scheduled Date',
+                    value: _formatDate(currentJob.scheduledDate),
+                  ),
+                  const Divider(height: 24, color: AppColors.divider),
+                  _DetailRow(
+                    icon: Icons.access_time,
+                    title: 'Time Window',
+                    value: currentJob.scheduledTime,
+                  ),
+                  if (currentJob.collectorName != null) ...[
+                    const Divider(height: 24, color: AppColors.divider),
+                    _DetailRow(
+                      icon: Icons.person_outline,
+                      title: 'Assigned Collector',
+                      value: currentJob.collectorName!,
+                    ),
+                  ],
+                  if (currentJob.notes != null && currentJob.notes!.isNotEmpty) ...[
+                    const Divider(height: 24, color: AppColors.divider),
+                    _DetailRow(
+                      icon: Icons.notes_outlined,
+                      title: 'Notes',
+                      value: currentJob.notes!,
+                    ),
+                  ],
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
 
-            _DetailSection(
-              icon: Icons.access_time,
-              title: 'Time Window',
-              value: currentJob.scheduledTime,
+            // Timeline card
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Timeline', style: AppTypography.subtitle.copyWith(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 16),
+                  _TimelineEntry(
+                    label: 'Created',
+                    time: currentJob.createdAt,
+                    isActive: true,
+                    isFirst: true,
+                  ),
+                  if (currentJob.assignedAt != null)
+                    _TimelineEntry(label: 'Assigned', time: currentJob.assignedAt!, isActive: true),
+                  if (currentJob.startedAt != null)
+                    _TimelineEntry(label: 'Started', time: currentJob.startedAt!, isActive: true),
+                  if (currentJob.completedAt != null)
+                    _TimelineEntry(label: 'Completed', time: currentJob.completedAt!, isActive: true),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.lg),
 
-            // Collector info
-            if (currentJob.collectorName != null) ...[
-              _DetailSection(
-                icon: Icons.person,
-                title: 'Assigned Collector',
-                value: currentJob.collectorName!,
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            // Notes
-            if (currentJob.notes != null && currentJob.notes!.isNotEmpty) ...[
-              _DetailSection(
-                icon: Icons.notes,
-                title: 'Notes',
-                value: currentJob.notes!,
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            // Timestamps
-            _DetailSection(
-              icon: Icons.info_outline,
-              title: 'Created',
-              value: DateFormat('MMM d, yyyy HH:mm').format(currentJob.createdAt),
-            ),
-            if (currentJob.assignedAt != null) ...[
-              const SizedBox(height: 12),
-              _DetailSection(
-                icon: Icons.assignment_ind,
-                title: 'Assigned',
-                value: DateFormat('MMM d, yyyy HH:mm').format(currentJob.assignedAt!),
-              ),
-            ],
-            if (currentJob.startedAt != null) ...[
-              const SizedBox(height: 12),
-              _DetailSection(
-                icon: Icons.play_circle_outline,
-                title: 'Started',
-                value: DateFormat('MMM d, yyyy HH:mm').format(currentJob.startedAt!),
-              ),
-            ],
-            if (currentJob.completedAt != null) ...[
-              const SizedBox(height: 12),
-              _DetailSection(
-                icon: Icons.check_circle_outline,
-                title: 'Completed',
-                value: DateFormat('MMM d, yyyy HH:mm').format(currentJob.completedAt!),
-              ),
-            ],
-
-            const SizedBox(height: 32),
-
-            // Action buttons
+            // Actions
             if (currentJob.canValidate) ...[
-              _ActionButton(
+              LoadingButton(
                 label: 'Validate Collection',
-                icon: Icons.verified,
-                color: Colors.green,
+                icon: Icons.verified_outlined,
                 onPressed: () => _handleValidate(context, currentJob.id),
               ),
               const SizedBox(height: 12),
             ],
 
             if (currentJob.canRate) ...[
-              _ActionButton(
+              LoadingButton(
                 label: 'Rate Collector',
-                icon: Icons.star,
-                color: Colors.amber.shade700,
+                icon: Icons.star_outline,
+                color: AppColors.warning,
                 onPressed: () => Navigator.pushNamed(
                   context,
                   '/rate-job',
@@ -134,25 +156,50 @@ class JobDetailScreen extends StatelessWidget {
             ],
 
             if (currentJob.canCancel)
-              _ActionButton(
+              LoadingButton(
                 label: 'Cancel Collection',
-                icon: Icons.cancel,
-                color: Colors.red,
+                icon: Icons.cancel_outlined,
+                variant: ButtonVariant.danger,
                 onPressed: () => _handleCancel(context, currentJob.id),
               ),
+
+            const SizedBox(height: 24),
           ],
         ),
       ),
     );
   }
 
+  IconData _statusIcon(JobStatus status) {
+    switch (status) {
+      case JobStatus.REQUESTED:
+        return Icons.schedule;
+      case JobStatus.ASSIGNED:
+        return Icons.assignment_ind;
+      case JobStatus.IN_PROGRESS:
+        return Icons.directions_run;
+      case JobStatus.COMPLETED:
+        return Icons.check_circle;
+      case JobStatus.VALIDATED:
+        return Icons.verified;
+      case JobStatus.RATED:
+        return Icons.star;
+      case JobStatus.CANCELLED:
+        return Icons.cancel;
+      case JobStatus.DISPUTED:
+        return Icons.gavel;
+    }
+  }
+
   Future<void> _handleValidate(BuildContext context, String jobId) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Validate Collection'),
-        content: const Text(
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.cardBorder),
+        title: Text('Validate Collection', style: AppTypography.heading3),
+        content: Text(
           'Confirm that the waste was collected successfully?',
+          style: AppTypography.body.copyWith(color: AppColors.textSecondary),
         ),
         actions: [
           TextButton(
@@ -173,7 +220,7 @@ class JobDetailScreen extends StatelessWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Collection validated!'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColors.success,
           ),
         );
       }
@@ -186,17 +233,23 @@ class JobDetailScreen extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Cancel Collection'),
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.cardBorder),
+        title: Text('Cancel Collection', style: AppTypography.heading3),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Are you sure you want to cancel this collection?'),
+            Text(
+              'Are you sure you want to cancel this collection?',
+              style: AppTypography.body.copyWith(color: AppColors.textSecondary),
+            ),
             const SizedBox(height: 16),
             TextField(
               controller: reasonController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Reason (optional)',
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderRadius: AppRadius.inputBorder,
+                ),
               ),
               maxLines: 2,
             ),
@@ -208,7 +261,7 @@ class JobDetailScreen extends StatelessWidget {
             child: const Text('Keep'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Cancel Job', style: TextStyle(color: Colors.white)),
           ),
@@ -225,7 +278,7 @@ class JobDetailScreen extends StatelessWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Collection cancelled.'),
-            backgroundColor: Colors.orange,
+            backgroundColor: AppColors.warning,
           ),
         );
       }
@@ -243,12 +296,14 @@ class JobDetailScreen extends StatelessWidget {
   }
 }
 
-class _DetailSection extends StatelessWidget {
+// ─── Detail Row ──────────────────────────────────────────────────────────────
+
+class _DetailRow extends StatelessWidget {
   final IconData icon;
   final String title;
   final String value;
 
-  const _DetailSection({
+  const _DetailRow({
     required this.icon,
     required this.title,
     required this.value,
@@ -259,25 +314,23 @@ class _DetailSection extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 20, color: Colors.grey.shade600),
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: AppColors.primarySurface,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 18, color: AppColors.primary),
+        ),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade500,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
+              Text(title, style: AppTypography.caption),
               const SizedBox(height: 2),
-              Text(
-                value,
-                style: const TextStyle(fontSize: 15),
-              ),
+              Text(value, style: AppTypography.bodyMedium),
             ],
           ),
         ),
@@ -286,32 +339,51 @@ class _DetailSection extends StatelessWidget {
   }
 }
 
-class _ActionButton extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onPressed;
+// ─── Timeline Entry ──────────────────────────────────────────────────────────
 
-  const _ActionButton({
+class _TimelineEntry extends StatelessWidget {
+  final String label;
+  final DateTime time;
+  final bool isActive;
+  final bool isFirst;
+
+  const _TimelineEntry({
     required this.label,
-    required this.icon,
-    required this.color,
-    required this.onPressed,
+    required this.time,
+    required this.isActive,
+    this.isFirst = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 48,
-      child: ElevatedButton.icon(
-        onPressed: onPressed,
-        icon: Icon(icon, color: Colors.white),
-        label: Text(label, style: const TextStyle(color: Colors.white, fontSize: 16)),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Column(
+            children: [
+              Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: isActive ? AppColors.primary : AppColors.divider,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isActive ? AppColors.primary : AppColors.divider,
+                    width: 2,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 12),
+          Text(label, style: AppTypography.bodyMedium),
+          const Spacer(),
+          Text(
+            DateFormat('MMM d, HH:mm').format(time),
+            style: AppTypography.caption,
+          ),
+        ],
       ),
     );
   }
