@@ -4,6 +4,7 @@ import 'presentation/screens/welcome_screen.dart';
 import 'presentation/screens/role_selection_screen.dart';
 import 'presentation/screens/phone_input_screen.dart';
 import 'presentation/screens/otp_screen.dart';
+import 'presentation/screens/complete_profile_screen.dart';
 
 /// Key used to persist onboarding completion state.
 const String kOnboardingCompletedKey = 'onboarding_completed';
@@ -24,10 +25,6 @@ Future<void> markOnboardingCompleted() async {
 enum UserRole { collector, household }
 
 /// Holds state accumulated during the onboarding flow.
-///
-/// This is a simple value object passed forward through the screens.
-/// It does NOT touch any backend/API — that happens in the existing
-/// auth flow after onboarding completes.
 class OnboardingData {
   UserRole? selectedRole;
   String? phoneNumber;
@@ -43,14 +40,8 @@ class OnboardingData {
 }
 
 /// Entry widget for the entire onboarding flow.
-///
-/// Uses a [Navigator] internally so the flow is self-contained and
-/// does not pollute the app's root route table.
 class OnboardingFlow extends StatefulWidget {
-  /// Called when onboarding completes successfully.
   final VoidCallback onComplete;
-
-  /// Called when the user taps "I already have an account".
   final VoidCallback onLogin;
 
   const OnboardingFlow({
@@ -65,10 +56,12 @@ class OnboardingFlow extends StatefulWidget {
 
 class _OnboardingFlowState extends State<OnboardingFlow> {
   final OnboardingData _data = OnboardingData();
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
   @override
   Widget build(BuildContext context) {
     return Navigator(
+      key: _navigatorKey,
       onGenerateRoute: (settings) {
         return MaterialPageRoute(
           builder: (_) => WelcomeScreen(
@@ -81,7 +74,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   }
 
   void _goToRoleSelection() {
-    Navigator.of(context).push(
+    _navigatorKey.currentState?.push(
       _slide(
         RoleSelectionScreen(
           selectedRole: _data.selectedRole,
@@ -89,14 +82,14 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
             _data.selectedRole = role;
           },
           onContinue: _goToPhoneInput,
-          onBack: () => Navigator.of(context).pop(),
+          onBack: () => _navigatorKey.currentState?.pop(),
         ),
       ),
     );
   }
 
   void _goToPhoneInput() {
-    Navigator.of(context).push(
+    _navigatorKey.currentState?.push(
       _slide(
         PhoneInputScreen(
           initialPhone: _data.phoneNumber,
@@ -106,29 +99,43 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
             _data.countryCode = code;
             _goToOtp();
           },
-          onBack: () => Navigator.of(context).pop(),
+          onBack: () => _navigatorKey.currentState?.pop(),
         ),
       ),
     );
   }
 
   void _goToOtp() {
-    Navigator.of(context).push(
+    _navigatorKey.currentState?.push(
       _slide(
         OtpScreen(
           phoneNumber: '${_data.countryCode} ${_data.phoneNumber}',
-          onVerified: () async {
+          onVerified: () {
             _data.otpVerified = true;
-            await markOnboardingCompleted();
-            widget.onComplete();
+            _goToCompleteProfile();
           },
-          onBack: () => Navigator.of(context).pop(),
+          onBack: () => _navigatorKey.currentState?.pop(),
         ),
       ),
     );
   }
 
-  /// Slide-right page transition matching modern mobile patterns.
+  void _goToCompleteProfile() {
+    _navigatorKey.currentState?.push(
+      _slide(
+        CompleteProfileScreen(
+          phone: '${_data.countryCode}${_data.phoneNumber}',
+          role: _data.selectedRole ?? UserRole.household,
+          onComplete: () async {
+            await markOnboardingCompleted();
+            widget.onComplete();
+          },
+          onBack: () => _navigatorKey.currentState?.pop(),
+        ),
+      ),
+    );
+  }
+
   Route _slide(Widget page) {
     return PageRouteBuilder(
       pageBuilder: (context, animation, secondaryAnimation) => page,
