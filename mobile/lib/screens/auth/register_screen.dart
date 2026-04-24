@@ -43,6 +43,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ? null
           : _emailController.text.trim(),
     );
+
+    if (mounted && auth.isAuthenticated) {
+      if (auth.user?.isCollector == true) {
+        Navigator.pushReplacementNamed(context, '/collector-home');
+      } else {
+        Navigator.pushReplacementNamed(context, '/home');
+      }
+    }
   }
 
   @override

@@ -33,6 +33,14 @@ class _LoginScreenState extends State<LoginScreen> {
       phone: _phoneController.text.trim(),
       password: _passwordController.text,
     );
+
+    if (mounted && auth.isAuthenticated) {
+      if (auth.user?.isCollector == true) {
+        Navigator.pushReplacementNamed(context, '/collector-home');
+      } else {
+        Navigator.pushReplacementNamed(context, '/home');
+      }
+    }
   }
 
   @override
