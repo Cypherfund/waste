@@ -50,6 +50,7 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
+    FocusScope.of(context).unfocus();
     widget.onSendCode(_phoneController.text.trim(), _selectedCode);
   }
 

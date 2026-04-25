@@ -5,15 +5,15 @@ import 'package:dio/dio.dart';
 import 'package:wastewise/models/job.dart';
 import 'package:wastewise/models/rating.dart';
 import 'package:wastewise/providers/jobs_provider.dart';
-import 'package:wastewise/services/api/jobs_api.dart';
+import 'package:wastewise/services/api/job_api.dart';
 import 'package:wastewise/services/websocket/websocket_service.dart';
 
-class MockJobsApi extends Mock implements JobsApi {}
+class MockJobApi extends Mock implements JobApi {}
 
 class MockWebSocketService extends Mock implements WebSocketService {}
 
 void main() {
-  late MockJobsApi mockJobsApi;
+  late MockJobApi mockJobApi;
   late MockWebSocketService mockWsService;
   late JobsProvider provider;
   late StreamController<JobStatusUpdate> wsStreamController;
@@ -21,7 +21,7 @@ void main() {
   final testJob = Job(
     id: 'job-1',
     householdId: 'hh-1',
-    status: JobStatus.REQUESTED,
+    status: JobStatus.requested,
     scheduledDate: '2026-04-25',
     scheduledTime: '08:00-10:00',
     locationAddress: 'Test Address',
@@ -30,7 +30,7 @@ void main() {
   );
 
   setUp(() {
-    mockJobsApi = MockJobsApi();
+    mockJobApi = MockJobApi();
     mockWsService = MockWebSocketService();
     wsStreamController = StreamController<JobStatusUpdate>.broadcast();
 
@@ -39,7 +39,7 @@ void main() {
     when(() => mockWsService.subscribeToJob(any())).thenReturn(null);
 
     provider = JobsProvider(
-      jobsApi: mockJobsApi,
+      jobsApi: mockJobApi,
       wsService: mockWsService,
     );
   });
@@ -52,7 +52,7 @@ void main() {
   group('JobsProvider', () {
     group('loadJobs', () {
       test('loads jobs successfully', () async {
-        when(() => mockJobsApi.getMyJobs(
+        when(() => mockJobApi.getMyJobs(
               status: any(named: 'status'),
               page: any(named: 'page'),
             )).thenAnswer((_) async => PaginatedJobs(
@@ -72,7 +72,7 @@ void main() {
       });
 
       test('sets error on failure', () async {
-        when(() => mockJobsApi.getMyJobs(
+        when(() => mockJobApi.getMyJobs(
               status: any(named: 'status'),
               page: any(named: 'page'),
             )).thenThrow(DioException(
@@ -90,7 +90,7 @@ void main() {
 
     group('createJob', () {
       test('creates job and adds to list', () async {
-        when(() => mockJobsApi.createJob(
+        when(() => mockJobApi.createJob(
               scheduledDate: any(named: 'scheduledDate'),
               scheduledTime: any(named: 'scheduledTime'),
               locationAddress: any(named: 'locationAddress'),
@@ -112,7 +112,7 @@ void main() {
       });
 
       test('returns null and sets error on failure', () async {
-        when(() => mockJobsApi.createJob(
+        when(() => mockJobApi.createJob(
               scheduledDate: any(named: 'scheduledDate'),
               scheduledTime: any(named: 'scheduledTime'),
               locationAddress: any(named: 'locationAddress'),
@@ -142,11 +142,11 @@ void main() {
     group('validateJob', () {
       test('validates job and updates list', () async {
         // First load a job
-        when(() => mockJobsApi.getMyJobs(
+        when(() => mockJobApi.getMyJobs(
               status: any(named: 'status'),
               page: any(named: 'page'),
             )).thenAnswer((_) async => PaginatedJobs(
-              data: [testJob.copyWith(status: JobStatus.COMPLETED)],
+              data: [testJob.copyWith(status: JobStatus.completed)],
               page: 1,
               limit: 20,
               total: 1,
@@ -154,18 +154,18 @@ void main() {
             ));
         await provider.loadJobs(refresh: true);
 
-        final validatedJob = testJob.copyWith(status: JobStatus.VALIDATED);
-        when(() => mockJobsApi.validateJob('job-1'))
+        final validatedJob = testJob.copyWith(status: JobStatus.validated);
+        when(() => mockJobApi.validateProof('job-1'))
             .thenAnswer((_) async => validatedJob);
 
         final success = await provider.validateJob('job-1');
 
         expect(success, true);
-        expect(provider.jobs.first.status, JobStatus.VALIDATED);
+        expect(provider.jobs.first.status, JobStatus.validated);
       });
 
       test('returns false on error', () async {
-        when(() => mockJobsApi.validateJob('job-1')).thenThrow(DioException(
+        when(() => mockJobApi.validateProof('job-1')).thenThrow(DioException(
           requestOptions: RequestOptions(path: '/jobs/job-1/validate'),
           response: Response(
             requestOptions: RequestOptions(path: '/jobs/job-1/validate'),
@@ -183,7 +183,7 @@ void main() {
 
     group('cancelJob', () {
       test('cancels job and updates list', () async {
-        when(() => mockJobsApi.getMyJobs(
+        when(() => mockJobApi.getMyJobs(
               status: any(named: 'status'),
               page: any(named: 'page'),
             )).thenAnswer((_) async => PaginatedJobs(
@@ -195,22 +195,22 @@ void main() {
             ));
         await provider.loadJobs(refresh: true);
 
-        final cancelledJob = testJob.copyWith(status: JobStatus.CANCELLED);
-        when(() => mockJobsApi.cancelJob('job-1', reason: 'No longer needed'))
+        final cancelledJob = testJob.copyWith(status: JobStatus.cancelled);
+        when(() => mockJobApi.cancelJob('job-1', reason: 'No longer needed'))
             .thenAnswer((_) async => cancelledJob);
 
         final success =
             await provider.cancelJob('job-1', reason: 'No longer needed');
 
         expect(success, true);
-        expect(provider.jobs.first.status, JobStatus.CANCELLED);
+        expect(provider.jobs.first.status, JobStatus.cancelled);
       });
     });
 
     group('rateJob', () {
       test('rates job and refreshes it', () async {
-        final validatedJob = testJob.copyWith(status: JobStatus.VALIDATED);
-        when(() => mockJobsApi.getMyJobs(
+        final validatedJob = testJob.copyWith(status: JobStatus.validated);
+        when(() => mockJobApi.getMyJobs(
               status: any(named: 'status'),
               page: any(named: 'page'),
             )).thenAnswer((_) async => PaginatedJobs(
@@ -222,7 +222,7 @@ void main() {
             ));
         await provider.loadJobs(refresh: true);
 
-        when(() => mockJobsApi.rateJob('job-1', value: 5, comment: 'Great'))
+        when(() => mockJobApi.rateJob('job-1', rating: 5, comment: 'Great'))
             .thenAnswer((_) async => Rating(
                   id: 'rating-1',
                   jobId: 'job-1',
@@ -233,21 +233,21 @@ void main() {
                   createdAt: DateTime.now(),
                 ));
 
-        final ratedJob = testJob.copyWith(status: JobStatus.RATED);
-        when(() => mockJobsApi.getJob('job-1'))
+        final ratedJob = testJob.copyWith(status: JobStatus.rated);
+        when(() => mockJobApi.getJob('job-1'))
             .thenAnswer((_) async => ratedJob);
 
         final success =
             await provider.rateJob('job-1', value: 5, comment: 'Great');
 
         expect(success, true);
-        expect(provider.jobs.first.status, JobStatus.RATED);
+        expect(provider.jobs.first.status, JobStatus.rated);
       });
     });
 
     group('WebSocket updates', () {
       test('updates job status on WebSocket event', () async {
-        when(() => mockJobsApi.getMyJobs(
+        when(() => mockJobApi.getMyJobs(
               status: any(named: 'status'),
               page: any(named: 'page'),
             )).thenAnswer((_) async => PaginatedJobs(
@@ -259,11 +259,11 @@ void main() {
             ));
         await provider.loadJobs(refresh: true);
 
-        expect(provider.jobs.first.status, JobStatus.REQUESTED);
+        expect(provider.jobs.first.status, JobStatus.requested);
 
         wsStreamController.add(JobStatusUpdate(
           jobId: 'job-1',
-          status: JobStatus.ASSIGNED,
+          status: JobStatus.assigned,
           collectorId: 'col-1',
           updatedAt: DateTime.now(),
         ));
@@ -271,11 +271,11 @@ void main() {
         // Allow stream to process
         await Future.delayed(Duration.zero);
 
-        expect(provider.jobs.first.status, JobStatus.ASSIGNED);
+        expect(provider.jobs.first.status, JobStatus.assigned);
       });
 
       test('ignores updates for unknown jobs', () async {
-        when(() => mockJobsApi.getMyJobs(
+        when(() => mockJobApi.getMyJobs(
               status: any(named: 'status'),
               page: any(named: 'page'),
             )).thenAnswer((_) async => PaginatedJobs(
@@ -289,13 +289,13 @@ void main() {
 
         wsStreamController.add(JobStatusUpdate(
           jobId: 'unknown-job',
-          status: JobStatus.COMPLETED,
+          status: JobStatus.completed,
           updatedAt: DateTime.now(),
         ));
 
         await Future.delayed(Duration.zero);
 
-        expect(provider.jobs.first.status, JobStatus.REQUESTED);
+        expect(provider.jobs.first.status, JobStatus.requested);
       });
     });
 
@@ -303,12 +303,12 @@ void main() {
       test('filters correctly', () async {
         final jobs = [
           testJob,
-          testJob.copyWith(status: JobStatus.COMPLETED),
-          testJob.copyWith(status: JobStatus.VALIDATED),
-          testJob.copyWith(status: JobStatus.CANCELLED),
+          testJob.copyWith(status: JobStatus.completed),
+          testJob.copyWith(status: JobStatus.validated),
+          testJob.copyWith(status: JobStatus.cancelled),
         ];
         // Trick: use different IDs
-        when(() => mockJobsApi.getMyJobs(
+        when(() => mockJobApi.getMyJobs(
               status: any(named: 'status'),
               page: any(named: 'page'),
             )).thenAnswer((_) async => PaginatedJobs(

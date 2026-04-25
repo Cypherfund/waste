@@ -60,6 +60,15 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       widget.onComplete();
     } else {
       debugPrint('CompleteProfileScreen: Registration did not result in authentication. Error: ${auth.error}');
+      if (auth.error != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(auth.error!),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 

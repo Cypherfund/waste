@@ -2,8 +2,9 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'offline_queue_service.dart';
 import 'connectivity_service.dart';
-import '../api/jobs_api.dart';
+import '../api/job_api.dart';
 import '../api/api_client.dart';
+import '../../models/job.dart';
 
 enum SyncStatus { idle, syncing, completed, error }
 
@@ -24,7 +25,7 @@ class SyncResult {
 class SyncService {
   final OfflineQueueService _queueService;
   final ConnectivityService _connectivityService;
-  final JobsApi _jobsApi;
+  final JobApi _jobApi;
 
   StreamSubscription? _connectivitySub;
   Timer? _retryTimer;
@@ -36,10 +37,10 @@ class SyncService {
   SyncService({
     required OfflineQueueService queueService,
     required ConnectivityService connectivityService,
-    required JobsApi jobsApi,
+    required JobApi jobApi,
   })  : _queueService = queueService,
         _connectivityService = connectivityService,
-        _jobsApi = jobsApi;
+        _jobApi = jobApi;
 
   Stream<SyncStatus> get statusStream => _statusController.stream;
   Stream<SyncResult> get resultStream => _resultController.stream;
@@ -134,6 +135,31 @@ class SyncService {
     return result;
   }
 
+  // ─── LOCAL DATA MANAGEMENT ─────────────────────────────────
+
+  Future<void> syncJobs(List<Job> jobs) async {
+    // This would typically save to a local 'jobs' table for offline viewing
+    // For now, we'll just log it. In a real app, we'd use a LocalJobService.
+    debugPrint('[Sync] Local job caching not fully implemented yet');
+  }
+
+  Future<List<Job>> getLocalJobs() async {
+    // Return empty for now as local caching isn't fully implemented
+    return [];
+  }
+
+  Future<void> addJob(Job job) async {
+    // Cache single job
+  }
+
+  Future<void> updateJob(Job job) async {
+    // Update cached job
+  }
+
+  Future<void> updateJobStatus(String jobId, JobStatus status) async {
+    // Update status in local cache
+  }
+
   Future<void> _processItem(QueuedItem item) async {
     switch (item.action) {
       case QueueAction.CREATE_JOB:
@@ -153,7 +179,7 @@ class SyncService {
 
   Future<void> _processCreateJob(QueuedItem item) async {
     final data = item.data;
-    await _jobsApi.createJob(
+    await _jobApi.createJob(
       scheduledDate: data['scheduledDate'] as String,
       scheduledTime: data['scheduledTime'] as String,
       locationAddress: data['locationAddress'] as String,
@@ -166,7 +192,7 @@ class SyncService {
   Future<void> _processCompleteJob(QueuedItem item) async {
     final data = item.data;
     final jobId = item.jobId!;
-    await _jobsApi.completeJob(
+    await _jobApi.completeJob(
       jobId,
       proofImageUrl: data['proofImageUrl'] as String,
       collectorLat: (data['collectorLat'] as num?)?.toDouble(),
@@ -177,9 +203,9 @@ class SyncService {
   Future<void> _processRateJob(QueuedItem item) async {
     final data = item.data;
     final jobId = item.jobId!;
-    await _jobsApi.rateJob(
+    await _jobApi.rateJob(
       jobId,
-      value: data['value'] as int,
+      rating: data['value'] as int,
       comment: data['comment'] as String?,
     );
   }

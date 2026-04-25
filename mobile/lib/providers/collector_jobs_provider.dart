@@ -2,14 +2,14 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/job.dart';
 import '../services/api/api_client.dart';
-import '../services/api/jobs_api.dart';
+import '../services/api/job_api.dart';
 import '../services/api/files_api.dart';
 import '../services/websocket/websocket_service.dart';
 import '../services/location/location_tracking_service.dart';
 import 'dart:io';
 
 class CollectorJobsProvider extends ChangeNotifier {
-  final JobsApi _jobsApi;
+  final JobApi _jobApi;
   final FilesApi _filesApi;
   final WebSocketService _wsService;
   final LocationTrackingService _locationService;
@@ -22,11 +22,11 @@ class CollectorJobsProvider extends ChangeNotifier {
   StreamSubscription? _assignedSub;
 
   CollectorJobsProvider({
-    required JobsApi jobsApi,
+    required JobApi jobApi,
     required FilesApi filesApi,
     required WebSocketService wsService,
     required LocationTrackingService locationService,
-  })  : _jobsApi = jobsApi,
+  })  : _jobApi = jobApi,
         _filesApi = filesApi,
         _wsService = wsService,
         _locationService = locationService {
@@ -41,21 +41,21 @@ class CollectorJobsProvider extends ChangeNotifier {
   bool get isActioning => _isActioning;
 
   List<Job> get assignedJobs =>
-      _jobs.where((j) => j.status == JobStatus.ASSIGNED).toList();
+      _jobs.where((j) => j.status == JobStatus.assigned).toList();
 
   List<Job> get inProgressJobs =>
-      _jobs.where((j) => j.status == JobStatus.IN_PROGRESS).toList();
+      _jobs.where((j) => j.status == JobStatus.inProgress).toList();
 
   List<Job> get completedJobs => _jobs
       .where((j) =>
-          j.status == JobStatus.COMPLETED ||
-          j.status == JobStatus.VALIDATED ||
-          j.status == JobStatus.RATED)
+          j.status == JobStatus.completed ||
+          j.status == JobStatus.validated ||
+          j.status == JobStatus.rated)
       .toList();
 
   List<Job> get activeJobs => _jobs
       .where(
-          (j) => j.status == JobStatus.ASSIGNED || j.status == JobStatus.IN_PROGRESS)
+          (j) => j.status == JobStatus.assigned || j.status == JobStatus.inProgress)
       .toList();
 
   Job? getJobById(String id) {
@@ -76,7 +76,7 @@ class CollectorJobsProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await _jobsApi.getAssignedJobs();
+      final result = await _jobApi.getAssignedJobs();
       _jobs = result.data;
       for (final job in _jobs) {
         _wsService.subscribeToJob(job.id);
@@ -97,7 +97,7 @@ class CollectorJobsProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final updated = await _jobsApi.acceptJob(jobId);
+      final updated = await _jobApi.acceptJob(jobId);
       _updateJobInList(updated);
       return true;
     } catch (e) {
@@ -117,7 +117,7 @@ class CollectorJobsProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _jobsApi.rejectJob(jobId, reason: reason);
+      await _jobApi.rejectJob(jobId, reason: reason);
       _jobs.removeWhere((j) => j.id == jobId);
       _wsService.unsubscribeFromJob(jobId);
       return true;
@@ -138,7 +138,7 @@ class CollectorJobsProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final updated = await _jobsApi.startJob(jobId);
+      final updated = await _jobApi.startJob(jobId);
       _updateJobInList(updated);
       await _locationService.startTracking(jobId);
       return true;
@@ -171,7 +171,7 @@ class CollectorJobsProvider extends ChangeNotifier {
         lng = pos?.$2;
       } catch (_) {}
 
-      final updated = await _jobsApi.completeJob(
+      final updated = await _jobApi.completeJob(
         jobId,
         proofImageUrl: uploadResult.fileUrl,
         collectorLat: lat,
@@ -205,7 +205,7 @@ class CollectorJobsProvider extends ChangeNotifier {
 
   Future<Job?> refreshJob(String jobId) async {
     try {
-      final job = await _jobsApi.getJob(jobId);
+      final job = await _jobApi.getJob(jobId);
       _updateJobInList(job);
       return job;
     } catch (e) {
@@ -222,8 +222,8 @@ class CollectorJobsProvider extends ChangeNotifier {
     if (idx != -1) {
       _jobs[idx] = _jobs[idx].copyWith(status: update.status);
 
-      // Stop location tracking if job is no longer IN_PROGRESS
-      if (update.status != JobStatus.IN_PROGRESS &&
+      // Stop location tracking if job is no longer inProgress
+      if (update.status != JobStatus.inProgress &&
           _locationService.activeJobId == update.jobId) {
         _locationService.stopTracking();
       }

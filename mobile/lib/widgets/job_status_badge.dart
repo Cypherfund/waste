@@ -31,63 +31,63 @@ class JobStatusBadge extends StatelessWidget {
 
   String get _label {
     switch (status) {
-      case JobStatus.REQUESTED:
+      case JobStatus.requested:
         return 'Requested';
-      case JobStatus.ASSIGNED:
+      case JobStatus.assigned:
         return 'Assigned';
-      case JobStatus.IN_PROGRESS:
+      case JobStatus.inProgress:
         return 'In Progress';
-      case JobStatus.COMPLETED:
+      case JobStatus.completed:
         return 'Completed';
-      case JobStatus.VALIDATED:
+      case JobStatus.validated:
         return 'Validated';
-      case JobStatus.RATED:
+      case JobStatus.rated:
         return 'Rated';
-      case JobStatus.CANCELLED:
+      case JobStatus.cancelled:
         return 'Cancelled';
-      case JobStatus.DISPUTED:
+      case JobStatus.disputed:
         return 'Disputed';
     }
   }
 
   Color get _backgroundColor {
     switch (status) {
-      case JobStatus.REQUESTED:
-        return AppColors.badgeRequested.withOpacity(0.1);
-      case JobStatus.ASSIGNED:
-        return AppColors.badgeAssigned.withOpacity(0.1);
-      case JobStatus.IN_PROGRESS:
-        return AppColors.badgeInProgress.withOpacity(0.1);
-      case JobStatus.COMPLETED:
-        return AppColors.badgeCompleted.withOpacity(0.1);
-      case JobStatus.VALIDATED:
-        return AppColors.badgeValidated.withOpacity(0.1);
-      case JobStatus.RATED:
-        return AppColors.badgeRated.withOpacity(0.1);
-      case JobStatus.CANCELLED:
-        return AppColors.badgeCancelled.withOpacity(0.1);
-      case JobStatus.DISPUTED:
-        return AppColors.badgeDisputed.withOpacity(0.1);
+      case JobStatus.requested:
+        return AppColors.badgeRequested.withValues(alpha: 0.1);
+      case JobStatus.assigned:
+        return AppColors.badgeAssigned.withValues(alpha: 0.1);
+      case JobStatus.inProgress:
+        return AppColors.badgeInProgress.withValues(alpha: 0.1);
+      case JobStatus.completed:
+        return AppColors.badgeCompleted.withValues(alpha: 0.1);
+      case JobStatus.validated:
+        return AppColors.badgeValidated.withValues(alpha: 0.1);
+      case JobStatus.rated:
+        return AppColors.badgeRated.withValues(alpha: 0.1);
+      case JobStatus.cancelled:
+        return AppColors.badgeCancelled.withValues(alpha: 0.1);
+      case JobStatus.disputed:
+        return AppColors.badgeDisputed.withValues(alpha: 0.1);
     }
   }
 
   Color get _textColor {
     switch (status) {
-      case JobStatus.REQUESTED:
+      case JobStatus.requested:
         return AppColors.badgeRequested;
-      case JobStatus.ASSIGNED:
+      case JobStatus.assigned:
         return AppColors.badgeAssigned;
-      case JobStatus.IN_PROGRESS:
+      case JobStatus.inProgress:
         return AppColors.badgeInProgress;
-      case JobStatus.COMPLETED:
+      case JobStatus.completed:
         return AppColors.badgeCompleted;
-      case JobStatus.VALIDATED:
+      case JobStatus.validated:
         return AppColors.badgeValidated;
-      case JobStatus.RATED:
+      case JobStatus.rated:
         return AppColors.badgeRated;
-      case JobStatus.CANCELLED:
+      case JobStatus.cancelled:
         return AppColors.badgeCancelled;
-      case JobStatus.DISPUTED:
+      case JobStatus.disputed:
         return AppColors.badgeDisputed;
     }
   }

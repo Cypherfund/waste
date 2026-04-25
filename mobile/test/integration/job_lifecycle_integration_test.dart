@@ -3,30 +3,35 @@
 /// Tests the complete job flow using mocked API services, verifying that
 /// providers, models, and WebSocket updates work together correctly:
 ///   Create → Assign (WS) → Start (WS) → Complete → Validate → Rate
+library;
 import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:dio/dio.dart';
 import 'package:wastewise/models/job.dart';
 import 'package:wastewise/models/rating.dart';
-import 'package:wastewise/providers/jobs_provider.dart';
-import 'package:wastewise/services/api/jobs_api.dart';
+import 'package:wastewise/providers/job_provider.dart';
+import 'package:wastewise/services/api/job_api.dart';
+import 'package:wastewise/services/offline/sync_service.dart';
 import 'package:wastewise/services/websocket/websocket_service.dart';
 
-class MockJobsApi extends Mock implements JobsApi {}
+class MockJobApi extends Mock implements JobApi {}
 
 class MockWebSocketService extends Mock implements WebSocketService {}
 
+class MockSyncService extends Mock implements SyncService {}
+
 void main() {
-  late MockJobsApi mockJobsApi;
+  late MockJobApi mockJobApi;
   late MockWebSocketService mockWsService;
-  late JobsProvider provider;
+  late MockSyncService mockSyncService;
+  late JobProvider provider;
   late StreamController<JobStatusUpdate> wsController;
 
   // Test data factory
   Job makeJob({
     String id = 'job-lifecycle-1',
-    JobStatus status = JobStatus.REQUESTED,
+    JobStatus status = JobStatus.requested,
     String? collectorId,
   }) =>
       Job(
@@ -45,22 +50,44 @@ void main() {
       );
 
   setUp(() {
-    mockJobsApi = MockJobsApi();
+    mockJobApi = MockJobApi();
     mockWsService = MockWebSocketService();
+    mockSyncService = MockSyncService();
     wsController = StreamController<JobStatusUpdate>.broadcast();
 
     when(() => mockWsService.jobStatusStream)
         .thenAnswer((_) => wsController.stream);
     when(() => mockWsService.subscribeToJob(any())).thenReturn(null);
+    when(() => mockSyncService.syncJobs(any())).thenAnswer((_) async => {});
+    when(() => mockSyncService.updateJob(any())).thenAnswer((_) async => {});
+    when(() => mockSyncService.addJob(any())).thenAnswer((_) async => {});
 
-    provider = JobsProvider(
-      jobsApi: mockJobsApi,
+    provider = JobProvider(
+      jobApi: mockJobApi,
+      syncService: mockSyncService,
       wsService: mockWsService,
     );
   });
 
   setUpAll(() {
-    registerFallbackValue(JobStatus.REQUESTED);
+    registerFallbackValue(JobStatus.requested);
+    registerFallbackValue(Job(
+      id: 'fb',
+      householdId: 'hh',
+      status: JobStatus.requested,
+      scheduledDate: '',
+      scheduledTime: '',
+      locationAddress: '',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    ));
+    registerFallbackValue(PaginatedJobs(
+      data: [],
+      page: 1,
+      limit: 20,
+      total: 0,
+      pages: 1,
+    ));
   });
 
   tearDown(() {
@@ -72,7 +99,7 @@ void main() {
     test('Step 1: Household creates a job via provider', () async {
       final createdJob = makeJob();
 
-      when(() => mockJobsApi.createJob(
+      when(() => mockJobApi.createJob(
             scheduledDate: any(named: 'scheduledDate'),
             scheduledTime: any(named: 'scheduledTime'),
             locationAddress: any(named: 'locationAddress'),
@@ -82,7 +109,7 @@ void main() {
           )).thenAnswer((_) async => createdJob);
 
       final result = await provider.createJob(
-        scheduledDate: '2026-04-25',
+        scheduledDate: DateTime(2026, 4, 25),
         scheduledTime: '09:00',
         locationAddress: '123 Integration Test Street, Douala',
         locationLat: 4.04,
@@ -92,7 +119,7 @@ void main() {
 
       expect(result, isNotNull);
       expect(result!.id, 'job-lifecycle-1');
-      expect(result.status, JobStatus.REQUESTED);
+      expect(result.status, JobStatus.requested);
       expect(provider.jobs.length, 1);
       expect(provider.jobs.first.isActive, true);
 
@@ -102,7 +129,7 @@ void main() {
 
     test('Step 2: Job appears in household job list after creation', () async {
       final jobs = [makeJob()];
-      when(() => mockJobsApi.getMyJobs(
+      when(() => mockJobApi.getMyJobs(
             status: any(named: 'status'),
             page: any(named: 'page'),
           )).thenAnswer((_) async => PaginatedJobs(
@@ -116,15 +143,15 @@ void main() {
       await provider.loadJobs(refresh: true);
 
       expect(provider.jobs.length, 1);
-      expect(provider.jobs.first.status, JobStatus.REQUESTED);
+      expect(provider.jobs.first.status, JobStatus.requested);
       expect(provider.activeJobs.length, 1);
       expect(provider.completedJobs.length, 0);
       expect(provider.error, isNull);
     });
 
-    test('Step 3: Real-time WebSocket update → job ASSIGNED', () async {
+    test('Step 3: Real-time WebSocket update → job assigned', () async {
       // Load initial job
-      when(() => mockJobsApi.getMyJobs(
+      when(() => mockJobApi.getMyJobs(
             status: any(named: 'status'),
             page: any(named: 'page'),
           )).thenAnswer((_) async => PaginatedJobs(
@@ -135,29 +162,29 @@ void main() {
             pages: 1,
           ));
       await provider.loadJobs(refresh: true);
-      expect(provider.jobs.first.status, JobStatus.REQUESTED);
+      expect(provider.jobs.first.status, JobStatus.requested);
 
       // Simulate WS assignment event (from backend)
       wsController.add(JobStatusUpdate(
         jobId: 'job-lifecycle-1',
-        status: JobStatus.ASSIGNED,
+        status: JobStatus.assigned,
         collectorId: 'col-1',
         updatedAt: DateTime.now(),
       ));
       await Future.delayed(Duration.zero);
 
-      expect(provider.jobs.first.status, JobStatus.ASSIGNED);
+      expect(provider.jobs.first.status, JobStatus.assigned);
       expect(provider.jobs.first.collectorId, 'col-1');
       expect(provider.jobs.first.isActive, true);
     });
 
-    test('Step 4: Real-time WebSocket update → job IN_PROGRESS', () async {
-      // Load ASSIGNED job
-      when(() => mockJobsApi.getMyJobs(
+    test('Step 4: Real-time WebSocket update → job inProgress', () async {
+      // Load assigned job
+      when(() => mockJobApi.getMyJobs(
             status: any(named: 'status'),
             page: any(named: 'page'),
           )).thenAnswer((_) async => PaginatedJobs(
-            data: [makeJob(status: JobStatus.ASSIGNED, collectorId: 'col-1')],
+            data: [makeJob(status: JobStatus.assigned, collectorId: 'col-1')],
             page: 1,
             limit: 20,
             total: 1,
@@ -168,24 +195,24 @@ void main() {
       // Simulate WS start event
       wsController.add(JobStatusUpdate(
         jobId: 'job-lifecycle-1',
-        status: JobStatus.IN_PROGRESS,
+        status: JobStatus.inProgress,
         collectorId: 'col-1',
         updatedAt: DateTime.now(),
       ));
       await Future.delayed(Duration.zero);
 
-      expect(provider.jobs.first.status, JobStatus.IN_PROGRESS);
+      expect(provider.jobs.first.status, JobStatus.inProgress);
       expect(provider.jobs.first.isActive, true);
       expect(provider.jobs.first.canCancel, false);
     });
 
-    test('Step 5: Real-time WebSocket update → job COMPLETED', () async {
-      when(() => mockJobsApi.getMyJobs(
+    test('Step 5: Real-time WebSocket update → job completed', () async {
+      when(() => mockJobApi.getMyJobs(
             status: any(named: 'status'),
             page: any(named: 'page'),
           )).thenAnswer((_) async => PaginatedJobs(
             data: [
-              makeJob(status: JobStatus.IN_PROGRESS, collectorId: 'col-1')
+              makeJob(status: JobStatus.inProgress, collectorId: 'col-1')
             ],
             page: 1,
             limit: 20,
@@ -197,13 +224,13 @@ void main() {
       // Simulate WS completion event
       wsController.add(JobStatusUpdate(
         jobId: 'job-lifecycle-1',
-        status: JobStatus.COMPLETED,
+        status: JobStatus.completed,
         collectorId: 'col-1',
         updatedAt: DateTime.now(),
       ));
       await Future.delayed(Duration.zero);
 
-      expect(provider.jobs.first.status, JobStatus.COMPLETED);
+      expect(provider.jobs.first.status, JobStatus.completed);
       expect(provider.jobs.first.isActive, false);
       expect(provider.jobs.first.canValidate, true);
       expect(provider.completedJobs.length, 1);
@@ -212,8 +239,8 @@ void main() {
     test('Step 6: Household validates the completed job', () async {
       // Load completed job
       final completedJob =
-          makeJob(status: JobStatus.COMPLETED, collectorId: 'col-1');
-      when(() => mockJobsApi.getMyJobs(
+          makeJob(status: JobStatus.completed, collectorId: 'col-1');
+      when(() => mockJobApi.getMyJobs(
             status: any(named: 'status'),
             page: any(named: 'page'),
           )).thenAnswer((_) async => PaginatedJobs(
@@ -229,22 +256,22 @@ void main() {
 
       // Validate
       final validatedJob =
-          makeJob(status: JobStatus.VALIDATED, collectorId: 'col-1');
-      when(() => mockJobsApi.validateJob('job-lifecycle-1'))
+          makeJob(status: JobStatus.validated, collectorId: 'col-1');
+      when(() => mockJobApi.validateProof('job-lifecycle-1'))
           .thenAnswer((_) async => validatedJob);
 
-      final success = await provider.validateJob('job-lifecycle-1');
+      final success = await provider.validateProof('job-lifecycle-1');
 
       expect(success, true);
-      expect(provider.jobs.first.status, JobStatus.VALIDATED);
+      expect(provider.jobs.first.status, JobStatus.validated);
       expect(provider.jobs.first.canRate, true);
     });
 
     test('Step 7: Household rates the validated job', () async {
       // Load validated job
       final validatedJob =
-          makeJob(status: JobStatus.VALIDATED, collectorId: 'col-1');
-      when(() => mockJobsApi.getMyJobs(
+          makeJob(status: JobStatus.validated, collectorId: 'col-1');
+      when(() => mockJobApi.getMyJobs(
             status: any(named: 'status'),
             page: any(named: 'page'),
           )).thenAnswer((_) async => PaginatedJobs(
@@ -258,7 +285,7 @@ void main() {
 
       // Rate
       when(() =>
-              mockJobsApi.rateJob('job-lifecycle-1', value: 5, comment: 'Great'))
+              mockJobApi.rateJob('job-lifecycle-1', rating: 5, comment: 'Great'))
           .thenAnswer((_) async => Rating(
                 id: 'rating-1',
                 jobId: 'job-lifecycle-1',
@@ -270,25 +297,25 @@ void main() {
               ));
 
       final ratedJob =
-          makeJob(status: JobStatus.RATED, collectorId: 'col-1');
-      when(() => mockJobsApi.getJob('job-lifecycle-1'))
+          makeJob(status: JobStatus.rated, collectorId: 'col-1');
+      when(() => mockJobApi.getJob('job-lifecycle-1'))
           .thenAnswer((_) async => ratedJob);
 
       final success = await provider.rateJob(
         'job-lifecycle-1',
-        value: 5,
+        5,
         comment: 'Great',
       );
 
       expect(success, true);
-      expect(provider.jobs.first.status, JobStatus.RATED);
+      expect(provider.jobs.first.status, JobStatus.rated);
       expect(provider.jobs.first.isTerminal, true);
     });
   });
 
   group('Job Cancellation Integration', () {
-    test('household can cancel a REQUESTED job', () async {
-      when(() => mockJobsApi.getMyJobs(
+    test('household can cancel a requested job', () async {
+      when(() => mockJobApi.getMyJobs(
             status: any(named: 'status'),
             page: any(named: 'page'),
           )).thenAnswer((_) async => PaginatedJobs(
@@ -301,8 +328,8 @@ void main() {
       await provider.loadJobs(refresh: true);
       expect(provider.jobs.first.canCancel, true);
 
-      final cancelledJob = makeJob(status: JobStatus.CANCELLED);
-      when(() => mockJobsApi.cancelJob('job-lifecycle-1',
+      final cancelledJob = makeJob(status: JobStatus.cancelled);
+      when(() => mockJobApi.cancelJob('job-lifecycle-1',
               reason: 'No longer needed'))
           .thenAnswer((_) async => cancelledJob);
 
@@ -310,14 +337,14 @@ void main() {
           reason: 'No longer needed');
 
       expect(success, true);
-      expect(provider.jobs.first.status, JobStatus.CANCELLED);
+      expect(provider.jobs.first.status, JobStatus.cancelled);
       expect(provider.jobs.first.isTerminal, true);
     });
 
-    test('cancel fails for COMPLETED job (backend rejects)', () async {
+    test('cancel fails for completed job (backend rejects)', () async {
       final completedJob =
-          makeJob(status: JobStatus.COMPLETED, collectorId: 'col-1');
-      when(() => mockJobsApi.getMyJobs(
+          makeJob(status: JobStatus.completed, collectorId: 'col-1');
+      when(() => mockJobApi.getMyJobs(
             status: any(named: 'status'),
             page: any(named: 'page'),
           )).thenAnswer((_) async => PaginatedJobs(
@@ -330,7 +357,7 @@ void main() {
       await provider.loadJobs(refresh: true);
       expect(provider.jobs.first.canCancel, false);
 
-      when(() => mockJobsApi.cancelJob('job-lifecycle-1', reason: 'Changed mind'))
+      when(() => mockJobApi.cancelJob('job-lifecycle-1', reason: 'Changed mind'))
           .thenThrow(DioException(
         requestOptions: RequestOptions(path: '/jobs/job-lifecycle-1/cancel'),
         response: Response(
@@ -339,7 +366,7 @@ void main() {
           statusCode: 400,
           data: {
             'message':
-                'Households can only cancel jobs in REQUESTED or ASSIGNED status'
+                'Households can only cancel jobs in requested or assigned status'
           },
         ),
       ));
@@ -348,13 +375,13 @@ void main() {
           await provider.cancelJob('job-lifecycle-1', reason: 'Changed mind');
 
       expect(success, false);
-      expect(provider.error, contains('REQUESTED or ASSIGNED'));
+      expect(provider.error, contains('requested or assigned'));
     });
   });
 
   group('WebSocket Real-time Update Integration', () {
     test('multiple rapid WS updates are applied in order', () async {
-      when(() => mockJobsApi.getMyJobs(
+      when(() => mockJobApi.getMyJobs(
             status: any(named: 'status'),
             page: any(named: 'page'),
           )).thenAnswer((_) async => PaginatedJobs(
@@ -369,30 +396,30 @@ void main() {
       // Simulate rapid status transitions via WS
       wsController.add(JobStatusUpdate(
         jobId: 'job-lifecycle-1',
-        status: JobStatus.ASSIGNED,
+        status: JobStatus.assigned,
         collectorId: 'col-1',
         updatedAt: DateTime.now(),
       ));
       wsController.add(JobStatusUpdate(
         jobId: 'job-lifecycle-1',
-        status: JobStatus.IN_PROGRESS,
+        status: JobStatus.inProgress,
         collectorId: 'col-1',
         updatedAt: DateTime.now(),
       ));
       wsController.add(JobStatusUpdate(
         jobId: 'job-lifecycle-1',
-        status: JobStatus.COMPLETED,
+        status: JobStatus.completed,
         collectorId: 'col-1',
         updatedAt: DateTime.now(),
       ));
 
       await Future.delayed(const Duration(milliseconds: 50));
 
-      expect(provider.jobs.first.status, JobStatus.COMPLETED);
+      expect(provider.jobs.first.status, JobStatus.completed);
     });
 
     test('WS updates for unknown jobs are ignored', () async {
-      when(() => mockJobsApi.getMyJobs(
+      when(() => mockJobApi.getMyJobs(
             status: any(named: 'status'),
             page: any(named: 'page'),
           )).thenAnswer((_) async => PaginatedJobs(
@@ -406,19 +433,19 @@ void main() {
 
       wsController.add(JobStatusUpdate(
         jobId: 'unknown-job-id',
-        status: JobStatus.COMPLETED,
+        status: JobStatus.completed,
         updatedAt: DateTime.now(),
       ));
       await Future.delayed(Duration.zero);
 
       // Original job unchanged
-      expect(provider.jobs.first.status, JobStatus.REQUESTED);
+      expect(provider.jobs.first.status, JobStatus.requested);
     });
 
     test('WS updates across multiple jobs work independently', () async {
       final job1 = makeJob(id: 'job-1');
       final job2 = makeJob(id: 'job-2');
-      when(() => mockJobsApi.getMyJobs(
+      when(() => mockJobApi.getMyJobs(
             status: any(named: 'status'),
             page: any(named: 'page'),
           )).thenAnswer((_) async => PaginatedJobs(
@@ -433,20 +460,20 @@ void main() {
       // Only update job-1
       wsController.add(JobStatusUpdate(
         jobId: 'job-1',
-        status: JobStatus.ASSIGNED,
+        status: JobStatus.assigned,
         collectorId: 'col-1',
         updatedAt: DateTime.now(),
       ));
       await Future.delayed(Duration.zero);
 
-      expect(provider.jobs[0].status, JobStatus.ASSIGNED);
-      expect(provider.jobs[1].status, JobStatus.REQUESTED);
+      expect(provider.jobs[0].status, JobStatus.assigned);
+      expect(provider.jobs[1].status, JobStatus.requested);
     });
   });
 
   group('Error Handling Integration', () {
     test('network error on job creation shows appropriate message', () async {
-      when(() => mockJobsApi.createJob(
+      when(() => mockJobApi.createJob(
             scheduledDate: any(named: 'scheduledDate'),
             scheduledTime: any(named: 'scheduledTime'),
             locationAddress: any(named: 'locationAddress'),
@@ -459,7 +486,7 @@ void main() {
       ));
 
       final result = await provider.createJob(
-        scheduledDate: '2026-04-25',
+        scheduledDate: DateTime(2026, 4, 25),
         scheduledTime: '09:00',
         locationAddress: 'Test',
       );
@@ -470,7 +497,7 @@ void main() {
     });
 
     test('clearError resets error state', () async {
-      when(() => mockJobsApi.getMyJobs(
+      when(() => mockJobApi.getMyJobs(
             status: any(named: 'status'),
             page: any(named: 'page'),
           )).thenThrow(DioException(

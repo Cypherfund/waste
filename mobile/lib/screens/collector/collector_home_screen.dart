@@ -385,11 +385,11 @@ class _CollectorJobCard extends StatelessWidget {
 
   Color _statusColor(JobStatus status) {
     switch (status) {
-      case JobStatus.ASSIGNED:
+      case JobStatus.assigned:
         return AppColors.badgeAssigned;
-      case JobStatus.IN_PROGRESS:
+      case JobStatus.inProgress:
         return AppColors.badgeInProgress;
-      case JobStatus.COMPLETED:
+      case JobStatus.completed:
         return AppColors.badgeCompleted;
       default:
         return AppColors.textSecondary;
@@ -398,11 +398,11 @@ class _CollectorJobCard extends StatelessWidget {
 
   IconData _statusIcon(JobStatus status) {
     switch (status) {
-      case JobStatus.ASSIGNED:
+      case JobStatus.assigned:
         return Icons.assignment_outlined;
-      case JobStatus.IN_PROGRESS:
+      case JobStatus.inProgress:
         return Icons.directions_run;
-      case JobStatus.COMPLETED:
+      case JobStatus.completed:
         return Icons.check_circle_outline;
       default:
         return Icons.work_outline;

@@ -1,19 +1,25 @@
 enum JobStatus {
-  REQUESTED,
-  ASSIGNED,
-  IN_PROGRESS,
-  COMPLETED,
-  VALIDATED,
-  RATED,
-  CANCELLED,
-  DISPUTED;
+  requested,
+  assigned,
+  inProgress,
+  completed,
+  validated,
+  rated,
+  cancelled,
+  disputed;
 
   static JobStatus fromString(String value) {
+    final lowerValue = value.toLowerCase();
+    // Handle camelCase conversion from snake_case or uppercase if needed
+    if (lowerValue == 'in_progress') return JobStatus.inProgress;
+    
     return JobStatus.values.firstWhere(
-      (e) => e.name == value,
-      orElse: () => JobStatus.REQUESTED,
+      (e) => e.name.toLowerCase() == lowerValue,
+      orElse: () => JobStatus.requested,
     );
   }
+
+  String toBackendString() => name.toUpperCase();
 }
 
 class Job {
@@ -97,7 +103,7 @@ class Job {
     return {
       'id': id,
       'householdId': householdId,
-      'status': status.name,
+      'status': status.toBackendString(),
       'scheduledDate': scheduledDate,
       'scheduledTime': scheduledTime,
       'locationAddress': locationAddress,
@@ -107,7 +113,17 @@ class Job {
     };
   }
 
-  Job copyWith({JobStatus? status, String? collectorId, String? collectorName}) {
+  Job copyWith({
+    JobStatus? status,
+    String? collectorId,
+    String? collectorName,
+    DateTime? assignedAt,
+    DateTime? startedAt,
+    DateTime? completedAt,
+    DateTime? validatedAt,
+    DateTime? cancelledAt,
+    DateTime? updatedAt,
+  }) {
     return Job(
       id: id,
       householdId: householdId,
@@ -121,30 +137,30 @@ class Job {
       locationLat: locationLat,
       locationLng: locationLng,
       notes: notes,
-      assignedAt: assignedAt,
-      startedAt: startedAt,
-      completedAt: completedAt,
-      validatedAt: validatedAt,
-      cancelledAt: cancelledAt,
+      assignedAt: assignedAt ?? this.assignedAt,
+      startedAt: startedAt ?? this.startedAt,
+      completedAt: completedAt ?? this.completedAt,
+      validatedAt: validatedAt ?? this.validatedAt,
+      cancelledAt: cancelledAt ?? this.cancelledAt,
       createdAt: createdAt,
-      updatedAt: updatedAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
   bool get isActive =>
-      status == JobStatus.REQUESTED ||
-      status == JobStatus.ASSIGNED ||
-      status == JobStatus.IN_PROGRESS;
+      status == JobStatus.requested ||
+      status == JobStatus.assigned ||
+      status == JobStatus.inProgress;
 
   bool get canCancel =>
-      status == JobStatus.REQUESTED || status == JobStatus.ASSIGNED;
+      status == JobStatus.requested || status == JobStatus.assigned;
 
-  bool get canValidate => status == JobStatus.COMPLETED;
+  bool get canValidate => status == JobStatus.completed;
 
-  bool get canRate => status == JobStatus.VALIDATED;
+  bool get canRate => status == JobStatus.validated;
 
   bool get isTerminal =>
-      status == JobStatus.RATED || status == JobStatus.CANCELLED;
+      status == JobStatus.rated || status == JobStatus.cancelled;
 }
 
 class PaginatedJobs {
