@@ -299,7 +299,7 @@ class _EarningPill extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
+          color: Colors.white.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
@@ -348,7 +348,7 @@ class _CollectorJobCard extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: _statusColor(job.status).withOpacity(0.1),
+              color: _statusColor(job.status).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(

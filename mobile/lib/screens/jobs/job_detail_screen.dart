@@ -172,21 +172,21 @@ class JobDetailScreen extends StatelessWidget {
 
   IconData _statusIcon(JobStatus status) {
     switch (status) {
-      case JobStatus.REQUESTED:
+      case JobStatus.requested:
         return Icons.schedule;
-      case JobStatus.ASSIGNED:
+      case JobStatus.assigned:
         return Icons.assignment_ind;
-      case JobStatus.IN_PROGRESS:
+      case JobStatus.inProgress:
         return Icons.directions_run;
-      case JobStatus.COMPLETED:
+      case JobStatus.completed:
         return Icons.check_circle;
-      case JobStatus.VALIDATED:
+      case JobStatus.validated:
         return Icons.verified;
-      case JobStatus.RATED:
+      case JobStatus.rated:
         return Icons.star;
-      case JobStatus.CANCELLED:
+      case JobStatus.cancelled:
         return Icons.cancel;
-      case JobStatus.DISPUTED:
+      case JobStatus.disputed:
         return Icons.gavel;
     }
   }

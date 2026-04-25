@@ -173,7 +173,7 @@ class _BookingStatusRequestedScreenState extends State<BookingStatusRequestedScr
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: Colors.orange.withOpacity(1 - adjustedValue),
+                        color: Colors.orange.withValues(alpha:1 - adjustedValue),
                         width: 2,
                       ),
                     ),
@@ -240,7 +240,7 @@ class _BookingStatusRequestedScreenState extends State<BookingStatusRequestedScr
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -277,7 +277,7 @@ class _BookingStatusRequestedScreenState extends State<BookingStatusRequestedScr
           _buildDetailRow(
             icon: Icons.calendar_today,
             label: 'Scheduled for',
-            value: '${DateFormat('EEEE, d MMM').format(job.scheduledDate)} at ${job.scheduledTime}',
+            value: '${DateFormat('EEEE, d MMM').format(DateTime.parse(job.scheduledDate))} at ${job.scheduledTime}',
           ),
           
           const SizedBox(height: 16),
@@ -389,7 +389,7 @@ class _BookingStatusRequestedScreenState extends State<BookingStatusRequestedScr
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -5),
           ),

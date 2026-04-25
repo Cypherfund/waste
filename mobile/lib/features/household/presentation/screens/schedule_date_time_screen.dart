@@ -209,7 +209,7 @@ class _ScheduleDateTimeScreenState extends State<ScheduleDateTimeScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -336,7 +336,7 @@ class _ScheduleDateTimeScreenState extends State<ScheduleDateTimeScreen> {
           color: isSelected
               ? AppColors.primary
               : isToday
-                  ? AppColors.primaryLight.withOpacity(0.2)
+                  ? AppColors.primaryLight.withValues(alpha: 0.2)
                   : Colors.transparent,
           shape: BoxShape.circle,
           border: isToday && !isSelected
@@ -502,7 +502,7 @@ class _ScheduleDateTimeScreenState extends State<ScheduleDateTimeScreen> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -5),
           ),

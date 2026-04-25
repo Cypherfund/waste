@@ -81,6 +81,8 @@ class JobProvider extends ChangeNotifier {
       .toList();
 
   // Load user's jobs
+  Future<void> loadMyJobs({bool refresh = false}) => loadJobs(refresh: refresh);
+
   Future<void> loadJobs({bool refresh = false}) async {
     if (refresh) _currentPage = 1;
     if (_isLoading && !refresh) return;
@@ -240,7 +242,7 @@ class JobProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final ratingObj = await _jobApi.rateJob(jobId, rating: rating, comment: comment);
+      await _jobApi.rateJob(jobId, rating: rating, comment: comment);
       
       // Since rating update doesn't return the Job, we refresh it
       await refreshJob(jobId);

@@ -35,13 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
       password: _passwordController.text,
     );
 
-    if (mounted && auth.isAuthenticated) {
-      if (auth.user?.isCollector == true) {
-        Navigator.pushReplacementNamed(context, '/collector-home');
-      } else {
-        Navigator.pushReplacementNamed(context, '/home');
-      }
-    }
+    // Navigation is handled by Consumer in main.dart based on auth state
   }
 
   @override

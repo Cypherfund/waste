@@ -183,7 +183,7 @@ class _BookingStatusOnTheWayScreenState extends State<BookingStatusOnTheWayScree
                 end: Alignment.bottomCenter,
                 colors: [
                   Colors.transparent,
-                  Colors.black.withOpacity(0.3),
+                  Colors.black.withValues(alpha: 0.3),
                 ],
               ),
             ),
@@ -201,7 +201,7 @@ class _BookingStatusOnTheWayScreenState extends State<BookingStatusOnTheWayScree
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 10,
                     offset: const Offset(0, 5),
                   ),
@@ -244,7 +244,7 @@ class _BookingStatusOnTheWayScreenState extends State<BookingStatusOnTheWayScree
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -257,7 +257,7 @@ class _BookingStatusOnTheWayScreenState extends State<BookingStatusOnTheWayScree
             children: [
               CircleAvatar(
                 radius: 30,
-                backgroundColor: AppColors.primaryLight.withOpacity(0.2),
+                backgroundColor: AppColors.primaryLight.withValues(alpha: 0.2),
                 child: Icon(
                   Icons.person,
                   color: AppColors.primary,
@@ -339,7 +339,7 @@ class _BookingStatusOnTheWayScreenState extends State<BookingStatusOnTheWayScree
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.primaryLight.withOpacity(0.1),
+        color: AppColors.primaryLight.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(10),
       ),
       child: IconButton(
@@ -366,7 +366,7 @@ class _BookingStatusOnTheWayScreenState extends State<BookingStatusOnTheWayScree
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.3),
+            color: AppColors.primary.withValues(alpha: 0.3),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -382,7 +382,7 @@ class _BookingStatusOnTheWayScreenState extends State<BookingStatusOnTheWayScree
                   children: [
                     Icon(
                       Icons.access_time,
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha: 0.8),
                       size: 20,
                     ),
                     const SizedBox(width: 8),
@@ -390,7 +390,7 @@ class _BookingStatusOnTheWayScreenState extends State<BookingStatusOnTheWayScree
                       'Estimated arrival',
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                       ),
                     ),
                   ],
@@ -410,7 +410,7 @@ class _BookingStatusOnTheWayScreenState extends State<BookingStatusOnTheWayScree
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
@@ -433,7 +433,7 @@ class _BookingStatusOnTheWayScreenState extends State<BookingStatusOnTheWayScree
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -463,7 +463,7 @@ class _BookingStatusOnTheWayScreenState extends State<BookingStatusOnTheWayScree
           _buildDetailRow(
             icon: Icons.calendar_today,
             label: 'Date',
-            value: DateFormat('EEEE, d MMMM').format(job.scheduledDate),
+            value: DateFormat('EEEE, d MMMM').format(DateTime.parse(job.scheduledDate)),
           ),
           
           const SizedBox(height: 16),
@@ -498,7 +498,7 @@ class _BookingStatusOnTheWayScreenState extends State<BookingStatusOnTheWayScree
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppColors.primaryLight.withOpacity(0.1),
+            color: AppColors.primaryLight.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
@@ -543,7 +543,7 @@ class _BookingStatusOnTheWayScreenState extends State<BookingStatusOnTheWayScree
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -5),
           ),

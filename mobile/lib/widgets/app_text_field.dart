@@ -58,7 +58,7 @@ class AppTextField extends StatelessWidget {
         prefixIcon: prefixIcon,
         alignLabelWithHint: alignLabelWithHint || maxLines > 1,
         filled: true,
-        fillColor: enabled ? AppColors.inputFill : AppColors.inputFill.withOpacity(0.5),
+        fillColor: enabled ? AppColors.inputFill : AppColors.inputFill.withValues(alpha: 0.5),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.input),
           borderSide: const BorderSide(color: AppColors.border),

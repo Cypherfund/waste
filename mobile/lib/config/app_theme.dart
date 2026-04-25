@@ -11,11 +11,15 @@ class AppColors {
   static const Color primaryLight = Color(0xFF4CAF50);
   static const Color primaryDark = Color(0xFF1B5E20);
   static const Color primarySurface = Color(0xFFE8F5E9);
+  // static const Color primarySurface = Colors.white;
 
   // Backgrounds
-  static const Color background = Color(0xFFF7F9F7);
-  static const Color surface = Color(0xFFFFFFFF);
-  static const Color scaffoldBackground = Color(0xFFF7F9F7);
+  // static const Color background = Color(0xFFF7F9F7);
+  static const Color background = Colors.white;
+  // static const Color surface = Color(0xFFFFFFFF);
+  static const Color surface = Colors.white;
+  // static const Color scaffoldBackground = Color(0xFFF7F9F7);
+  static const Color scaffoldBackground = Colors.white;
 
   // Text
   static const Color textPrimary = Color(0xFF1C1C1C);
@@ -110,7 +114,7 @@ class AppShadows {
 
   static List<BoxShadow> get elevated => [
         BoxShadow(
-          color: Colors.black.withOpacity(0.08),
+          color: Colors.black.withValues(alpha: 0.08),
           blurRadius: 20,
           offset: const Offset(0, 8),
           spreadRadius: 0,
@@ -119,7 +123,7 @@ class AppShadows {
 
   static List<BoxShadow> get bottomBar => [
         BoxShadow(
-          color: Colors.black.withOpacity(0.06),
+          color: Colors.black.withValues(alpha: 0.06),
           blurRadius: 12,
           offset: const Offset(0, -4),
           spreadRadius: 0,

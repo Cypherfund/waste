@@ -164,7 +164,7 @@ class _BookingStatusCompletedScreenState extends State<BookingStatusCompletedScr
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -238,9 +238,7 @@ class _BookingStatusCompletedScreenState extends State<BookingStatusCompletedScr
               ),
               const SizedBox(width: 4),
               Text(
-                proof?.uploadedAt != null
-                    ? 'Uploaded at ${DateFormat('h:mm a').format(proof!.uploadedAt)}'
-                    : 'Photo uploaded by collector',
+                'Photo uploaded by collector',
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.grey.shade600,
@@ -252,7 +250,43 @@ class _BookingStatusCompletedScreenState extends State<BookingStatusCompletedScr
       ),
     );
   }
-  
+  Widget _buildScheduleCard() {
+  return Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: AppColors.primaryLight,
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "You usually schedule every 3 days.",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () => Navigator.pushNamed(context, '/schedule-pickup'),
+                child: const Text("Schedule"),
+              )
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        const Icon(Icons.calendar_month, size: 48),
+      ],
+    ),
+  );
+}
   Widget _buildPhotoPlaceholder() {
     return Container(
       decoration: BoxDecoration(
@@ -288,7 +322,7 @@ class _BookingStatusCompletedScreenState extends State<BookingStatusCompletedScr
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -318,7 +352,7 @@ class _BookingStatusCompletedScreenState extends State<BookingStatusCompletedScr
           _buildDetailRow(
             icon: Icons.calendar_today_outlined,
             label: 'Date',
-            value: DateFormat('EEEE, d MMMM yyyy').format(job.scheduledDate),
+            value: DateFormat('EEEE, d MMMM yyyy').format(DateTime.parse(job.scheduledDate)),
           ),
           
           const SizedBox(height: 12),
@@ -453,7 +487,7 @@ class _BookingStatusCompletedScreenState extends State<BookingStatusCompletedScr
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -475,7 +509,7 @@ class _BookingStatusCompletedScreenState extends State<BookingStatusCompletedScr
             children: [
               CircleAvatar(
                 radius: 25,
-                backgroundColor: AppColors.primaryLight.withOpacity(0.2),
+                backgroundColor: AppColors.primaryLight.withValues(alpha: 0.2),
                 child: Icon(
                   Icons.person,
                   color: AppColors.primary,
@@ -539,7 +573,7 @@ class _BookingStatusCompletedScreenState extends State<BookingStatusCompletedScr
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -5),
           ),
@@ -594,7 +628,31 @@ class _BookingStatusCompletedScreenState extends State<BookingStatusCompletedScr
       ),
     );
   }
-  
+  Widget _actionTile(IconData icon, String label, VoidCallback onTap) {
+  return GestureDetector(
+    onTap: onTap,
+    child: Container(
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+          )
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: AppColors.primary),
+          const SizedBox(height: 8),
+          Text(label, textAlign: TextAlign.center),
+        ],
+      ),
+    ),
+  );
+}
   void _confirmPickup() async {
     final jobProvider = context.read<JobProvider>();
     

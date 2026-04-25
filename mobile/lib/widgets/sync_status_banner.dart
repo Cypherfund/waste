@@ -83,7 +83,7 @@ class _Banner extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 10),
-      color: color.withOpacity(0.9),
+      color: color.withValues(alpha: 0.9),
       child: SafeArea(
         bottom: false,
         child: Row(

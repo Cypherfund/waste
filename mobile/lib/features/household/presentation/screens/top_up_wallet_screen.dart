@@ -84,7 +84,7 @@ class _TopUpWalletScreenState extends State<TopUpWalletScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -145,7 +145,7 @@ class _TopUpWalletScreenState extends State<TopUpWalletScreen> {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -161,7 +161,7 @@ class _TopUpWalletScreenState extends State<TopUpWalletScreen> {
             ),
             decoration: InputDecoration(
               prefixText: 'XAF ',
-              prefixStyle: const TextStyle(
+              prefixStyle: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: Colors.grey.shade600,
@@ -189,7 +189,7 @@ class _TopUpWalletScreenState extends State<TopUpWalletScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Quick Amounts',
           style: TextStyle(
             fontSize: 16,
@@ -317,7 +317,7 @@ class _TopUpWalletScreenState extends State<TopUpWalletScreen> {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -328,7 +328,7 @@ class _TopUpWalletScreenState extends State<TopUpWalletScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppColors.primaryLight.withOpacity(0.1),
+                color: AppColors.primaryLight.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(

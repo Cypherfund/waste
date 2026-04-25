@@ -46,13 +46,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           : _emailController.text.trim(),
     );
 
-    if (mounted && auth.isAuthenticated) {
-      if (auth.user?.isCollector == true) {
-        Navigator.pushReplacementNamed(context, '/collector-home');
-      } else {
-        Navigator.pushReplacementNamed(context, '/home');
-      }
-    }
+    // Navigation is handled by Consumer in main.dart based on auth state
   }
 
   @override

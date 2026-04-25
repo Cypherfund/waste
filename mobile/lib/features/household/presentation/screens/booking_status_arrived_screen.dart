@@ -146,7 +146,7 @@ class _BookingStatusArrivedScreenState extends State<BookingStatusArrivedScreen>
           width: 180,
           height: 180,
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.1 * _pulseController.value),
+            color: AppColors.primary.withValues(alpha: 0.1 * _pulseController.value),
             shape: BoxShape.circle,
           ),
           child: Center(
@@ -158,7 +158,7 @@ class _BookingStatusArrivedScreenState extends State<BookingStatusArrivedScreen>
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.primary.withOpacity(0.3),
+                    color: AppColors.primary.withValues(alpha: 0.3),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -216,7 +216,7 @@ class _BookingStatusArrivedScreenState extends State<BookingStatusArrivedScreen>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -228,7 +228,7 @@ class _BookingStatusArrivedScreenState extends State<BookingStatusArrivedScreen>
             children: [
               CircleAvatar(
                 radius: 35,
-                backgroundColor: AppColors.primaryLight.withOpacity(0.2),
+                backgroundColor: AppColors.primaryLight.withValues(alpha: 0.2),
                 child: Icon(
                   Icons.person,
                   color: AppColors.primary,
@@ -338,15 +338,15 @@ class _BookingStatusArrivedScreenState extends State<BookingStatusArrivedScreen>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppColors.primary.withOpacity(0.1),
-            AppColors.primaryLight.withOpacity(0.05),
+            AppColors.primary.withValues(alpha: 0.1),
+            AppColors.primaryLight.withValues(alpha: 0.05),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppColors.primary.withOpacity(0.3),
+          color: AppColors.primary.withValues(alpha: 0.3),
         ),
       ),
       child: Column(
@@ -426,7 +426,7 @@ class _BookingStatusArrivedScreenState extends State<BookingStatusArrivedScreen>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -579,7 +579,7 @@ class _BookingStatusArrivedScreenState extends State<BookingStatusArrivedScreen>
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -5),
           ),

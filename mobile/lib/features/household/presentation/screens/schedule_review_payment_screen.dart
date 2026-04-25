@@ -249,7 +249,7 @@ class _ScheduleReviewPaymentScreenState extends State<ScheduleReviewPaymentScree
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -302,7 +302,7 @@ class _ScheduleReviewPaymentScreenState extends State<ScheduleReviewPaymentScree
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: iconColor.withOpacity(0.1),
+            color: iconColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(
@@ -348,10 +348,10 @@ class _ScheduleReviewPaymentScreenState extends State<ScheduleReviewPaymentScree
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.primaryLight.withOpacity(0.05),
+        color: AppColors.primaryLight.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppColors.primaryLight.withOpacity(0.3),
+          color: AppColors.primaryLight.withValues(alpha: 0.3),
         ),
       ),
       child: Column(
@@ -422,7 +422,7 @@ class _ScheduleReviewPaymentScreenState extends State<ScheduleReviewPaymentScree
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -522,7 +522,7 @@ class _ScheduleReviewPaymentScreenState extends State<ScheduleReviewPaymentScree
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -5),
           ),

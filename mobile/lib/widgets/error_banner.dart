@@ -19,9 +19,9 @@ class ErrorBanner extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.error.withOpacity(0.08),
+        color: AppColors.error.withValues(alpha: 0.08),
         borderRadius: AppRadius.cardBorder,
-        border: Border.all(color: AppColors.error.withOpacity(0.2)),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
@@ -36,7 +36,7 @@ class ErrorBanner extends StatelessWidget {
           if (onDismiss != null)
             GestureDetector(
               onTap: onDismiss,
-              child: Icon(Icons.close, color: AppColors.error.withOpacity(0.6), size: 18),
+              child: Icon(Icons.close, color: AppColors.error.withValues(alpha: 0.6), size: 18),
             ),
         ],
       ),

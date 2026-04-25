@@ -154,7 +154,7 @@ class _JobList extends StatelessWidget {
                 width: 64,
                 height: 64,
                 decoration: BoxDecoration(
-                  color: AppColors.error.withOpacity(0.1),
+                  color: AppColors.error.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Icon(Icons.error_outline, size: 32, color: AppColors.error),

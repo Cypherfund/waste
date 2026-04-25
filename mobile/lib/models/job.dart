@@ -1,3 +1,5 @@
+import 'proof.dart';
+
 enum JobStatus {
   requested,
   assigned,
@@ -42,6 +44,9 @@ class Job {
   final DateTime? cancelledAt;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final int? rating;
+  final String? ratingComment;
+  final Proof? proof;
 
   Job({
     required this.id,
@@ -63,6 +68,9 @@ class Job {
     this.cancelledAt,
     required this.createdAt,
     required this.updatedAt,
+    this.rating,
+    this.ratingComment,
+    this.proof,
   });
 
   factory Job.fromJson(Map<String, dynamic> json) {
@@ -96,6 +104,9 @@ class Job {
           : null,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
+      rating: json['rating'] as int?,
+      ratingComment: json['ratingComment'] as String?,
+      proof: json['proof'] != null ? Proof.fromJson(json['proof'] as Map<String, dynamic>) : null,
     );
   }
 
@@ -110,6 +121,9 @@ class Job {
       'locationLat': locationLat,
       'locationLng': locationLng,
       'notes': notes,
+      'rating': rating,
+      'ratingComment': ratingComment,
+      'proof': proof?.toJson(),
     };
   }
 
@@ -123,6 +137,9 @@ class Job {
     DateTime? validatedAt,
     DateTime? cancelledAt,
     DateTime? updatedAt,
+    int? rating,
+    String? ratingComment,
+    Proof? proof,
   }) {
     return Job(
       id: id,
@@ -144,6 +161,9 @@ class Job {
       cancelledAt: cancelledAt ?? this.cancelledAt,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      rating: rating ?? this.rating,
+      ratingComment: ratingComment ?? this.ratingComment,
+      proof: proof ?? this.proof,
     );
   }
 

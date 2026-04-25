@@ -35,7 +35,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   String _selectedFilter = 'all';
   
   final List<Transaction> _transactions = [
-    const Transaction(
+    Transaction(
       id: '1',
       title: 'Pickup Payment',
       subtitle: 'Booking #ABC12345',
@@ -45,7 +45,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       category: 'pickup',
       status: 'completed',
     ),
-    const Transaction(
+    Transaction(
       id: '2',
       title: 'Top Up',
       subtitle: 'Mobile Money - MTN',
@@ -55,7 +55,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       category: 'top_up',
       status: 'completed',
     ),
-    const Transaction(
+    Transaction(
       id: '3',
       title: 'Pickup Payment',
       subtitle: 'Booking #DEF67890',
@@ -65,7 +65,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       category: 'pickup',
       status: 'completed',
     ),
-    const Transaction(
+    Transaction(
       id: '4',
       title: 'Top Up',
       subtitle: 'Bank Transfer',
@@ -75,7 +75,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       category: 'top_up',
       status: 'completed',
     ),
-    const Transaction(
+    Transaction(
       id: '5',
       title: 'Pickup Payment',
       subtitle: 'Booking #GHI11223',
@@ -85,7 +85,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       category: 'pickup',
       status: 'completed',
     ),
-    const Transaction(
+    Transaction(
       id: '6',
       title: 'Top Up',
       subtitle: 'Mobile Money - Orange',
@@ -95,7 +95,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       category: 'top_up',
       status: 'completed',
     ),
-    const Transaction(
+    Transaction(
       id: '7',
       title: 'Pickup Payment',
       subtitle: 'Booking #JKL44556',
@@ -105,7 +105,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       category: 'pickup',
       status: 'completed',
     ),
-    const Transaction(
+    Transaction(
       id: '8',
       title: 'Top Up',
       subtitle: 'Mobile Money - MTN',
@@ -260,7 +260,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -319,7 +319,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: _getStatusColor(transaction.status).withOpacity(0.1),
+                        color: _getStatusColor(transaction.status).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(

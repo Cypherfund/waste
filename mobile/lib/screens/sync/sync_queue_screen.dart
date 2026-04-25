@@ -59,7 +59,7 @@ class _SyncQueueScreenState extends State<SyncQueueScreen> {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: _statusColor(queue).withOpacity(0.1),
+                      color: _statusColor(queue).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(_statusIcon(queue), color: _statusColor(queue), size: 22),
@@ -181,7 +181,7 @@ class _QueueItemCard extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: _statusColor().withOpacity(0.1),
+              color: _statusColor().withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(_actionIcon(), size: 18, color: _statusColor()),
@@ -282,7 +282,7 @@ class _StatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: AppRadius.badgeBorder,
       ),
       child: Text(

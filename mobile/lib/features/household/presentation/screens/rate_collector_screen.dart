@@ -108,7 +108,7 @@ class _RateCollectorScreenState extends State<RateCollectorScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -118,7 +118,7 @@ class _RateCollectorScreenState extends State<RateCollectorScreen> {
         children: [
           CircleAvatar(
             radius: 40,
-            backgroundColor: AppColors.primaryLight.withOpacity(0.2),
+            backgroundColor: AppColors.primaryLight.withValues(alpha: 0.2),
             child: Icon(
               Icons.person,
               color: AppColors.primary,
@@ -171,6 +171,7 @@ class _RateCollectorScreenState extends State<RateCollectorScreen> {
           ),
           const SizedBox(height: 8),
           Text(
+            // ignore: dead_null_aware_expression
             DateFormat('EEEE, d MMMM at h:mm a').format(job.updatedAt ?? DateTime.now()),
             style: TextStyle(
               fontSize: 14,
@@ -191,7 +192,7 @@ class _RateCollectorScreenState extends State<RateCollectorScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -291,7 +292,7 @@ class _RateCollectorScreenState extends State<RateCollectorScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -366,7 +367,7 @@ class _RateCollectorScreenState extends State<RateCollectorScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -420,7 +421,7 @@ class _RateCollectorScreenState extends State<RateCollectorScreen> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -5),
           ),

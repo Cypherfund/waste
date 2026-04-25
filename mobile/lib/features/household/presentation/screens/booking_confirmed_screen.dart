@@ -14,7 +14,6 @@ class BookingConfirmedScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final job = arguments['job'] as Job?;
-    final jobId = arguments['jobId'] as String?;
     
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7F4),
@@ -41,7 +40,7 @@ class BookingConfirmedScreen extends StatelessWidget {
             
             // Success Content
             Expanded(
-              child: SingleScrollScrollView(
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
                   children: [
@@ -61,7 +60,7 @@ class BookingConfirmedScreen extends StatelessWidget {
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppColors.primary.withOpacity(0.3),
+                                  color: AppColors.primary.withValues(alpha: 0.3),
                                   blurRadius: 20,
                                   offset: const Offset(0, 10),
                                 ),
@@ -130,7 +129,7 @@ class BookingConfirmedScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -142,7 +141,7 @@ class BookingConfirmedScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: AppColors.primaryLight.withOpacity(0.1),
+              color: AppColors.primaryLight.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
@@ -173,7 +172,7 @@ class BookingConfirmedScreen extends StatelessWidget {
           _buildDetailItem(
             icon: Icons.calendar_today,
             title: 'Pickup Date',
-            value: DateFormat('EEEE, d MMMM').format(job.scheduledDate),
+            value: DateFormat('EEEE, d MMMM').format(DateTime.parse(job.scheduledDate)),
           ),
           const SizedBox(height: 16),
           
@@ -208,7 +207,7 @@ class BookingConfirmedScreen extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppColors.primaryLight.withOpacity(0.1),
+            color: AppColors.primaryLight.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
@@ -359,7 +358,7 @@ class BookingConfirmedScreen extends StatelessWidget {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -5),
           ),

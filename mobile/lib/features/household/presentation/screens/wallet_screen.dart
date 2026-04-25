@@ -46,7 +46,7 @@ class WalletScreen extends StatelessWidget {
             const SizedBox(height: 24),
             
             // Recent Transactions
-            _buildRecentTransactions(),
+            _buildRecentTransactions(context),
           ],
         ),
       ),
@@ -67,7 +67,7 @@ class WalletScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.3),
+            color: AppColors.primary.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -80,7 +80,7 @@ class WalletScreen extends StatelessWidget {
             children: [
               Icon(
                 Icons.account_balance_wallet,
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withValues(alpha: 0.8),
                 size: 24,
               ),
               const SizedBox(width: 8),
@@ -88,7 +88,7 @@ class WalletScreen extends StatelessWidget {
                 'Current Balance',
                 style: TextStyle(
                   fontSize: 16,
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                 ),
               ),
             ],
@@ -107,7 +107,7 @@ class WalletScreen extends StatelessWidget {
             '≈ \$41.67 USD',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha: 0.8),
             ),
           ),
         ],
@@ -183,7 +183,7 @@ class WalletScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -194,7 +194,7 @@ class WalletScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -218,7 +218,7 @@ class WalletScreen extends StatelessWidget {
     );
   }
   
-  Widget _buildRecentTransactions() {
+  Widget _buildRecentTransactions(BuildContext context) {
     final transactions = [
       {
         'title': 'Pickup Payment',
@@ -312,7 +312,7 @@ class WalletScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),

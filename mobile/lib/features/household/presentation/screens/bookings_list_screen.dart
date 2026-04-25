@@ -22,7 +22,10 @@ class _BookingsListScreenState extends State<BookingsListScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _loadBookings();
+    // Defer loading bookings to avoid setState during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadBookings();
+    });
   }
   
   @override
@@ -40,24 +43,26 @@ class _BookingsListScreenState extends State<BookingsListScreen>
     switch (filter) {
       case 'today':
         final today = DateTime.now();
-        return jobs.where((job) => 
-          job.scheduledDate.year == today.year &&
-          job.scheduledDate.month == today.month &&
-          job.scheduledDate.day == today.day
-        ).toList();
+        return jobs.where((job) {
+          final date = DateTime.parse(job.scheduledDate);
+          return date.year == today.year &&
+                 date.month == today.month &&
+                 date.day == today.day;
+        }).toList();
       case 'week':
         final startOfWeek = DateTime.now().subtract(Duration(days: DateTime.now().weekday - 1));
         final endOfWeek = startOfWeek.add(const Duration(days: 7));
-        return jobs.where((job) => 
-          job.scheduledDate.isAfter(startOfWeek.subtract(const Duration(days: 1))) &&
-          job.scheduledDate.isBefore(endOfWeek)
-        ).toList();
+        return jobs.where((job) {
+          final date = DateTime.parse(job.scheduledDate);
+          return date.isAfter(startOfWeek.subtract(const Duration(days: 1))) &&
+                 date.isBefore(endOfWeek);
+        }).toList();
       case 'month':
         final now = DateTime.now();
-        return jobs.where((job) => 
-          job.scheduledDate.year == now.year &&
-          job.scheduledDate.month == now.month
-        ).toList();
+        return jobs.where((job) {
+          final date = DateTime.parse(job.scheduledDate);
+          return date.year == now.year && date.month == now.month;
+        }).toList();
       default:
         return jobs;
     }
@@ -310,7 +315,7 @@ class _BookingsListScreenState extends State<BookingsListScreen>
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -326,7 +331,7 @@ class _BookingsListScreenState extends State<BookingsListScreen>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: _getStatusColor(job.status).withOpacity(0.1),
+                    color: _getStatusColor(job.status).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -376,7 +381,7 @@ class _BookingsListScreenState extends State<BookingsListScreen>
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    '${DateFormat('EEEE, d MMM').format(job.scheduledDate)} • ${job.scheduledTime}',
+                    '${DateFormat('EEEE, d MMM').format(DateTime.parse(job.scheduledDate))} • ${job.scheduledTime}',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,

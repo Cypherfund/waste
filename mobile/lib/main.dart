@@ -21,6 +21,10 @@ import 'services/offline/connectivity_service.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/collector/collector_home_screen.dart';
 import 'screens/auth/login_screen.dart';
+import 'features/household/presentation/screens/home_dashboard_screen.dart';
+import 'features/household/presentation/screens/bookings_list_screen.dart';
+import 'features/household/presentation/screens/wallet_screen.dart';
+import 'features/household/presentation/screens/profile_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -141,6 +145,12 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
         title: 'WasteWise',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
+        routes: {
+          '/home': (context) => const HomeDashboardScreen(),
+          '/bookings': (context) => const BookingsListScreen(),
+          '/wallet': (context) => const WalletScreen(),
+          '/profile': (context) => const ProfileScreen(),
+        },
         home: _onboardingCompleted
             ? Consumer<AuthProvider>(
                 builder: (context, auth, _) {
@@ -151,7 +161,7 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
                       if (auth.user?.isCollector == true) {
                         return const CollectorHomeScreen();
                       }
-                      return const HomeScreen();
+                      return const HomeDashboardScreen();
                     case AuthStatus.unauthenticated:
                       return const LoginScreen();
                   }
@@ -171,8 +181,22 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
   }
 }
 
-class _SplashScreen extends StatelessWidget {
+class _SplashScreen extends StatefulWidget {
   const _SplashScreen();
+
+  @override
+  State<_SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<_SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Restore session when splash screen initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AuthProvider>().tryRestoreSession();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

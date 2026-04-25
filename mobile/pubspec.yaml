@@ -74,6 +74,7 @@ flutter:
   assets:
     - assets/images/
     - assets/images/onboarding/
+    - assets/images/scheduling/
     - assets/images/status/
     - assets/images/empty_states/
 

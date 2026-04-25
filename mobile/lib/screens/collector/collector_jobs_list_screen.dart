@@ -172,7 +172,7 @@ class _JobTab extends StatelessWidget {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: _statusColor(job.status).withOpacity(0.1),
+                      color: _statusColor(job.status).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
@@ -220,15 +220,15 @@ class _JobTab extends StatelessWidget {
 
   Color _statusColor(JobStatus status) {
     switch (status) {
-      case JobStatus.ASSIGNED:
+      case JobStatus.assigned:
         return AppColors.badgeAssigned;
-      case JobStatus.IN_PROGRESS:
+      case JobStatus.inProgress:
         return AppColors.badgeInProgress;
-      case JobStatus.COMPLETED:
+      case JobStatus.completed:
         return AppColors.badgeCompleted;
-      case JobStatus.VALIDATED:
+      case JobStatus.validated:
         return AppColors.badgeValidated;
-      case JobStatus.RATED:
+      case JobStatus.rated:
         return AppColors.badgeRated;
       default:
         return AppColors.textSecondary;
@@ -237,15 +237,15 @@ class _JobTab extends StatelessWidget {
 
   IconData _statusIcon(JobStatus status) {
     switch (status) {
-      case JobStatus.ASSIGNED:
+      case JobStatus.assigned:
         return Icons.assignment_outlined;
-      case JobStatus.IN_PROGRESS:
+      case JobStatus.inProgress:
         return Icons.directions_run;
-      case JobStatus.COMPLETED:
+      case JobStatus.completed:
         return Icons.check_circle_outline;
-      case JobStatus.VALIDATED:
+      case JobStatus.validated:
         return Icons.verified_outlined;
-      case JobStatus.RATED:
+      case JobStatus.rated:
         return Icons.star_outline;
       default:
         return Icons.work_outline;

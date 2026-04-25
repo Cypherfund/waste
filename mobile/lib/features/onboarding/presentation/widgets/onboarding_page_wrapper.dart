@@ -91,7 +91,7 @@ class _StepIndicator extends StatelessWidget {
           width: isActive ? 24 : 8,
           height: 8,
           decoration: BoxDecoration(
-            color: isActive ? AppColors.primary : AppColors.primary.withOpacity(0.2),
+            color: isActive ? AppColors.primary : AppColors.primary.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(4),
           ),
         );

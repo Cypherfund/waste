@@ -49,7 +49,7 @@ class LoadingButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: bg,
           foregroundColor: Colors.white,
-          disabledBackgroundColor: bg.withOpacity(0.5),
+          disabledBackgroundColor: bg.withValues(alpha: 0.5),
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: AppRadius.buttonBorder,

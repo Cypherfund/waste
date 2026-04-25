@@ -28,7 +28,7 @@ class NotificationsScreen extends StatefulWidget {
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
   final List<Notification> _notifications = [
-    const Notification(
+    Notification(
       id: '1',
       title: 'Collector assigned',
       message: 'John Doe has been assigned to your pickup scheduled for today at 2:00 PM',
@@ -36,7 +36,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       isRead: false,
       type: 'booking',
     ),
-    const Notification(
+    Notification(
       id: '2',
       title: 'Pickup completed',
       message: 'Your pickup has been completed successfully. Please rate your experience.',
@@ -44,7 +44,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       isRead: false,
       type: 'booking',
     ),
-    const Notification(
+    Notification(
       id: '3',
       title: 'Payment received',
       message: '10,000 XAF has been added to your wallet via Mobile Money',
@@ -52,7 +52,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       isRead: true,
       type: 'payment',
     ),
-    const Notification(
+    Notification(
       id: '4',
       title: 'Welcome to Hysacam!',
       message: 'Thank you for joining us. Schedule your first pickup and get 10% off!',
@@ -60,7 +60,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       isRead: true,
       type: 'promo',
     ),
-    const Notification(
+    Notification(
       id: '5',
       title: 'Scheduled pickup reminder',
       message: 'Your pickup is scheduled for tomorrow at 10:00 AM. Please have your waste ready.',
@@ -165,7 +165,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -177,7 +177,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: _getNotificationColor(notification.type).withOpacity(0.1),
+              color: _getNotificationColor(notification.type).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(

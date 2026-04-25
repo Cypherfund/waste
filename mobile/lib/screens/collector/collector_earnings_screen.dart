@@ -193,7 +193,7 @@ class _SummaryTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
+          color: Colors.white.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
@@ -249,7 +249,7 @@ class _EarningCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
+                  color: statusColor.withValues(alpha: 0.1),
                   borderRadius: AppRadius.badgeBorder,
                 ),
                 child: Text(

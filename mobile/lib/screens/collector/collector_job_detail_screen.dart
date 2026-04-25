@@ -147,8 +147,7 @@ class _CollectorJobDetailScreenState extends State<CollectorJobDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Timeline',
-                      style: AppTypography.subtitle
-                          .copyWith(fontWeight: FontWeight.w600)),
+                      style: AppTypography.subtitle.copyWith(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 16),
                   if (liveJob.assignedAt != null)
                     _TimelineItem(
@@ -226,7 +225,7 @@ class _CollectorJobDetailScreenState extends State<CollectorJobDetailScreen> {
       BuildContext context, Job job, CollectorJobsProvider provider) {
     final actions = <Widget>[];
 
-    if (job.status == JobStatus.ASSIGNED) {
+    if (job.status == JobStatus.assigned) {
       actions.add(
         LoadingButton(
           label: 'Accept & Start Job',
@@ -245,7 +244,7 @@ class _CollectorJobDetailScreenState extends State<CollectorJobDetailScreen> {
               provider.isActioning ? null : () => _showRejectDialog(job.id),
         ),
       );
-    } else if (job.status == JobStatus.IN_PROGRESS) {
+    } else if (job.status == JobStatus.inProgress) {
       if (_proofImage == null) {
         actions.add(
           LoadingButton(
@@ -430,15 +429,15 @@ class _CollectorJobDetailScreenState extends State<CollectorJobDetailScreen> {
 
   IconData _statusIcon(JobStatus status) {
     switch (status) {
-      case JobStatus.ASSIGNED:
+      case JobStatus.assigned:
         return Icons.assignment_outlined;
-      case JobStatus.IN_PROGRESS:
+      case JobStatus.inProgress:
         return Icons.directions_run;
-      case JobStatus.COMPLETED:
+      case JobStatus.completed:
         return Icons.check_circle_outline;
-      case JobStatus.VALIDATED:
+      case JobStatus.validated:
         return Icons.verified_outlined;
-      case JobStatus.RATED:
+      case JobStatus.rated:
         return Icons.star_outline;
       default:
         return Icons.work_outline;

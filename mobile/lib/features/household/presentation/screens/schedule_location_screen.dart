@@ -22,6 +22,7 @@ class _ScheduleLocationScreenState extends State<ScheduleLocationScreen> {
   bool _isLoadingLocation = false;
   bool _useCurrentLocation = true;
   Position? _currentPosition;
+  // ignore: unused_field
   String? _currentAddress;
 
   @override
@@ -64,7 +65,9 @@ class _ScheduleLocationScreenState extends State<ScheduleLocationScreen> {
 
       // Get current position
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       );
       
       // Get address from coordinates
@@ -314,7 +317,7 @@ class _ScheduleLocationScreenState extends State<ScheduleLocationScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryLight.withOpacity(0.1) : Colors.white,
+          color: isSelected ? AppColors.primaryLight.withValues(alpha: 0.1) : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? AppColors.primary : Colors.grey.shade300,
@@ -501,7 +504,7 @@ class _ScheduleLocationScreenState extends State<ScheduleLocationScreen> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: AppColors.primaryLight.withOpacity(0.1),
+                color: AppColors.primaryLight.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
@@ -553,7 +556,7 @@ class _ScheduleLocationScreenState extends State<ScheduleLocationScreen> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -5),
           ),
