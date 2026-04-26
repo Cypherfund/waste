@@ -26,7 +26,10 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
 
     _getCurrentLocation();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Load from local storage first for immediate display
+      await _loadJobsFromLocal();
+      // Then refresh from API
       _loadJobs();
     });
   }
@@ -81,6 +84,11 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
   Future<void> _loadJobs() async {
     final jobProvider = context.read<JobProvider>();
     await jobProvider.loadMyJobs();
+  }
+
+  Future<void> _loadJobsFromLocal() async {
+    final jobProvider = context.read<JobProvider>();
+    await jobProvider.loadJobsFromLocal();
   }
 
   @override

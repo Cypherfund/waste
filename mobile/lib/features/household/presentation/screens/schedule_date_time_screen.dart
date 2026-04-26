@@ -14,11 +14,11 @@ class TimeSlot {
 }
 
 class ScheduleDateTimeScreen extends StatefulWidget {
-  final dynamic pickupType;
+  final Map<String, dynamic>? arguments;
 
   const ScheduleDateTimeScreen({
     super.key,
-    this.pickupType,
+    this.arguments,
   });
 
   @override
@@ -34,11 +34,11 @@ class _ScheduleDateTimeScreenState extends State<ScheduleDateTimeScreen> {
   late final DateTime _maxDate;
 
   final List<TimeSlot> _timeSlots = const [
-    TimeSlot(time: '6:00 AM – 8:00 AM', isAvailable: true),
-    TimeSlot(time: '8:00 AM – 10:00 AM', isAvailable: true),
-    TimeSlot(time: '10:00 AM – 12:00 PM', isAvailable: true),
-    TimeSlot(time: '2:00 PM – 4:00 PM', isAvailable: true),
-    TimeSlot(time: '4:00 PM – 6:00 PM', isAvailable: true),
+    TimeSlot(time: '06:00-08:00', isAvailable: true),
+    TimeSlot(time: '08:00-10:00', isAvailable: true),
+    TimeSlot(time: '10:00-12:00', isAvailable: true),
+    TimeSlot(time: '14:00-16:00', isAvailable: true),
+    TimeSlot(time: '16:00-18:00', isAvailable: true),
   ];
 
   @override
@@ -51,7 +51,7 @@ class _ScheduleDateTimeScreenState extends State<ScheduleDateTimeScreen> {
 
     _selectedDate = _firstAvailableDate(_minDate);
     _focusedMonth = DateTime(_selectedDate.year, _selectedDate.month);
-    _selectedTimeSlot = '8:00 AM – 10:00 AM';
+    _selectedTimeSlot = '08:00-10:00';
   }
 
   DateTime _firstAvailableDate(DateTime from) {
@@ -177,7 +177,7 @@ class _ScheduleDateTimeScreenState extends State<ScheduleDateTimeScreen> {
                         context,
                         '/schedule-location',
                         arguments: {
-                          'pickupType': widget.pickupType,
+                          ...widget.arguments ?? {},
                           'scheduledDate': _selectedDate,
                           'scheduledTime': _selectedTimeSlot,
                         },

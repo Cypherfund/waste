@@ -74,40 +74,46 @@ class Job {
   });
 
   factory Job.fromJson(Map<String, dynamic> json) {
-    return Job(
-      id: json['id'] as String,
-      householdId: json['householdId'] as String,
-      householdName: json['householdName'] as String?,
-      collectorId: json['collectorId'] as String?,
-      collectorName: json['collectorName'] as String?,
-      status: JobStatus.fromString(json['status'] as String),
-      scheduledDate: json['scheduledDate'] as String,
-      scheduledTime: json['scheduledTime'] as String,
-      locationAddress: json['locationAddress'] as String,
-      locationLat: (json['locationLat'] as num?)?.toDouble(),
-      locationLng: (json['locationLng'] as num?)?.toDouble(),
-      notes: json['notes'] as String?,
-      assignedAt: json['assignedAt'] != null
-          ? DateTime.parse(json['assignedAt'] as String)
-          : null,
-      startedAt: json['startedAt'] != null
-          ? DateTime.parse(json['startedAt'] as String)
-          : null,
-      completedAt: json['completedAt'] != null
-          ? DateTime.parse(json['completedAt'] as String)
-          : null,
-      validatedAt: json['validatedAt'] != null
-          ? DateTime.parse(json['validatedAt'] as String)
-          : null,
-      cancelledAt: json['cancelledAt'] != null
-          ? DateTime.parse(json['cancelledAt'] as String)
-          : null,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
-      rating: json['rating'] as int?,
-      ratingComment: json['ratingComment'] as String?,
-      proof: json['proof'] != null ? Proof.fromJson(json['proof'] as Map<String, dynamic>) : null,
-    );
+    try {
+      return Job(
+        id: json['id'] as String,
+        householdId: json['householdId'] as String,
+        householdName: json['householdName'] as String?,
+        collectorId: json['collectorId'] as String?,
+        collectorName: json['collectorName'] as String?,
+        status: JobStatus.fromString(json['status'] as String),
+        scheduledDate: json['scheduledDate'] as String,
+        scheduledTime: json['scheduledTime'] as String,
+        locationAddress: json['locationAddress'] as String,
+        locationLat: (json['locationLat'] as num?)?.toDouble(),
+        locationLng: (json['locationLng'] as num?)?.toDouble(),
+        notes: json['notes'] as String?,
+        assignedAt: json['assignedAt'] != null
+            ? DateTime.parse(json['assignedAt'] as String)
+            : null,
+        startedAt: json['startedAt'] != null
+            ? DateTime.parse(json['startedAt'] as String)
+            : null,
+        completedAt: json['completedAt'] != null
+            ? DateTime.parse(json['completedAt'] as String)
+            : null,
+        validatedAt: json['validatedAt'] != null
+            ? DateTime.parse(json['validatedAt'] as String)
+            : null,
+        cancelledAt: json['cancelledAt'] != null
+            ? DateTime.parse(json['cancelledAt'] as String)
+            : null,
+        createdAt: DateTime.parse(json['createdAt'] as String),
+        updatedAt: DateTime.parse(json['updatedAt'] as String),
+        rating: json['rating'] as int?,
+        ratingComment: json['ratingComment'] as String?,
+        proof: json['proof'] != null ? Proof.fromJson(json['proof'] as Map<String, dynamic>) : null,
+      );
+    } catch (e) {
+      print('Job.fromJson error: $e');
+      print('JSON data: $json');
+      rethrow;
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -199,15 +205,23 @@ class PaginatedJobs {
   });
 
   factory PaginatedJobs.fromJson(Map<String, dynamic> json) {
-    final meta = json['meta'] as Map<String, dynamic>;
-    return PaginatedJobs(
-      data: (json['data'] as List)
-          .map((e) => Job.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      page: meta['page'] as int,
-      limit: meta['limit'] as int,
-      total: meta['total'] as int,
-      pages: meta['pages'] as int,
-    );
+    try {
+      print('PaginatedJobs.fromJson: JSON = $json');
+      final meta = json['meta'] as Map<String, dynamic>;
+      print('PaginatedJobs.fromJson: meta = $meta');
+      return PaginatedJobs(
+        data: (json['data'] as List)
+            .map((e) => Job.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        page: meta['page'] as int,
+        limit: meta['limit'] as int,
+        total: meta['total'] as int,
+        pages: meta['totalPages'] as int,
+      );
+    } catch (e) {
+      print('PaginatedJobs.fromJson error: $e');
+      print('JSON data: $json');
+      rethrow;
+    }
   }
 }

@@ -83,30 +83,49 @@ class JobProvider extends ChangeNotifier {
   // Load user's jobs
   Future<void> loadMyJobs({bool refresh = false}) => loadJobs(refresh: refresh);
 
+  // Load jobs from local storage only (for immediate display)
+  Future<void> loadJobsFromLocal() async {
+    try {
+      print('JobProvider: Loading jobs from local storage...');
+      final localJobs = await _syncService.getLocalJobs();
+      print('JobProvider: Local storage returned ${localJobs.length} jobs');
+      if (localJobs.isNotEmpty) {
+        _jobs = localJobs;
+        _error = null;
+        notifyListeners();
+      }
+    } catch (e) {
+      print('JobProvider: Local storage failed with error: $e');
+      // Silent failure - will try API next
+    }
+  }
+
   Future<void> loadJobs({bool refresh = false}) async {
     if (refresh) _currentPage = 1;
     if (_isLoading && !refresh) return;
-    
+
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
+      print('JobProvider: Loading jobs from API...');
       // Try to load from API first
       final result = await _jobApi.getMyJobs(
         status: _filterStatus,
         page: _currentPage,
       );
-      
+
+      print('JobProvider: API returned ${result.data.length} jobs');
       if (refresh || _currentPage == 1) {
         _jobs = result.data;
       } else {
         _jobs = [..._jobs, ...result.data];
       }
-      
+
       _totalPages = result.pages;
       _error = null;
-      
+
       // Sync to local database for offline access
       await _syncService.syncJobs(_jobs);
 
@@ -115,9 +134,11 @@ class JobProvider extends ChangeNotifier {
         _wsService.subscribeToJob(job.id);
       }
     } catch (e) {
+      print('JobProvider: API failed with error: $e');
       // If API fails, try loading from local database
       try {
         final localJobs = await _syncService.getLocalJobs();
+        print('JobProvider: Local storage returned ${localJobs.length} jobs');
         if (localJobs.isNotEmpty) {
           _jobs = localJobs;
           _error = 'Offline: Loading from local storage.';
@@ -125,6 +146,7 @@ class JobProvider extends ChangeNotifier {
           _error = 'Failed to load jobs. Please check your connection.';
         }
       } catch (localError) {
+        print('JobProvider: Local storage failed with error: $localError');
         _error = 'Failed to load jobs. Please check your connection.';
         _jobs = [];
       }

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+
 import '../../../../config/app_theme.dart';
 import '../../../../providers/job_provider.dart';
-import '../screens/schedule_pickup_type_screen.dart';
+import 'schedule_pickup_type_screen.dart';
 
 class ScheduleReviewPaymentScreen extends StatefulWidget {
   final Map<String, dynamic> arguments;
@@ -14,323 +15,213 @@ class ScheduleReviewPaymentScreen extends StatefulWidget {
   });
 
   @override
-  State<ScheduleReviewPaymentScreen> createState() => _ScheduleReviewPaymentScreenState();
+  State<ScheduleReviewPaymentScreen> createState() =>
+      _ScheduleReviewPaymentScreenState();
 }
 
-class _ScheduleReviewPaymentScreenState extends State<ScheduleReviewPaymentScreen> {
+class _ScheduleReviewPaymentScreenState
+    extends State<ScheduleReviewPaymentScreen> {
   bool _isCreatingJob = false;
-  
-  // Pricing simulation - in production, this would come from API
-  final double _basePrice = 2000.0; // XAF
-  final double _distancePrice = 500.0; // XAF
-  
-  String _getPickupTypeName(PickupType type) {
+
+  final double _basePrice = 1500.0;
+  final double _distancePrice = 500.0;
+  final double _walletBalance = 5600.0;
+
+  String _getPickupTypeName(PickupScheduleType type) {
     switch (type) {
-      case PickupType.regular:
-        return 'Regular Waste';
-      case PickupType.recyclable:
-        return 'Recyclable';
-      case PickupType.hazardous:
-        return 'Hazardous';
-      case PickupType.bulk:
-        return 'Bulk Items';
+      case PickupScheduleType.oneTime:
+        return 'One-time pickup';
+      case PickupScheduleType.weekly:
+        return 'Weekly pickup';
+      case PickupScheduleType.custom:
+        return 'Custom schedule';
     }
   }
 
-  IconData _getPickupTypeIcon(PickupType type) {
+  String _getWasteTypeLabel(PickupScheduleType type) {
     switch (type) {
-      case PickupType.regular:
-        return Icons.delete_outline;
-      case PickupType.recyclable:
-        return Icons.recycling;
-      case PickupType.hazardous:
-        return Icons.warning_amber_rounded;
-      case PickupType.bulk:
-        return Icons.king_bed_outlined;
-    }
-  }
-
-  Color _getPickupTypeColor(PickupType type) {
-    switch (type) {
-      case PickupType.regular:
-        return AppColors.primary;
-      case PickupType.recyclable:
-        return Colors.blue;
-      case PickupType.hazardous:
-        return Colors.orange;
-      case PickupType.bulk:
-        return Colors.purple;
+      case PickupScheduleType.oneTime:
+        return 'General Waste';
+      case PickupScheduleType.weekly:
+        return 'General Waste';
+      case PickupScheduleType.custom:
+        return 'General Waste';
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final pickupType = widget.arguments['pickupType'] as PickupType;
+    final pickupType = widget.arguments['pickupType'] as PickupScheduleType;
     final scheduledDate = widget.arguments['scheduledDate'] as DateTime;
     final scheduledTime = widget.arguments['scheduledTime'] as String;
-    final locationAddress = widget.arguments['locationAddress'] as String;
+    final locationAddress =
+        widget.arguments['locationAddress'] as String? ?? 'Bonapriso, Douala';
+    final locationArea =
+        widget.arguments['locationArea'] as String? ?? 'Near Total Bonapriso';
     final landmark = widget.arguments['landmark'] as String?;
     final locationLat = widget.arguments['locationLat'] as double?;
     final locationLng = widget.arguments['locationLng'] as double?;
-    
+
     final totalPrice = _basePrice + _distancePrice;
-    
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F4),
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
         elevation: 0,
+        scrolledUnderElevation: 0,
+        leadingWidth: 44,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Color(0xFF111827),
+            size: 16,
+          ),
           onPressed: _isCreatingJob ? null : () => Navigator.pop(context),
         ),
         title: const Text(
-          'Review & Payment',
+          'Review your booking',
           style: TextStyle(
-            color: Colors.black,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
+            color: Color(0xFF111827),
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
           ),
         ),
         centerTitle: true,
       ),
-      body: Column(
-        children: [
-          // Progress Indicator
-          _buildProgressIndicator(),
-          
-          // Content
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Review your booking',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            const Divider(
+              height: 1,
+              thickness: 1,
+              color: Color(0xFFF0F2F0),
+            ),
+
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildInfoRow(
+                      icon: Icons.calendar_today_outlined,
+                      title: 'Date & Time',
+                      lines: [
+                        DateFormat('EEE, d MMM yyyy').format(scheduledDate),
+                        scheduledTime,
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Please review the details before confirming',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey.shade600,
+
+                    const SizedBox(height: 18),
+
+                    _buildInfoRow(
+                      icon: Icons.location_on_outlined,
+                      title: 'Address',
+                      lines: [
+                        locationAddress,
+                        locationArea,
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // Booking Details
-                  _buildBookingDetails(
-                    pickupType: pickupType,
-                    scheduledDate: scheduledDate,
-                    scheduledTime: scheduledTime,
-                    locationAddress: locationAddress,
-                    landmark: landmark,
-                  ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Price Breakdown
-                  _buildPriceBreakdown(
-                    basePrice: _basePrice,
-                    distancePrice: _distancePrice,
-                    totalPrice: totalPrice,
-                  ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Payment Method
-                  _buildPaymentMethod(),
-                ],
+
+                    const SizedBox(height: 18),
+
+                    _buildInfoRow(
+                      icon: Icons.delete_outline_rounded,
+                      title: 'Waste Type',
+                      lines: [
+                        _getWasteTypeLabel(pickupType),
+                      ],
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    _buildInfoRow(
+                      icon: Icons.note_alt_outlined,
+                      title: 'Notes',
+                      lines: [
+                        landmark != null && landmark.trim().isNotEmpty
+                            ? landmark
+                            : 'No instructions',
+                      ],
+                    ),
+
+                    const SizedBox(height: 22),
+
+                    _buildPriceBreakdown(
+                      basePrice: _basePrice,
+                      distancePrice: _distancePrice,
+                      totalPrice: totalPrice,
+                    ),
+
+                    const SizedBox(height: 22),
+
+                    _buildPaymentMethod(),
+                  ],
+                ),
               ),
             ),
-          ),
-          
-          // Confirm Button
-          _buildConfirmButton(
-            totalPrice: totalPrice,
-            pickupType: pickupType,
-            scheduledDate: scheduledDate,
-            scheduledTime: scheduledTime,
-            locationAddress: locationAddress,
-            landmark: landmark,
-            locationLat: locationLat,
-            locationLng: locationLng,
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildProgressIndicator() {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      child: Row(
-        children: [
-          _buildProgressStep(1, 'Type', false, true),
-          _buildProgressLine(true),
-          _buildProgressStep(2, 'Schedule', false, true),
-          _buildProgressLine(true),
-          _buildProgressStep(3, 'Location', false, true),
-          _buildProgressLine(true),
-          _buildProgressStep(4, 'Review', true, false),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProgressStep(int step, String label, bool isActive, bool isCompleted) {
-    return Expanded(
-      child: Column(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isActive || isCompleted
-                  ? AppColors.primary
-                  : Colors.grey.shade300,
+            _buildConfirmButton(
+              totalPrice: totalPrice,
+              pickupType: pickupType,
+              scheduledDate: scheduledDate,
+              scheduledTime: scheduledTime,
+              locationAddress: locationAddress,
+              landmark: landmark,
+              locationLat: locationLat,
+              locationLng: locationLng,
             ),
-            child: Center(
-              child: isCompleted
-                  ? const Icon(Icons.check, color: Colors.white, size: 16)
-                  : Text(
-                      step.toString(),
-                      style: TextStyle(
-                        color: isActive ? Colors.white : Colors.grey.shade600,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: isActive ? AppColors.primary : Colors.grey.shade500,
-              fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildProgressLine(bool isCompleted) {
-    return Expanded(
-      child: Container(
-        height: 2,
-        color: isCompleted ? AppColors.primary : Colors.grey.shade300,
-        margin: const EdgeInsets.only(bottom: 20),
-      ),
-    );
-  }
-
-  Widget _buildBookingDetails({
-    required PickupType pickupType,
-    required DateTime scheduledDate,
-    required String scheduledTime,
-    required String locationAddress,
-    String? landmark,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Pickup Type
-          _buildDetailRow(
-            icon: _getPickupTypeIcon(pickupType),
-            iconColor: _getPickupTypeColor(pickupType),
-            title: 'Waste Type',
-            value: _getPickupTypeName(pickupType),
-          ),
-          const Divider(height: 32),
-          
-          // Date & Time
-          _buildDetailRow(
-            icon: Icons.calendar_today,
-            iconColor: AppColors.primary,
-            title: 'Date & Time',
-            value: '${DateFormat('EEEE, d MMM').format(scheduledDate)}\n$scheduledTime',
-          ),
-          const Divider(height: 32),
-          
-          // Location
-          _buildDetailRow(
-            icon: Icons.location_on,
-            iconColor: AppColors.primary,
-            title: 'Pickup Location',
-            value: landmark != null && landmark.isNotEmpty
-                ? '$locationAddress\n(Near: $landmark)'
-                : locationAddress,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDetailRow({
+  Widget _buildInfoRow({
     required IconData icon,
-    required Color iconColor,
     required String title,
-    required String value,
+    required List<String> lines,
   }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: iconColor.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
+        SizedBox(
+          width: 34,
           child: Icon(
             icon,
-            color: iconColor,
-            size: 20,
+            size: 26,
+            color: const Color(0xFF4B5563),
           ),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 title,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade600,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF111827),
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                  height: 1.4,
+              const SizedBox(height: 6),
+              ...lines.map(
+                    (line) => Padding(
+                  padding: const EdgeInsets.only(bottom: 3),
+                  child: Text(
+                    line,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      height: 1.25,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF6B7280),
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -346,40 +237,35 @@ class _ScheduleReviewPaymentScreenState extends State<ScheduleReviewPaymentScree
     required double totalPrice,
   }) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
       decoration: BoxDecoration(
-        color: AppColors.primaryLight.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.primaryLight.withValues(alpha: 0.3),
-        ),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(
-                Icons.receipt_outlined,
-                color: AppColors.primary,
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              const Text(
-                'Price Details',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
-              ),
-            ],
+          const Text(
+            'Price breakdown',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF111827),
+            ),
           ),
-          const SizedBox(height: 16),
-          _buildPriceRow('Base rate', basePrice),
-          const SizedBox(height: 8),
+          const SizedBox(height: 13),
+          _buildPriceRow('Base price', basePrice),
+          const SizedBox(height: 9),
           _buildPriceRow('Distance fee', distancePrice),
-          const Divider(height: 24),
+          const SizedBox(height: 12),
+          const Divider(
+            height: 1,
+            thickness: 1,
+            color: Color(0xFFE5E7EB),
+          ),
+          const SizedBox(height: 12),
           _buildPriceRow(
             'Total',
             totalPrice,
@@ -390,24 +276,28 @@ class _ScheduleReviewPaymentScreenState extends State<ScheduleReviewPaymentScree
     );
   }
 
-  Widget _buildPriceRow(String label, double amount, {bool isTotal = false}) {
+  Widget _buildPriceRow(
+      String label,
+      double amount, {
+        bool isTotal = false,
+      }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
           style: TextStyle(
-            fontSize: isTotal ? 16 : 14,
-            fontWeight: isTotal ? FontWeight.w600 : FontWeight.normal,
-            color: isTotal ? Colors.black87 : Colors.grey.shade700,
+            fontSize: isTotal ? 12 : 11,
+            fontWeight: isTotal ? FontWeight.w900 : FontWeight.w500,
+            color: isTotal ? const Color(0xFF111827) : const Color(0xFF6B7280),
           ),
         ),
         Text(
           '${amount.toStringAsFixed(0)} XAF',
           style: TextStyle(
-            fontSize: isTotal ? 18 : 14,
-            fontWeight: isTotal ? FontWeight.bold : FontWeight.w600,
-            color: isTotal ? AppColors.primary : Colors.black87,
+            fontSize: isTotal ? 12 : 11,
+            fontWeight: isTotal ? FontWeight.w900 : FontWeight.w700,
+            color: const Color(0xFF111827),
           ),
         ),
       ],
@@ -415,100 +305,95 @@ class _ScheduleReviewPaymentScreenState extends State<ScheduleReviewPaymentScree
   }
 
   Widget _buildPaymentMethod() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.account_balance_wallet_outlined,
-                color: AppColors.primary,
-                size: 20,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Text(
+              'Pay with',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF111827),
               ),
-              const SizedBox(width: 8),
-              const Text(
-                'Payment Method',
+            ),
+            const Spacer(),
+            GestureDetector(
+              onTap: () {},
+              child: Text(
+                'Change',
                 style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Container(
+          width: double.infinity,
+          height: 50,
+          padding: const EdgeInsets.symmetric(horizontal: 13),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEAF5EA),
+            borderRadius: BorderRadius.circular(9),
+            border: Border.all(
+              color: AppColors.primary,
+              width: 1.3,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD8EBDD),
+                  borderRadius: BorderRadius.circular(7),
+                ),
+                child: Icon(
+                  Icons.account_balance_wallet_outlined,
+                  color: const Color(0xFF374151),
+                  size: 17,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Wallet (Balance: ${_walletBalance.toStringAsFixed(0)} XAF)',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF111827),
+                  ),
+                ),
+              ),
+              Container(
+                width: 18,
+                height: 18,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.check_rounded,
+                  size: 12,
+                  color: Colors.white,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.primary),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.money,
-                  color: AppColors.primary,
-                ),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Cash Payment',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        'Pay directly to the collector',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.check,
-                    color: Colors.white,
-                    size: 16,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
   Widget _buildConfirmButton({
     required double totalPrice,
-    required PickupType pickupType,
+    required PickupScheduleType pickupType,
     required DateTime scheduledDate,
     required String scheduledTime,
     required String locationAddress,
@@ -517,80 +402,75 @@ class _ScheduleReviewPaymentScreenState extends State<ScheduleReviewPaymentScree
     double? locationLng,
   }) {
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
+      width: double.infinity,
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
       child: SafeArea(
         top: false,
         child: Column(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Total Amount',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey,
-                  ),
-                ),
-                Text(
-                  '${totalPrice.toStringAsFixed(0)} XAF',
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
-              height: 56,
+              height: 54,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: AppColors.primary.withValues(
+                    alpha: 0.55,
                   ),
                   elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(9),
+                  ),
                 ),
                 onPressed: _isCreatingJob
                     ? null
                     : () => _confirmBooking(
-                        scheduledDate: scheduledDate,
-                        scheduledTime: scheduledTime,
-                        locationAddress: locationAddress,
-                        landmark: landmark,
-                        locationLat: locationLat,
-                        locationLng: locationLng,
-                      ),
+                  scheduledDate: scheduledDate,
+                  scheduledTime: scheduledTime,
+                  locationAddress: locationAddress,
+                  landmark: landmark,
+                  locationLat: locationLat,
+                  locationLng: locationLng,
+                ),
                 child: _isCreatingJob
                     ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.2,
+                    color: Colors.white,
+                  ),
+                )
                     : const Text(
-                        'Confirm Booking',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                  'Confirm & Pay',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
               ),
+            ),
+            const SizedBox(height: 13),
+            const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.lock_outline_rounded,
+                  size: 12,
+                  color: Color(0xFF9CA3AF),
+                ),
+                SizedBox(width: 5),
+                Text(
+                  'Payments are secure',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Color(0xFF9CA3AF),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -612,24 +492,28 @@ class _ScheduleReviewPaymentScreenState extends State<ScheduleReviewPaymentScree
 
     try {
       final jobProvider = context.read<JobProvider>();
-      final fullAddress = landmark != null && landmark.isNotEmpty
+
+      final fullAddress = landmark != null && landmark.trim().isNotEmpty
           ? '$locationAddress (Near: $landmark)'
           : locationAddress;
-          
+
+      final pickupType =
+      widget.arguments['pickupType'] as PickupScheduleType;
+
       final job = await jobProvider.createJob(
         scheduledDate: scheduledDate,
         scheduledTime: scheduledTime,
         locationAddress: fullAddress,
         locationLat: locationLat,
         locationLng: locationLng,
-        notes: 'Pickup type: ${_getPickupTypeName(widget.arguments['pickupType'] as PickupType)}',
+        notes: 'Pickup type: ${_getPickupTypeName(pickupType)}',
       );
 
       if (job != null && mounted) {
         Navigator.pushNamedAndRemoveUntil(
           context,
           '/booking-confirmed',
-          (route) => route.settings.name == '/home',
+              (route) => route.settings.name == '/home',
           arguments: {
             'jobId': job.id,
             'job': job,
@@ -643,7 +527,7 @@ class _ScheduleReviewPaymentScreenState extends State<ScheduleReviewPaymentScree
           ),
         );
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

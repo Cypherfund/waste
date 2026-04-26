@@ -22,8 +22,12 @@ class _BookingsListScreenState extends State<BookingsListScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+
     // Defer loading bookings to avoid setState during build
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Load from local storage first for immediate display
+      await _loadBookingsFromLocal();
+      // Then refresh from API
       _loadBookings();
     });
   }
@@ -37,6 +41,11 @@ class _BookingsListScreenState extends State<BookingsListScreen>
   Future<void> _loadBookings() async {
     final jobProvider = context.read<JobProvider>();
     await jobProvider.loadMyJobs();
+  }
+
+  Future<void> _loadBookingsFromLocal() async {
+    final jobProvider = context.read<JobProvider>();
+    await jobProvider.loadJobsFromLocal();
   }
   
   List<Job> _filterJobs(List<Job> jobs, String filter) {

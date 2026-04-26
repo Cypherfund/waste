@@ -28,6 +28,8 @@ import 'features/household/presentation/screens/profile_screen.dart';
 import 'features/household/presentation/screens/schedule_pickup_type_screen.dart';
 import 'features/household/presentation/screens/schedule_date_time_screen.dart';
 import 'features/household/presentation/screens/schedule_location_screen.dart';
+import 'features/household/presentation/screens/schedule_review_payment_screen.dart';
+import 'features/household/presentation/screens/booking_confirmed_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -154,8 +156,18 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
           '/wallet': (context) => const WalletScreen(),
           '/profile': (context) => const ProfileScreen(),
           '/schedule-pickup': (context) => const SchedulePickupTypeScreen(),
-          '/schedule-date-time': (context) => const ScheduleDateTimeScreen(),
-          '/schedule-location': (context) => const ScheduleLocationScreen(),
+          '/schedule-date-time': (context) => ScheduleDateTimeScreen(
+            arguments: ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {},
+          ),
+          '/schedule-location': (context) => ScheduleLocationScreen(
+            arguments: ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {},
+          ),
+          '/schedule-review': (context) => ScheduleReviewPaymentScreen(
+            arguments: ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {},
+          ),
+          '/booking-confirmed': (context) => BookingConfirmedScreen(
+            arguments: ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {},
+          ),
         },
         home: _onboardingCompleted
             ? Consumer<AuthProvider>(
