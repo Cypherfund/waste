@@ -30,6 +30,8 @@ import 'features/household/presentation/screens/schedule_date_time_screen.dart';
 import 'features/household/presentation/screens/schedule_location_screen.dart';
 import 'features/household/presentation/screens/schedule_review_payment_screen.dart';
 import 'features/household/presentation/screens/booking_confirmed_screen.dart';
+import 'features/household/presentation/screens/booking_details_screen.dart';
+import 'features/household/presentation/screens/job_tracking_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -167,6 +169,12 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
           ),
           '/booking-confirmed': (context) => BookingConfirmedScreen(
             arguments: ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {},
+          ),
+          '/job-tracking': (context) => JobTrackingScreen(
+            jobId: ModalRoute.of(context)?.settings.arguments as String? ?? '',
+          ),
+          '/booking-details': (context) => BookingDetailsScreen(
+            jobId: ModalRoute.of(context)?.settings.arguments as String? ?? '',
           ),
         },
         home: _onboardingCompleted

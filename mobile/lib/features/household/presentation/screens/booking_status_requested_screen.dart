@@ -1,7 +1,9 @@
-import 'package:flutter/material.dart';
 import 'dart:async';
+
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+
 import '../../../../config/app_theme.dart';
 import '../../../../models/job.dart';
 import '../../../../providers/job_provider.dart';
@@ -15,50 +17,49 @@ class BookingStatusRequestedScreen extends StatefulWidget {
   });
 
   @override
-  State<BookingStatusRequestedScreen> createState() => _BookingStatusRequestedScreenState();
+  State<BookingStatusRequestedScreen> createState() =>
+      _BookingStatusRequestedScreenState();
 }
 
-class _BookingStatusRequestedScreenState extends State<BookingStatusRequestedScreen> 
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
+class _BookingStatusRequestedScreenState
+    extends State<BookingStatusRequestedScreen> {
   Timer? _refreshTimer;
-  
+  bool _isCancelling = false;
+
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(seconds: 2),
-      vsync: this,
-    )..repeat();
-    
-    // Refresh job status every 10 seconds
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshJobStatus();
+    });
+
     _refreshTimer = Timer.periodic(const Duration(seconds: 10), (_) {
       _refreshJobStatus();
     });
-    
-    // Initial load
-    _refreshJobStatus();
   }
-  
+
   @override
   void dispose() {
-    _animationController.dispose();
     _refreshTimer?.cancel();
     super.dispose();
   }
-  
+
   Future<void> _refreshJobStatus() async {
+    if (!mounted || _isCancelling) return;
+
     final jobProvider = context.read<JobProvider>();
     await jobProvider.refreshJob(widget.jobId);
-    
-    // Check if job status has changed
+
     final job = jobProvider.getJob(widget.jobId);
-    if (job != null && job.status != JobStatus.requested && mounted) {
-      // Navigate to appropriate screen based on status
+
+    if (!mounted || job == null) return;
+
+    if (job.status != JobStatus.requested) {
       _navigateToNextScreen(job);
     }
   }
-  
+
   void _navigateToNextScreen(Job job) {
     switch (job.status) {
       case JobStatus.assigned:
@@ -68,6 +69,15 @@ class _BookingStatusRequestedScreenState extends State<BookingStatusRequestedScr
           arguments: job.id,
         );
         break;
+
+      case JobStatus.inProgress:
+        Navigator.pushReplacementNamed(
+          context,
+          '/booking-status-on-the-way',
+          arguments: job.id,
+        );
+        break;
+
       case JobStatus.cancelled:
         Navigator.pushReplacementNamed(
           context,
@@ -75,8 +85,8 @@ class _BookingStatusRequestedScreenState extends State<BookingStatusRequestedScr
           arguments: job.id,
         );
         break;
+
       default:
-        // Stay on current screen
         break;
     }
   }
@@ -84,362 +94,177 @@ class _BookingStatusRequestedScreenState extends State<BookingStatusRequestedScr
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F4),
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
         elevation: 0,
+        scrolledUnderElevation: 0,
+        leadingWidth: 44,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Color(0xFF111827),
+            size: 16,
+          ),
+          onPressed: _isCancelling ? null : () => Navigator.pop(context),
         ),
         title: const Text(
-          'Booking Status',
+          'My Booking',
           style: TextStyle(
-            color: Colors.black,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
+            color: Color(0xFF111827),
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
           ),
         ),
         centerTitle: true,
       ),
-      body: Consumer<JobProvider>(
-        builder: (context, jobProvider, _) {
-          final job = jobProvider.getJob(widget.jobId);
-          
-          if (job == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          
-          return RefreshIndicator(
-            onRefresh: _refreshJobStatus,
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  // Status Animation
-                  _buildStatusAnimation(),
-                  
-                  const SizedBox(height: 32),
-                  
-                  // Status Message
-                  _buildStatusMessage(),
-                  
-                  const SizedBox(height: 40),
-                  
-                  // Booking Details
-                  _buildBookingDetails(job),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Info Card
-                  _buildInfoCard(),
-                  
-                  const SizedBox(height: 80),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-      bottomNavigationBar: _buildBottomActions(),
-    );
-  }
-  
-  Widget _buildStatusAnimation() {
-    return Container(
-      width: 200,
-      height: 200,
-      decoration: BoxDecoration(
-        color: Colors.orange.shade50,
-        shape: BoxShape.circle,
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Animated circles
-          ...List.generate(3, (index) {
-            return AnimatedBuilder(
-              animation: _animationController,
-              builder: (context, child) {
-                final value = _animationController.value + (index * 0.33);
-                final adjustedValue = value > 1 ? value - 1 : value;
-                
-                return Transform.scale(
-                  scale: 0.5 + (adjustedValue * 0.5),
-                  child: Container(
-                    width: 200,
-                    height: 200,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.orange.withValues(alpha:1 - adjustedValue),
-                        width: 2,
+      body: SafeArea(
+        top: false,
+        child: Consumer<JobProvider>(
+          builder: (context, jobProvider, _) {
+            final job = jobProvider.getJob(widget.jobId);
+
+            if (job == null) {
+              return Center(
+                child: CircularProgressIndicator(
+                  color: AppColors.primary,
+                ),
+              );
+            }
+
+            return Column(
+              children: [
+                Expanded(
+                  child: RefreshIndicator(
+                    color: AppColors.primary,
+                    onRefresh: _refreshJobStatus,
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(20, 10, 20, 28),
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 2),
+                          Text(
+                            'Requested',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w900,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          const Text(
+                            "We're finding a collector\nnear you...",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 13,
+                              height: 1.45,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF6B7280),
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          _buildStatusIllustration(),
+                          const SizedBox(height: 18),
+                          _buildBookingCard(job),
+                        ],
                       ),
                     ),
                   ),
-                );
-              },
+                ),
+                _buildBottomActions(job),
+              ],
             );
-          }),
-          
-          // Center image
-          Image.asset(
-            'assets/images/status/searching-for-a-collector.png',
-            width: 100,
-            height: 100,
-            errorBuilder: (_, __, ___) => Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                color: Colors.orange.shade100,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.search,
-                color: Colors.orange.shade700,
-                size: 50,
-              ),
-            ),
-          ),
-        ],
+          },
+        ),
       ),
     );
   }
-  
-  Widget _buildStatusMessage() {
-    return Column(
-      children: [
-        const Text(
-          'Finding a collector for you',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Please wait while we assign the best available collector',
-          style: TextStyle(
-            fontSize: 16,
-            color: Colors.grey.shade600,
-            height: 1.4,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
-  }
-  
-  Widget _buildBookingDetails(Job job) {
+
+  Widget _buildBottomActions(Job job) {
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+      decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Booking ID
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Booking ID',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-              Text(
-                job.id.substring(0, 8).toUpperCase(),
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  fontFamily: 'monospace',
-                ),
-              ),
-            ],
-          ),
-          
-          const Divider(height: 24),
-          
-          // Date & Time
-          _buildDetailRow(
-            icon: Icons.calendar_today,
-            label: 'Scheduled for',
-            value: '${DateFormat('EEEE, d MMM').format(DateTime.parse(job.scheduledDate))} at ${job.scheduledTime}',
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Location
-          _buildDetailRow(
-            icon: Icons.location_on,
-            label: 'Pickup location',
-            value: job.locationAddress,
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Created Time
-          _buildDetailRow(
-            icon: Icons.access_time,
-            label: 'Requested',
-            value: _getTimeAgo(job.createdAt),
-          ),
-        ],
-      ),
-    );
-  }
-  
-  Widget _buildDetailRow({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            icon,
-            color: Colors.grey.shade700,
-            size: 16,
+        border: Border(
+          top: BorderSide(
+            color: Color(0xFFE5E7EB),
+            width: 1,
           ),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black87,
-                  height: 1.3,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-  
-  Widget _buildInfoCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue.shade200),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.info_outline,
-            color: Colors.blue.shade700,
-            size: 24,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Average assignment time is 2-5 minutes. You\'ll be notified once a collector is assigned.',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.blue.shade800,
-                height: 1.4,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-  
-  Widget _buildBottomActions() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
-          ),
-        ],
       ),
       child: SafeArea(
+        top: false,
         child: Row(
           children: [
             Expanded(
-              child: OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  side: BorderSide(color: Colors.red.shade400, width: 1.5),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              child: SizedBox(
+                height: 48,
+                child: OutlinedButton(
+                  onPressed:
+                  _isCancelling ? null : () => _showCancelConfirmation(job),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFFDC2626),
+                    disabledForegroundColor:
+                    const Color(0xFFDC2626).withValues(alpha: 0.45),
+                    side: BorderSide(
+                      color: _isCancelling
+                          ? const Color(0xFFDC2626).withValues(alpha: 0.35)
+                          : const Color(0xFFDC2626),
+                      width: 1.2,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(9),
+                    ),
                   ),
-                ),
-                onPressed: _showCancelDialog,
-                child: Text(
-                  'Cancel Booking',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.red.shade600,
+                  child: _isCancelling
+                      ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Color(0xFFDC2626),
+                    ),
+                  )
+                      : const Text(
+                    'Cancel Booking',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Expanded(
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              child: SizedBox(
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: _isCancelling
+                      ? null
+                      : () {
+                    Navigator.pushNamed(context, '/support');
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor:
+                    AppColors.primary.withValues(alpha: 0.55),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(9),
+                    ),
                   ),
-                  elevation: 0,
-                ),
-                onPressed: () {
-                  Navigator.pushReplacementNamed(
-                    context,
-                    '/bookings',
-                  );
-                },
-                child: const Text(
-                  'View All Bookings',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                  child: const Text(
+                    'Contact Support',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
               ),
@@ -449,63 +274,307 @@ class _BookingStatusRequestedScreenState extends State<BookingStatusRequestedScr
       ),
     );
   }
-  
-  void _showCancelDialog() {
-    showDialog(
+
+  Future<void> _showCancelConfirmation(Job job) async {
+    final shouldCancel = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: const Text('Cancel Booking?'),
-        content: const Text(
-          'Are you sure you want to cancel this booking? This action cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Keep Booking'),
+      barrierDismissible: !_isCancelling,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
           ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              
-              final jobProvider = context.read<JobProvider>();
-              final success = await jobProvider.cancelJob(
-                widget.jobId,
-                reason: 'Cancelled by user',
+          titlePadding: const EdgeInsets.fromLTRB(22, 22, 22, 8),
+          contentPadding: const EdgeInsets.fromLTRB(22, 0, 22, 18),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          title: const Text(
+            'Cancel booking?',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF111827),
+            ),
+          ),
+          content: const Text(
+            'Are you sure you want to cancel this pickup request? This action cannot be undone.',
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.45,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF6B7280),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text(
+                'Yes, Cancel',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFFDC2626),
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text(
+                'Keep Booking',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF111827),
+                ),
+              ),
+            )
+
+          ],
+        );
+      },
+    );
+
+    if (shouldCancel == true && mounted) {
+      await _cancelBooking(job);
+    }
+  }
+
+  Future<void> _cancelBooking(Job job) async {
+    setState(() {
+      _isCancelling = true;
+    });
+
+    try {
+      final jobProvider = context.read<JobProvider>();
+
+      final success = await jobProvider.cancelJob(job.id);
+
+      if (!mounted) return;
+
+      if (success == true) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/bookings',
+              (route) => route.settings.name == '/home',
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(jobProvider.error ?? 'Failed to cancel booking'),
+            backgroundColor: Colors.red.shade600,
+          ),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Unable to cancel booking. Please try again.'),
+          backgroundColor: Colors.red.shade600,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCancelling = false;
+        });
+      }
+    }
+  }
+
+  Widget _buildStatusIllustration() {
+    return SizedBox(
+      width: double.infinity,
+      height: 142,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          const Positioned.fill(
+            child: CustomPaint(
+              painter: _MiniConfettiPainter(),
+            ),
+          ),
+          Image.asset(
+            'assets/images/status/searching-for-a-collector.png',
+            width: 200,
+            height: 200,
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) {
+              return Container(
+                width: 118,
+                height: 118,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF7EF),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Icon(
+                  Icons.search_rounded,
+                  size: 58,
+                  color: AppColors.primary,
+                ),
               );
-              
-              if (success && mounted) {
-                Navigator.pushReplacementNamed(
-                  context,
-                  '/booking-cancelled',
-                  arguments: widget.jobId,
-                );
-              }
             },
-            child: Text(
-              'Yes, Cancel',
-              style: TextStyle(color: Colors.red.shade600),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBookingCard(Job job) {
+    final date = DateTime.tryParse(job.scheduledDate);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.025),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildDetailLine(
+            title: date == null
+                ? job.scheduledDate
+                : DateFormat('EEE, d MMM yyyy').format(date),
+            subtitle: job.scheduledTime,
+          ),
+          const SizedBox(height: 14),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.location_on_outlined,
+                size: 16,
+                color: Color(0xFF6B7280),
+              ),
+              const SizedBox(width: 7),
+              Expanded(
+                child: Text(
+                  job.locationAddress,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    height: 1.35,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF6B7280),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'Ref: #KTR-${_shortId(job.id)}',
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF9CA3AF),
             ),
           ),
         ],
       ),
     );
   }
-  
-  String _getTimeAgo(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-    
-    if (difference.inMinutes < 1) {
-      return 'Just now';
-    } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes} min ago';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours} hour${difference.inHours == 1 ? '' : 's'} ago';
-    } else {
-      return DateFormat('d MMM, h:mm a').format(dateTime);
+
+  Widget _buildDetailLine({
+    required String title,
+    required String subtitle,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(
+          Icons.calendar_today_outlined,
+          size: 16,
+          color: Color(0xFF6B7280),
+        ),
+        const SizedBox(width: 7),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 12,
+                  height: 1.3,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF111827),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  fontSize: 11,
+                  height: 1.3,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF111827),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _shortId(String id) {
+    if (id.length <= 8) return id.toUpperCase();
+    return id.substring(0, 8).toUpperCase();
+  }
+}
+
+class _MiniConfettiPainter extends CustomPainter {
+  const _MiniConfettiPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final pieces = [
+      _Dot(size.width * 0.17, size.height * 0.32, const Color(0xFF2563EB)),
+      _Dot(size.width * 0.27, size.height * 0.20, const Color(0xFFF59E0B)),
+      _Dot(size.width * 0.35, size.height * 0.38, const Color(0xFF22C55E)),
+      _Dot(size.width * 0.45, size.height * 0.16, const Color(0xFFEF4444)),
+      _Dot(size.width * 0.58, size.height * 0.25, const Color(0xFF22C55E)),
+      _Dot(size.width * 0.67, size.height * 0.15, const Color(0xFF2563EB)),
+      _Dot(size.width * 0.78, size.height * 0.34, const Color(0xFFEF4444)),
+      _Dot(size.width * 0.22, size.height * 0.62, const Color(0xFFF59E0B)),
+      _Dot(size.width * 0.70, size.height * 0.60, const Color(0xFF22C55E)),
+      _Dot(size.width * 0.80, size.height * 0.54, const Color(0xFF2563EB)),
+    ];
+
+    for (final dot in pieces) {
+      final paint = Paint()
+        ..color = dot.color
+        ..style = PaintingStyle.fill;
+
+      canvas.drawCircle(
+        Offset(dot.x, dot.y),
+        2.2,
+        paint,
+      );
     }
   }
+
+  @override
+  bool shouldRepaint(covariant _MiniConfettiPainter oldDelegate) => false;
+}
+
+class _Dot {
+  final double x;
+  final double y;
+  final Color color;
+
+  const _Dot(this.x, this.y, this.color);
 }
