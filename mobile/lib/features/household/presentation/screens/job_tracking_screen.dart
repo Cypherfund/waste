@@ -20,72 +20,62 @@ class JobTrackingScreen extends StatefulWidget {
 }
 
 class _JobTrackingScreenState extends State<JobTrackingScreen> {
-  Job? _job;
-  bool _isLoading = true;
-
   @override
   void initState() {
     super.initState();
-    _loadJob();
+    // Navigate to appropriate status screen based on job status
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _navigateToStatusScreen();
+    });
   }
 
-  Future<void> _loadJob() async {
+  void _navigateToStatusScreen() {
     final jobProvider = context.read<JobProvider>();
     final job = jobProvider.jobs.firstWhere(
       (j) => j.id == widget.jobId,
       orElse: () => throw Exception('Job not found'),
     );
 
-    setState(() {
-      _job = job;
-      _isLoading = false;
-    });
+    if (!mounted) return;
+
+    // Navigate to appropriate status screen based on job status
+    switch (job.status) {
+      case JobStatus.requested:
+      case JobStatus.assigned:
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => BookingStatusRequestedScreen(jobId: widget.jobId),
+          ),
+        );
+        break;
+      case JobStatus.inProgress:
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => BookingStatusOnTheWayScreen(jobId: widget.jobId),
+          ),
+        );
+        break;
+      case JobStatus.completed:
+      case JobStatus.validated:
+      case JobStatus.rated:
+      case JobStatus.cancelled:
+      case JobStatus.disputed:
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => BookingStatusCompletedScreen(jobId: widget.jobId),
+          ),
+        );
+        break;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (_job == null) {
-      return Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text('Job not found'),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Go Back'),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    // Navigate to appropriate status screen based on job status
-    switch (_job!.status) {
-      case JobStatus.requested:
-        return BookingStatusRequestedScreen(jobId: widget.jobId);
-      case JobStatus.assigned:
-        return BookingStatusRequestedScreen(jobId: widget.jobId);
-      case JobStatus.inProgress:
-        return BookingStatusOnTheWayScreen(jobId: widget.jobId);
-      case JobStatus.completed:
-        return BookingStatusCompletedScreen(jobId: widget.jobId);
-      case JobStatus.validated:
-        return BookingStatusCompletedScreen(jobId: widget.jobId);
-      case JobStatus.rated:
-        return BookingStatusCompletedScreen(jobId: widget.jobId);
-      case JobStatus.cancelled:
-        return BookingStatusCompletedScreen(jobId: widget.jobId);
-      case JobStatus.disputed:
-        return BookingStatusCompletedScreen(jobId: widget.jobId);
-    }
+    return const Scaffold(
+      body: Center(child: CircularProgressIndicator()),
+    );
   }
 }

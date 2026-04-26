@@ -56,15 +56,6 @@ class _BookingsListScreenState extends State<BookingsListScreen>
         surfaceTintColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leadingWidth: 44,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: Color(0xFF111827),
-            size: 16,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
         title: const Text(
           'My Bookings',
           style: TextStyle(
