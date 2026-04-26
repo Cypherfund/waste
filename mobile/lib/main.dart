@@ -25,6 +25,9 @@ import 'features/household/presentation/screens/home_dashboard_screen.dart';
 import 'features/household/presentation/screens/bookings_list_screen.dart';
 import 'features/household/presentation/screens/wallet_screen.dart';
 import 'features/household/presentation/screens/profile_screen.dart';
+import 'features/household/presentation/screens/schedule_pickup_type_screen.dart';
+import 'features/household/presentation/screens/schedule_date_time_screen.dart';
+import 'features/household/presentation/screens/schedule_location_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -150,6 +153,9 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
           '/bookings': (context) => const BookingsListScreen(),
           '/wallet': (context) => const WalletScreen(),
           '/profile': (context) => const ProfileScreen(),
+          '/schedule-pickup': (context) => const SchedulePickupTypeScreen(),
+          '/schedule-date-time': (context) => const ScheduleDateTimeScreen(),
+          '/schedule-location': (context) => const ScheduleLocationScreen(),
         },
         home: _onboardingCompleted
             ? Consumer<AuthProvider>(

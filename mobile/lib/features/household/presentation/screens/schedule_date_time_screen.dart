@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../../../../config/app_theme.dart';
 
 class TimeSlot {
@@ -26,525 +27,394 @@ class ScheduleDateTimeScreen extends StatefulWidget {
 
 class _ScheduleDateTimeScreenState extends State<ScheduleDateTimeScreen> {
   DateTime _selectedDate = DateTime.now();
+  DateTime _focusedMonth = DateTime.now();
   String? _selectedTimeSlot;
-  final DateTime _minDate = DateTime.now();
-  final DateTime _maxDate = DateTime.now().add(const Duration(days: 30));
 
-  // Simulate time slots - in production, these would come from API
-  final List<TimeSlot> _morningSlots = [
-    const TimeSlot(time: '06:00 - 08:00', isAvailable: true),
-    const TimeSlot(time: '08:00 - 10:00', isAvailable: true),
-    const TimeSlot(time: '10:00 - 12:00', isAvailable: false),
-  ];
+  late final DateTime _minDate;
+  late final DateTime _maxDate;
 
-  final List<TimeSlot> _afternoonSlots = [
-    const TimeSlot(time: '12:00 - 14:00', isAvailable: true),
-    const TimeSlot(time: '14:00 - 16:00', isAvailable: true),
-    const TimeSlot(time: '16:00 - 18:00', isAvailable: true),
+  final List<TimeSlot> _timeSlots = const [
+    TimeSlot(time: '6:00 AM – 8:00 AM', isAvailable: true),
+    TimeSlot(time: '8:00 AM – 10:00 AM', isAvailable: true),
+    TimeSlot(time: '10:00 AM – 12:00 PM', isAvailable: true),
+    TimeSlot(time: '2:00 PM – 4:00 PM', isAvailable: true),
+    TimeSlot(time: '4:00 PM – 6:00 PM', isAvailable: true),
   ];
 
   @override
   void initState() {
     super.initState();
-    // Skip weekends if today is weekend
-    while (_selectedDate.weekday == DateTime.saturday ||
-           _selectedDate.weekday == DateTime.sunday) {
-      _selectedDate = _selectedDate.add(const Duration(days: 1));
+
+    final now = DateTime.now();
+    _minDate = DateTime(now.year, now.month, now.day);
+    _maxDate = _minDate.add(const Duration(days: 30));
+
+    _selectedDate = _firstAvailableDate(_minDate);
+    _focusedMonth = DateTime(_selectedDate.year, _selectedDate.month);
+    _selectedTimeSlot = '8:00 AM – 10:00 AM';
+  }
+
+  DateTime _firstAvailableDate(DateTime from) {
+    var date = from;
+
+    while (_isWeekend(date)) {
+      date = date.add(const Duration(days: 1));
     }
+
+    return date;
   }
 
   @override
   Widget build(BuildContext context) {
+    final canContinue = _selectedTimeSlot != null;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F4),
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
         elevation: 0,
+        scrolledUnderElevation: 0,
+        leadingWidth: 44,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Color(0xFF111827),
+            size: 16,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'Schedule Pickup',
           style: TextStyle(
-            color: Colors.black,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
+            color: Color(0xFF111827),
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
           ),
         ),
         centerTitle: true,
       ),
-      body: Column(
-        children: [
-          // Progress Indicator
-          _buildProgressIndicator(),
-          
-          // Content
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header
-                  Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Choose date and time',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            const Divider(
+              height: 1,
+              thickness: 1,
+              color: Color(0xFFF0F2F0),
+            ),
+
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Select a date',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF111827),
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    _buildCalendar(),
+
+                    const SizedBox(height: 22),
+
+                    const Text(
+                      'Select a time slot',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF111827),
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    ..._timeSlots.map(_buildTimeSlotButton),
+
+                    const SizedBox(height: 18),
+
+                    Row(
+                      children: const [
+                        Icon(
+                          Icons.info_outline_rounded,
+                          size: 14,
+                          color: Color(0xFF6B7280),
                         ),
-                        const SizedBox(height: 8),
+                        SizedBox(width: 6),
                         Text(
-                          'Select when you want your waste collected',
+                          'Earliest available: Tomorrow',
                           style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey.shade600,
+                            fontSize: 11,
+                            color: Color(0xFF6B7280),
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
                     ),
-                  ),
-
-                  // Calendar Section
-                  _buildCalendarSection(),
-
-                  // Time Slots Section
-                  if (!_isWeekend(_selectedDate)) _buildTimeSlotsSection(),
-                  
-                  if (_isWeekend(_selectedDate)) _buildWeekendMessage(),
-
-                  const SizedBox(height: 100),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-          
-          // Continue Button
-          _buildContinueButton(),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildProgressIndicator() {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      child: Row(
-        children: [
-          _buildProgressStep(1, 'Type', false, true),
-          _buildProgressLine(true),
-          _buildProgressStep(2, 'Schedule', true, false),
-          _buildProgressLine(false),
-          _buildProgressStep(3, 'Location', false, false),
-          _buildProgressLine(false),
-          _buildProgressStep(4, 'Review', false, false),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProgressStep(int step, String label, bool isActive, bool isCompleted) {
-    return Expanded(
-      child: Column(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isActive || isCompleted
-                  ? AppColors.primary
-                  : Colors.grey.shade300,
-            ),
-            child: Center(
-              child: isCompleted
-                  ? const Icon(Icons.check, color: Colors.white, size: 16)
-                  : Text(
-                      step.toString(),
-                      style: TextStyle(
-                        color: isActive ? Colors.white : Colors.grey.shade600,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+              child: SafeArea(
+                top: false,
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: ElevatedButton(
+                    onPressed: canContinue
+                        ? () {
+                      Navigator.pushNamed(
+                        context,
+                        '/schedule-location',
+                        arguments: {
+                          'pickupType': widget.pickupType,
+                          'scheduledDate': _selectedDate,
+                          'scheduledTime': _selectedTimeSlot,
+                        },
+                      );
+                    }
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: const Color(0xFFE0E0E0),
+                      disabledForegroundColor: const Color(0xFF8A8A8A),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(9),
                       ),
                     ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: isActive ? AppColors.primary : Colors.grey.shade500,
-              fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProgressLine(bool isCompleted) {
-    return Expanded(
-      child: Container(
-        height: 2,
-        color: isCompleted ? AppColors.primary : Colors.grey.shade300,
-        margin: const EdgeInsets.only(bottom: 20),
-      ),
-    );
-  }
-
-  Widget _buildCalendarSection() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Month/Year Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                DateFormat('MMMM yyyy').format(_selectedDate),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              Row(
-                children: [
-                  IconButton(
-                    icon: Icon(Icons.chevron_left, color: AppColors.primary),
-                    onPressed: _canGoToPreviousMonth()
-                        ? () => _changeMonth(-1)
-                        : null,
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.chevron_right, color: AppColors.primary),
-                    onPressed: _canGoToNextMonth()
-                        ? () => _changeMonth(1)
-                        : null,
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // Weekday Labels
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: ['S', 'M', 'T', 'W', 'T', 'F', 'S']
-                .map((day) => SizedBox(
-                      width: 40,
-                      child: Center(
-                        child: Text(
-                          day,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
+                    child: const Text(
+                      'Continue',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
                       ),
-                    ))
-                .toList(),
-          ),
-          const SizedBox(height: 8),
-
-          // Calendar Grid
-          _buildCalendarGrid(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCalendarGrid() {
-    final firstDayOfMonth = DateTime(_selectedDate.year, _selectedDate.month, 1);
-    final lastDayOfMonth = DateTime(_selectedDate.year, _selectedDate.month + 1, 0);
-    final startingWeekday = firstDayOfMonth.weekday % 7;
-    
-    List<Widget> dayWidgets = [];
-    
-    // Add empty spaces for days before month starts
-    for (int i = 0; i < startingWeekday; i++) {
-      dayWidgets.add(const SizedBox(width: 40, height: 40));
-    }
-    
-    // Add days of the month
-    for (int day = 1; day <= lastDayOfMonth.day; day++) {
-      final date = DateTime(_selectedDate.year, _selectedDate.month, day);
-      dayWidgets.add(_buildDayWidget(date));
-    }
-    
-    // Create rows of 7 days
-    List<Widget> rows = [];
-    for (int i = 0; i < dayWidgets.length; i += 7) {
-      rows.add(
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: dayWidgets.skip(i).take(7).toList(),
-          ),
-        ),
-      );
-    }
-    
-    return Column(children: rows);
-  }
-
-  Widget _buildDayWidget(DateTime date) {
-    final isSelected = _isSameDay(date, _selectedDate);
-    final isToday = _isSameDay(date, DateTime.now());
-    final isPast = date.isBefore(DateTime.now().subtract(const Duration(days: 1)));
-    final isWeekend = date.weekday == DateTime.saturday || date.weekday == DateTime.sunday;
-    final isDisabled = isPast || isWeekend;
-    
-    return GestureDetector(
-      onTap: isDisabled
-          ? null
-          : () {
-              setState(() {
-                _selectedDate = date;
-                _selectedTimeSlot = null; // Reset time selection
-              });
-            },
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary
-              : isToday
-                  ? AppColors.primaryLight.withValues(alpha: 0.2)
-                  : Colors.transparent,
-          shape: BoxShape.circle,
-          border: isToday && !isSelected
-              ? Border.all(color: AppColors.primary, width: 2)
-              : null,
-        ),
-        child: Center(
-          child: Text(
-            date.day.toString(),
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: isSelected || isToday ? FontWeight.w600 : FontWeight.normal,
-              color: isDisabled
-                  ? Colors.grey.shade400
-                  : isSelected
-                      ? Colors.white
-                      : Colors.black87,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTimeSlotsSection() {
-    return Container(
-      margin: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.access_time, color: AppColors.primary, size: 20),
-              const SizedBox(width: 8),
-              const Text(
-                'Available time slots',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                    ),
+                  ),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          
-          // Morning Slots
-          _buildTimeSlotGroup('Morning', _morningSlots),
-          const SizedBox(height: 20),
-          
-          // Afternoon Slots
-          _buildTimeSlotGroup('Afternoon', _afternoonSlots),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildTimeSlotGroup(String title, List<TimeSlot> slots) {
+  Widget _buildCalendar() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey.shade700,
-          ),
+        Row(
+          children: [
+            GestureDetector(
+              onTap: _canGoToPreviousMonth() ? () => _changeMonth(-1) : null,
+              child: Icon(
+                Icons.chevron_left_rounded,
+                size: 22,
+                color: _canGoToPreviousMonth()
+                    ? const Color(0xFF374151)
+                    : const Color(0xFFD1D5DB),
+              ),
+            ),
+
+            Expanded(
+              child: Center(
+                child: Text(
+                  DateFormat('MMMM yyyy').format(_focusedMonth),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF111827),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+
+            GestureDetector(
+              onTap: _canGoToNextMonth() ? () => _changeMonth(1) : null,
+              child: Icon(
+                Icons.chevron_right_rounded,
+                size: 22,
+                color: _canGoToNextMonth()
+                    ? const Color(0xFF374151)
+                    : const Color(0xFFD1D5DB),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: slots.map((slot) => _buildTimeSlotChip(slot)).toList(),
+
+        const SizedBox(height: 18),
+
+        Row(
+          children: const [
+            _WeekdayLabel('Mo'),
+            _WeekdayLabel('Tu'),
+            _WeekdayLabel('We'),
+            _WeekdayLabel('Th'),
+            _WeekdayLabel('Fr'),
+            _WeekdayLabel('Sa'),
+            _WeekdayLabel('Su'),
+          ],
         ),
+
+        const SizedBox(height: 10),
+
+        _buildCalendarGrid(),
       ],
     );
   }
 
-  Widget _buildTimeSlotChip(TimeSlot slot) {
+  Widget _buildCalendarGrid() {
+    final firstDay = DateTime(_focusedMonth.year, _focusedMonth.month, 1);
+    final lastDay = DateTime(_focusedMonth.year, _focusedMonth.month + 1, 0);
+
+    final leadingEmptyDays = firstDay.weekday - 1;
+
+    final List<Widget> cells = [];
+
+    for (int i = 0; i < leadingEmptyDays; i++) {
+      cells.add(const SizedBox(height: 34));
+    }
+
+    for (int day = 1; day <= lastDay.day; day++) {
+      final date = DateTime(_focusedMonth.year, _focusedMonth.month, day);
+      cells.add(_buildDayCell(date));
+    }
+
+    while (cells.length % 7 != 0) {
+      cells.add(const SizedBox(height: 34));
+    }
+
+    return GridView.builder(
+      itemCount: cells.length,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 7,
+        mainAxisExtent: 36,
+        crossAxisSpacing: 6,
+        mainAxisSpacing: 4,
+      ),
+      itemBuilder: (_, index) => cells[index],
+    );
+  }
+
+  Widget _buildDayCell(DateTime date) {
+    final isSelected = _isSameDay(date, _selectedDate);
+    final isPast = date.isBefore(_minDate);
+    final isOutsideRange = date.isAfter(_maxDate);
+    final disabled = isPast || isOutsideRange;
+
+    return GestureDetector(
+      onTap: disabled
+          ? null
+          : () {
+        setState(() {
+          _selectedDate = date;
+          _selectedTimeSlot = null;
+        });
+      },
+      child: Center(
+        child: Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.primary : Colors.transparent,
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Text(
+              '${date.day}',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                color: disabled
+                    ? const Color(0xFFC8CDD2)
+                    : isSelected
+                    ? Colors.white
+                    : const Color(0xFF374151),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTimeSlotButton(TimeSlot slot) {
     final isSelected = _selectedTimeSlot == slot.time;
-    
+
     return GestureDetector(
       onTap: slot.isAvailable
           ? () {
-              setState(() {
-                _selectedTimeSlot = slot.time;
-              });
-            }
+        setState(() {
+          _selectedTimeSlot = slot.time;
+        });
+      }
           : null,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        width: double.infinity,
+        height: 36,
+        margin: const EdgeInsets.only(bottom: 9),
         decoration: BoxDecoration(
-          color: !slot.isAvailable
-              ? Colors.grey.shade100
-              : isSelected
-                  ? AppColors.primary
-                  : Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: !slot.isAvailable
-                ? Colors.grey.shade300
-                : isSelected
-                    ? AppColors.primary
-                    : Colors.grey.shade300,
-            width: isSelected ? 2 : 1,
+            color: isSelected ? AppColors.primary : const Color(0xFFE5E7EB),
+            width: isSelected ? 1.4 : 1,
           ),
         ),
-        child: Text(
-          slot.time,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-            color: !slot.isAvailable
-                ? Colors.grey.shade400
-                : isSelected
-                    ? Colors.white
-                    : Colors.black87,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildWeekendMessage() {
-    return Container(
-      margin: const EdgeInsets.all(20),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.orange.shade50,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.orange.shade200),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.info_outline,
-            color: Colors.orange.shade700,
-            size: 24,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Pickup service is not available on weekends. Please select a weekday.',
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Text(
+              slot.time,
               style: TextStyle(
-                fontSize: 14,
-                color: Colors.orange.shade800,
-                height: 1.4,
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                color: slot.isAvailable
+                    ? const Color(0xFF374151)
+                    : const Color(0xFFB8B8B8),
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildContinueButton() {
-    final canContinue = _selectedTimeSlot != null && !_isWeekend(_selectedDate);
-    
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          width: double.infinity,
-          height: 56,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: canContinue
-                  ? AppColors.primary
-                  : Colors.grey.shade300,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+            if (isSelected)
+              Positioned(
+                right: 10,
+                child: Container(
+                  width: 16,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.check_rounded,
+                    size: 11,
+                    color: Colors.white,
+                  ),
+                ),
               ),
-              elevation: 0,
-            ),
-            onPressed: canContinue
-                ? () {
-                    Navigator.pushNamed(
-                      context,
-                      '/schedule-location',
-                      arguments: {
-                        'pickupType': widget.pickupType,
-                        'scheduledDate': _selectedDate,
-                        'scheduledTime': _selectedTimeSlot,
-                      },
-                    );
-                  }
-                : null,
-            child: Text(
-              'Continue',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: canContinue ? Colors.white : Colors.grey.shade600,
+            if (isSelected)
+              Positioned(
+                left: 10,
+                child: Icon(
+                  Icons.access_time_rounded,
+                  size: 14,
+                  color: AppColors.primary,
+                ),
               ),
-            ),
-          ),
+          ],
         ),
       ),
     );
@@ -555,24 +425,63 @@ class _ScheduleDateTimeScreenState extends State<ScheduleDateTimeScreen> {
   }
 
   bool _isWeekend(DateTime date) {
-    return date.weekday == DateTime.saturday || date.weekday == DateTime.sunday;
+    return date.weekday == DateTime.saturday ||
+        date.weekday == DateTime.sunday;
   }
 
   bool _canGoToPreviousMonth() {
-    final firstDayOfCurrentMonth = DateTime(_selectedDate.year, _selectedDate.month, 1);
-    final firstDayOfMinMonth = DateTime(_minDate.year, _minDate.month, 1);
-    return firstDayOfCurrentMonth.isAfter(firstDayOfMinMonth);
+    final currentMonth = DateTime(_focusedMonth.year, _focusedMonth.month);
+    final minMonth = DateTime(_minDate.year, _minDate.month);
+    return currentMonth.isAfter(minMonth);
   }
 
   bool _canGoToNextMonth() {
-    final lastDayOfCurrentMonth = DateTime(_selectedDate.year, _selectedDate.month + 1, 0);
-    return lastDayOfCurrentMonth.isBefore(_maxDate);
+    final currentMonth = DateTime(_focusedMonth.year, _focusedMonth.month);
+    final maxMonth = DateTime(_maxDate.year, _maxDate.month);
+    return currentMonth.isBefore(maxMonth);
   }
 
   void _changeMonth(int delta) {
     setState(() {
-      _selectedDate = DateTime(_selectedDate.year, _selectedDate.month + delta, 1);
+      _focusedMonth = DateTime(
+        _focusedMonth.year,
+        _focusedMonth.month + delta,
+      );
+
+      var nextDate = DateTime(_focusedMonth.year, _focusedMonth.month, 1);
+
+      if (nextDate.isBefore(_minDate)) {
+        nextDate = _minDate;
+      }
+
+      if (nextDate.isAfter(_maxDate)) {
+        nextDate = _maxDate;
+      }
+
+      _selectedDate = nextDate;
       _selectedTimeSlot = null;
     });
+  }
+}
+
+class _WeekdayLabel extends StatelessWidget {
+  final String label;
+
+  const _WeekdayLabel(this.label);
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Center(
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF6B7280),
+          ),
+        ),
+      ),
+    );
   }
 }

@@ -1,26 +1,23 @@
 import 'package:flutter/material.dart';
 import '../../../../config/app_theme.dart';
 
-enum PickupType {
-  regular,
-  recyclable,
-  hazardous,
-  bulk,
+enum PickupScheduleType {
+  oneTime,
+  weekly,
+  custom,
 }
 
-class PickupTypeData {
-  final PickupType type;
+class PickupScheduleTypeData {
+  final PickupScheduleType type;
   final String title;
   final String description;
   final IconData icon;
-  final Color color;
 
-  const PickupTypeData({
+  const PickupScheduleTypeData({
     required this.type,
     required this.title,
     required this.description,
     required this.icon,
-    required this.color,
   });
 }
 
@@ -28,301 +25,120 @@ class SchedulePickupTypeScreen extends StatefulWidget {
   const SchedulePickupTypeScreen({super.key});
 
   @override
-  State<SchedulePickupTypeScreen> createState() => _SchedulePickupTypeScreenState();
+  State<SchedulePickupTypeScreen> createState() =>
+      _SchedulePickupTypeScreenState();
 }
 
 class _SchedulePickupTypeScreenState extends State<SchedulePickupTypeScreen> {
-  PickupType? _selectedType;
+  PickupScheduleType _selectedType = PickupScheduleType.oneTime;
 
-  final List<PickupTypeData> _pickupTypes = [
-    PickupTypeData(
-      type: PickupType.regular,
-      title: 'Regular Waste',
-      description: 'Household waste, food scraps, and general refuse',
-      icon: Icons.delete_outline,
-      color: AppColors.primary,
+  final List<PickupScheduleTypeData> _pickupTypes = const [
+    PickupScheduleTypeData(
+      type: PickupScheduleType.oneTime,
+      title: 'One-time pickup',
+      description: 'Schedule a single pickup',
+      icon: Icons.restore_from_trash_outlined,
     ),
-    PickupTypeData(
-      type: PickupType.recyclable,
-      title: 'Recyclable',
-      description: 'Plastic, paper, glass, and metal items',
-      icon: Icons.recycling,
-      color: Colors.blue,
+    PickupScheduleTypeData(
+      type: PickupScheduleType.weekly,
+      title: 'Weekly pickup',
+      description: "We'll come every week",
+      icon: Icons.calendar_today_outlined,
     ),
-    PickupTypeData(
-      type: PickupType.hazardous,
-      title: 'Hazardous',
-      description: 'Batteries, chemicals, medical waste',
-      icon: Icons.warning_amber_rounded,
-      color: Colors.orange,
-    ),
-    PickupTypeData(
-      type: PickupType.bulk,
-      title: 'Bulk Items',
-      description: 'Furniture, appliances, construction debris',
-      icon: Icons.king_bed_outlined,
-      color: Colors.purple,
+    PickupScheduleTypeData(
+      type: PickupScheduleType.custom,
+      title: 'Custom schedule',
+      description: 'Choose your own repeat days',
+      icon: Icons.event_note_outlined,
     ),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F4),
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
         elevation: 0,
+        scrolledUnderElevation: 0,
+        leadingWidth: 44,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Color(0xFF111827),
+            size: 18,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'Schedule Pickup',
           style: TextStyle(
-            color: Colors.black,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
+            color: Color(0xFF111827),
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
           ),
         ),
         centerTitle: true,
       ),
-      body: Column(
-        children: [
-          // Progress Indicator
-          _buildProgressIndicator(),
-          
-          // Content
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'What type of pickup do you need?',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Select the type of waste you want to dispose of',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // Pickup Type Options
-                  ..._pickupTypes.map((type) => _buildPickupTypeCard(type)),
-                ],
-              ),
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            const Divider(
+              height: 1,
+              thickness: 1,
+              color: Color(0xFFF0F2F0),
             ),
-          ),
-          
-          // Continue Button
-          _buildContinueButton(),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildProgressIndicator() {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              _buildProgressStep(1, 'Type', true, true),
-              _buildProgressLine(false),
-              _buildProgressStep(2, 'Schedule', false, false),
-              _buildProgressLine(false),
-              _buildProgressStep(3, 'Location', false, false),
-              _buildProgressLine(false),
-              _buildProgressStep(4, 'Review', false, false),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProgressStep(int step, String label, bool isActive, bool isCompleted) {
-    return Expanded(
-      child: Column(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isActive || isCompleted
-                  ? AppColors.primary
-                  : Colors.grey.shade300,
-            ),
-            child: Center(
-              child: isCompleted
-                  ? const Icon(Icons.check, color: Colors.white, size: 16)
-                  : Text(
-                      step.toString(),
-                      style: TextStyle(
-                        color: isActive ? Colors.white : Colors.grey.shade600,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: isActive ? AppColors.primary : Colors.grey.shade500,
-              fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProgressLine(bool isCompleted) {
-    return Expanded(
-      child: Container(
-        height: 2,
-        color: isCompleted ? AppColors.primary : Colors.grey.shade300,
-        margin: const EdgeInsets.only(bottom: 20),
-      ),
-    );
-  }
-
-  Widget _buildPickupTypeCard(PickupTypeData type) {
-    final isSelected = _selectedType == type.type;
-    
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedType = type.type;
-        });
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? type.color : Colors.grey.shade200,
-            width: isSelected ? 2 : 1,
-          ),
-          boxShadow: [
-            if (isSelected)
-              BoxShadow(
-                color: type.color.withValues(alpha: 0.2),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: type.color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  type.icon,
-                  color: type.color,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 34, 20, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      type.title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      type.description,
+                    const Text(
+                      'What type of pickup\ndo you need?',
                       style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey.shade600,
-                        height: 1.4,
+                        fontSize: 18,
+                        height: 1.25,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF111827),
+                        letterSpacing: -0.2,
                       ),
                     ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Choose the option that fits you best.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF6B7280),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+
+                    ..._pickupTypes.map(_buildPickupTypeCard),
                   ],
                 ),
               ),
-              if (isSelected)
-                Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: type.color,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.check,
-                    color: Colors.white,
-                    size: 16,
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildContinueButton() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          width: double.infinity,
-          height: 56,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _selectedType != null
-                  ? AppColors.primary
-                  : Colors.grey.shade300,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              elevation: 0,
             ),
-            onPressed: _selectedType != null
-                ? () {
-                    // Navigate to next screen with selected type
+
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+              child: SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: () {
                     Navigator.pushNamed(
                       context,
                       '/schedule-date-time',
@@ -330,17 +146,115 @@ class _SchedulePickupTypeScreenState extends State<SchedulePickupTypeScreen> {
                         'pickupType': _selectedType,
                       },
                     );
-                  }
-                : null,
-            child: Text(
-              'Continue',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: _selectedType != null ? Colors.white : Colors.grey.shade600,
+                  },
+                  child: const Text(
+                    'Continue',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPickupTypeCard(PickupScheduleTypeData item) {
+    final isSelected = _selectedType == item.type;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedType = item.type;
+        });
+      },
+      child: Container(
+        width: double.infinity,
+        height: 78,
+        margin: const EdgeInsets.only(bottom: 14),
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(11),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : const Color(0xFFE5E7EB),
+            width: isSelected ? 1.4 : 1,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.025),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: const Color(0xFFEAF5EA),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                item.icon,
+                color: AppColors.primary,
+                size: 19,
+              ),
+            ),
+            const SizedBox(width: 13),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.title,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF111827),
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    item.description,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: Color(0xFF6B7280),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isSelected ? AppColors.primary : Colors.white,
+                border: Border.all(
+                  color: isSelected ? AppColors.primary : const Color(0xFFD1D5DB),
+                  width: 1.3,
+                ),
+              ),
+              child: isSelected
+                  ? const Icon(
+                Icons.check_rounded,
+                color: Colors.white,
+                size: 15,
+              )
+                  : null,
+            ),
+          ],
         ),
       ),
     );

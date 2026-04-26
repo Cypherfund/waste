@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+
 import '../../../../config/app_theme.dart';
 
 class ScheduleLocationScreen extends StatefulWidget {
@@ -16,27 +18,26 @@ class ScheduleLocationScreen extends StatefulWidget {
 }
 
 class _ScheduleLocationScreenState extends State<ScheduleLocationScreen> {
-  final TextEditingController _addressController = TextEditingController();
-  final TextEditingController _landmarkController = TextEditingController();
-  
-  bool _isLoadingLocation = false;
-  bool _useCurrentLocation = true;
+  final TextEditingController _instructionsController =
+  TextEditingController();
+
+  bool _isLoadingLocation = true;
   Position? _currentPosition;
-  // ignore: unused_field
-  String? _currentAddress;
+
+  String _area = 'Bonapriso, Douala';
+  String _city = 'Cameroon';
+  String _streetAddress = 'Rue 1278, Bonapriso';
+  String _nearbyAddress = 'Near Total Bonapriso';
 
   @override
   void initState() {
     super.initState();
-    if (_useCurrentLocation) {
-      _getCurrentLocation();
-    }
+    _getCurrentLocation();
   }
 
   @override
   void dispose() {
-    _addressController.dispose();
-    _landmarkController.dispose();
+    _instructionsController.dispose();
     super.dispose();
   }
 
@@ -46,500 +47,263 @@ class _ScheduleLocationScreenState extends State<ScheduleLocationScreen> {
     });
 
     try {
-      // Check permission
-      LocationPermission permission = await Geolocator.checkPermission();
+      var permission = await Geolocator.checkPermission();
+
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          _showLocationError('Location permissions are denied');
-          return;
-        }
       }
 
-      if (permission == LocationPermission.deniedForever) {
-        _showLocationError(
-          'Location permissions are permanently denied. Please enable them in settings.',
-        );
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        _useFallbackLocation();
         return;
       }
 
-      // Get current position
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
         ),
       );
-      
-      // Get address from coordinates
+
       final placemarks = await placemarkFromCoordinates(
         position.latitude,
         position.longitude,
       );
 
-      if (placemarks.isNotEmpty && mounted) {
-        final place = placemarks[0];
-        final address = _formatAddress(place);
-        
+      if (!mounted) return;
+
+      if (placemarks.isNotEmpty) {
+        final place = placemarks.first;
+
+        final street = _clean(place.street);
+        final subLocality = _clean(place.subLocality);
+        final locality = _clean(place.locality);
+        final country = _clean(place.country);
+
         setState(() {
           _currentPosition = position;
-          _currentAddress = address;
-          _addressController.text = address;
+          _area = [
+            if (subLocality != null) subLocality,
+            locality ?? 'Douala',
+          ].join(', ');
+
+          _city = country ?? 'Cameroon';
+
+          _streetAddress = street ?? 'Rue 1278, Bonapriso';
+
+          _nearbyAddress = subLocality != null
+              ? 'Near $subLocality'
+              : 'Near Total Bonapriso';
+
           _isLoadingLocation = false;
         });
+      } else {
+        _useFallbackLocation(position: position);
       }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoadingLocation = false;
-        });
-        _showLocationError('Failed to get location. Please enter manually.');
-      }
+    } catch (_) {
+      _useFallbackLocation();
     }
   }
 
-  String _formatAddress(Placemark place) {
-    final parts = <String>[];
-    
-    if (place.street != null && place.street!.isNotEmpty) {
-      parts.add(place.street!);
-    }
-    if (place.subLocality != null && place.subLocality!.isNotEmpty) {
-      parts.add(place.subLocality!);
-    }
-    if (place.locality != null && place.locality!.isNotEmpty) {
-      parts.add(place.locality!);
-    }
-    
-    return parts.isNotEmpty ? parts.join(', ') : 'Unknown location';
+  String? _clean(String? value) {
+    if (value == null) return null;
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
   }
 
-  void _showLocationError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red.shade600,
-      ),
-    );
+  void _useFallbackLocation({Position? position}) {
+    if (!mounted) return;
+
+    setState(() {
+      _currentPosition = position;
+      _area = 'Bonapriso, Douala';
+      _city = 'Cameroon';
+      _streetAddress = 'Rue 1278, Bonapriso';
+      _nearbyAddress = 'Near Total Bonapriso';
+      _isLoadingLocation = false;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final canContinue = !_isLoadingLocation && _streetAddress.isNotEmpty;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F4),
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
         elevation: 0,
+        scrolledUnderElevation: 0,
+        leadingWidth: 44,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Color(0xFF111827),
+            size: 16,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'Schedule Pickup',
           style: TextStyle(
-            color: Colors.black,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
+            color: Color(0xFF111827),
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
           ),
         ),
         centerTitle: true,
       ),
-      body: Column(
-        children: [
-          // Progress Indicator
-          _buildProgressIndicator(),
-          
-          // Content
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Pickup address',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Where should we collect your waste?',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // Location Options
-                  _buildLocationOptions(),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Address Input
-                  _buildAddressInput(),
-                  
-                  const SizedBox(height: 20),
-                  
-                  // Landmark Input
-                  _buildLandmarkInput(),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Saved Addresses
-                  _buildSavedAddresses(),
-                ],
-              ),
-            ),
-          ),
-          
-          // Continue Button
-          _buildContinueButton(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProgressIndicator() {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      child: Row(
-        children: [
-          _buildProgressStep(1, 'Type', false, true),
-          _buildProgressLine(true),
-          _buildProgressStep(2, 'Schedule', false, true),
-          _buildProgressLine(true),
-          _buildProgressStep(3, 'Location', true, false),
-          _buildProgressLine(false),
-          _buildProgressStep(4, 'Review', false, false),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProgressStep(int step, String label, bool isActive, bool isCompleted) {
-    return Expanded(
-      child: Column(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isActive || isCompleted
-                  ? AppColors.primary
-                  : Colors.grey.shade300,
-            ),
-            child: Center(
-              child: isCompleted
-                  ? const Icon(Icons.check, color: Colors.white, size: 16)
-                  : Text(
-                      step.toString(),
-                      style: TextStyle(
-                        color: isActive ? Colors.white : Colors.grey.shade600,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: isActive ? AppColors.primary : Colors.grey.shade500,
-              fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProgressLine(bool isCompleted) {
-    return Expanded(
-      child: Container(
-        height: 2,
-        color: isCompleted ? AppColors.primary : Colors.grey.shade300,
-        margin: const EdgeInsets.only(bottom: 20),
-      ),
-    );
-  }
-
-  Widget _buildLocationOptions() {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildLocationOption(
-            title: 'Use current location',
-            icon: Icons.my_location,
-            isSelected: _useCurrentLocation,
-            onTap: () {
-              setState(() {
-                _useCurrentLocation = true;
-              });
-              _getCurrentLocation();
-            },
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildLocationOption(
-            title: 'Enter manually',
-            icon: Icons.edit_location,
-            isSelected: !_useCurrentLocation,
-            onTap: () {
-              setState(() {
-                _useCurrentLocation = false;
-                _addressController.clear();
-                _currentPosition = null;
-                _currentAddress = null;
-              });
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLocationOption({
-    required String title,
-    required IconData icon,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryLight.withValues(alpha: 0.1) : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? AppColors.primary : Colors.grey.shade300,
-            width: isSelected ? 2 : 1,
-          ),
-        ),
+      body: SafeArea(
+        top: false,
         child: Column(
           children: [
-            Icon(
-              icon,
-              color: isSelected ? AppColors.primary : Colors.grey.shade600,
-              size: 24,
+            const Divider(
+              height: 1,
+              thickness: 1,
+              color: Color(0xFFF0F2F0),
             ),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                color: isSelected ? AppColors.primary : Colors.grey.shade700,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
-  Widget _buildAddressInput() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Street address',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey.shade700,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade300),
-          ),
-          child: TextField(
-            controller: _addressController,
-            enabled: !_isLoadingLocation,
-            maxLines: 2,
-            decoration: InputDecoration(
-              hintText: _useCurrentLocation 
-                  ? 'Getting your location...' 
-                  : 'Enter your complete address',
-              hintStyle: TextStyle(color: Colors.grey.shade400),
-              prefixIcon: Padding(
-                padding: const EdgeInsets.only(left: 16, right: 12),
-                child: Icon(
-                  Icons.location_on_outlined,
-                  color: AppColors.primary,
-                ),
-              ),
-              suffixIcon: _isLoadingLocation
-                  ? const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                        ),
-                      ),
-                    )
-                  : null,
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.all(16),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLandmarkInput() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Nearby landmark (optional)',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey.shade700,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade300),
-          ),
-          child: TextField(
-            controller: _landmarkController,
-            decoration: InputDecoration(
-              hintText: 'e.g., Next to Carrefour Market',
-              hintStyle: TextStyle(color: Colors.grey.shade400),
-              prefixIcon: Padding(
-                padding: const EdgeInsets.only(left: 16, right: 12),
-                child: Icon(
-                  Icons.place_outlined,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.all(16),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSavedAddresses() {
-    // In a real app, these would come from user's saved addresses
-    final savedAddresses = [
-      {
-        'label': 'Home',
-        'address': 'Rue de la Liberté, Bonanjo, Douala',
-        'icon': Icons.home,
-      },
-      {
-        'label': 'Office',
-        'address': 'Avenue Charles de Gaulle, Akwa, Douala',
-        'icon': Icons.work,
-      },
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Saved addresses',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey.shade700,
-          ),
-        ),
-        const SizedBox(height: 12),
-        ...savedAddresses.map((address) => _buildSavedAddressCard(
-          label: address['label'] as String,
-          address: address['address'] as String,
-          icon: address['icon'] as IconData,
-        )),
-      ],
-    );
-  }
-
-  Widget _buildSavedAddressCard({
-    required String label,
-    required String address,
-    required IconData icon,
-  }) {
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _addressController.text = address;
-          _useCurrentLocation = false;
-        });
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade200),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                icon,
-                color: AppColors.primary,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 16),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Pickup Address',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF111827),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    address,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade600,
+
+                    const SizedBox(height: 14),
+
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: _isLoadingLocation
+                              ? const Text(
+                            'Getting your location...',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF6B7280),
+                            ),
+                          )
+                              : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _area,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF111827),
+                                ),
+                              ),
+                              const SizedBox(height: 5),
+                              Text(
+                                _city,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF6B7280),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: _getCurrentLocation,
+                          child: Text(
+                            'Change',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+
+                    const SizedBox(height: 14),
+
+                    _buildMapPreview(),
+
+                    const SizedBox(height: 10),
+
+                    _buildAddressSummaryCard(),
+
+                    const SizedBox(height: 24),
+
+                    const Text(
+                      'Add instructions (optional)',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF111827),
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    _buildInstructionsInput(),
+                  ],
+                ),
               ),
             ),
-            Icon(
-              Icons.chevron_right,
-              color: Colors.grey.shade400,
+
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+              child: SafeArea(
+                top: false,
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: ElevatedButton(
+                    onPressed: canContinue
+                        ? () {
+                      final args = widget.arguments ?? {};
+
+                      Navigator.pushNamed(
+                        context,
+                        '/schedule-review',
+                        arguments: {
+                          ...args,
+                          'locationAddress': _streetAddress,
+                          'locationArea': _area,
+                          'landmark': _instructionsController.text,
+                          'locationLat': _currentPosition?.latitude,
+                          'locationLng': _currentPosition?.longitude,
+                        },
+                      );
+                    }
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: const Color(0xFFE0E0E0),
+                      disabledForegroundColor: const Color(0xFF8A8A8A),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                    ),
+                    child: const Text(
+                      'Continue',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
           ],
         ),
@@ -547,62 +311,178 @@ class _ScheduleLocationScreenState extends State<ScheduleLocationScreen> {
     );
   }
 
-  Widget _buildContinueButton() {
-    final canContinue = _addressController.text.isNotEmpty && !_isLoadingLocation;
-    
+  Widget _buildMapPreview() {
+    final LatLng fallbackLatLng = const LatLng(4.0511, 9.7679); // Douala fallback
+
+    final LatLng selectedLatLng = _currentPosition == null
+        ? fallbackLatLng
+        : LatLng(
+      _currentPosition!.latitude,
+      _currentPosition!.longitude,
+    );
+
     return Container(
-      padding: const EdgeInsets.all(20),
+      width: double.infinity,
+      height: 210,
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF3F0),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          GoogleMap(
+            initialCameraPosition: CameraPosition(
+              target: selectedLatLng,
+              zoom: 15.5,
+            ),
+            markers: {
+              Marker(
+                markerId: const MarkerId('pickup_location'),
+                position: selectedLatLng,
+                icon: BitmapDescriptor.defaultMarkerWithHue(
+                  BitmapDescriptor.hueGreen,
+                ),
+              ),
+            },
+            myLocationEnabled: false,
+            myLocationButtonEnabled: false,
+            zoomControlsEnabled: false,
+            mapToolbarEnabled: false,
+            compassEnabled: false,
+            rotateGesturesEnabled: false,
+            tiltGesturesEnabled: false,
+            scrollGesturesEnabled: true,
+            zoomGesturesEnabled: true,
+          ),
+
+          if (_isLoadingLocation)
+            Positioned.fill(
+              child: Container(
+                color: Colors.white.withValues(alpha: 0.65),
+                child: Center(
+                  child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.4,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAddressSummaryCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(13, 11, 13, 11),
       decoration: BoxDecoration(
         color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _isLoadingLocation
+                ? const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _SkeletonLine(width: 120),
+                SizedBox(height: 8),
+                _SkeletonLine(width: 170),
+              ],
+            )
+                : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _streetAddress,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF111827),
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  _nearbyAddress,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF6B7280),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Icon(
+            Icons.edit_outlined,
+            size: 17,
+            color: AppColors.primary,
           ),
         ],
       ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          width: double.infinity,
-          height: 56,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: canContinue
-                  ? AppColors.primary
-                  : Colors.grey.shade300,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              elevation: 0,
-            ),
-            onPressed: canContinue
-                ? () {
-                    final args = widget.arguments ?? {};
-                    Navigator.pushNamed(
-                      context,
-                      '/schedule-review',
-                      arguments: {
-                        ...args,
-                        'locationAddress': _addressController.text,
-                        'landmark': _landmarkController.text,
-                        'locationLat': _currentPosition?.latitude,
-                        'locationLng': _currentPosition?.longitude,
-                      },
-                    );
-                  }
-                : null,
-            child: Text(
-              'Continue',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: canContinue ? Colors.white : Colors.grey.shade600,
-              ),
-            ),
+    );
+  }
+
+  Widget _buildInstructionsInput() {
+    return Container(
+      width: double.infinity,
+      height: 58,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: TextField(
+        controller: _instructionsController,
+        maxLines: 1,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: Color(0xFF111827),
+        ),
+        decoration: const InputDecoration(
+          border: InputBorder.none,
+          hintText: 'Gate code, landmark, floor, etc.',
+          hintStyle: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF9CA3AF),
+          ),
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 20,
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _SkeletonLine extends StatelessWidget {
+  final double width;
+
+  const _SkeletonLine({
+    required this.width,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: 9,
+      decoration: BoxDecoration(
+        color: const Color(0xFFE5E7EB),
+        borderRadius: BorderRadius.circular(999),
       ),
     );
   }
