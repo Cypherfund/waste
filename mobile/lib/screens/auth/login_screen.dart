@@ -31,7 +31,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final auth = context.read<AuthProvider>();
     await auth.login(
-      phone: _phoneController.text.trim(),
+      phone: '+237${_phoneController.text.trim()}',
       password: _passwordController.text,
     );
 
@@ -69,7 +69,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   AppTextField(
                     controller: _phoneController,
                     label: 'Phone Number',
-                    hint: '+237 6XX XXX XXX',
+                    hint: '654321233',
                     keyboardType: TextInputType.phone,
                     prefixIcon: const Padding(
                       padding: EdgeInsets.only(left: 12),
@@ -102,8 +102,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       if (value == null || value.trim().isEmpty) {
                         return 'Phone number is required';
                       }
-                      if (!RegExp(r'^\+237[0-9]{9}$').hasMatch(value.trim())) {
-                        return 'Enter a valid Cameroon phone number (+237XXXXXXXXX)';
+                      if (!RegExp(r'^[0-9]{9}$').hasMatch(value.trim())) {
+                        return 'Enter a valid phone number (9 digits)';
                       }
                       return null;
                     },

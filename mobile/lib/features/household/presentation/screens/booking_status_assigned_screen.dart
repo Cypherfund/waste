@@ -3,32 +3,27 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../../config/app_theme.dart';
 import '../../../../models/job.dart';
 import '../../../../providers/job_provider.dart';
 
-class BookingStatusOnTheWayScreen extends StatefulWidget {
+class BookingStatusAssignedScreen extends StatefulWidget {
   final String jobId;
 
-  const BookingStatusOnTheWayScreen({
+  const BookingStatusAssignedScreen({
     super.key,
     required this.jobId,
   });
 
   @override
-  State<BookingStatusOnTheWayScreen> createState() =>
-      _BookingStatusOnTheWayScreenState();
+  State<BookingStatusAssignedScreen> createState() =>
+      _BookingStatusAssignedScreenState();
 }
 
-class _BookingStatusOnTheWayScreenState
-    extends State<BookingStatusOnTheWayScreen> {
+class _BookingStatusAssignedScreenState
+    extends State<BookingStatusAssignedScreen> {
   Timer? _refreshTimer;
-  GoogleMapController? _mapController;
-
-  static const LatLng _fallbackPickupLatLng = LatLng(4.0511, 9.7679);
-  static const LatLng _fallbackCollectorLatLng = LatLng(4.0540, 9.7635);
 
   @override
   void initState() {
@@ -46,7 +41,6 @@ class _BookingStatusOnTheWayScreenState
   @override
   void dispose() {
     _refreshTimer?.cancel();
-    _mapController?.dispose();
     super.dispose();
   }
 
@@ -60,10 +54,10 @@ class _BookingStatusOnTheWayScreenState
 
     if (!mounted || job == null) return;
 
-    if (job.status == JobStatus.completed) {
+    if (job.status == JobStatus.inProgress) {
       Navigator.pushReplacementNamed(
         context,
-        '/booking-status-completed',
+        '/booking-status-on-the-way',
         arguments: job.id,
       );
     }
@@ -75,26 +69,14 @@ class _BookingStatusOnTheWayScreenState
         arguments: job.id,
       );
     }
-  }
 
-  LatLng _pickupLatLng(Job job) {
-    final lat = job.locationLat;
-    final lng = job.locationLng;
-
-    if (lat != null && lng != null) {
-      return LatLng(lat, lng);
+    if (job.status == JobStatus.completed) {
+      Navigator.pushReplacementNamed(
+        context,
+        '/booking-status-completed',
+        arguments: job.id,
+      );
     }
-
-    return _fallbackPickupLatLng;
-  }
-
-  LatLng _collectorLatLng(Job job) {
-    final pickup = _pickupLatLng(job);
-
-    return LatLng(
-      pickup.latitude + 0.003,
-      pickup.longitude - 0.004,
-    );
   }
 
   @override
@@ -144,11 +126,11 @@ class _BookingStatusOnTheWayScreenState
               onRefresh: _refreshJobStatus,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
                 child: Column(
                   children: [
                     Text(
-                      'On the way',
+                      'Assigned',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 13,
@@ -160,7 +142,7 @@ class _BookingStatusOnTheWayScreenState
                     const SizedBox(height: 12),
 
                     const Text(
-                      'Collector is heading to you',
+                      'Your collector is on the way',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 13,
@@ -170,19 +152,15 @@ class _BookingStatusOnTheWayScreenState
                       ),
                     ),
 
+                    const SizedBox(height: 20),
+
+                    _buildCollectorCard(),
+
                     const SizedBox(height: 14),
-
-                    _buildRealMapCard(job),
-
-                    const SizedBox(height: 8),
-
-                    _buildEtaRow(),
-
-                    const SizedBox(height: 10),
 
                     _buildBookingInfoCard(job),
 
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 16),
 
                     _buildTrackButton(job),
                   ],
@@ -195,132 +173,144 @@ class _BookingStatusOnTheWayScreenState
     );
   }
 
-  Widget _buildRealMapCard(Job job) {
-    final pickupLatLng = _pickupLatLng(job);
-    final collectorLatLng = _collectorLatLng(job);
-
+  Widget _buildCollectorCard() {
     return Container(
       width: double.infinity,
-      height: 128,
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
       decoration: BoxDecoration(
-        color: const Color(0xFFEFF3F0),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(9),
         border: Border.all(color: const Color(0xFFE5E7EB)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.025),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      clipBehavior: Clip.antiAlias,
-      child: GoogleMap(
-        initialCameraPosition: CameraPosition(
-          target: LatLng(
-            (pickupLatLng.latitude + collectorLatLng.latitude) / 2,
-            (pickupLatLng.longitude + collectorLatLng.longitude) / 2,
-          ),
-          zoom: 14.5,
-        ),
-        onMapCreated: (controller) {
-          _mapController = controller;
-
-          Future.delayed(const Duration(milliseconds: 350), () {
-            if (!mounted) return;
-
-            controller.animateCamera(
-              CameraUpdate.newLatLngBounds(
-                _boundsFromLatLngList([pickupLatLng, collectorLatLng]),
-                44,
-              ),
-            );
-          });
-        },
-        markers: {
-          Marker(
-            markerId: const MarkerId('pickup'),
-            position: pickupLatLng,
-            icon: BitmapDescriptor.defaultMarkerWithHue(
-              BitmapDescriptor.hueGreen,
-            ),
-            infoWindow: const InfoWindow(title: 'Pickup location'),
-          ),
-          Marker(
-            markerId: const MarkerId('collector'),
-            position: collectorLatLng,
-            icon: BitmapDescriptor.defaultMarkerWithHue(
-              BitmapDescriptor.hueAzure,
-            ),
-            infoWindow: const InfoWindow(title: 'Collector'),
-          ),
-        },
-        polylines: {
-          Polyline(
-            polylineId: const PolylineId('collector_route'),
-            points: [
-              collectorLatLng,
-              LatLng(
-                collectorLatLng.latitude,
-                pickupLatLng.longitude,
-              ),
-              pickupLatLng,
-            ],
-            color: const Color(0xFF2563EB),
-            width: 4,
-          ),
-        },
-        myLocationEnabled: false,
-        myLocationButtonEnabled: false,
-        zoomControlsEnabled: false,
-        mapToolbarEnabled: false,
-        compassEnabled: false,
-        rotateGesturesEnabled: false,
-        tiltGesturesEnabled: false,
-      ),
-    );
-  }
-
-  LatLngBounds _boundsFromLatLngList(List<LatLng> list) {
-    double minLat = list.first.latitude;
-    double maxLat = list.first.latitude;
-    double minLng = list.first.longitude;
-    double maxLng = list.first.longitude;
-
-    for (final point in list) {
-      if (point.latitude < minLat) minLat = point.latitude;
-      if (point.latitude > maxLat) maxLat = point.latitude;
-      if (point.longitude < minLng) minLng = point.longitude;
-      if (point.longitude > maxLng) maxLng = point.longitude;
-    }
-
-    return LatLngBounds(
-      southwest: LatLng(minLat, minLng),
-      northeast: LatLng(maxLat, maxLng),
-    );
-  }
-
-  Widget _buildEtaRow() {
-    return Row(
-      children: const [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        children: [
+          Row(
             children: [
-              Text(
-                'ETA',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF6B7280),
+              CircleAvatar(
+                radius: 30,
+                backgroundColor: const Color(0xFFEAF5EA),
+                backgroundImage: const AssetImage(
+                  'assets/images/collectors/jean-claude.png',
                 ),
+                onBackgroundImageError: (_, __) {},
               ),
-              SizedBox(height: 4),
-              Text(
-                '10 min',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF111827),
+
+              const SizedBox(width: 13),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Jean Claude',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF111827),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: const [
+                        Icon(
+                          Icons.star_rounded,
+                          color: Color(0xFFF59E0B),
+                          size: 15,
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          '4.8 (128 trips)',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF6B7280),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
+
+          const SizedBox(height: 12),
+
+          Row(
+            children: [
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'ETA',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF6B7280),
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      '25 min',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF111827),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              _smallGreenButton(
+                icon: Icons.call_rounded,
+                onTap: () {},
+              ),
+
+              const SizedBox(width: 8),
+
+              _smallGreenButton(
+                icon: Icons.chat_bubble_outline_rounded,
+                onTap: () {},
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _smallGreenButton({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: const Color(0xFFD6EAD8),
+            width: 1,
+          ),
         ),
-      ],
+        child: Icon(
+          icon,
+          color: AppColors.primary,
+          size: 18,
+        ),
+      ),
     );
   }
 

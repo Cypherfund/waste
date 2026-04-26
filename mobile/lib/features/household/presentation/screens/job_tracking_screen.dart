@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../models/job.dart';
 import '../../../../providers/job_provider.dart';
+import 'booking_status_assigned_screen.dart';
 import 'booking_status_requested_screen.dart';
 import 'booking_status_on_the_way_screen.dart';
 import 'booking_status_arrived_screen.dart';
@@ -41,14 +42,21 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
     // Navigate to appropriate status screen based on job status
     switch (job.status) {
       case JobStatus.requested:
+        // Navigator.pushReplacement(
+        //   context,
+        //   MaterialPageRoute(
+        //     builder: (context) => BookingStatusRequestedScreen(jobId: widget.jobId),
+        //   ),
+        // );
+        // break;
       case JobStatus.assigned:
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => BookingStatusRequestedScreen(jobId: widget.jobId),
-          ),
-        );
-        break;
+        // Navigator.pushReplacement(
+        //   context,
+        //   MaterialPageRoute(
+        //     builder: (context) => BookingStatusAssignedScreen(jobId: widget.jobId),
+        //   ),
+        // );
+        // break;
       case JobStatus.inProgress:
         Navigator.pushReplacement(
           context,
