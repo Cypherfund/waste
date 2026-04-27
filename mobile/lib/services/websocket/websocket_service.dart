@@ -128,8 +128,12 @@ class WebSocketService {
       }
     });
 
-    _socket!.onDisconnect((_) {
-      debugPrint('[WS] Disconnected');
+    _socket!.onDisconnect((reason) {
+      debugPrint('[WS] Disconnected: $reason');
+    });
+
+    _socket!.on('reconnect', (_) {
+      debugPrint('[WS] Reconnected');
     });
 
     _socket!.onConnectError((error) {

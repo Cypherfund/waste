@@ -14,17 +14,33 @@ class CollectorHomeTab extends StatefulWidget {
   State<CollectorHomeTab> createState() => _CollectorHomeTabState();
 }
 
-class _CollectorHomeTabState extends State<CollectorHomeTab> {
+class _CollectorHomeTabState extends State<CollectorHomeTab>
+    with WidgetsBindingObserver {
   bool _isOnline = true;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<CollectorJobsProvider>().loadJobs(refresh: true);
       context.read<CollectorEarningsProvider>().loadQuickSummary();
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      context.read<CollectorJobsProvider>().loadJobs(refresh: true);
+      context.read<CollectorEarningsProvider>().loadQuickSummary();
+    }
   }
 
   @override
@@ -475,7 +491,7 @@ class _CollectorHomeTabState extends State<CollectorHomeTab> {
               onPressed: () {
                 Navigator.pushNamed(
                   context,
-                  '/collector-job-detail',
+                  '/collector-navigate',
                   arguments: job,
                 );
               },

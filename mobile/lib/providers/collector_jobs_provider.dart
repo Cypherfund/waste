@@ -233,7 +233,7 @@ class CollectorJobsProvider extends ChangeNotifier {
   }
 
   void _onCollectorAssigned(CollectorAssignedEvent event) {
-    // New job assigned — reload the full list
+    debugPrint('[CollectorJobs] WS collector:assigned received — jobId=${event.jobId}');
     loadJobs(refresh: true);
   }
 

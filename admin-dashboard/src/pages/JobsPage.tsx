@@ -27,6 +27,12 @@ export default function JobsPage() {
   const [assignLoading, setAssignLoading] = useState(false);
   const [assignError, setAssignError] = useState('');
   const [feedback, setFeedback] = useState('');
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [cancelError, setCancelError] = useState('');
+  const [reassignCollectorId, setReassignCollectorId] = useState('');
+  const [reassignLoading, setReassignLoading] = useState(false);
+  const [reassignError, setReassignError] = useState('');
 
   const fetchJobs = useCallback(() => {
     const params: Record<string, string> = { page: String(page), limit: '20' };
@@ -62,6 +68,46 @@ export default function JobsPage() {
       setAssignError(typeof msg === 'string' ? msg : JSON.stringify(msg));
     } finally {
       setAssignLoading(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!selectedJob) return;
+    setCancelLoading(true);
+    setCancelError('');
+    try {
+      await jobsApi.cancel(selectedJob.id, cancelReason);
+      setFeedback(`Job cancelled successfully.`);
+      setSelectedJob(null);
+      setCancelReason('');
+      run();
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || 'Cancellation failed';
+      setCancelError(typeof msg === 'string' ? msg : JSON.stringify(msg));
+    } finally {
+      setCancelLoading(false);
+    }
+  };
+
+  const handleReassign = async () => {
+    if (!selectedJob || !reassignCollectorId) return;
+    setReassignLoading(true);
+    setReassignError('');
+    try {
+      await jobsApi.manualReassign(selectedJob.id, reassignCollectorId);
+      setFeedback(`Job reassigned successfully.`);
+      setSelectedJob(null);
+      setReassignCollectorId('');
+      run();
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || 'Reassignment failed';
+      setReassignError(typeof msg === 'string' ? msg : JSON.stringify(msg));
+    } finally {
+      setReassignLoading(false);
     }
   };
 
@@ -301,12 +347,85 @@ export default function JobsPage() {
               </div>
             )}
 
+            {/* Manual Reassignment — only for ASSIGNED jobs */}
+            {selectedJob.status === 'ASSIGNED' && (
+              <div className="mb-4 rounded border border-orange-200 bg-orange-50 p-3">
+                <p className="mb-2 text-sm font-medium text-orange-800">
+                  Reassign Job
+                </p>
+                <p className="mb-2 text-xs text-orange-600">
+                  Current collector:{' '}
+                  {selectedJob.collectorId
+                    ? `${selectedJob.collectorId.slice(0, 8)}...`
+                    : 'None'}
+                </p>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={reassignCollectorId}
+                    onChange={(e) => setReassignCollectorId(e.target.value)}
+                    className="flex-1 rounded border px-2 py-1.5 text-sm"
+                  >
+                    <option value="">Select New Collector...</option>
+                    {(collectors ?? [])
+                      .filter((c) => c.id !== selectedJob.collectorId)
+                      .map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} ({c.phone})
+                        </option>
+                      ))}
+                  </select>
+                  <button
+                    onClick={handleReassign}
+                    disabled={!reassignCollectorId || reassignLoading}
+                    className="rounded bg-orange-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-50"
+                  >
+                    {reassignLoading ? 'Reassigning...' : 'Reassign'}
+                  </button>
+                </div>
+                {reassignError && (
+                  <p className="mt-2 text-xs text-red-600">{reassignError}</p>
+                )}
+              </div>
+            )}
+
+            {/* Cancel Job — only for active jobs */}
+            {['REQUESTED', 'ASSIGNED', 'IN_PROGRESS'].includes(selectedJob.status) && (
+              <div className="mb-4 rounded border border-red-200 bg-red-50 p-3">
+                <p className="mb-2 text-sm font-medium text-red-800">
+                  Cancel Job
+                </p>
+                <div className="mb-2">
+                  <textarea
+                    value={cancelReason}
+                    onChange={(e) => setCancelReason(e.target.value)}
+                    placeholder="Reason for cancellation (optional)"
+                    className="w-full rounded border px-2 py-1.5 text-sm"
+                    rows={2}
+                  />
+                </div>
+                <button
+                  onClick={handleCancel}
+                  disabled={cancelLoading}
+                  className="rounded bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  {cancelLoading ? 'Cancelling...' : 'Cancel Job'}
+                </button>
+                {cancelError && (
+                  <p className="mt-2 text-xs text-red-600">{cancelError}</p>
+                )}
+              </div>
+            )}
+
             <div className="flex justify-end">
               <button
                 onClick={() => {
                   setSelectedJob(null);
                   setAssignCollectorId('');
                   setAssignError('');
+                  setCancelReason('');
+                  setCancelError('');
+                  setReassignCollectorId('');
+                  setReassignError('');
                 }}
                 className="rounded border px-4 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
               >
