@@ -28,6 +28,7 @@ class Job {
   final String id;
   final String householdId;
   final String? householdName;
+  final String? householdPhone;
   final String? collectorId;
   final String? collectorName;
   final JobStatus status;
@@ -52,6 +53,7 @@ class Job {
     required this.id,
     required this.householdId,
     this.householdName,
+    this.householdPhone,
     this.collectorId,
     this.collectorName,
     required this.status,
@@ -78,6 +80,7 @@ class Job {
       id: json['id'] as String,
       householdId: json['householdId'] as String,
       householdName: json['householdName'] as String?,
+      householdPhone: json['householdPhone'] as String?,
       collectorId: json['collectorId'] as String?,
       collectorName: json['collectorName'] as String?,
       status: JobStatus.fromString(json['status'] as String),
@@ -114,6 +117,7 @@ class Job {
     return {
       'id': id,
       'householdId': householdId,
+      'householdPhone': householdPhone,
       'status': status.toBackendString(),
       'scheduledDate': scheduledDate,
       'scheduledTime': scheduledTime,
@@ -145,6 +149,7 @@ class Job {
       id: id,
       householdId: householdId,
       householdName: householdName,
+      householdPhone: householdPhone,
       collectorId: collectorId ?? this.collectorId,
       collectorName: collectorName ?? this.collectorName,
       status: status ?? this.status,

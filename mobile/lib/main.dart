@@ -26,6 +26,7 @@ import 'screens/collector/collector_start_job_screen.dart';
 import 'screens/collector/collector_complete_job_screen.dart';
 import 'screens/collector/collector_job_completed_screen.dart';
 import 'screens/collector/collector_arrived_screen.dart';
+import 'screens/collector/collector_navigate_screen.dart';
 import 'screens/collector/collector_job_detail_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
@@ -202,6 +203,9 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
             job: ModalRoute.of(context)?.settings.arguments as Job,
           ),
           '/collector-arrived': (context) => CollectorArrivedScreen(
+            job: ModalRoute.of(context)?.settings.arguments as Job,
+          ),
+          '/collector-navigate': (context) => CollectorNavigateScreen(
             job: ModalRoute.of(context)?.settings.arguments as Job,
           ),
           '/collector-job-detail': (context) => const CollectorJobDetailScreen(),
