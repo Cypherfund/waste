@@ -175,6 +175,7 @@ void main() {
         .thenAnswer((_) => syncStatusController.stream);
     when(() => mockSyncService.resultStream)
         .thenAnswer((_) => syncResultController.stream);
+    when(() => mockQueueService.isSupported).thenReturn(true);
     when(() => mockQueueService.getPendingCount()).thenAnswer((_) async => 0);
     when(() => mockQueueService.getAllItems()).thenAnswer((_) async => []);
 

@@ -94,6 +94,8 @@ class OfflineQueueService {
   Database? _db;
   final _uuid = const Uuid();
 
+  bool get isSupported => !kIsWeb;
+
   Future<Database> get database async {
     _db ??= await _initDb();
     return _db!;

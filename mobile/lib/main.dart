@@ -7,6 +7,7 @@ import 'providers/job_provider.dart';
 import 'providers/collector_jobs_provider.dart';
 import 'providers/collector_earnings_provider.dart';
 import 'providers/offline_queue_provider.dart';
+import 'models/job.dart';
 import 'services/api/api_client.dart';
 import 'services/api/auth_api.dart';
 import 'services/api/job_api.dart';
@@ -18,9 +19,16 @@ import 'services/location/location_tracking_service.dart';
 import 'services/offline/offline_queue_service.dart';
 import 'services/offline/sync_service.dart';
 import 'services/offline/connectivity_service.dart';
-import 'screens/home/home_screen.dart';
-import 'screens/collector/collector_home_screen.dart';
+import 'screens/collector/collector_shell.dart';
+import 'screens/collector/collector_cashout_screen.dart';
+import 'screens/collector/collector_cashout_success_screen.dart';
+import 'screens/collector/collector_start_job_screen.dart';
+import 'screens/collector/collector_complete_job_screen.dart';
+import 'screens/collector/collector_job_completed_screen.dart';
+import 'screens/collector/collector_arrived_screen.dart';
+import 'screens/collector/collector_job_detail_screen.dart';
 import 'screens/auth/login_screen.dart';
+import 'screens/auth/register_screen.dart';
 import 'features/household/presentation/screens/home_dashboard_screen.dart';
 import 'features/household/presentation/screens/bookings_list_screen.dart';
 import 'features/household/presentation/screens/wallet_screen.dart';
@@ -153,6 +161,8 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         routes: {
+          '/login': (context) => const LoginScreen(),
+          '/register': (context) => const RegisterScreen(),
           '/home': (context) => const HomeDashboardScreen(),
           '/bookings': (context) => const BookingsListScreen(),
           '/wallet': (context) => const WalletScreen(),
@@ -176,6 +186,25 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
           '/booking-details': (context) => BookingDetailsScreen(
             jobId: ModalRoute.of(context)?.settings.arguments as String? ?? '',
           ),
+          // Collector routes
+          '/collector-home': (context) => const CollectorShell(),
+          '/collector-jobs': (context) => const CollectorShell(),
+          '/collector-earnings': (context) => const CollectorShell(),
+          '/collector-cashout': (context) => const CollectorCashoutScreen(),
+          '/collector-cashout-success': (context) => const CollectorCashoutSuccessScreen(),
+          '/collector-start-job': (context) => CollectorStartJobScreen(
+            job: ModalRoute.of(context)?.settings.arguments as Job,
+          ),
+          '/collector-complete-job': (context) => CollectorCompleteJobScreen(
+            job: ModalRoute.of(context)?.settings.arguments as Job,
+          ),
+          '/collector-job-completed': (context) => CollectorJobCompletedScreen(
+            job: ModalRoute.of(context)?.settings.arguments as Job,
+          ),
+          '/collector-arrived': (context) => CollectorArrivedScreen(
+            job: ModalRoute.of(context)?.settings.arguments as Job,
+          ),
+          '/collector-job-detail': (context) => const CollectorJobDetailScreen(),
         },
         home: _onboardingCompleted
             ? Consumer<AuthProvider>(
@@ -185,11 +214,15 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
                       return const _SplashScreen();
                     case AuthStatus.authenticated:
                       if (auth.user?.isCollector == true) {
-                        return const CollectorHomeScreen();
+                        return const CollectorShell();
                       }
                       return const HomeDashboardScreen();
                     case AuthStatus.unauthenticated:
-                      return const LoginScreen();
+                      return LoginScreen(
+                        onSignUp: () {
+                          setState(() => _onboardingCompleted = false);
+                        },
+                      );
                   }
                 },
               )

@@ -7,7 +7,9 @@ import '../../widgets/loading_button.dart';
 import '../../widgets/error_banner.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final VoidCallback? onSignUp;
+
+  const LoginScreen({super.key, this.onSignUp});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -167,7 +169,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       GestureDetector(
-                        onTap: () => Navigator.pushReplacementNamed(context, '/register'),
+                        onTap: () {
+                          if (widget.onSignUp != null) {
+                            widget.onSignUp!();
+                          }
+                        },
                         child: Text(
                           'Sign Up',
                           style: AppTypography.bodyMedium.copyWith(

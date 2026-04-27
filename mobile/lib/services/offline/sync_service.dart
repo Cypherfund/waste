@@ -66,6 +66,10 @@ class SyncService {
       return SyncResult(total: 0, synced: 0, failed: 0);
     }
 
+    if (!_queueService.isSupported) {
+      return SyncResult(total: 0, synced: 0, failed: 0);
+    }
+
     if (!_connectivityService.isOnline) {
       debugPrint('[Sync] Offline — skipping sync');
       return SyncResult(total: 0, synced: 0, failed: 0);

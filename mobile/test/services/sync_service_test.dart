@@ -63,6 +63,7 @@ void main() {
     when(() => mockConnectivity.onConnectivityChanged)
         .thenAnswer((_) => connectivityController.stream);
     when(() => mockConnectivity.isOnline).thenReturn(true);
+    when(() => mockQueue.isSupported).thenReturn(true);
 
     syncService = SyncService(
       queueService: mockQueue,
