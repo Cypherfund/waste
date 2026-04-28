@@ -4,6 +4,7 @@ import Footer from "@/components/Footer";
 import JsonLd from "@/components/JsonLd";
 import { getLocale } from "@/i18n/getLocale";
 import { getDictionary } from "@/i18n/dictionaries";
+import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -37,6 +38,7 @@ export default async function RootLayout({
         <main className="flex-1">{children}</main>
         <Footer lang={lang} dict={dict.common} />
         <JsonLd />
+        <Analytics />
       </body>
     </html>
   );

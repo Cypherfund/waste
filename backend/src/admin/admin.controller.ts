@@ -80,6 +80,14 @@ export class AdminController {
     return this.adminService.manualAssign(id, dto.collectorId);
   }
 
+  @Post('jobs/:id/reassign')
+  manualReassign(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ManualAssignDto,
+  ) {
+    return this.adminService.manualReassign(id, dto.collectorId);
+  }
+
   // ─── DISPUTES ─────────────────────────────────────────────────
 
   @Get('disputes')

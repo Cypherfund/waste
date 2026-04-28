@@ -197,6 +197,90 @@ export class AssignmentService {
     this.eventEmitter.emit(JobEvents.ASSIGNED, payload);
   }
 
+  // ─── MANUAL REASSIGN (Admin) ──────────────────────────────────
+
+  async manualReassign(jobId: string, collectorId: string): Promise<void> {
+    const job = await this.jobsService.getJobEntity(jobId);
+
+    // Only allow reassignment of ASSIGNED jobs
+    if (job.status !== JobStatus.ASSIGNED) {
+      throw new BadRequestException(
+        `Job must be in ASSIGNED status to reassign (current: ${job.status})`,
+      );
+    }
+
+    // Verify collector exists and is active
+    const collector = await this.userRepo.findOne({
+      where: { id: collectorId, role: UserRole.COLLECTOR, isActive: true },
+    });
+
+    if (!collector) {
+      throw new NotFoundException(
+        'Collector not found or not active',
+      );
+    }
+
+    // Don't allow reassigning to the same collector
+    if (job.collectorId === collectorId) {
+      throw new BadRequestException(
+        'Job is already assigned to this collector',
+      );
+    }
+
+    const oldCollectorId = job.collectorId;
+
+    // Use a transaction to safely reassign
+    await this.dataSource.transaction(async (manager) => {
+      // First, revert job to REQUESTED status
+      const updated = await manager
+        .createQueryBuilder()
+        .update(Job)
+        .set({
+          status: JobStatus.REQUESTED,
+          collectorId: null,
+          assignedAt: null,
+          version: () => 'version + 1',
+        })
+        .where('id = :id AND version = :version', {
+          id: jobId,
+          version: job.version,
+        })
+        .execute();
+
+      if (updated.affected === 0) {
+        throw new BadRequestException(
+          'Failed to reassign job (concurrent modification)',
+        );
+      }
+
+      // Then assign to new collector
+      const assigned = await this.jobsService.assignToCollector(
+        jobId,
+        collectorId,
+      );
+
+      if (!assigned) {
+        throw new BadRequestException(
+          'Failed to assign job to new collector',
+        );
+      }
+    });
+
+    this.logger.log(
+      `Job ${jobId} reassigned from collector ${oldCollectorId} to ${collectorId}`,
+    );
+
+    const payload: JobAssignedPayload = {
+      jobId: job.id,
+      householdId: job.householdId,
+      collectorId,
+      status: JobStatus.ASSIGNED,
+      timestamp: new Date(),
+      attempt: job.assignmentAttempts + 1,
+    };
+    this.eventEmitter.emit(JobEvents.ASSIGNED, payload);
+  }
+
   // ─── TIMEOUT HANDLER (called by scheduler) ────────────────────
 
   async handleTimeout(jobId: string): Promise<void> {

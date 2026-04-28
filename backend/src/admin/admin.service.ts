@@ -151,6 +151,11 @@ export class AdminService {
     this.logger.log(`Admin manually assigned job ${jobId} to collector ${collectorId}`);
   }
 
+  async manualReassign(jobId: string, collectorId: string): Promise<void> {
+    await this.assignmentService.manualReassign(jobId, collectorId);
+    this.logger.log(`Admin manually reassigned job ${jobId} to collector ${collectorId}`);
+  }
+
   // ─── DISPUTES ─────────────────────────────────────────────────
 
   async listDisputes(filters?: { status?: DisputeStatus }) {

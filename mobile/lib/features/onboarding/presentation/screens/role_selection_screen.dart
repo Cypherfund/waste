@@ -34,90 +34,98 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7F4),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 10),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 10),
 
-              // BACK BUTTON
-              IconButton(
-                onPressed: widget.onBack,
-                icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-              ),
+                      // BACK BUTTON
+                      IconButton(
+                        onPressed: widget.onBack,
+                        icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+                      ),
 
-              const SizedBox(height: 10),
+                      const SizedBox(height: 10),
 
-              // TITLE
-              const Text(
-                'I want to join as',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+                      // TITLE
+                      const Text(
+                        'I want to join as',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
 
-              const SizedBox(height: 6),
+                      const SizedBox(height: 6),
 
-                Text(
-                  'Choose your role',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade600,
+                      Text(
+                        'Choose your role',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // CARDS
+                      _roleCard(
+                        role: UserRole.collector,
+                        title: 'Collector',
+                        subtitle:
+                            'Collect waste, earn money\nand support your community.',
+                        image: 'assets/images/onboarding/collector.png',
+                      ),
+
+                      _roleCard(
+                        role: UserRole.household,
+                        title: 'Household',
+                        subtitle:
+                            'Schedule waste collection\nand keep your area clean.',
+                        image: 'assets/images/onboarding/household.png',
+                      ),
+
+                      const Spacer(),
+
+                      // CONTINUE BUTTON
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: selected != null ? widget.onContinue : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            disabledBackgroundColor: Colors.grey.shade300,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: Text(
+                            'Continue',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: selected != null
+                                  ? Colors.white
+                                  : Colors.grey.shade500,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+                    ],
                   ),
                 ),
-
-              const SizedBox(height: 20),
-
-              // CARDS
-              _roleCard(
-                role: UserRole.collector,
-                title: 'Collector',
-                subtitle:
-                'Collect waste, earn money\nand support your community.',
-                image: 'assets/images/onboarding/collector.png',
               ),
-
-              _roleCard(
-                role: UserRole.household,
-                title: 'Household',
-                subtitle:
-                'Schedule waste collection\nand keep your area clean.',
-                image: 'assets/images/onboarding/household.png',
-              ),
-
-              const Spacer(),
-
-              // CONTINUE BUTTON
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed:
-                  selected != null ? widget.onContinue : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    disabledBackgroundColor: Colors.grey.shade300,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: Text(
-                    'Continue',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: selected != null
-                          ? Colors.white
-                          : Colors.grey.shade500,
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
