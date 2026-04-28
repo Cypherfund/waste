@@ -61,19 +61,24 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      debugPrint('AuthProvider: Starting login for phone: $phone');
       final response = await _authApi.login(phone: phone, password: password);
+      debugPrint('AuthProvider: Login successful. User role: ${response.user.role}, isHousehold: ${response.user.isHousehold}, isCollector: ${response.user.isCollector}');
 
       if (!response.user.isHousehold && !response.user.isCollector) {
-        throw Exception('This app is for household and collector users only.');
+        throw Exception('This app is for household and collector users only. Your role: ${response.user.role}');
       }
 
       await _persistSession(response);
       _user = response.user;
       _status = AuthStatus.authenticated;
+      debugPrint('AuthProvider: Status set to authenticated');
       _connectWebSocket(response.accessToken);
     } catch (e) {
+      debugPrint('AuthProvider: Login failed with error: $e');
       _error = ApiClient.extractErrorMessage(e);
       _status = AuthStatus.unauthenticated;
+      _user = null;
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -84,6 +89,7 @@ class AuthProvider extends ChangeNotifier {
     required String name,
     required String phone,
     required String password,
+    required String role,
     String? email,
   }) async {
     _isLoading = true;
@@ -91,19 +97,30 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      debugPrint('AuthProvider: Starting register for phone: $phone');
       final response = await _authApi.register(
         name: name,
         phone: phone,
         password: password,
+        role: role,
         email: email,
       );
+      debugPrint('AuthProvider: Register successful. User role: ${response.user.role}, isHousehold: ${response.user.isHousehold}, isCollector: ${response.user.isCollector}');
+
+      if (!response.user.isHousehold && !response.user.isCollector) {
+        throw Exception('This app is for household and collector users only. Your role: ${response.user.role}');
+      }
 
       await _persistSession(response);
       _user = response.user;
       _status = AuthStatus.authenticated;
+      debugPrint('AuthProvider: Status set to authenticated');
       _connectWebSocket(response.accessToken);
     } catch (e) {
+      debugPrint('AuthProvider: Register failed with error: $e');
       _error = ApiClient.extractErrorMessage(e);
+      _status = AuthStatus.unauthenticated;
+      _user = null;
     } finally {
       _isLoading = false;
       notifyListeners();

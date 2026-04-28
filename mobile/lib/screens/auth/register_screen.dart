@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/app_text_field.dart';
 import '../../widgets/loading_button.dart';
@@ -39,10 +40,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
       name: _nameController.text.trim(),
       phone: _phoneController.text.trim(),
       password: _passwordController.text,
+      role: 'HOUSEHOLD',
       email: _emailController.text.trim().isEmpty
           ? null
           : _emailController.text.trim(),
     );
+
+    // Navigation is handled by Consumer in main.dart based on auth state
   }
 
   @override
@@ -50,46 +54,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final auth = context.watch<AuthProvider>();
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
             child: Form(
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Icon(
-                    Icons.eco,
-                    size: 56,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Create Account',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Register as a household user',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
-                        ),
-                  ),
-                  const SizedBox(height: 32),
+                  // Logo & Heading
+                  _buildHeader(),
+                  const SizedBox(height: AppSpacing.xl),
+
+                  // Error
                   if (auth.error != null)
                     ErrorBanner(
                       message: auth.error!,
                       onDismiss: auth.clearError,
                     ),
+
+                  // Name
                   AppTextField(
                     controller: _nameController,
                     label: 'Full Name',
-                    hint: 'John Doe',
+                    hint: 'Enter your full name',
+                    prefixIcon: const Icon(Icons.person_outline, color: AppColors.textHint, size: 22),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
                         return 'Name is required';
@@ -100,12 +91,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.md),
+
+                  // Phone
                   AppTextField(
                     controller: _phoneController,
                     label: 'Phone Number',
                     hint: '+237670000000',
                     keyboardType: TextInputType.phone,
+                    prefixIcon: const Icon(Icons.phone_outlined, color: AppColors.textHint, size: 22),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
                         return 'Phone number is required';
@@ -116,12 +110,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.md),
+
+                  // Email
                   AppTextField(
                     controller: _emailController,
                     label: 'Email (optional)',
                     hint: 'john@example.com',
                     keyboardType: TextInputType.emailAddress,
+                    prefixIcon: const Icon(Icons.email_outlined, color: AppColors.textHint, size: 22),
                     validator: (value) {
                       if (value != null && value.trim().isNotEmpty) {
                         if (!RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(value.trim())) {
@@ -131,14 +128,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.md),
+
+                  // Password
                   AppTextField(
                     controller: _passwordController,
                     label: 'Password',
                     obscureText: _obscurePassword,
+                    prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textHint, size: 22),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                        _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                        color: AppColors.textHint,
+                        size: 22,
                       ),
                       onPressed: () {
                         setState(() => _obscurePassword = !_obscurePassword);
@@ -154,11 +156,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.md),
+
+                  // Confirm Password
                   AppTextField(
                     controller: _confirmPasswordController,
                     label: 'Confirm Password',
                     obscureText: true,
+                    prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textHint, size: 22),
                     validator: (value) {
                       if (value != _passwordController.text) {
                         return 'Passwords do not match';
@@ -166,23 +171,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: AppSpacing.lg),
+
+                  // Register button
                   LoadingButton(
                     label: 'Create Account',
                     isLoading: auth.isLoading,
                     onPressed: _handleRegister,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.md),
+
+                  // Login link
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text('Already have an account? '),
+                      Text(
+                        'Already have an account? ',
+                        style: AppTypography.body.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
                       GestureDetector(
                         onTap: () => Navigator.pushReplacementNamed(context, '/login'),
                         child: Text(
                           'Sign In',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.primary,
+                          style: AppTypography.bodyMedium.copyWith(
+                            color: AppColors.primary,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -195,6 +209,39 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Column(
+      children: [
+        Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            color: AppColors.primarySurface,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: const Icon(
+            Icons.eco,
+            size: 36,
+            color: AppColors.primary,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Text(
+          'Create Account',
+          style: AppTypography.heading1,
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          'Join KmerTrash and start managing waste',
+          textAlign: TextAlign.center,
+          style: AppTypography.body.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+      ],
     );
   }
 }

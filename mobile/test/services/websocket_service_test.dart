@@ -14,7 +14,7 @@ void main() {
 
       final update = JobStatusUpdate.fromJson(json);
       expect(update.jobId, 'job-1');
-      expect(update.status, JobStatus.ASSIGNED);
+      expect(update.status, JobStatus.assigned);
       expect(update.collectorId, 'col-1');
       expect(update.updatedAt, isNotNull);
     });
@@ -29,6 +29,7 @@ void main() {
 
       final update = JobStatusUpdate.fromJson(json);
       expect(update.collectorId, isNull);
+      expect(update.status, JobStatus.requested);
     });
 
     test('fromJson handles missing updatedAt', () {
@@ -40,6 +41,7 @@ void main() {
       };
 
       final update = JobStatusUpdate.fromJson(json);
+      expect(update.status, JobStatus.completed);
       expect(update.updatedAt, isNotNull); // defaults to DateTime.now()
     });
   });

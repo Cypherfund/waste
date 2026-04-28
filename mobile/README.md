@@ -227,3 +227,5 @@ This fixes most issues.
 ## 🎉 You're Ready!
 
 You should now be able to run the app successfully.
+flutter run -d chrome --web-port 5000 --web-hostname 10.12.1.172 --dart-define=API_BASE_URL=https://waste-0faw.onrender.com/api/v1 --dart-define=WS_BASE_URL
+=wss://waste-0faw.onrender.com

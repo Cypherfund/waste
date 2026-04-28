@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:wastewise/main.dart' as app;
-import 'package:provider/provider.dart';
-import 'package:wastewise/providers/auth_provider.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -42,7 +40,7 @@ void main() {
     });
   });
 
-  group('Job Creation Integration Tests', () => {
+  group('Job Creation Integration Tests', () {
     testWidgets('household can navigate to create job screen', (tester) async {
       app.main();
       await tester.pumpAndSettle();
@@ -53,7 +51,7 @@ void main() {
     }, skip: true); // Skip for now as it requires backend
   });
 
-  group('Offline Sync Integration Tests', () => {
+  group('Offline Sync Integration Tests', () {
     testWidgets('offline queue screen is accessible', (tester) async {
       app.main();
       await tester.pumpAndSettle();

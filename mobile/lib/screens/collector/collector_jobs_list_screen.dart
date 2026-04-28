@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../config/app_theme.dart';
 import '../../providers/collector_jobs_provider.dart';
 import '../../models/job.dart';
+import '../../widgets/app_card.dart';
 import '../../widgets/job_status_badge.dart';
 
 class CollectorJobsListScreen extends StatefulWidget {
@@ -36,15 +38,37 @@ class _CollectorJobsListScreenState extends State<CollectorJobsListScreen>
     final provider = context.watch<CollectorJobsProvider>();
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('My Jobs'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'Assigned'),
-            Tab(text: 'In Progress'),
-            Tab(text: 'Completed'),
-          ],
+        backgroundColor: AppColors.surface,
+        title: Text('My Jobs', style: AppTypography.heading3),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 20),
+            decoration: BoxDecoration(
+              color: AppColors.inputFill,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              indicator: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              indicatorSize: TabBarIndicatorSize.tab,
+              labelColor: Colors.white,
+              unselectedLabelColor: AppColors.textSecondary,
+              dividerColor: Colors.transparent,
+              splashBorderRadius: BorderRadius.circular(10),
+              padding: const EdgeInsets.all(4),
+              tabs: const [
+                Tab(text: 'Assigned'),
+                Tab(text: 'In Progress'),
+                Tab(text: 'Completed'),
+              ],
+            ),
+          ),
         ),
       ),
       body: TabBarView(
@@ -54,6 +78,7 @@ class _CollectorJobsListScreenState extends State<CollectorJobsListScreen>
             jobs: provider.assignedJobs,
             isLoading: provider.isLoading,
             emptyMessage: 'No assigned jobs',
+            emptySubtitle: 'New jobs will appear here when assigned',
             emptyIcon: Icons.assignment_outlined,
             onRefresh: () => provider.loadJobs(refresh: true),
           ),
@@ -61,6 +86,7 @@ class _CollectorJobsListScreenState extends State<CollectorJobsListScreen>
             jobs: provider.inProgressJobs,
             isLoading: provider.isLoading,
             emptyMessage: 'No jobs in progress',
+            emptySubtitle: 'Start an assigned job to see it here',
             emptyIcon: Icons.directions_run,
             onRefresh: () => provider.loadJobs(refresh: true),
           ),
@@ -68,6 +94,7 @@ class _CollectorJobsListScreenState extends State<CollectorJobsListScreen>
             jobs: provider.completedJobs,
             isLoading: provider.isLoading,
             emptyMessage: 'No completed jobs',
+            emptySubtitle: 'Completed jobs will show here',
             emptyIcon: Icons.check_circle_outline,
             onRefresh: () => provider.loadJobs(refresh: true),
           ),
@@ -81,6 +108,7 @@ class _JobTab extends StatelessWidget {
   final List<Job> jobs;
   final bool isLoading;
   final String emptyMessage;
+  final String emptySubtitle;
   final IconData emptyIcon;
   final Future<void> Function() onRefresh;
 
@@ -88,6 +116,7 @@ class _JobTab extends StatelessWidget {
     required this.jobs,
     required this.isLoading,
     required this.emptyMessage,
+    required this.emptySubtitle,
     required this.emptyIcon,
     required this.onRefresh,
   });
@@ -95,7 +124,7 @@ class _JobTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isLoading && jobs.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: CircularProgressIndicator(color: AppColors.primary));
     }
 
     if (jobs.isEmpty) {
@@ -103,55 +132,84 @@ class _JobTab extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(emptyIcon, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 12),
-            Text(emptyMessage, style: TextStyle(color: Colors.grey[600])),
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: AppColors.primarySurface,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Icon(emptyIcon, size: 36, color: AppColors.primary),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(emptyMessage, style: AppTypography.subtitle),
+            const SizedBox(height: AppSpacing.xs),
+            Text(emptySubtitle, style: AppTypography.caption),
           ],
         ),
       );
     }
 
     return RefreshIndicator(
+      color: AppColors.primary,
       onRefresh: onRefresh,
       child: ListView.builder(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(20),
         itemCount: jobs.length,
         itemBuilder: (context, index) {
           final job = jobs[index];
-          return Card(
-            margin: const EdgeInsets.only(bottom: 8),
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: _statusColor(job.status).withOpacity(0.15),
-                child: Icon(
-                  _statusIcon(job.status),
-                  color: _statusColor(job.status),
-                ),
-              ),
-              title: Text(
-                job.locationAddress,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${job.scheduledDate} • ${job.scheduledTime}',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                  ),
-                  if (job.householdName != null)
-                    Text(
-                      'Household: ${job.householdName}',
-                      style: TextStyle(color: Colors.grey[500], fontSize: 11),
-                    ),
-                ],
-              ),
-              trailing: JobStatusBadge(status: job.status),
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: AppCard(
               onTap: () => Navigator.pushNamed(
                 context,
                 '/collector-job-detail',
                 arguments: job,
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: _statusColor(job.status).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      _statusIcon(job.status),
+                      color: _statusColor(job.status),
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          job.locationAddress,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.bodyMedium,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${job.scheduledDate} • ${job.scheduledTime}',
+                          style: AppTypography.caption,
+                        ),
+                        if (job.householdName != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            'Household: ${job.householdName}',
+                            style: AppTypography.overline.copyWith(color: AppColors.primary),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  JobStatusBadge(status: job.status),
+                ],
               ),
             ),
           );
@@ -162,35 +220,35 @@ class _JobTab extends StatelessWidget {
 
   Color _statusColor(JobStatus status) {
     switch (status) {
-      case JobStatus.ASSIGNED:
-        return Colors.orange;
-      case JobStatus.IN_PROGRESS:
-        return Colors.blue;
-      case JobStatus.COMPLETED:
-        return Colors.green;
-      case JobStatus.VALIDATED:
-        return Colors.teal;
-      case JobStatus.RATED:
-        return Colors.purple;
+      case JobStatus.assigned:
+        return AppColors.badgeAssigned;
+      case JobStatus.inProgress:
+        return AppColors.badgeInProgress;
+      case JobStatus.completed:
+        return AppColors.badgeCompleted;
+      case JobStatus.validated:
+        return AppColors.badgeValidated;
+      case JobStatus.rated:
+        return AppColors.badgeRated;
       default:
-        return Colors.grey;
+        return AppColors.textSecondary;
     }
   }
 
   IconData _statusIcon(JobStatus status) {
     switch (status) {
-      case JobStatus.ASSIGNED:
-        return Icons.assignment;
-      case JobStatus.IN_PROGRESS:
+      case JobStatus.assigned:
+        return Icons.assignment_outlined;
+      case JobStatus.inProgress:
         return Icons.directions_run;
-      case JobStatus.COMPLETED:
-        return Icons.check_circle;
-      case JobStatus.VALIDATED:
-        return Icons.verified;
-      case JobStatus.RATED:
-        return Icons.star;
+      case JobStatus.completed:
+        return Icons.check_circle_outline;
+      case JobStatus.validated:
+        return Icons.verified_outlined;
+      case JobStatus.rated:
+        return Icons.star_outline;
       default:
-        return Icons.work;
+        return Icons.work_outline;
     }
   }
 }

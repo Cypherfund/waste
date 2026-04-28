@@ -195,6 +195,7 @@ void main() {
               name: 'John Doe',
               phone: '+237670000001',
               password: 'password123',
+              role: 'HOUSEHOLD',
               email: null,
             )).thenAnswer((_) async => testAuthResponse);
         when(() => mockStorage.saveTokens(
@@ -207,6 +208,7 @@ void main() {
           name: 'John Doe',
           phone: '+237670000001',
           password: 'password123',
+          role: 'HOUSEHOLD',
         );
 
         expect(provider.status, AuthStatus.authenticated);
@@ -219,6 +221,7 @@ void main() {
               name: any(named: 'name'),
               phone: any(named: 'phone'),
               password: any(named: 'password'),
+              role: any(named: 'role'),
               email: any(named: 'email'),
             )).thenThrow(DioException(
           requestOptions: RequestOptions(path: '/auth/register'),
@@ -233,6 +236,7 @@ void main() {
           name: 'John',
           phone: '+237670000001',
           password: 'pass1234',
+          role: 'HOUSEHOLD',
         );
 
         expect(provider.error, 'Phone number already registered');

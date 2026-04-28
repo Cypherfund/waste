@@ -21,13 +21,14 @@ class AuthApi {
     required String name,
     required String phone,
     required String password,
+    required String role,
     String? email,
   }) async {
     final response = await _client.dio.post('/auth/register', data: {
       'name': name,
       'phone': phone,
       'password': password,
-      'role': 'HOUSEHOLD',
+      'role': role,
       if (email != null && email.isNotEmpty) 'email': email,
     });
     return AuthResponse.fromJson(response.data as Map<String, dynamic>);

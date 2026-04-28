@@ -11,7 +11,7 @@ import 'package:wastewise/providers/collector_jobs_provider.dart';
 import 'package:wastewise/providers/collector_earnings_provider.dart';
 import 'package:wastewise/providers/offline_queue_provider.dart';
 import 'package:wastewise/services/api/auth_api.dart';
-import 'package:wastewise/services/api/jobs_api.dart';
+import 'package:wastewise/services/api/job_api.dart';
 import 'package:wastewise/services/api/files_api.dart';
 import 'package:wastewise/services/api/earnings_api.dart';
 import 'package:wastewise/services/storage/secure_storage.dart';
@@ -28,7 +28,7 @@ class MockSecureStorage extends Mock implements SecureStorageService {}
 
 class MockWebSocketService extends Mock implements WebSocketService {}
 
-class MockJobsApi extends Mock implements JobsApi {}
+class MockJobApi extends Mock implements JobApi {}
 
 class MockFilesApi extends Mock implements FilesApi {}
 
@@ -50,7 +50,7 @@ void main() {
   late MockAuthApi mockAuthApi;
   late MockSecureStorage mockStorage;
   late MockWebSocketService mockWsService;
-  late MockJobsApi mockJobsApi;
+  late MockJobApi mockJobApi;
   late MockFilesApi mockFilesApi;
   late MockEarningsApi mockEarningsApi;
   late MockLocationTrackingService mockLocationService;
@@ -78,7 +78,7 @@ void main() {
     householdId: 'hh-1',
     householdName: 'Test House',
     collectorId: 'col-1',
-    status: JobStatus.ASSIGNED,
+    status: JobStatus.assigned,
     scheduledDate: '2026-04-20',
     scheduledTime: '08:00-10:00',
     locationAddress: '123 Test Street, Douala',
@@ -95,14 +95,14 @@ void main() {
       isActive: true,
       createdAt: DateTime(2026, 1, 1),
     ));
-    registerFallbackValue(JobStatus.ASSIGNED);
+    registerFallbackValue(JobStatus.assigned);
   });
 
   setUp(() {
     mockAuthApi = MockAuthApi();
     mockStorage = MockSecureStorage();
     mockWsService = MockWebSocketService();
-    mockJobsApi = MockJobsApi();
+    mockJobApi = MockJobApi();
     mockFilesApi = MockFilesApi();
     mockEarningsApi = MockEarningsApi();
     mockLocationService = MockLocationTrackingService();
@@ -116,7 +116,7 @@ void main() {
     when(() => mockWsService.subscribeToJob(any())).thenReturn(null);
     when(() => mockLocationService.activeJobId).thenReturn(null);
 
-    when(() => mockJobsApi.getAssignedJobs(
+    when(() => mockJobApi.getAssignedJobs(
           status: any(named: 'status'),
           page: any(named: 'page'),
           limit: any(named: 'limit'),
@@ -151,7 +151,7 @@ void main() {
     );
 
     jobsProvider = CollectorJobsProvider(
-      jobsApi: mockJobsApi,
+      jobApi: mockJobApi,
       filesApi: mockFilesApi,
       wsService: mockWsService,
       locationService: mockLocationService,
@@ -175,6 +175,7 @@ void main() {
         .thenAnswer((_) => syncStatusController.stream);
     when(() => mockSyncService.resultStream)
         .thenAnswer((_) => syncResultController.stream);
+    when(() => mockQueueService.isSupported).thenReturn(true);
     when(() => mockQueueService.getPendingCount()).thenAnswer((_) async => 0);
     when(() => mockQueueService.getAllItems()).thenAnswer((_) async => []);
 
@@ -213,8 +214,8 @@ void main() {
       await tester.pumpWidget(buildTestWidget());
       await tester.pumpAndSettle();
 
-      expect(find.text('WasteWise Collector'), findsOneWidget);
-      expect(find.textContaining('Hello'), findsOneWidget);
+      expect(find.textContaining('morning'), findsOneWidget);
+      expect(find.textContaining('Online'), findsOneWidget);
     });
 
     testWidgets('displays earnings summary card', (tester) async {

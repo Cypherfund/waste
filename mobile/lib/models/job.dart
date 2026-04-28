@@ -1,25 +1,34 @@
+import 'proof.dart';
+
 enum JobStatus {
-  REQUESTED,
-  ASSIGNED,
-  IN_PROGRESS,
-  COMPLETED,
-  VALIDATED,
-  RATED,
-  CANCELLED,
-  DISPUTED;
+  requested,
+  assigned,
+  inProgress,
+  completed,
+  validated,
+  rated,
+  cancelled,
+  disputed;
 
   static JobStatus fromString(String value) {
+    final lowerValue = value.toLowerCase();
+    // Handle camelCase conversion from snake_case or uppercase if needed
+    if (lowerValue == 'in_progress') return JobStatus.inProgress;
+    
     return JobStatus.values.firstWhere(
-      (e) => e.name == value,
-      orElse: () => JobStatus.REQUESTED,
+      (e) => e.name.toLowerCase() == lowerValue,
+      orElse: () => JobStatus.requested,
     );
   }
+
+  String toBackendString() => name.toUpperCase();
 }
 
 class Job {
   final String id;
   final String householdId;
   final String? householdName;
+  final String? householdPhone;
   final String? collectorId;
   final String? collectorName;
   final JobStatus status;
@@ -36,11 +45,15 @@ class Job {
   final DateTime? cancelledAt;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final int? rating;
+  final String? ratingComment;
+  final Proof? proof;
 
   Job({
     required this.id,
     required this.householdId,
     this.householdName,
+    this.householdPhone,
     this.collectorId,
     this.collectorName,
     required this.status,
@@ -57,6 +70,9 @@ class Job {
     this.cancelledAt,
     required this.createdAt,
     required this.updatedAt,
+    this.rating,
+    this.ratingComment,
+    this.proof,
   });
 
   factory Job.fromJson(Map<String, dynamic> json) {
@@ -64,6 +80,7 @@ class Job {
       id: json['id'] as String,
       householdId: json['householdId'] as String,
       householdName: json['householdName'] as String?,
+      householdPhone: json['householdPhone'] as String?,
       collectorId: json['collectorId'] as String?,
       collectorName: json['collectorName'] as String?,
       status: JobStatus.fromString(json['status'] as String),
@@ -90,6 +107,9 @@ class Job {
           : null,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
+      rating: json['rating'] as int?,
+      ratingComment: json['ratingComment'] as String?,
+      proof: json['proof'] != null ? Proof.fromJson(json['proof'] as Map<String, dynamic>) : null,
     );
   }
 
@@ -97,21 +117,39 @@ class Job {
     return {
       'id': id,
       'householdId': householdId,
-      'status': status.name,
+      'householdPhone': householdPhone,
+      'status': status.toBackendString(),
       'scheduledDate': scheduledDate,
       'scheduledTime': scheduledTime,
       'locationAddress': locationAddress,
       'locationLat': locationLat,
       'locationLng': locationLng,
       'notes': notes,
+      'rating': rating,
+      'ratingComment': ratingComment,
+      'proof': proof?.toJson(),
     };
   }
 
-  Job copyWith({JobStatus? status, String? collectorId, String? collectorName}) {
+  Job copyWith({
+    JobStatus? status,
+    String? collectorId,
+    String? collectorName,
+    DateTime? assignedAt,
+    DateTime? startedAt,
+    DateTime? completedAt,
+    DateTime? validatedAt,
+    DateTime? cancelledAt,
+    DateTime? updatedAt,
+    int? rating,
+    String? ratingComment,
+    Proof? proof,
+  }) {
     return Job(
       id: id,
       householdId: householdId,
       householdName: householdName,
+      householdPhone: householdPhone,
       collectorId: collectorId ?? this.collectorId,
       collectorName: collectorName ?? this.collectorName,
       status: status ?? this.status,
@@ -121,30 +159,33 @@ class Job {
       locationLat: locationLat,
       locationLng: locationLng,
       notes: notes,
-      assignedAt: assignedAt,
-      startedAt: startedAt,
-      completedAt: completedAt,
-      validatedAt: validatedAt,
-      cancelledAt: cancelledAt,
+      assignedAt: assignedAt ?? this.assignedAt,
+      startedAt: startedAt ?? this.startedAt,
+      completedAt: completedAt ?? this.completedAt,
+      validatedAt: validatedAt ?? this.validatedAt,
+      cancelledAt: cancelledAt ?? this.cancelledAt,
       createdAt: createdAt,
-      updatedAt: updatedAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rating: rating ?? this.rating,
+      ratingComment: ratingComment ?? this.ratingComment,
+      proof: proof ?? this.proof,
     );
   }
 
   bool get isActive =>
-      status == JobStatus.REQUESTED ||
-      status == JobStatus.ASSIGNED ||
-      status == JobStatus.IN_PROGRESS;
+      status == JobStatus.requested ||
+      status == JobStatus.assigned ||
+      status == JobStatus.inProgress;
 
   bool get canCancel =>
-      status == JobStatus.REQUESTED || status == JobStatus.ASSIGNED;
+      status == JobStatus.requested || status == JobStatus.assigned;
 
-  bool get canValidate => status == JobStatus.COMPLETED;
+  bool get canValidate => status == JobStatus.completed;
 
-  bool get canRate => status == JobStatus.VALIDATED;
+  bool get canRate => status == JobStatus.validated;
 
   bool get isTerminal =>
-      status == JobStatus.RATED || status == JobStatus.CANCELLED;
+      status == JobStatus.rated || status == JobStatus.cancelled;
 }
 
 class PaginatedJobs {
@@ -171,7 +212,7 @@ class PaginatedJobs {
       page: meta['page'] as int,
       limit: meta['limit'] as int,
       total: meta['total'] as int,
-      pages: meta['pages'] as int,
+      pages: meta['totalPages'] as int,
     );
   }
 }

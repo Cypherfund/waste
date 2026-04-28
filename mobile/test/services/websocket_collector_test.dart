@@ -14,7 +14,7 @@ void main() {
 
       final event = CollectorAssignedEvent.fromJson(json);
       expect(event.jobId, 'job-1');
-      expect(event.status, JobStatus.ASSIGNED);
+      expect(event.status, JobStatus.assigned);
       expect(event.householdId, 'hh-1');
       expect(event.updatedAt, isNotNull);
     });

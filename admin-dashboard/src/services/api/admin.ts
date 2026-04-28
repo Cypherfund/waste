@@ -32,6 +32,16 @@ export const jobsApi = {
     client
       .post(`/admin/jobs/${jobId}/assign`, { collectorId })
       .then((r) => r.data),
+
+  manualReassign: (jobId: string, collectorId: string) =>
+    client
+      .post(`/admin/jobs/${jobId}/reassign`, { collectorId })
+      .then((r) => r.data),
+
+  cancel: (jobId: string, reason?: string) =>
+    client
+      .post(`/jobs/${jobId}/cancel`, { reason })
+      .then((r) => r.data),
 };
 
 export const disputesApi = {

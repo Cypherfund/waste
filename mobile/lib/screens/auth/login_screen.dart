@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/app_text_field.dart';
 import '../../widgets/loading_button.dart';
 import '../../widgets/error_banner.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final VoidCallback? onSignUp;
+
+  const LoginScreen({super.key, this.onSignUp});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -30,9 +33,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final auth = context.read<AuthProvider>();
     await auth.login(
-      phone: _phoneController.text.trim(),
+      phone: '+237${_phoneController.text.trim()}',
       password: _passwordController.text,
     );
+
+    // Navigation is handled by Consumer in main.dart based on auth state
   }
 
   @override
@@ -40,67 +45,83 @@ class _LoginScreenState extends State<LoginScreen> {
     final auth = context.watch<AuthProvider>();
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
             child: Form(
               key: _formKey,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Icon(
-                    Icons.eco,
-                    size: 64,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'WasteWise',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Sign in to manage your waste collection',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
-                        ),
-                  ),
-                  const SizedBox(height: 40),
+                  // Logo & Branding
+                  _buildLogo(),
+                  const SizedBox(height: AppSpacing.xl),
+
+                  // Error
                   if (auth.error != null)
                     ErrorBanner(
                       message: auth.error!,
                       onDismiss: auth.clearError,
                     ),
+
+                  // Phone field
                   AppTextField(
                     controller: _phoneController,
                     label: 'Phone Number',
-                    hint: '+237670000000',
+                    hint: '654321233',
                     keyboardType: TextInputType.phone,
+                    prefixIcon: const Padding(
+                      padding: EdgeInsets.only(left: 12),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('🇨🇲', style: TextStyle(fontSize: 20)),
+                          SizedBox(width: 4),
+                          Text(
+                            '+237',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          SizedBox(
+                            height: 24,
+                            child: VerticalDivider(
+                              color: AppColors.border,
+                              thickness: 1,
+                              width: 1,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
                         return 'Phone number is required';
                       }
-                      if (!RegExp(r'^\+237[0-9]{9}$').hasMatch(value.trim())) {
-                        return 'Enter a valid Cameroon phone number (+237XXXXXXXXX)';
+                      if (!RegExp(r'^[0-9]{9}$').hasMatch(value.trim())) {
+                        return 'Enter a valid phone number (9 digits)';
                       }
                       return null;
                     },
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.md),
+
+                  // Password field
                   AppTextField(
                     controller: _passwordController,
                     label: 'Password',
                     obscureText: _obscurePassword,
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                        _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                        color: AppColors.textHint,
+                        size: 22,
                       ),
                       onPressed: () {
                         setState(() => _obscurePassword = !_obscurePassword);
@@ -113,23 +134,50 @@ class _LoginScreenState extends State<LoginScreen> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: AppSpacing.lg),
+
+                  // Sign In button
                   LoadingButton(
                     label: 'Sign In',
                     isLoading: auth.isLoading,
                     onPressed: _handleLogin,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.lg),
+
+                  // Trust message
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text("Don't have an account? "),
+                      Icon(Icons.shield_outlined, size: 16, color: AppColors.textSecondary),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Your information is safe with us',
+                        style: AppTypography.caption,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+
+                  // Register link
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Don't have an account? ",
+                        style: AppTypography.body.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
                       GestureDetector(
-                        onTap: () => Navigator.pushReplacementNamed(context, '/register'),
+                        onTap: () {
+                          if (widget.onSignUp != null) {
+                            widget.onSignUp!();
+                          }
+                        },
                         child: Text(
                           'Sign Up',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.primary,
+                          style: AppTypography.bodyMedium.copyWith(
+                            color: AppColors.primary,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -142,6 +190,43 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildLogo() {
+    return Column(
+      children: [
+        // Logo icon
+        Container(
+          width: 72,
+          height: 72,
+          decoration: BoxDecoration(
+            color: AppColors.primarySurface,
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: const Icon(
+            Icons.eco,
+            size: 40,
+            color: AppColors.primary,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Text(
+          'KmerTrash',
+          style: AppTypography.heading1.copyWith(
+            color: AppColors.primary,
+            fontSize: 28,
+            letterSpacing: -0.5,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          'Collect. Clean. Earn. Together.',
+          style: AppTypography.body.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+      ],
     );
   }
 }
