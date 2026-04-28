@@ -5,7 +5,7 @@ import { useAuth } from '../features/auth/AuthContext';
 import Spinner from '../components/Spinner';
 import ErrorBox from '../components/ErrorBox';
 import ConfirmDialog from '../components/ConfirmDialog';
-import type { AdminUser } from '../types';
+import type { AdminUser, UserDetail } from '../types';
 
 export default function UsersPage() {
   const { user: adminUser } = useAuth();
@@ -17,6 +17,9 @@ export default function UsersPage() {
   } | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [feedback, setFeedback] = useState('');
+  const [selectedUser, setSelectedUser] = useState<UserDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState('');
 
   const fetchUsers = useCallback(() => {
     const params: Record<string, string> = {};
@@ -43,6 +46,20 @@ export default function UsersPage() {
       setFeedback(`Error: ${msg}`);
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleViewDetails = async (userId: string) => {
+    setDetailLoading(true);
+    setDetailError('');
+    try {
+      const details = await usersApi.getDetail(userId);
+      setSelectedUser(details);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to load details';
+      setDetailError(msg);
+    } finally {
+      setDetailLoading(false);
     }
   };
 
@@ -141,33 +158,137 @@ export default function UsersPage() {
                       {new Date(u.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3">
-                      {isSelf ? (
-                        <span className="text-xs text-gray-400">You</span>
-                      ) : u.isActive ? (
+                      <div className="flex gap-2">
                         <button
-                          onClick={() =>
-                            setConfirmAction({ user: u, action: 'deactivate' })
-                          }
-                          className="rounded bg-red-50 px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-100"
+                          onClick={() => handleViewDetails(u.id)}
+                          className="rounded bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-100"
                         >
-                          Deactivate
+                          Details
                         </button>
-                      ) : (
-                        <button
-                          onClick={() =>
-                            setConfirmAction({ user: u, action: 'activate' })
-                          }
-                          className="rounded bg-green-50 px-2.5 py-1 text-xs font-medium text-green-600 hover:bg-green-100"
-                        >
-                          Activate
-                        </button>
-                      )}
+                        {isSelf ? (
+                          <span className="text-xs text-gray-400">You</span>
+                        ) : u.isActive ? (
+                          <button
+                            onClick={() =>
+                              setConfirmAction({ user: u, action: 'deactivate' })
+                            }
+                            className="rounded bg-red-50 px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-100"
+                          >
+                            Deactivate
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() =>
+                              setConfirmAction({ user: u, action: 'activate' })
+                            }
+                            className="rounded bg-green-50 px-2.5 py-1 text-xs font-medium text-green-600 hover:bg-green-100"
+                          >
+                            Activate
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* User Detail Modal */}
+      {selectedUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
+            <h3 className="mb-4 text-lg font-semibold text-gray-900">
+              User Details
+            </h3>
+
+            {detailLoading && <Spinner />}
+
+            {!detailLoading && detailError && (
+              <ErrorBox message={detailError} onRetry={() => handleViewDetails(selectedUser.id)} />
+            )}
+
+            {!detailLoading && !detailError && selectedUser && (
+              <div className="mb-4 grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <span className="text-gray-500">ID:</span>
+                  <span className="ml-1 font-mono text-xs">{selectedUser.id}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Name:</span>
+                  <span className="ml-1">{selectedUser.name}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Phone:</span>
+                  <span className="ml-1">{selectedUser.phone}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Email:</span>
+                  <span className="ml-1">{selectedUser.email || '—'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Role:</span>
+                  <span className="ml-1">{selectedUser.role}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Status:</span>
+                  <span className="ml-1">
+                    {selectedUser.isActive ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Avg Rating:</span>
+                  <span className="ml-1">
+                    {selectedUser.avgRating != null
+                      ? Number(selectedUser.avgRating).toFixed(1)
+                      : '—'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Total Completed:</span>
+                  <span className="ml-1">{selectedUser.totalCompleted}</span>
+                </div>
+                {selectedUser.role === 'COLLECTOR' && (
+                  <>
+                    <div>
+                      <span className="text-gray-500">Completed Jobs:</span>
+                      <span className="ml-1">{selectedUser.completedJobs}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Total Earnings:</span>
+                      <span className="ml-1">{selectedUser.totalEarnings} XAF</span>
+                    </div>
+                  </>
+                )}
+                <div className="col-span-2">
+                  <span className="text-gray-500">Joined:</span>
+                  <span className="ml-1">
+                    {new Date(selectedUser.createdAt).toLocaleString()}
+                  </span>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-gray-500">Last Updated:</span>
+                  <span className="ml-1">
+                    {new Date(selectedUser.updatedAt).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end">
+              <button
+                onClick={() => {
+                  setSelectedUser(null);
+                  setDetailError('');
+                }}
+                className="rounded border px-4 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
