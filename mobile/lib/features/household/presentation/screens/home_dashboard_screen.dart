@@ -6,6 +6,7 @@ import 'package:geocoding/geocoding.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../providers/auth_provider.dart';
 import '../../../../providers/job_provider.dart';
+import '../../../../providers/subscription_provider.dart';
 import '../../../../models/job.dart';
 import '../../../../widgets/bottom_navigation.dart';
 
@@ -27,6 +28,8 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     _getCurrentLocation();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      context.read<SubscriptionProvider>().loadMySubscription();
+      context.read<SubscriptionProvider>().loadPricingQuote();
       // Load from local storage first for immediate display
       await _loadJobsFromLocal();
       // Then refresh from API
@@ -135,6 +138,10 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                         const SizedBox(height: 22),
 
                         _buildDashboardQuickActions(),
+
+                        const SizedBox(height: 16),
+
+                        _buildSubscriptionCard(),
 
                         const Spacer(),
 
@@ -609,6 +616,142 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     );
   }
 
+
+  Widget _buildSubscriptionCard() {
+    final sub = context.watch<SubscriptionProvider>();
+    final subscription = sub.subscription;
+
+    if (subscription != null && subscription.isActive) {
+      final remaining = subscription.remainingPickupsThisWeek;
+      final total = subscription.plan?.pickupsPerWeek ?? 2;
+      return GestureDetector(
+        onTap: () => Navigator.pushNamed(context, '/manage-subscription'),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEAF5EA),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: const Icon(
+                  Icons.verified_outlined,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      subscription.plan?.name ?? 'Active Plan',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF111827),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      remaining > 0
+                          ? '$remaining of $total pickups left this week'
+                          : 'Weekly pickups used up',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: remaining > 0
+                            ? const Color(0xFF374151)
+                            : Colors.orange.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: Color(0xFF9CA3AF),
+                size: 18,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return GestureDetector(
+      onTap: () => Navigator.pushNamed(context, '/subscription-plans'),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE5E7EB)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3F4F6),
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: const Icon(
+                Icons.subscriptions_outlined,
+                color: Color(0xFF6B7280),
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'No active subscription',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF111827),
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Subscribe & save up to 4,500 XAF/month',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF6B7280),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              'Subscribe',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: AppColors.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _buildScheduleReminderCard() {
     return Container(

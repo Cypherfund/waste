@@ -665,6 +665,18 @@ INSERT INTO system_config (key, value, data_type, category, description, is_feat
   ('feature.sms_notifications', 'false', 'boolean', 'feature', 'Enable SMS fallback notifications', true),
   ('feature.surge_pricing', 'false', 'boolean', 'feature', 'Enable surge pricing', true),
   ('feature.location_tracking', 'true', 'boolean', 'feature', 'Enable real-time location tracking', true),
+  ('feature.payment_integration', 'true', 'boolean', 'feature', 'Enable payment integration', true),
+  ('pricing.per_pickup_price', '1000', 'number', 'pricing', 'Price per pickup for pay-as-you-go (XAF)', false),
+  ('pricing.subscription_price', '3500', 'number', 'pricing', 'Monthly subscription price (XAF)', false),
+  ('pricing.subscription_pickups_per_week', '2', 'number', 'pricing', 'Pickups included per week in standard plan', false),
+  ('payout.min_withdrawal', '1000', 'number', 'payout', 'Minimum withdrawal amount (XAF)', false),
+  ('payout.max_withdrawal', '500000', 'number', 'payout', 'Maximum withdrawal amount (XAF)', false),
+  ('payout.methods_enabled', 'MOBILE_MONEY,BANK_TRANSFER', 'string', 'payout', 'Comma-separated list of enabled payout methods', false),
+  ('payout.mobile_money_label', 'MTN Mobile Money / Orange Money', 'string', 'payout', 'Label shown for mobile money in collector app', false),
+  ('payout.bank_transfer_label', 'Bank Transfer', 'string', 'payout', 'Label shown for bank transfer in collector app', false),
+  ('support.whatsapp_number', '+237677777777', 'string', 'support', 'WhatsApp support number', false),
+  ('payment.manual_instructions', 'Send your payment of {amount} XAF to MTN MoMo: 6XX XXX XXX (WasteWise) or Orange Money: 6XX XXX XXX. Use your phone number as reference.', 'string', 'payment', 'Instructions shown to users when payment integration is disabled', false),
+  ('feature.wallet_system', 'true', 'boolean', 'feature', 'Enable wallet system', true),
   ('feature.offline_queue', 'true', 'boolean', 'feature', 'Enable offline action queue', true);
 
 -- ============================================================
