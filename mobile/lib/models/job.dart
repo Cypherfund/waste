@@ -87,8 +87,12 @@ class Job {
       scheduledDate: json['scheduledDate'] as String,
       scheduledTime: json['scheduledTime'] as String,
       locationAddress: json['locationAddress'] as String,
-      locationLat: (json['locationLat'] as num?)?.toDouble(),
-      locationLng: (json['locationLng'] as num?)?.toDouble(),
+      locationLat: json['locationLat'] != null
+          ? double.tryParse(json['locationLat'].toString())
+          : null,
+      locationLng: json['locationLng'] != null
+          ? double.tryParse(json['locationLng'].toString())
+          : null,
       notes: json['notes'] as String?,
       assignedAt: json['assignedAt'] != null
           ? DateTime.parse(json['assignedAt'] as String)
@@ -117,7 +121,10 @@ class Job {
     return {
       'id': id,
       'householdId': householdId,
+      'householdName': householdName,
       'householdPhone': householdPhone,
+      'collectorId': collectorId,
+      'collectorName': collectorName,
       'status': status.toBackendString(),
       'scheduledDate': scheduledDate,
       'scheduledTime': scheduledTime,
@@ -125,6 +132,13 @@ class Job {
       'locationLat': locationLat,
       'locationLng': locationLng,
       'notes': notes,
+      'assignedAt': assignedAt?.toIso8601String(),
+      'startedAt': startedAt?.toIso8601String(),
+      'completedAt': completedAt?.toIso8601String(),
+      'validatedAt': validatedAt?.toIso8601String(),
+      'cancelledAt': cancelledAt?.toIso8601String(),
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
       'rating': rating,
       'ratingComment': ratingComment,
       'proof': proof?.toJson(),

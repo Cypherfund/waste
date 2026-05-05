@@ -12,6 +12,7 @@ class SubscriptionProvider extends ChangeNotifier {
   UserSubscription? _subscription;
   PricingQuote? _pricingQuote;
   AppConfig? _appConfig;
+  double? _walletBalance;
   bool _isLoading = false;
   bool _isActing = false;
   String? _error;
@@ -26,6 +27,7 @@ class SubscriptionProvider extends ChangeNotifier {
   UserSubscription? get subscription => _subscription;
   PricingQuote? get pricingQuote => _pricingQuote;
   AppConfig? get appConfig => _appConfig;
+  double? get walletBalance => _walletBalance;
   bool get isLoading => _isLoading;
   bool get isActing => _isActing;
   String? get error => _error;
@@ -65,6 +67,16 @@ class SubscriptionProvider extends ChangeNotifier {
       ]);
       _pricingQuote = results[0] as PricingQuote;
       _appConfig = results[1] as AppConfig;
+    } catch (e) {
+      _error = ApiClient.extractErrorMessage(e);
+    } finally {
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadWalletBalance() async {
+    try {
+      _walletBalance = await _walletApi.getBalance();
     } catch (e) {
       _error = ApiClient.extractErrorMessage(e);
     } finally {

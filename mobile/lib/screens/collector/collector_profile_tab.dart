@@ -2,15 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/collector_earnings_provider.dart';
 import '../../widgets/app_card.dart';
 
-class CollectorProfileTab extends StatelessWidget {
+class CollectorProfileTab extends StatefulWidget {
   const CollectorProfileTab({super.key});
+
+  @override
+  State<CollectorProfileTab> createState() => _CollectorProfileTabState();
+}
+
+class _CollectorProfileTabState extends State<CollectorProfileTab> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<CollectorEarningsProvider>().loadQuickSummary();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+    final earnings = context.watch<CollectorEarningsProvider>();
     final user = auth.user;
+    final summary = earnings.quickSummary;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -51,9 +67,9 @@ class CollectorProfileTab extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _buildStat('Jobs', '128'),
+                      _buildStat('Today', '${summary?.today.toStringAsFixed(0) ?? 0}'),
                       Container(width: 1, height: 30, color: AppColors.divider),
-                      _buildStat('Earnings', '24,600 XAF'),
+                      _buildStat('Earnings', '${summary?.allTime.toStringAsFixed(0) ?? 0} XAF'),
                       Container(width: 1, height: 30, color: AppColors.divider),
                       _buildStat('Rating', '4.8'),
                     ],
@@ -200,7 +216,12 @@ class CollectorProfileTab extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: () => auth.logout(),
+                onPressed: () async {
+                  await auth.logout();
+                  if (mounted) {
+                    Navigator.pushNamedAndRemoveUntil(context, '/', (r) => false);
+                  }
+                },
                 icon: const Icon(Icons.logout, size: 18),
                 label: const Text('Logout'),
                 style: OutlinedButton.styleFrom(

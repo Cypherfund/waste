@@ -1,12 +1,31 @@
 -- =============================================================
 -- WasteWise Demo Seed Data
--- Users (existing): already in DB — referenced by UUID below
---   COLLECTOR : 4dfc31a8 (Ngai), f9f129e1 (test collector2)
---   HOUSEHOLD : d3a53bcb (ngai/0931636), 3ae283b0 (ngai/0931645),
---               73b57bb8 (Test User), f005aa56 (ngai/0933822),
---               7166b229 (test)
---   ADMIN     : 63ee287d
+-- Password for all users: 12345678 (bcrypt hash: $2b$12$w3/NNRSSu33U7VKJHn6rb.NMBUkuyrHhwxDRX8.cGusVdaKx9WizG)
 -- =============================================================
+
+-- ── 0. Insert Users ─────────────────────────────────────────────
+-- Admin user
+INSERT INTO users (id, name, email, phone, password_hash, role, is_active, avg_rating, total_completed, created_at, updated_at)
+VALUES
+  ('63ee287d-1234-5678-90ab-cdef12345678', 'Admin User', 'admin@wastewise.com', '237000000001', '$2b$12$w3/NNRSSu33U7VKJHn6rb.NMBUkuyrHhwxDRX8.cGusVdaKx9WizG', 'ADMIN', true, 0.00, 0, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- Collectors
+INSERT INTO users (id, name, email, phone, password_hash, role, is_active, latitude, longitude, avg_rating, total_completed, created_at, updated_at)
+VALUES
+  ('4dfc31a8-dca3-45ce-aeb6-648f1faf3c4e', 'Ngai Collector', 'ngai@wastewise.com', '237000000002', '$2b$12$w3/NNRSSu33U7VKJHn6rb.NMBUkuyrHhwxDRX8.cGusVdaKx9WizG', 'COLLECTOR', true, 4.04700, 9.70200, 4.50, 12, NOW(), NOW()),
+  ('f9f129e1-8b2b-499d-825a-b2f7aeb10e4a', 'Test Collector 2', 'collector2@wastewise.com', '237000000003', '$2b$12$w3/NNRSSu33U7VKJHn6rb.NMBUkuyrHhwxDRX8.cGusVdaKx9WizG', 'COLLECTOR', true, 4.05500, 9.69800, 4.20, 7, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- Households
+INSERT INTO users (id, name, email, phone, password_hash, role, is_active, avg_rating, total_completed, created_at, updated_at)
+VALUES
+  ('d3a53bcb-bcd4-432a-975f-a50fe0691fc0', 'Ngai Household', 'ngai.household@wastewise.com', '2370931636', '$2b$12$w3/NNRSSu33U7VKJHn6rb.NMBUkuyrHhwxDRX8.cGusVdaKx9WizG', 'HOUSEHOLD', true, 0.00, 0, NOW(), NOW()),
+  ('3ae283b0-328b-46f8-9510-fb28386f3865', 'Ngai Household 2', 'ngai2@wastewise.com', '2370931645', '$2b$12$w3/NNRSSu33U7VKJHn6rb.NMBUkuyrHhwxDRX8.cGusVdaKx9WizG', 'HOUSEHOLD', true, 0.00, 0, NOW(), NOW()),
+  ('73b57bb8-a102-44ee-9a2c-6d02b92ac742', 'Test User', 'test@wastewise.com', '237000000004', '$2b$12$w3/NNRSSu33U7VKJHn6rb.NMBUkuyrHhwxDRX8.cGusVdaKx9WizG', 'HOUSEHOLD', true, 0.00, 0, NOW(), NOW()),
+  ('f005aa56-d1ec-467e-87bc-7ec1e6003d10', 'Ngai Household 3', 'ngai3@wastewise.com', '2370933822', '$2b$12$w3/NNRSSu33U7VKJHn6rb.NMBUkuyrHhwxDRX8.cGusVdaKx9WizG', 'HOUSEHOLD', true, 0.00, 0, NOW(), NOW()),
+  ('7166b229-5f5c-4110-b4f3-0c29edbc11db', 'Test Household', 'test2@wastewise.com', '237000000005', '$2b$12$w3/NNRSSu33U7VKJHn6rb.NMBUkuyrHhwxDRX8.cGusVdaKx9WizG', 'HOUSEHOLD', true, 0.00, 0, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
 
 -- ── 0. Collector availability ─────────────────────────────────
 -- Ngai collector: Mon-Sat, 08:00-17:00
@@ -26,14 +45,7 @@ VALUES
   (uuid_generate_v4(), 'f9f129e1-8b2b-499d-825a-b2f7aeb10e4a', 'FRI', '09:00', '18:00', true)
 ON CONFLICT ON CONSTRAINT uq_collector_day_slot DO NOTHING;
 
--- ── 1. Update collector stats (avg_rating, total_completed) ───
-UPDATE users SET avg_rating = 4.50, total_completed = 12
-WHERE id = '4dfc31a8-dca3-45ce-aeb6-648f1faf3c4e';
-
-UPDATE users SET avg_rating = 4.20, total_completed = 7
-WHERE id = 'f9f129e1-8b2b-499d-825a-b2f7aeb10e4a';
-
--- ── 2. Subscription plan id (use existing seeded plan) ────────
+-- ── 1. Subscription plan id (use existing seeded plan) ────────
 -- Grab the Standard Plan id into a variable
 DO $$
 DECLARE

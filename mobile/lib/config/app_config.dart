@@ -8,14 +8,14 @@ class AppConfig {
 
   static String get apiBaseUrl {
     if (_apiBaseUrlOverride.isNotEmpty) return _apiBaseUrlOverride;
-    if (kIsWeb) return 'http://localhost:3001/api/v1';
-    return 'http://10.0.2.2:3001/api/v1';
+    if (kIsWeb) return 'http://10.12.1.172:3001/api/v1';
+    return 'http://10.12.1.172:3001/api/v1';
   }
 
   static String get wsBaseUrl {
     if (_wsBaseUrlOverride.isNotEmpty) return _wsBaseUrlOverride;
-    if (kIsWeb) return 'http://localhost:3001';
-    return 'http://10.0.2.2:3001';
+    if (kIsWeb) return 'http://10.12.1.172:3001';
+    return 'http://10.12.1.172:3001';
   }
 
   static const String wsNamespace = '/ws';

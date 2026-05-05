@@ -119,8 +119,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                   constraints: BoxConstraints(
                     minHeight: constraints.maxHeight - 28,
                   ),
-                  child: IntrinsicHeight(
-                    child: Column(
+                  child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildDashboardHeader(auth.user?.name ?? 'Sophie'),
@@ -143,14 +142,13 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
 
                         _buildSubscriptionCard(),
 
-                        const Spacer(),
+                        const SizedBox(height: 16),
 
                         _buildScheduleReminderCard(),
 
                         const SizedBox(height: 8),
                       ],
                     ),
-                  ),
                 ),
               );
             },
@@ -555,7 +553,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
             Expanded(
               child: _quickActionTile(
                 icon: Icons.account_balance_wallet_outlined,
-                label: 'Wallet\n5,600 XAF',
+                label: 'Wallet',
                 onTap: () => Navigator.pushNamed(context, '/wallet'),
               ),
             ),
@@ -575,40 +573,30 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        height: 132,
+        padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: selected ? AppColors.primary : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: selected ? AppColors.primary : const Color(0xFFE5E7EB),
-            width: selected ? 1.5 : 1,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.035),
-              blurRadius: 14,
-              offset: const Offset(0, 7),
-            ),
-          ],
         ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               icon,
-              size: 27,
-              color: selected ? AppColors.primary : const Color(0xFF374151),
+              size: 24,
+              color: selected ? Colors.white : AppColors.primary,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 6),
             Text(
               label,
-              textAlign: TextAlign.center,
               style: TextStyle(
-                height: 1.25,
-                fontSize: 13,
-                color: selected ? AppColors.primary : const Color(0xFF111827),
+                fontSize: 11,
                 fontWeight: FontWeight.w700,
+                color: selected ? Colors.white : const Color(0xFF111827),
               ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),

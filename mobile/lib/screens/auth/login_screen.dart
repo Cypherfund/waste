@@ -5,6 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/app_text_field.dart';
 import '../../widgets/loading_button.dart';
 import '../../widgets/error_banner.dart';
+import '../../features/onboarding/onboarding_flow.dart';
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback? onSignUp;
@@ -37,7 +38,13 @@ class _LoginScreenState extends State<LoginScreen> {
       password: _passwordController.text,
     );
 
-    // Navigation is handled by Consumer in main.dart based on auth state
+    if (auth.status == AuthStatus.authenticated) {
+      await markOnboardingCompleted();
+      if (mounted) {
+        final route = auth.user?.isCollector == true ? '/collector-home' : '/home';
+        Navigator.pushNamedAndRemoveUntil(context, route, (r) => false);
+      }
+    }
   }
 
   @override
@@ -172,6 +179,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         onTap: () {
                           if (widget.onSignUp != null) {
                             widget.onSignUp!();
+                          } else {
+                            Navigator.pushNamed(context, '/register');
                           }
                         },
                         child: Text(
