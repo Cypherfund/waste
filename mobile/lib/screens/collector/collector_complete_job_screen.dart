@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
@@ -19,7 +19,7 @@ class CollectorCompleteJobScreen extends StatefulWidget {
 
 class _CollectorCompleteJobScreenState
     extends State<CollectorCompleteJobScreen> {
-  File? _proofImage;
+  XFile? _proofImage;
 
   @override
   Widget build(BuildContext context) {
@@ -155,15 +155,43 @@ class _CollectorCompleteJobScreenState
   Widget _buildPhotoPreview() {
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
-      child: Image.file(
-        _proofImage!,
-        width: double.infinity,
-        fit: BoxFit.cover,
+      child: FutureBuilder<List<int>>(
+        future: _proofImage!.readAsBytes().then((b) => b.toList()),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          return Image.memory(
+            snapshot.data! as dynamic,
+            width: double.infinity,
+            fit: BoxFit.cover,
+          );
+        },
       ),
     );
   }
 
   Future<void> _pickProofImage() async {
+    if (kIsWeb) {
+      try {
+        final picker = ImagePicker();
+        final picked = await picker.pickImage(
+          source: ImageSource.gallery,
+          maxWidth: 1280,
+          maxHeight: 1280,
+          imageQuality: 80,
+        );
+        if (picked != null && mounted) setState(() => _proofImage = picked);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Could not open file picker: $e')),
+          );
+        }
+      }
+      return;
+    }
+
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -209,7 +237,7 @@ class _CollectorCompleteJobScreenState
         imageQuality: 80,
       );
       if (picked != null && mounted) {
-        setState(() => _proofImage = File(picked.path));
+        setState(() => _proofImage = picked);
       }
     } catch (e) {
       if (mounted) {

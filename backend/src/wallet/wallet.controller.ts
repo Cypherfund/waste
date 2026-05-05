@@ -6,14 +6,25 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { IsNumber, IsString, IsOptional, Min } from 'class-validator';
 import { WalletService } from './wallet.service';
 import { CurrentUser, JwtPayload } from '../common/decorators/current-user.decorator';
 import { UserRole } from '../common/enums/role.enum';
 
 class RequestWithdrawalDto {
+  @IsNumber()
+  @Min(1)
   amount: number;
+
+  @IsString()
   method: string;
+
+  @IsOptional()
+  @IsString()
   accountNumber?: string;
+
+  @IsOptional()
+  @IsString()
   accountName?: string;
 }
 

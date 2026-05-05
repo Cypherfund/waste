@@ -91,7 +91,12 @@ class JobApi {
       params['status'] = status.name;
     }
     final response = await _client.dio.get('/jobs/assigned', queryParameters: params);
-    return PaginatedJobs.fromJson(response.data as Map<String, dynamic>);
+    final body = response.data;
+    if (body is List) {
+      final jobs = body.map((e) => Job.fromJson(e as Map<String, dynamic>)).toList();
+      return PaginatedJobs(data: jobs, page: page, limit: limit, total: jobs.length, pages: 1);
+    }
+    return PaginatedJobs.fromJson(body as Map<String, dynamic>);
   }
 
   Future<Job> acceptJob(String id) async {
