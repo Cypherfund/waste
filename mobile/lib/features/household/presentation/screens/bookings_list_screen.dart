@@ -370,7 +370,6 @@ class _BookingsListScreenState extends State<BookingsListScreen>
       Job job, {
         required bool isUpcoming,
       }) {
-    print('Opening booking ${job.id} - Status: ${job.status} - Upcoming: $isUpcoming');
     if (isUpcoming &&
         (job.status == JobStatus.requested ||
             job.status == JobStatus.assigned ||

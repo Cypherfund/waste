@@ -24,7 +24,13 @@ class AuthProvider extends ChangeNotifier {
     required WebSocketService wsService,
   })  : _authApi = authApi,
         _storage = storage,
-        _wsService = wsService;
+        _wsService = wsService {
+    // Listen for WebSocket auth errors and logout
+    _wsService.onAuthError = () {
+      debugPrint('[AuthProvider] WebSocket auth error - logging out');
+      logout();
+    };
+  }
 
   AuthStatus get status => _status;
   User? get user => _user;

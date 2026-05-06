@@ -41,6 +41,14 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>WasteWise needs camera access to take a proof photo when completing a pickup job.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>WasteWise needs photo library access to select a proof image for pickup completion.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>WasteWise needs permission to save photos.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>WasteWise needs microphone access for video recording when capturing proof.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../config/app_theme.dart';
 import '../../models/job.dart';
-import '../../providers/jobs_provider.dart';
+import '../../providers/job_provider.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/job_status_badge.dart';
 
@@ -23,7 +23,7 @@ class _JobsListScreenState extends State<JobsListScreen>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<JobsProvider>().loadJobs(refresh: true);
+      context.read<JobProvider>().loadMyJobs(refresh: true);
     });
   }
 
@@ -35,7 +35,7 @@ class _JobsListScreenState extends State<JobsListScreen>
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<JobsProvider>();
+    final provider = context.watch<JobProvider>();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -78,7 +78,7 @@ class _JobsListScreenState extends State<JobsListScreen>
             jobs: provider.activeJobs,
             isLoading: provider.isLoading,
             error: provider.error,
-            onRefresh: () => provider.loadJobs(refresh: true),
+            onRefresh: () => provider.loadMyJobs(refresh: true),
             emptyMessage: 'No active collections',
             emptySubtitle: 'Schedule a pickup to get started',
             emptyIcon: Icons.check_circle_outline,
@@ -87,7 +87,7 @@ class _JobsListScreenState extends State<JobsListScreen>
             jobs: provider.completedJobs,
             isLoading: provider.isLoading,
             error: provider.error,
-            onRefresh: () => provider.loadJobs(refresh: true),
+            onRefresh: () => provider.loadMyJobs(refresh: true),
             emptyMessage: 'No completed collections yet',
             emptySubtitle: 'Completed pickups will appear here',
             emptyIcon: Icons.history,
@@ -96,7 +96,7 @@ class _JobsListScreenState extends State<JobsListScreen>
             jobs: provider.jobs,
             isLoading: provider.isLoading,
             error: provider.error,
-            onRefresh: () => provider.loadJobs(refresh: true),
+            onRefresh: () => provider.loadMyJobs(refresh: true),
             emptyMessage: 'No collections found',
             emptySubtitle: 'Your collection history is empty',
             emptyIcon: Icons.inbox_outlined,

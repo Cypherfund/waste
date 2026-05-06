@@ -1,0 +1,4 @@
+export enum PricingType {
+  SUBSCRIPTION = 'SUBSCRIPTION',
+  PAY_PER_PICKUP = 'PAY_PER_PICKUP',
+}

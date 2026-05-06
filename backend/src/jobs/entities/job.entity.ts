@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { JobStatus } from '../../common/enums/job-status.enum';
+import { PricingType } from '../../common/enums/pricing-type.enum';
 
 @Entity('jobs')
 export class Job {
@@ -74,6 +75,15 @@ export class Job {
 
   @Column({ type: 'int', default: 0, name: 'assignment_attempts' })
   assignmentAttempts: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true, name: 'quoted_price' })
+  quotedPrice: number | null;
+
+  @Column({ type: 'enum', enum: PricingType, nullable: true, name: 'pricing_type' })
+  pricingType: PricingType | null;
+
+  @Column({ type: 'boolean', default: false, name: 'is_covered_by_subscription' })
+  isCoveredBySubscription: boolean;
 
   @Column({ type: 'int', default: 1 })
   version: number;

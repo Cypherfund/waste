@@ -64,10 +64,10 @@ class JobProvider extends ChangeNotifier {
     ..sort((a, b) => a.scheduledDate.compareTo(b.scheduledDate));
       
   List<Job> get completedJobs => _jobs
-      .where((job) => [
-            JobStatus.completed,
-            JobStatus.validated,
-            JobStatus.rated,
+      .where((job) => ![
+            JobStatus.requested,
+            JobStatus.assigned,
+            JobStatus.inProgress,
           ].contains(job.status))
       .toList()
     ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
@@ -93,7 +93,7 @@ class JobProvider extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      // Silent failure - will try API next
+      // Silent failure - will try API next (expected on web)
     }
   }
 

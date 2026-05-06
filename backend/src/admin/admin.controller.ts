@@ -7,10 +7,12 @@ import {
   Param,
   Query,
   Body,
+  Res,
   ParseUUIDPipe,
   ParseIntPipe,
   DefaultValuePipe,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -24,13 +26,19 @@ import { ReviewFraudFlagDto } from '../fraud/dto/review-fraud-flag.dto';
 import { DisputeStatus } from '../common/enums/dispute-status.enum';
 import { FraudFlagStatus } from '../common/enums/fraud-type.enum';
 import { FraudSeverity } from '../common/enums/fraud-severity.enum';
+import { EarningStatus } from '../common/enums/earning-status.enum';
+import { WalletService } from '../wallet/wallet.service';
+import { PayoutRequestStatus } from '../wallet/entities/payout-request.entity';
 
 @ApiTags('Admin')
 @ApiBearerAuth()
 @Controller('admin')
 @Roles(UserRole.ADMIN)
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly walletService: WalletService,
+  ) {}
 
   // ─── USERS ────────────────────────────────────────────────────
 
@@ -144,6 +152,63 @@ export class AdminController {
     @Body() body: { value: string },
   ) {
     return this.adminService.updateConfig(key, body.value, adminId);
+  }
+
+  // ─── EARNINGS / PAYOUTS ────────────────────────────────────────
+
+  @Get('earnings')
+  listEarnings(
+    @Query('status') status?: EarningStatus,
+    @Query('collectorId') collectorId?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page?: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit?: number,
+  ) {
+    return this.adminService.listEarnings({ status, collectorId, from, to, page, limit });
+  }
+
+  @Post('earnings/:id/pay')
+  markAsPaid(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('sub') adminId: string,
+  ) {
+    return this.adminService.markAsPaid(id, adminId);
+  }
+
+  @Get('earnings/export')
+  async exportEarnings(
+    @Query('status') status?: EarningStatus,
+    @Query('collectorId') collectorId?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Res() res?: Response,
+  ) {
+    const csv = await this.adminService.exportEarningsCsv({ status, collectorId, from, to });
+    res!.setHeader('Content-Type', 'text/csv');
+    res!.setHeader('Content-Disposition', 'attachment; filename="earnings.csv"');
+    res!.send(csv);
+  }
+
+  // ─── PAYOUT REQUESTS ────────────────────────────────────────────
+
+  @Get('payouts')
+  listPayouts(
+    @Query('status') status?: PayoutRequestStatus,
+    @Query('collectorId') collectorId?: string,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page?: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit?: number,
+  ) {
+    return this.walletService.adminListPayoutRequests({ status, collectorId, page, limit });
+  }
+
+  @Patch('payouts/:id')
+  reviewPayout(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('sub') adminId: string,
+    @Body() body: { action: 'approve' | 'reject' | 'mark_paid'; adminNote?: string },
+  ) {
+    return this.walletService.adminReviewPayout(id, adminId, body.action, body.adminNote);
   }
 
   // ─── STATS & PERFORMANCE ──────────────────────────────────────

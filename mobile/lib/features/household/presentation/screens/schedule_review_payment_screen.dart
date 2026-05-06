@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../config/app_theme.dart';
 import '../../../../providers/job_provider.dart';
+import '../../../../providers/subscription_provider.dart';
+import '../../../../models/subscription.dart';
 import 'schedule_pickup_type_screen.dart';
 
 class ScheduleReviewPaymentScreen extends StatefulWidget {
@@ -22,10 +26,22 @@ class ScheduleReviewPaymentScreen extends StatefulWidget {
 class _ScheduleReviewPaymentScreenState
     extends State<ScheduleReviewPaymentScreen> {
   bool _isCreatingJob = false;
+  String _selectedPaymentMethod = 'MOBILE_MONEY';
+  final _paymentRefController = TextEditingController();
 
-  final double _basePrice = 1500.0;
-  final double _distancePrice = 500.0;
-  final double _walletBalance = 5600.0;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<SubscriptionProvider>().loadPricingQuote();
+    });
+  }
+
+  @override
+  void dispose() {
+    _paymentRefController.dispose();
+    super.dispose();
+  }
 
   String _getPickupTypeName(PickupScheduleType type) {
     switch (type) {
@@ -62,7 +78,10 @@ class _ScheduleReviewPaymentScreenState
     final locationLat = widget.arguments['locationLat'] as double?;
     final locationLng = widget.arguments['locationLng'] as double?;
 
-    final totalPrice = _basePrice + _distancePrice;
+    final subProvider = context.watch<SubscriptionProvider>();
+    final quote = subProvider.pricingQuote;
+    final isFree = quote?.isCoveredBySubscription == true;
+    final totalPrice = quote?.quotedPrice ?? 1000.0;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -150,15 +169,11 @@ class _ScheduleReviewPaymentScreenState
 
                     const SizedBox(height: 22),
 
-                    _buildPriceBreakdown(
-                      basePrice: _basePrice,
-                      distancePrice: _distancePrice,
-                      totalPrice: totalPrice,
-                    ),
+                    _buildPricingBanner(quote),
 
                     const SizedBox(height: 22),
 
-                    _buildPaymentMethod(),
+                    if (!isFree) _buildPaymentSection(subProvider, totalPrice),
                   ],
                 ),
               ),
@@ -166,6 +181,7 @@ class _ScheduleReviewPaymentScreenState
 
             _buildConfirmButton(
               totalPrice: totalPrice,
+              isFree: isFree,
               pickupType: pickupType,
               scheduledDate: scheduledDate,
               scheduledTime: scheduledTime,
@@ -231,14 +247,134 @@ class _ScheduleReviewPaymentScreenState
     );
   }
 
-  Widget _buildPriceBreakdown({
-    required double basePrice,
-    required double distancePrice,
-    required double totalPrice,
-  }) {
+  Widget _buildPricingBanner(PricingQuote? quote) {
+    if (quote == null) {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF9FAFB),
+          borderRadius: BorderRadius.circular(9),
+          border: Border.all(color: const Color(0xFFE5E7EB)),
+        ),
+        child: const Center(
+          child: SizedBox(
+            height: 18,
+            width: 18,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
+    }
+
+    if (quote.isCoveredBySubscription) {
+      // Case 1: FREE — covered by subscription
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEAF5EA),
+          borderRadius: BorderRadius.circular(9),
+          border: Border.all(color: AppColors.primary),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.check_circle_rounded,
+                    color: AppColors.primary, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  'This pickup is FREE 🎉',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Covered by your ${quote.planName ?? 'subscription'}',
+              style: const TextStyle(
+                fontSize: 11,
+                color: Color(0xFF374151),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            if (quote.remainingPickupsThisWeek != null) ...
+              [
+                const SizedBox(height: 4),
+                Text(
+                  'Pickups remaining this week: ${quote.remainingPickupsThisWeek}',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF6B7280),
+                  ),
+                ),
+              ],
+          ],
+        ),
+      );
+    }
+
+    if (quote.planName != null && quote.remainingPickupsThisWeek == 0) {
+      // Case 2: Subscription exhausted
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF8E1),
+          borderRadius: BorderRadius.circular(9),
+          border: Border.all(color: const Color(0xFFFFA000)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.warning_amber_rounded,
+                    color: Color(0xFFFFA000), size: 18),
+                SizedBox(width: 8),
+                Text(
+                  'Weekly pickups used up',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF111827),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _buildPriceRow(
+              'This pickup costs',
+              quote.quotedPrice,
+              isTotal: true,
+            ),
+            const SizedBox(height: 10),
+            GestureDetector(
+              onTap: () => Navigator.pushNamed(context, '/subscription-plans'),
+              child: Text(
+                'Upgrade your plan →',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Case 3: No subscription — pay per pickup
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(9),
@@ -248,29 +384,44 @@ class _ScheduleReviewPaymentScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Price breakdown',
+            'Price',
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w800,
               color: Color(0xFF111827),
             ),
           ),
-          const SizedBox(height: 13),
-          _buildPriceRow('Base price', basePrice),
-          const SizedBox(height: 9),
-          _buildPriceRow('Distance fee', distancePrice),
-          const SizedBox(height: 12),
-          const Divider(
-            height: 1,
-            thickness: 1,
-            color: Color(0xFFE5E7EB),
-          ),
-          const SizedBox(height: 12),
-          _buildPriceRow(
-            'Total',
-            totalPrice,
-            isTotal: true,
-          ),
+          const SizedBox(height: 10),
+          _buildPriceRow('This pickup', quote.quotedPrice, isTotal: true),
+          if (quote.subscriptionSavingsMessage != null) ...
+            [
+              const SizedBox(height: 12),
+              const Divider(height: 1, color: Color(0xFFE5E7EB)),
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: () =>
+                    Navigator.pushNamed(context, '/subscription-plans'),
+                child: Row(
+                  children: [
+                    const Icon(Icons.savings_outlined,
+                        size: 14, color: Color(0xFF2E7D32)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        quote.subscriptionSavingsMessage!,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF2E7D32),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right_rounded,
+                        size: 16, color: Color(0xFF2E7D32)),
+                  ],
+                ),
+              ),
+            ],
         ],
       ),
     );
@@ -304,33 +455,27 @@ class _ScheduleReviewPaymentScreenState
     );
   }
 
-  Widget _buildPaymentMethod() {
+  Widget _buildPaymentSection(SubscriptionProvider subProvider, double amount) {
+    final appConfig = subProvider.appConfig;
+    final paymentEnabled = appConfig?.paymentIntegrationEnabled ?? false;
+
+    if (paymentEnabled) {
+      return _buildOnlinePaymentMethod();
+    }
+    return _buildManualPaymentFlow(appConfig, amount);
+  }
+
+  Widget _buildOnlinePaymentMethod() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            const Text(
-              'Pay with',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF111827),
-              ),
-            ),
-            const Spacer(),
-            GestureDetector(
-              onTap: () {},
-              child: Text(
-                'Change',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.primary,
-                ),
-              ),
-            ),
-          ],
+        const Text(
+          'Pay with',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF111827),
+          ),
         ),
         const SizedBox(height: 10),
         Container(
@@ -340,10 +485,7 @@ class _ScheduleReviewPaymentScreenState
           decoration: BoxDecoration(
             color: const Color(0xFFEAF5EA),
             borderRadius: BorderRadius.circular(9),
-            border: Border.all(
-              color: AppColors.primary,
-              width: 1.3,
-            ),
+            border: Border.all(color: AppColors.primary, width: 1.3),
           ),
           child: Row(
             children: [
@@ -354,17 +496,17 @@ class _ScheduleReviewPaymentScreenState
                   color: const Color(0xFFD8EBDD),
                   borderRadius: BorderRadius.circular(7),
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.account_balance_wallet_outlined,
-                  color: const Color(0xFF374151),
+                  color: Color(0xFF374151),
                   size: 17,
                 ),
               ),
               const SizedBox(width: 10),
-              Expanded(
+              const Expanded(
                 child: Text(
-                  'Wallet (Balance: ${_walletBalance.toStringAsFixed(0)} XAF)',
-                  style: const TextStyle(
+                  'Mobile Money / Card',
+                  style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF111827),
@@ -378,11 +520,7 @@ class _ScheduleReviewPaymentScreenState
                   color: AppColors.primary,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.check_rounded,
-                  size: 12,
-                  color: Colors.white,
-                ),
+                child: const Icon(Icons.check_rounded, size: 12, color: Colors.white),
               ),
             ],
           ),
@@ -391,8 +529,253 @@ class _ScheduleReviewPaymentScreenState
     );
   }
 
+  Widget _buildManualPaymentFlow(dynamic appConfig, double amount) {
+    final instructions = (appConfig?.manualPaymentInstructions as String? ?? '')
+        .replaceAll('{amount}', amount.toStringAsFixed(0));
+    final whatsapp = appConfig?.supportWhatsapp as String? ?? '';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Payment method selector
+        const Text(
+          'Payment Method',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF111827),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            _buildMethodChip('MOBILE_MONEY', Icons.phone_android, 'Mobile Money'),
+            const SizedBox(width: 10),
+            _buildMethodChip('BANK_TRANSFER', Icons.account_balance, 'Bank Transfer'),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // Instructions box
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF8E1),
+            borderRadius: BorderRadius.circular(9),
+            border: Border.all(color: const Color(0xFFFFA000)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.info_outline_rounded,
+                      color: Color(0xFFFFA000), size: 16),
+                  SizedBox(width: 6),
+                  Text(
+                    'How to pay',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF111827),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                instructions.isNotEmpty
+                    ? instructions
+                    : 'Send your payment of ${amount.toStringAsFixed(0)} XAF via Mobile Money. An admin will confirm your payment shortly.',
+                style: const TextStyle(
+                  fontSize: 11,
+                  height: 1.5,
+                  color: Color(0xFF374151),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 10),
+              GestureDetector(
+                onTap: () {
+                  Clipboard.setData(ClipboardData(
+                    text: amount.toStringAsFixed(0),
+                  ));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Amount copied to clipboard'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                },
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.copy_rounded,
+                        size: 13, color: Color(0xFFFFA000)),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Copy amount: ${amount.toStringAsFixed(0)} XAF',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFFFFA000),
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        // Payment reference field
+        const Text(
+          'Payment Reference / Transaction ID',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF111827),
+          ),
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: _paymentRefController,
+          style: const TextStyle(fontSize: 12),
+          decoration: InputDecoration(
+            hintText: 'e.g. 0012345678 or leave blank',
+            hintStyle: const TextStyle(
+                fontSize: 11, color: Color(0xFF9CA3AF)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(9),
+              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(9),
+              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(9),
+              borderSide: BorderSide(color: AppColors.primary, width: 1.3),
+            ),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          ),
+        ),
+        const SizedBox(height: 6),
+        const Text(
+          'Optional — enter your MoMo transaction ID so the admin can verify quickly.',
+          style: TextStyle(
+              fontSize: 10, color: Color(0xFF9CA3AF), height: 1.4),
+        ),
+        const SizedBox(height: 16),
+
+        // WhatsApp support
+        if (whatsapp.isNotEmpty)
+          GestureDetector(
+            onTap: () => _openWhatsApp(whatsapp),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFDCFCE7),
+                borderRadius: BorderRadius.circular(9),
+                border: Border.all(color: const Color(0xFF16A34A)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.chat_rounded,
+                      color: Color(0xFF16A34A), size: 18),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Need help? Chat with us on WhatsApp',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF14532D),
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Tap to open WhatsApp for complaints or payment issues',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Color(0xFF166534),
+                            height: 1.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.arrow_forward_ios_rounded,
+                      size: 12, color: Color(0xFF16A34A)),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildMethodChip(String key, IconData icon, String label) {
+    final isSelected = _selectedPaymentMethod == key;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedPaymentMethod = key),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFEAF5EA) : const Color(0xFFF9FAFB),
+          borderRadius: BorderRadius.circular(9),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : const Color(0xFFE5E7EB),
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon,
+                size: 15,
+                color: isSelected ? AppColors.primary : const Color(0xFF6B7280)),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: isSelected
+                    ? AppColors.primary
+                    : const Color(0xFF374151),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openWhatsApp(String phone) async {
+    final clean = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+    final url = Uri.parse('https://wa.me/$clean');
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open WhatsApp')),
+        );
+      }
+    }
+  }
+
   Widget _buildConfirmButton({
     required double totalPrice,
+    required bool isFree,
     required PickupScheduleType pickupType,
     required DateTime scheduledDate,
     required String scheduledTime,
@@ -427,6 +810,7 @@ class _ScheduleReviewPaymentScreenState
                 onPressed: _isCreatingJob
                     ? null
                     : () => _confirmBooking(
+                  isFree: isFree,
                   scheduledDate: scheduledDate,
                   scheduledTime: scheduledTime,
                   locationAddress: locationAddress,
@@ -443,9 +827,9 @@ class _ScheduleReviewPaymentScreenState
                     color: Colors.white,
                   ),
                 )
-                    : const Text(
-                  'Confirm & Pay',
-                  style: TextStyle(
+                    : Text(
+                  isFree ? 'Confirm Booking' : 'Confirm & Pay',
+                  style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
                   ),
@@ -453,18 +837,18 @@ class _ScheduleReviewPaymentScreenState
               ),
             ),
             const SizedBox(height: 13),
-            const Row(
+            Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
+                const Icon(
                   Icons.lock_outline_rounded,
                   size: 12,
                   color: Color(0xFF9CA3AF),
                 ),
-                SizedBox(width: 5),
+                const SizedBox(width: 5),
                 Text(
-                  'Payments are secure',
-                  style: TextStyle(
+                  isFree ? 'No payment required' : 'Payment verified by admin',
+                  style: const TextStyle(
                     fontSize: 10,
                     color: Color(0xFF9CA3AF),
                     fontWeight: FontWeight.w500,
@@ -479,6 +863,7 @@ class _ScheduleReviewPaymentScreenState
   }
 
   Future<void> _confirmBooking({
+    required bool isFree,
     required DateTime scheduledDate,
     required String scheduledTime,
     required String locationAddress,
@@ -500,13 +885,19 @@ class _ScheduleReviewPaymentScreenState
       final pickupType =
       widget.arguments['pickupType'] as PickupScheduleType;
 
+      final paymentRef = _paymentRefController.text.trim();
+      final paymentNote = isFree
+          ? ''
+          : ' | Payment: $_selectedPaymentMethod'
+              '${paymentRef.isNotEmpty ? ' | Ref: $paymentRef' : ''}';
+
       final job = await jobProvider.createJob(
         scheduledDate: scheduledDate,
         scheduledTime: scheduledTime,
         locationAddress: fullAddress,
         locationLat: locationLat,
         locationLng: locationLng,
-        notes: 'Pickup type: ${_getPickupTypeName(pickupType)}',
+        notes: 'Pickup type: ${_getPickupTypeName(pickupType)}$paymentNote',
       );
 
       if (job != null && mounted) {
