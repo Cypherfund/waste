@@ -110,6 +110,76 @@ export interface SystemConfig {
   updatedAt: string;
 }
 
+// ─── Subscriptions ─────────────────────────────────────────────────────────
+export interface SubscriptionPlan {
+  id: string;
+  name: string;
+  price: number;
+  currency: string;
+  pickupsPerWeek: number;
+  isActive: boolean;
+  description: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Payouts ────────────────────────────────────────────────────────────────
+export interface PayoutRequest {
+  id: string;
+  collectorId: string;
+  collectorName: string | null;
+  collectorPhone: string | null;
+  amount: number;
+  method: string;
+  accountNumber: string | null;
+  accountName: string | null;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'PAID';
+  adminNote: string | null;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+  paidAt: string | null;
+  createdAt: string;
+}
+
+export interface PayoutListResponse {
+  data: PayoutRequest[];
+  meta: { total: number; page: number; limit: number; pages: number };
+}
+
+export interface PayoutMethod { key: string; label: string; }
+export interface PayoutConfig {
+  minWithdrawal: number;
+  maxWithdrawal: number;
+  methods: PayoutMethod[];
+}
+
+// ─── Earnings ───────────────────────────────────────────────────────────────
+export interface Earning {
+  id: string;
+  jobId: string;
+  collectorId: string;
+  collectorName: string | null;
+  collectorPhone: string | null;
+  baseAmount: number;
+  distanceAmount: number;
+  surgeMultiplier: number;
+  totalAmount: number;
+  status: 'PENDING' | 'CONFIRMED' | 'PAID';
+  confirmedAt: string | null;
+  paidAt: string | null;
+  createdAt: string;
+}
+
+export interface EarningsListResponse {
+  data: Earning[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    pages: number;
+  };
+}
+
 // ─── Stats ───────────────────────────────────────────────────────
 export interface DashboardStats {
   totalUsers: number;
@@ -127,4 +197,5 @@ export interface DashboardStats {
   earningsTotal: number;
   earningsPending: number;
   jobsByStatus: Record<string, number>;
+  paymentIntegrationEnabled: boolean;
 }

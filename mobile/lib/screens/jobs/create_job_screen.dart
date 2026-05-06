@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../../config/app_theme.dart';
 import '../../providers/jobs_provider.dart';
+import '../../widgets/app_card.dart';
 import '../../widgets/app_text_field.dart';
-import '../../widgets/loading_button.dart';
 import '../../widgets/error_banner.dart';
+import '../../widgets/bottom_cta.dart';
 
 class CreateJobScreen extends StatefulWidget {
   const CreateJobScreen({super.key});
@@ -43,6 +45,16 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
       initialDate: _scheduledDate,
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 90)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+                  primary: AppColors.primary,
+                ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked != null) {
       setState(() => _scheduledDate = picked);
@@ -84,7 +96,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Job created successfully!'),
-          backgroundColor: Colors.green,
+          backgroundColor: AppColors.success,
         ),
       );
       Navigator.pop(context);
@@ -96,11 +108,13 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     final provider = context.watch<JobsProvider>();
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Schedule Collection'),
+        backgroundColor: AppColors.surface,
+        title: Text('Schedule Collection', style: AppTypography.heading3),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
         child: Form(
           key: _formKey,
           child: Column(
@@ -111,95 +125,83 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                   message: provider.error!,
                   onDismiss: provider.clearError,
                 ),
+
               // Date picker
-              Text(
-                'Scheduled Date',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              InkWell(
+              Text('Select a date', style: AppTypography.subtitle),
+              const SizedBox(height: AppSpacing.sm),
+              AppCard(
                 onTap: _pickDate,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade400),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.calendar_today, size: 20),
-                      const SizedBox(width: 12),
-                      Text(
-                        DateFormat('EEEE, MMMM d, yyyy').format(_scheduledDate),
-                        style: const TextStyle(fontSize: 16),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppColors.primarySurface,
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                    ],
-                  ),
+                      child: const Icon(Icons.calendar_today, size: 20, color: AppColors.primary),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      DateFormat('EEEE, MMMM d, yyyy').format(_scheduledDate),
+                      style: AppTypography.body,
+                    ),
+                    const Spacer(),
+                    const Icon(Icons.chevron_right, color: AppColors.textHint),
+                  ],
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.lg),
+
               // Time window
-              Text(
-                'Time Window',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-              const SizedBox(height: 8),
+              Text('Select a time slot', style: AppTypography.subtitle),
+              const SizedBox(height: AppSpacing.sm),
               Row(
                 children: [
                   Expanded(
-                    child: InkWell(
+                    child: AppCard(
                       onTap: _pickStartTime,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade400),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.access_time, size: 20),
-                            const SizedBox(width: 8),
-                            Text(_startTime.format(context)),
-                          ],
-                        ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.access_time, size: 18, color: AppColors.primary),
+                          const SizedBox(width: 8),
+                          Text(_startTime.format(context), style: AppTypography.bodyMedium),
+                        ],
                       ),
                     ),
                   ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12),
-                    child: Text('to', style: TextStyle(fontSize: 16)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text('to', style: AppTypography.body.copyWith(color: AppColors.textSecondary)),
                   ),
                   Expanded(
-                    child: InkWell(
+                    child: AppCard(
                       onTap: _pickEndTime,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade400),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.access_time, size: 20),
-                            const SizedBox(width: 8),
-                            Text(_endTime.format(context)),
-                          ],
-                        ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.access_time, size: 18, color: AppColors.primary),
+                          const SizedBox(width: 8),
+                          Text(_endTime.format(context), style: AppTypography.bodyMedium),
+                        ],
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.lg),
+
+              // Address
+              Text('Pickup Address', style: AppTypography.subtitle),
+              const SizedBox(height: AppSpacing.sm),
               AppTextField(
                 controller: _addressController,
-                label: 'Pickup Address',
+                label: 'Address',
                 hint: 'Rue de la Joie, Akwa, Douala',
                 maxLines: 2,
+                prefixIcon: const Icon(Icons.location_on_outlined, color: AppColors.textHint, size: 22),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return 'Address is required';
@@ -210,22 +212,27 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
+
+              // Notes
+              Text('Additional Instructions', style: AppTypography.subtitle),
+              const SizedBox(height: AppSpacing.sm),
               AppTextField(
                 controller: _notesController,
                 label: 'Notes (optional)',
                 hint: 'Gate is blue, ring the bell',
                 maxLines: 3,
-              ),
-              const SizedBox(height: 32),
-              LoadingButton(
-                label: 'Schedule Collection',
-                isLoading: provider.isLoading,
-                onPressed: _handleCreate,
+                prefixIcon: const Icon(Icons.notes_outlined, color: AppColors.textHint, size: 22),
               ),
             ],
           ),
         ),
+      ),
+      bottomSheet: BottomCTA(
+        label: 'Schedule Collection',
+        isLoading: provider.isLoading,
+        onPressed: _handleCreate,
+        icon: Icons.check,
       ),
     );
   }

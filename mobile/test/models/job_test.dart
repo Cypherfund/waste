@@ -4,17 +4,17 @@ import 'package:wastewise/models/job.dart';
 void main() {
   group('JobStatus', () {
     test('fromString parses valid status', () {
-      expect(JobStatus.fromString('REQUESTED'), JobStatus.REQUESTED);
-      expect(JobStatus.fromString('ASSIGNED'), JobStatus.ASSIGNED);
-      expect(JobStatus.fromString('IN_PROGRESS'), JobStatus.IN_PROGRESS);
-      expect(JobStatus.fromString('COMPLETED'), JobStatus.COMPLETED);
-      expect(JobStatus.fromString('VALIDATED'), JobStatus.VALIDATED);
-      expect(JobStatus.fromString('RATED'), JobStatus.RATED);
-      expect(JobStatus.fromString('CANCELLED'), JobStatus.CANCELLED);
+      expect(JobStatus.fromString('REQUESTED'), JobStatus.requested);
+      expect(JobStatus.fromString('ASSIGNED'), JobStatus.assigned);
+      expect(JobStatus.fromString('IN_PROGRESS'), JobStatus.inProgress);
+      expect(JobStatus.fromString('COMPLETED'), JobStatus.completed);
+      expect(JobStatus.fromString('VALIDATED'), JobStatus.validated);
+      expect(JobStatus.fromString('RATED'), JobStatus.rated);
+      expect(JobStatus.fromString('CANCELLED'), JobStatus.cancelled);
     });
 
     test('fromString defaults to REQUESTED for unknown value', () {
-      expect(JobStatus.fromString('UNKNOWN'), JobStatus.REQUESTED);
+      expect(JobStatus.fromString('UNKNOWN'), JobStatus.requested);
     });
   });
 
@@ -46,7 +46,7 @@ void main() {
       expect(job.id, 'job-1');
       expect(job.householdId, 'hh-1');
       expect(job.collectorName, 'Collector One');
-      expect(job.status, JobStatus.ASSIGNED);
+      expect(job.status, JobStatus.assigned);
       expect(job.locationAddress, 'Rue de la Joie, Akwa, Douala');
       expect(job.locationLat, 4.0435);
       expect(job.notes, 'Blue gate');
@@ -85,8 +85,8 @@ void main() {
 
     test('copyWith creates updated copy', () {
       final job = Job.fromJson(json);
-      final updated = job.copyWith(status: JobStatus.IN_PROGRESS);
-      expect(updated.status, JobStatus.IN_PROGRESS);
+      final updated = job.copyWith(status: JobStatus.inProgress);
+      expect(updated.status, JobStatus.inProgress);
       expect(updated.id, job.id);
       expect(updated.locationAddress, job.locationAddress);
     });

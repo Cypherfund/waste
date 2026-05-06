@@ -11,43 +11,43 @@ void main() {
       );
     }
 
-    testWidgets('displays correct label for REQUESTED', (tester) async {
-      await tester.pumpWidget(buildBadge(JobStatus.REQUESTED));
+    testWidgets('displays correct label for requested', (tester) async {
+      await tester.pumpWidget(buildBadge(JobStatus.requested));
       expect(find.text('Requested'), findsOneWidget);
     });
 
-    testWidgets('displays correct label for ASSIGNED', (tester) async {
-      await tester.pumpWidget(buildBadge(JobStatus.ASSIGNED));
+    testWidgets('displays correct label for assigned', (tester) async {
+      await tester.pumpWidget(buildBadge(JobStatus.assigned));
       expect(find.text('Assigned'), findsOneWidget);
     });
 
-    testWidgets('displays correct label for IN_PROGRESS', (tester) async {
-      await tester.pumpWidget(buildBadge(JobStatus.IN_PROGRESS));
+    testWidgets('displays correct label for inProgress', (tester) async {
+      await tester.pumpWidget(buildBadge(JobStatus.inProgress));
       expect(find.text('In Progress'), findsOneWidget);
     });
 
-    testWidgets('displays correct label for COMPLETED', (tester) async {
-      await tester.pumpWidget(buildBadge(JobStatus.COMPLETED));
+    testWidgets('displays correct label for completed', (tester) async {
+      await tester.pumpWidget(buildBadge(JobStatus.completed));
       expect(find.text('Completed'), findsOneWidget);
     });
 
-    testWidgets('displays correct label for VALIDATED', (tester) async {
-      await tester.pumpWidget(buildBadge(JobStatus.VALIDATED));
+    testWidgets('displays correct label for validated', (tester) async {
+      await tester.pumpWidget(buildBadge(JobStatus.validated));
       expect(find.text('Validated'), findsOneWidget);
     });
 
-    testWidgets('displays correct label for RATED', (tester) async {
-      await tester.pumpWidget(buildBadge(JobStatus.RATED));
+    testWidgets('displays correct label for rated', (tester) async {
+      await tester.pumpWidget(buildBadge(JobStatus.rated));
       expect(find.text('Rated'), findsOneWidget);
     });
 
-    testWidgets('displays correct label for CANCELLED', (tester) async {
-      await tester.pumpWidget(buildBadge(JobStatus.CANCELLED));
+    testWidgets('displays correct label for cancelled', (tester) async {
+      await tester.pumpWidget(buildBadge(JobStatus.cancelled));
       expect(find.text('Cancelled'), findsOneWidget);
     });
 
-    testWidgets('displays correct label for DISPUTED', (tester) async {
-      await tester.pumpWidget(buildBadge(JobStatus.DISPUTED));
+    testWidgets('displays correct label for disputed', (tester) async {
+      await tester.pumpWidget(buildBadge(JobStatus.disputed));
       expect(find.text('Disputed'), findsOneWidget);
     });
   });

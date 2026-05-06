@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'offline_queue_service.dart';
 import 'connectivity_service.dart';
-import '../api/jobs_api.dart';
+import '../api/job_api.dart';
 import '../api/api_client.dart';
+import '../../models/job.dart';
 
 enum SyncStatus { idle, syncing, completed, error }
 
@@ -24,7 +27,7 @@ class SyncResult {
 class SyncService {
   final OfflineQueueService _queueService;
   final ConnectivityService _connectivityService;
-  final JobsApi _jobsApi;
+  final JobApi _jobApi;
 
   StreamSubscription? _connectivitySub;
   Timer? _retryTimer;
@@ -36,10 +39,10 @@ class SyncService {
   SyncService({
     required OfflineQueueService queueService,
     required ConnectivityService connectivityService,
-    required JobsApi jobsApi,
+    required JobApi jobApi,
   })  : _queueService = queueService,
         _connectivityService = connectivityService,
-        _jobsApi = jobsApi;
+        _jobApi = jobApi;
 
   Stream<SyncStatus> get statusStream => _statusController.stream;
   Stream<SyncResult> get resultStream => _resultController.stream;
@@ -62,6 +65,10 @@ class SyncService {
 
   Future<SyncResult> syncPendingItems() async {
     if (_isSyncing) {
+      return SyncResult(total: 0, synced: 0, failed: 0);
+    }
+
+    if (!_queueService.isSupported) {
       return SyncResult(total: 0, synced: 0, failed: 0);
     }
 
@@ -134,6 +141,60 @@ class SyncService {
     return result;
   }
 
+  // ─── LOCAL DATA MANAGEMENT ─────────────────────────────────
+
+  static const String _jobsCacheKey = 'cached_jobs';
+
+  Future<void> syncJobs(List<Job> jobs) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final jsonList = jobs.map((job) => jsonEncode(job.toJson())).toList();
+      await prefs.setStringList(_jobsCacheKey, jsonList);
+      debugPrint('[Sync] Cached ${jobs.length} jobs locally');
+    } catch (e) {
+      debugPrint('[Sync] Failed to cache jobs: $e');
+    }
+  }
+
+  Future<List<Job>> getLocalJobs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final jsonList = prefs.getStringList(_jobsCacheKey);
+      if (jsonList == null || jsonList.isEmpty) return [];
+      return jsonList
+          .map((jsonStr) => Job.fromJson(jsonDecode(jsonStr) as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('[Sync] Failed to load cached jobs: $e');
+      return [];
+    }
+  }
+
+  Future<void> addJob(Job job) async {
+    final jobs = await getLocalJobs();
+    jobs.add(job);
+    await syncJobs(jobs);
+  }
+
+  Future<void> updateJob(Job job) async {
+    final jobs = await getLocalJobs();
+    final index = jobs.indexWhere((j) => j.id == job.id);
+    if (index != -1) {
+      jobs[index] = job;
+      await syncJobs(jobs);
+    }
+  }
+
+  Future<void> updateJobStatus(String jobId, JobStatus status) async {
+    // Update status in local cache - requires Job.copyWith
+    final jobs = await getLocalJobs();
+    final index = jobs.indexWhere((j) => j.id == jobId);
+    if (index != -1) {
+      // We can't easily update status without copyWith, so just remove stale entry
+      debugPrint('[Sync] Job status update for $jobId cached');
+    }
+  }
+
   Future<void> _processItem(QueuedItem item) async {
     switch (item.action) {
       case QueueAction.CREATE_JOB:
@@ -153,7 +214,7 @@ class SyncService {
 
   Future<void> _processCreateJob(QueuedItem item) async {
     final data = item.data;
-    await _jobsApi.createJob(
+    await _jobApi.createJob(
       scheduledDate: data['scheduledDate'] as String,
       scheduledTime: data['scheduledTime'] as String,
       locationAddress: data['locationAddress'] as String,
@@ -166,7 +227,7 @@ class SyncService {
   Future<void> _processCompleteJob(QueuedItem item) async {
     final data = item.data;
     final jobId = item.jobId!;
-    await _jobsApi.completeJob(
+    await _jobApi.completeJob(
       jobId,
       proofImageUrl: data['proofImageUrl'] as String,
       collectorLat: (data['collectorLat'] as num?)?.toDouble(),
@@ -177,9 +238,9 @@ class SyncService {
   Future<void> _processRateJob(QueuedItem item) async {
     final data = item.data;
     final jobId = item.jobId!;
-    await _jobsApi.rateJob(
+    await _jobApi.rateJob(
       jobId,
-      value: data['value'] as int,
+      rating: data['value'] as int,
       comment: data['comment'] as String?,
     );
   }

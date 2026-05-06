@@ -3,18 +3,19 @@
 /// Tests the collector-side flow using mocked API services:
 ///   Receive assignment (WS) → Accept → Start → Complete (with proof)
 /// Also tests WebSocket real-time updates on the collector side.
+library;
 import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:dio/dio.dart';
 import 'package:wastewise/models/job.dart';
 import 'package:wastewise/providers/collector_jobs_provider.dart';
-import 'package:wastewise/services/api/jobs_api.dart';
+import 'package:wastewise/services/api/job_api.dart';
 import 'package:wastewise/services/api/files_api.dart';
 import 'package:wastewise/services/websocket/websocket_service.dart';
 import 'package:wastewise/services/location/location_tracking_service.dart';
 
-class MockJobsApi extends Mock implements JobsApi {}
+class MockJobApi extends Mock implements JobApi {}
 
 class MockFilesApi extends Mock implements FilesApi {}
 
@@ -23,7 +24,7 @@ class MockWebSocketService extends Mock implements WebSocketService {}
 class MockLocationTrackingService extends Mock implements LocationTrackingService {}
 
 void main() {
-  late MockJobsApi mockJobsApi;
+  late MockJobApi mockJobApi;
   late MockFilesApi mockFilesApi;
   late MockWebSocketService mockWsService;
   late MockLocationTrackingService mockLocationService;
@@ -33,7 +34,7 @@ void main() {
 
   Job makeCollectorJob({
     String id = 'col-job-1',
-    JobStatus status = JobStatus.ASSIGNED,
+    JobStatus status = JobStatus.assigned,
     String collectorId = 'col-1',
   }) =>
       Job(
@@ -51,7 +52,7 @@ void main() {
       );
 
   setUp(() {
-    mockJobsApi = MockJobsApi();
+    mockJobApi = MockJobApi();
     mockFilesApi = MockFilesApi();
     mockWsService = MockWebSocketService();
     mockLocationService = MockLocationTrackingService();
@@ -68,7 +69,7 @@ void main() {
     when(() => mockLocationService.dispose()).thenAnswer((_) {});
 
     provider = CollectorJobsProvider(
-      jobsApi: mockJobsApi,
+      jobApi: mockJobApi,
       filesApi: mockFilesApi,
       wsService: mockWsService,
       locationService: mockLocationService,
@@ -76,7 +77,24 @@ void main() {
   });
 
   setUpAll(() {
-    registerFallbackValue(JobStatus.ASSIGNED);
+    registerFallbackValue(JobStatus.assigned);
+    registerFallbackValue(Job(
+      id: 'fb',
+      householdId: 'hh',
+      status: JobStatus.assigned,
+      scheduledDate: '',
+      scheduledTime: '',
+      locationAddress: '',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    ));
+    registerFallbackValue(PaginatedJobs(
+      data: [],
+      page: 1,
+      limit: 20,
+      total: 0,
+      pages: 1,
+    ));
   });
 
   tearDown(() {
@@ -88,7 +106,7 @@ void main() {
   group('Collector Job Lifecycle Integration', () {
     test('Step 1: Collector loads assigned jobs', () async {
       final assignedJob = makeCollectorJob();
-      when(() => mockJobsApi.getAssignedJobs(
+      when(() => mockJobApi.getAssignedJobs(
             status: any(named: 'status'),
             page: any(named: 'page'),
             limit: any(named: 'limit'),
@@ -111,7 +129,7 @@ void main() {
 
     test('Step 2: Collector accepts an assigned job', () async {
       // Load job first
-      when(() => mockJobsApi.getAssignedJobs(
+      when(() => mockJobApi.getAssignedJobs(
             status: any(named: 'status'),
             page: any(named: 'page'),
             limit: any(named: 'limit'),
@@ -124,9 +142,9 @@ void main() {
           ));
       await provider.loadJobs(refresh: true);
 
-      // Accept returns ASSIGNED (confirmation only, per spec)
-      final acceptedJob = makeCollectorJob(status: JobStatus.ASSIGNED);
-      when(() => mockJobsApi.acceptJob('col-job-1'))
+      // Accept returns assigned (confirmation only, per spec)
+      final acceptedJob = makeCollectorJob(status: JobStatus.assigned);
+      when(() => mockJobApi.acceptJob('col-job-1'))
           .thenAnswer((_) async => acceptedJob);
 
       final success = await provider.acceptJob('col-job-1');
@@ -136,7 +154,7 @@ void main() {
     });
 
     test('Step 3: Collector starts the job', () async {
-      when(() => mockJobsApi.getAssignedJobs(
+      when(() => mockJobApi.getAssignedJobs(
             status: any(named: 'status'),
             page: any(named: 'page'),
             limit: any(named: 'limit'),
@@ -150,8 +168,8 @@ void main() {
       await provider.loadJobs(refresh: true);
 
       final startedJob =
-          makeCollectorJob(status: JobStatus.IN_PROGRESS);
-      when(() => mockJobsApi.startJob('col-job-1'))
+          makeCollectorJob(status: JobStatus.inProgress);
+      when(() => mockJobApi.startJob('col-job-1'))
           .thenAnswer((_) async => startedJob);
       when(() => mockLocationService.startTracking('col-job-1'))
           .thenAnswer((_) async => true);
@@ -159,13 +177,13 @@ void main() {
       final success = await provider.startJob('col-job-1');
 
       expect(success, true);
-      expect(provider.jobs.first.status, JobStatus.IN_PROGRESS);
+      expect(provider.jobs.first.status, JobStatus.inProgress);
       expect(provider.inProgressJobs.length, 1);
       verify(() => mockLocationService.startTracking('col-job-1')).called(1);
     });
 
     test('Step 4: Collector rejects a job', () async {
-      when(() => mockJobsApi.getAssignedJobs(
+      when(() => mockJobApi.getAssignedJobs(
             status: any(named: 'status'),
             page: any(named: 'page'),
             limit: any(named: 'limit'),
@@ -179,8 +197,8 @@ void main() {
       await provider.loadJobs(refresh: true);
 
       when(() =>
-              mockJobsApi.rejectJob('col-job-1', reason: 'Too far'))
-          .thenAnswer((_) async => {'message': 'Job rejected'});
+              mockJobApi.rejectJob('col-job-1', reason: 'Too far'))
+          .thenAnswer((_) async => {});
 
       final success =
           await provider.rejectJob('col-job-1', reason: 'Too far');
@@ -194,7 +212,7 @@ void main() {
   group('Collector WebSocket Updates', () {
     test('receives new job assignment via WS', () async {
       // Initial empty list
-      when(() => mockJobsApi.getAssignedJobs(
+      when(() => mockJobApi.getAssignedJobs(
             status: any(named: 'status'),
             page: any(named: 'page'),
             limit: any(named: 'limit'),
@@ -210,7 +228,7 @@ void main() {
 
       // Simulate new assignment event via WS
       // This triggers a refresh of the job list
-      when(() => mockJobsApi.getAssignedJobs(
+      when(() => mockJobApi.getAssignedJobs(
             status: any(named: 'status'),
             page: any(named: 'page'),
             limit: any(named: 'limit'),
@@ -224,7 +242,7 @@ void main() {
 
       wsAssignedController.add(CollectorAssignedEvent(
         jobId: 'col-job-1',
-        status: JobStatus.ASSIGNED,
+        status: JobStatus.assigned,
         householdId: 'hh-1',
         updatedAt: DateTime.now(),
       ));
@@ -236,7 +254,7 @@ void main() {
     });
 
     test('WS status update changes job in list', () async {
-      when(() => mockJobsApi.getAssignedJobs(
+      when(() => mockJobApi.getAssignedJobs(
             status: any(named: 'status'),
             page: any(named: 'page'),
             limit: any(named: 'limit'),
@@ -248,25 +266,25 @@ void main() {
             pages: 1,
           ));
       await provider.loadJobs(refresh: true);
-      expect(provider.jobs.first.status, JobStatus.ASSIGNED);
+      expect(provider.jobs.first.status, JobStatus.assigned);
 
-      // Simulate status update to COMPLETED (e.g., admin force-complete)
+      // Simulate status update to completed (e.g., admin force-complete)
       wsStatusController.add(JobStatusUpdate(
         jobId: 'col-job-1',
-        status: JobStatus.COMPLETED,
+        status: JobStatus.completed,
         collectorId: 'col-1',
         updatedAt: DateTime.now(),
       ));
       await Future.delayed(Duration.zero);
 
-      expect(provider.jobs.first.status, JobStatus.COMPLETED);
+      expect(provider.jobs.first.status, JobStatus.completed);
       expect(provider.completedJobs.length, 1);
     });
   });
 
   group('Collector Error Handling', () {
     test('accept failure shows error', () async {
-      when(() => mockJobsApi.getAssignedJobs(
+      when(() => mockJobApi.getAssignedJobs(
             status: any(named: 'status'),
             page: any(named: 'page'),
             limit: any(named: 'limit'),
@@ -279,7 +297,7 @@ void main() {
           ));
       await provider.loadJobs(refresh: true);
 
-      when(() => mockJobsApi.acceptJob('col-job-1')).thenThrow(DioException(
+      when(() => mockJobApi.acceptJob('col-job-1')).thenThrow(DioException(
         requestOptions: RequestOptions(path: '/jobs/col-job-1/accept'),
         response: Response(
           requestOptions: RequestOptions(path: '/jobs/col-job-1/accept'),
@@ -296,7 +314,7 @@ void main() {
     });
 
     test('load failure shows error', () async {
-      when(() => mockJobsApi.getAssignedJobs(
+      when(() => mockJobApi.getAssignedJobs(
             status: any(named: 'status'),
             page: any(named: 'page'),
             limit: any(named: 'limit'),
@@ -315,13 +333,13 @@ void main() {
   group('Collector Job Filters', () {
     test('filters assigned vs in-progress vs completed correctly', () async {
       final jobs = [
-        makeCollectorJob(id: 'j-1', status: JobStatus.ASSIGNED),
-        makeCollectorJob(id: 'j-2', status: JobStatus.IN_PROGRESS),
-        makeCollectorJob(id: 'j-3', status: JobStatus.COMPLETED),
-        makeCollectorJob(id: 'j-4', status: JobStatus.VALIDATED),
+        makeCollectorJob(id: 'j-1', status: JobStatus.assigned),
+        makeCollectorJob(id: 'j-2', status: JobStatus.inProgress),
+        makeCollectorJob(id: 'j-3', status: JobStatus.completed),
+        makeCollectorJob(id: 'j-4', status: JobStatus.validated),
       ];
 
-      when(() => mockJobsApi.getAssignedJobs(
+      when(() => mockJobApi.getAssignedJobs(
             status: any(named: 'status'),
             page: any(named: 'page'),
             limit: any(named: 'limit'),

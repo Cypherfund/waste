@@ -3,6 +3,7 @@ import {
   Logger,
   ForbiddenException,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsWhere, Between, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
@@ -12,6 +13,7 @@ import { AssignmentService } from '../assignment/assignment.service';
 import { DisputesService } from '../disputes/disputes.service';
 import { FraudService } from '../fraud/fraud.service';
 import { SystemConfigService } from '../config/system-config.service';
+import { FeatureFlagService, FEATURE_FLAGS } from '../config/feature-flags';
 import { Job } from '../jobs/entities/job.entity';
 import { Dispute } from '../disputes/entities/dispute.entity';
 import { Earning } from '../earnings/entities/earning.entity';
@@ -40,6 +42,7 @@ export class AdminService {
     private readonly disputesService: DisputesService,
     private readonly fraudService: FraudService,
     private readonly systemConfigService: SystemConfigService,
+    private readonly featureFlagService: FeatureFlagService,
     @InjectRepository(Job)
     private readonly jobRepo: Repository<Job>,
     @InjectRepository(Dispute)
@@ -149,6 +152,11 @@ export class AdminService {
   async manualAssign(jobId: string, collectorId: string): Promise<void> {
     await this.assignmentService.manualAssign(jobId, collectorId);
     this.logger.log(`Admin manually assigned job ${jobId} to collector ${collectorId}`);
+  }
+
+  async manualReassign(jobId: string, collectorId: string): Promise<void> {
+    await this.assignmentService.manualReassign(jobId, collectorId);
+    this.logger.log(`Admin manually reassigned job ${jobId} to collector ${collectorId}`);
   }
 
   // ─── DISPUTES ─────────────────────────────────────────────────
@@ -265,6 +273,7 @@ export class AdminService {
       earningsTotal,
       earningsPending,
       avgCompletionTimeMinutes,
+      paymentIntegrationEnabled,
     ] = await Promise.all([
       this.usersService.countByRole(UserRole.HOUSEHOLD),
       this.usersService.countByRole(UserRole.COLLECTOR),
@@ -308,6 +317,7 @@ export class AdminService {
         .andWhere('j.completed_at IS NOT NULL')
         .getRawOne()
         .then((r) => Math.round(Number(r?.avg_minutes ?? 0))),
+      this.featureFlagService.isEnabled(FEATURE_FLAGS.PAYMENT_INTEGRATION, false),
     ]);
 
     // jobsByStatus breakdown
@@ -339,6 +349,142 @@ export class AdminService {
       earningsPending,
       totalDisputes,
       openDisputes,
+      paymentIntegrationEnabled,
     };
+  }
+
+  // ─── EARNINGS / PAYOUTS ───────────────────────────────────────
+
+  async listEarnings(filters: {
+    status?: EarningStatus;
+    collectorId?: string;
+    from?: string;
+    to?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const page = filters.page ?? 1;
+    const limit = Math.min(filters.limit ?? 20, 100);
+
+    const qb = this.earningRepo
+      .createQueryBuilder('e')
+      .leftJoin('e.collector', 'collector')
+      .addSelect(['collector.id', 'collector.name', 'collector.phone'])
+      .orderBy('e.createdAt', 'DESC');
+
+    if (filters.status) {
+      qb.andWhere('e.status = :status', { status: filters.status });
+    }
+    if (filters.collectorId) {
+      qb.andWhere('e.collector_id = :collectorId', { collectorId: filters.collectorId });
+    }
+    if (filters.from) {
+      qb.andWhere('e.createdAt >= :from', { from: new Date(filters.from) });
+    }
+    if (filters.to) {
+      qb.andWhere('e.createdAt <= :to', { to: new Date(filters.to) });
+    }
+
+    const total = await qb.getCount();
+    const earnings = await qb
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getMany();
+
+    return {
+      data: earnings.map((e) => ({
+        id: e.id,
+        jobId: e.jobId,
+        collectorId: e.collectorId,
+        collectorName: (e as any).collector?.name ?? null,
+        collectorPhone: (e as any).collector?.phone ?? null,
+        baseAmount: Number(e.baseAmount),
+        distanceAmount: Number(e.distanceAmount),
+        surgeMultiplier: Number(e.surgeMultiplier),
+        totalAmount: Number(e.totalAmount),
+        status: e.status,
+        confirmedAt: e.confirmedAt,
+        paidAt: e.paidAt,
+        createdAt: e.createdAt,
+      })),
+      meta: {
+        total,
+        page,
+        limit,
+        pages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async markAsPaid(earningId: string, adminId: string) {
+    const earning = await this.earningRepo.findOne({ where: { id: earningId } });
+    if (!earning) throw new NotFoundException('Earning record not found');
+    if (earning.status === EarningStatus.PAID) {
+      throw new BadRequestException('Earning is already marked as paid');
+    }
+    if (earning.status !== EarningStatus.CONFIRMED) {
+      throw new BadRequestException(
+        `Only CONFIRMED earnings can be marked as paid (current: ${earning.status})`,
+      );
+    }
+    earning.status = EarningStatus.PAID;
+    earning.paidAt = new Date();
+    const saved = await this.earningRepo.save(earning);
+    this.logger.log(`Earning ${earningId} marked as PAID by admin ${adminId}`);
+    return {
+      id: saved.id,
+      jobId: saved.jobId,
+      collectorId: saved.collectorId,
+      totalAmount: Number(saved.totalAmount),
+      status: saved.status,
+      paidAt: saved.paidAt,
+    };
+  }
+
+  async exportEarningsCsv(filters: {
+    status?: EarningStatus;
+    collectorId?: string;
+    from?: string;
+    to?: string;
+  }): Promise<string> {
+    const qb = this.earningRepo
+      .createQueryBuilder('e')
+      .leftJoin('e.collector', 'collector')
+      .addSelect(['collector.id', 'collector.name', 'collector.phone'])
+      .orderBy('e.createdAt', 'DESC');
+
+    if (filters.status) {
+      qb.andWhere('e.status = :status', { status: filters.status });
+    }
+    if (filters.collectorId) {
+      qb.andWhere('e.collector_id = :collectorId', { collectorId: filters.collectorId });
+    }
+    if (filters.from) {
+      qb.andWhere('e.created_at >= :from', { from: new Date(filters.from) });
+    }
+    if (filters.to) {
+      qb.andWhere('e.created_at <= :to', { to: new Date(filters.to) });
+    }
+
+    const earnings = await qb.getMany();
+
+    const header = 'id,jobId,collectorId,collectorName,collectorPhone,baseAmount,distanceAmount,surgeMultiplier,totalAmount,status,confirmedAt,paidAt,createdAt';
+    const rows = earnings.map((e) => [
+      e.id,
+      e.jobId,
+      e.collectorId,
+      (e as any).collector?.name ?? '',
+      (e as any).collector?.phone ?? '',
+      e.baseAmount,
+      e.distanceAmount,
+      e.surgeMultiplier,
+      e.totalAmount,
+      e.status,
+      e.confirmedAt?.toISOString() ?? '',
+      e.paidAt?.toISOString() ?? '',
+      e.createdAt.toISOString(),
+    ].join(','));
+
+    return [header, ...rows].join('\n');
   }
 }

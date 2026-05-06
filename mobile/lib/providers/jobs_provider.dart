@@ -2,11 +2,11 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/job.dart';
 import '../services/api/api_client.dart';
-import '../services/api/jobs_api.dart';
+import '../services/api/job_api.dart';
 import '../services/websocket/websocket_service.dart';
 
 class JobsProvider extends ChangeNotifier {
-  final JobsApi _jobsApi;
+  final JobApi _jobsApi;
   final WebSocketService _wsService;
 
   List<Job> _jobs = [];
@@ -18,7 +18,7 @@ class JobsProvider extends ChangeNotifier {
   StreamSubscription<JobStatusUpdate>? _wsSub;
 
   JobsProvider({
-    required JobsApi jobsApi,
+    required JobApi jobsApi,
     required WebSocketService wsService,
   })  : _jobsApi = jobsApi,
         _wsService = wsService {
@@ -37,9 +37,9 @@ class JobsProvider extends ChangeNotifier {
 
   List<Job> get completedJobs => _jobs
       .where((j) =>
-          j.status == JobStatus.COMPLETED ||
-          j.status == JobStatus.VALIDATED ||
-          j.status == JobStatus.RATED)
+          j.status == JobStatus.completed ||
+          j.status == JobStatus.validated ||
+          j.status == JobStatus.rated)
       .toList();
 
   Future<void> loadJobs({bool refresh = false}) async {
@@ -115,7 +115,7 @@ class JobsProvider extends ChangeNotifier {
 
   Future<bool> validateJob(String jobId) async {
     try {
-      final updated = await _jobsApi.validateJob(jobId);
+      final updated = await _jobsApi.validateProof(jobId);
       _updateJobInList(updated);
       return true;
     } catch (e) {
@@ -139,7 +139,7 @@ class JobsProvider extends ChangeNotifier {
 
   Future<bool> rateJob(String jobId, {required int value, String? comment}) async {
     try {
-      await _jobsApi.rateJob(jobId, value: value, comment: comment);
+      await _jobsApi.rateJob(jobId, rating: value, comment: comment);
       // Refresh job to get updated status (VALIDATED → RATED)
       final updatedJob = await _jobsApi.getJob(jobId);
       _updateJobInList(updatedJob);

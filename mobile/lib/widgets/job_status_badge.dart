@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import '../config/app_theme.dart';
 import '../models/job.dart';
 
+/// A styled status badge for job states.
+///
+/// Displays the job status as a colored pill badge.
 class JobStatusBadge extends StatelessWidget {
   final JobStatus status;
 
@@ -9,17 +13,17 @@ class JobStatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       decoration: BoxDecoration(
         color: _backgroundColor,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.badgeBorder,
       ),
       child: Text(
         _label,
-        style: TextStyle(
+        style: AppTypography.overline.copyWith(
           color: _textColor,
-          fontSize: 12,
           fontWeight: FontWeight.w600,
+          fontSize: 11,
         ),
       ),
     );
@@ -27,64 +31,64 @@ class JobStatusBadge extends StatelessWidget {
 
   String get _label {
     switch (status) {
-      case JobStatus.REQUESTED:
+      case JobStatus.requested:
         return 'Requested';
-      case JobStatus.ASSIGNED:
+      case JobStatus.assigned:
         return 'Assigned';
-      case JobStatus.IN_PROGRESS:
+      case JobStatus.inProgress:
         return 'In Progress';
-      case JobStatus.COMPLETED:
+      case JobStatus.completed:
         return 'Completed';
-      case JobStatus.VALIDATED:
+      case JobStatus.validated:
         return 'Validated';
-      case JobStatus.RATED:
+      case JobStatus.rated:
         return 'Rated';
-      case JobStatus.CANCELLED:
+      case JobStatus.cancelled:
         return 'Cancelled';
-      case JobStatus.DISPUTED:
+      case JobStatus.disputed:
         return 'Disputed';
     }
   }
 
   Color get _backgroundColor {
     switch (status) {
-      case JobStatus.REQUESTED:
-        return Colors.blue.shade50;
-      case JobStatus.ASSIGNED:
-        return Colors.orange.shade50;
-      case JobStatus.IN_PROGRESS:
-        return Colors.amber.shade50;
-      case JobStatus.COMPLETED:
-        return Colors.green.shade50;
-      case JobStatus.VALIDATED:
-        return Colors.teal.shade50;
-      case JobStatus.RATED:
-        return Colors.purple.shade50;
-      case JobStatus.CANCELLED:
-        return Colors.red.shade50;
-      case JobStatus.DISPUTED:
-        return Colors.deepOrange.shade50;
+      case JobStatus.requested:
+        return AppColors.badgeRequested.withValues(alpha: 0.1);
+      case JobStatus.assigned:
+        return AppColors.badgeAssigned.withValues(alpha: 0.1);
+      case JobStatus.inProgress:
+        return AppColors.badgeInProgress.withValues(alpha: 0.1);
+      case JobStatus.completed:
+        return AppColors.badgeCompleted.withValues(alpha: 0.1);
+      case JobStatus.validated:
+        return AppColors.badgeValidated.withValues(alpha: 0.1);
+      case JobStatus.rated:
+        return AppColors.badgeRated.withValues(alpha: 0.1);
+      case JobStatus.cancelled:
+        return AppColors.badgeCancelled.withValues(alpha: 0.1);
+      case JobStatus.disputed:
+        return AppColors.badgeDisputed.withValues(alpha: 0.1);
     }
   }
 
   Color get _textColor {
     switch (status) {
-      case JobStatus.REQUESTED:
-        return Colors.blue.shade700;
-      case JobStatus.ASSIGNED:
-        return Colors.orange.shade700;
-      case JobStatus.IN_PROGRESS:
-        return Colors.amber.shade800;
-      case JobStatus.COMPLETED:
-        return Colors.green.shade700;
-      case JobStatus.VALIDATED:
-        return Colors.teal.shade700;
-      case JobStatus.RATED:
-        return Colors.purple.shade700;
-      case JobStatus.CANCELLED:
-        return Colors.red.shade700;
-      case JobStatus.DISPUTED:
-        return Colors.deepOrange.shade700;
+      case JobStatus.requested:
+        return AppColors.badgeRequested;
+      case JobStatus.assigned:
+        return AppColors.badgeAssigned;
+      case JobStatus.inProgress:
+        return AppColors.badgeInProgress;
+      case JobStatus.completed:
+        return AppColors.badgeCompleted;
+      case JobStatus.validated:
+        return AppColors.badgeValidated;
+      case JobStatus.rated:
+        return AppColors.badgeRated;
+      case JobStatus.cancelled:
+        return AppColors.badgeCancelled;
+      case JobStatus.disputed:
+        return AppColors.badgeDisputed;
     }
   }
 }

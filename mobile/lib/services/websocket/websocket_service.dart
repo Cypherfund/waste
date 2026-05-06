@@ -86,6 +86,7 @@ class WebSocketService {
   io.Socket? _socket;
   String? _currentUserId;
   String? _currentRole;
+  VoidCallback? onAuthError;
   final _jobStatusController = StreamController<JobStatusUpdate>.broadcast();
   final _collectorAssignedController =
       StreamController<CollectorAssignedEvent>.broadcast();
@@ -128,8 +129,12 @@ class WebSocketService {
       }
     });
 
-    _socket!.onDisconnect((_) {
-      debugPrint('[WS] Disconnected');
+    _socket!.onDisconnect((reason) {
+      debugPrint('[WS] Disconnected: $reason');
+    });
+
+    _socket!.on('reconnect', (_) {
+      debugPrint('[WS] Reconnected');
     });
 
     _socket!.onConnectError((error) {
@@ -138,6 +143,11 @@ class WebSocketService {
 
     _socket!.on('error', (data) {
       debugPrint('[WS] Error: $data');
+      // If server says not authenticated, disconnect and trigger callback
+      if (data is Map && (data['message']?.toString().toLowerCase().contains('not authenticated') ?? false)) {
+        disconnect();
+        onAuthError?.call();
+      }
     });
 
     _socket!.on('job:status', (data) {

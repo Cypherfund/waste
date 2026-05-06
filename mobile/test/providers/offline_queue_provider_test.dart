@@ -36,6 +36,7 @@ void main() {
         .thenAnswer((_) => syncStatusController.stream);
     when(() => mockSync.resultStream)
         .thenAnswer((_) => syncResultController.stream);
+    when(() => mockQueue.isSupported).thenReturn(true);
     when(() => mockQueue.getPendingCount()).thenAnswer((_) async => 0);
     when(() => mockQueue.getAllItems()).thenAnswer((_) async => []);
 

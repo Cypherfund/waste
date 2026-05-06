@@ -10,6 +10,7 @@ export const FEATURE_FLAGS = {
   SURGE_PRICING: 'feature.surge_pricing',
   LOCATION_TRACKING: 'feature.location_tracking',
   OFFLINE_QUEUE: 'feature.offline_queue',
+  PAYMENT_INTEGRATION: 'feature.payment_integration',
 } as const;
 
 @Injectable()

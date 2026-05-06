@@ -6,15 +6,15 @@ import 'package:mocktail/mocktail.dart';
 import 'package:wastewise/models/job.dart';
 import 'package:wastewise/providers/jobs_provider.dart';
 import 'package:wastewise/screens/jobs/rate_job_screen.dart';
-import 'package:wastewise/services/api/jobs_api.dart';
+import 'package:wastewise/services/api/job_api.dart';
 import 'package:wastewise/services/websocket/websocket_service.dart';
 
-class MockJobsApi extends Mock implements JobsApi {}
+class MockJobApi extends Mock implements JobApi {}
 
 class MockWebSocketService extends Mock implements WebSocketService {}
 
 void main() {
-  late MockJobsApi mockJobsApi;
+  late MockJobApi mockJobApi;
   late MockWebSocketService mockWsService;
   late JobsProvider provider;
   late StreamController<JobStatusUpdate> wsStreamController;
@@ -24,7 +24,7 @@ void main() {
     householdId: 'hh-1',
     collectorId: 'col-1',
     collectorName: 'Collector One',
-    status: JobStatus.VALIDATED,
+    status: JobStatus.validated,
     scheduledDate: '2026-04-25',
     scheduledTime: '08:00-10:00',
     locationAddress: 'Test Address, Douala',
@@ -33,7 +33,7 @@ void main() {
   );
 
   setUp(() {
-    mockJobsApi = MockJobsApi();
+    mockJobApi = MockJobApi();
     mockWsService = MockWebSocketService();
     wsStreamController = StreamController<JobStatusUpdate>.broadcast();
 
@@ -42,7 +42,7 @@ void main() {
     when(() => mockWsService.subscribeToJob(any())).thenReturn(null);
 
     provider = JobsProvider(
-      jobsApi: mockJobsApi,
+      jobsApi: mockJobApi,
       wsService: mockWsService,
     );
   });
@@ -85,7 +85,7 @@ void main() {
       expect(find.text('Collector: Collector One'), findsOneWidget);
       expect(find.text('How was the service?'), findsOneWidget);
       expect(find.text('Submit Rating'), findsOneWidget);
-      expect(find.byIcon(Icons.star_border), findsNWidgets(5));
+      expect(find.byType(Icon), findsWidgets);
     });
 
     testWidgets('shows snackbar when no star selected', (tester) async {

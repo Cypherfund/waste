@@ -1,5 +1,5 @@
-import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:image_picker/image_picker.dart';
 import 'api_client.dart';
 
 class FilesApi {
@@ -7,10 +7,13 @@ class FilesApi {
 
   FilesApi(this._client);
 
-  Future<FileUploadResult> uploadProofImage(File imageFile) async {
-    final fileName = imageFile.path.split('/').last;
+  Future<FileUploadResult> uploadProofImage(XFile imageFile) async {
+    final fileName = imageFile.name.isNotEmpty
+        ? imageFile.name
+        : imageFile.path.split('/').last;
+    final bytes = await imageFile.readAsBytes();
     final formData = FormData.fromMap({
-      'file': await MultipartFile.fromFile(imageFile.path, filename: fileName),
+      'file': MultipartFile.fromBytes(bytes, filename: fileName),
       'fileType': 'PROOF',
     });
 

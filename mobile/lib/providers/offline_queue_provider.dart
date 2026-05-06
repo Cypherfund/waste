@@ -145,6 +145,7 @@ class OfflineQueueProvider extends ChangeNotifier {
   }
 
   Future<void> _refreshItems() async {
+    if (!_queueService.isSupported) return;
     try {
       _items = await _queueService.getAllItems();
       _pendingCount = await _queueService.getPendingCount();
@@ -154,6 +155,7 @@ class OfflineQueueProvider extends ChangeNotifier {
   }
 
   Future<void> _refreshPendingCount() async {
+    if (!_queueService.isSupported) return;
     try {
       _pendingCount = await _queueService.getPendingCount();
     } catch (e) {

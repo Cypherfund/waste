@@ -5,10 +5,11 @@ import 'package:provider/provider.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:wastewise/providers/jobs_provider.dart';
 import 'package:wastewise/screens/jobs/create_job_screen.dart';
-import 'package:wastewise/services/api/jobs_api.dart';
+import 'package:wastewise/widgets/app_text_field.dart';
+import 'package:wastewise/services/api/job_api.dart';
 import 'package:wastewise/services/websocket/websocket_service.dart';
 
-class MockJobsApi extends Mock implements JobsApi {}
+class MockJobApi extends Mock implements JobApi {}
 
 class MockWebSocketService extends Mock implements WebSocketService {}
 
@@ -22,13 +23,13 @@ Widget buildTestWidget(JobsProvider provider) {
 }
 
 void main() {
-  late MockJobsApi mockJobsApi;
+  late MockJobApi mockJobApi;
   late MockWebSocketService mockWsService;
   late JobsProvider provider;
   late StreamController<JobStatusUpdate> wsStreamController;
 
   setUp(() {
-    mockJobsApi = MockJobsApi();
+    mockJobApi = MockJobApi();
     mockWsService = MockWebSocketService();
     wsStreamController = StreamController<JobStatusUpdate>.broadcast();
 
@@ -37,7 +38,7 @@ void main() {
     when(() => mockWsService.subscribeToJob(any())).thenReturn(null);
 
     provider = JobsProvider(
-      jobsApi: mockJobsApi,
+      jobsApi: mockJobApi,
       wsService: mockWsService,
     );
   });
@@ -54,8 +55,8 @@ void main() {
 
       // AppBar title
       expect(find.text('Schedule Collection'), findsWidgets);
-      expect(find.text('Scheduled Date'), findsOneWidget);
-      expect(find.text('Time Window'), findsOneWidget);
+      expect(find.text('Select a date'), findsOneWidget);
+      expect(find.text('Select a time slot'), findsOneWidget);
       expect(find.text('Pickup Address'), findsOneWidget);
       expect(find.text('Notes (optional)'), findsOneWidget);
     });
@@ -81,7 +82,7 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Pickup Address'),
+        find.widgetWithText(AppTextField, 'Address'),
         'AB',
       );
 

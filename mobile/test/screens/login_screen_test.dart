@@ -53,8 +53,8 @@ void main() {
     testWidgets('renders login form', (tester) async {
       await tester.pumpWidget(buildTestWidget(provider));
 
-      expect(find.text('WasteWise'), findsOneWidget);
-      expect(find.text('Sign in to manage your waste collection'), findsOneWidget);
+      expect(find.text('KmerTrash'), findsOneWidget);
+      expect(find.text('Collect. Clean. Earn. Together.'), findsOneWidget);
       expect(find.text('Phone Number'), findsOneWidget);
       expect(find.text('Password'), findsOneWidget);
       expect(find.text('Sign In'), findsOneWidget);

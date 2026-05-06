@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../config/app_theme.dart';
 import '../../models/job.dart';
 import '../../providers/jobs_provider.dart';
-import '../../widgets/loading_button.dart';
+import '../../widgets/app_card.dart';
+import '../../widgets/bottom_cta.dart';
 
 class RateJobScreen extends StatefulWidget {
   const RateJobScreen({super.key});
@@ -27,7 +29,7 @@ class _RateJobScreenState extends State<RateJobScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please select a rating'),
-          backgroundColor: Colors.orange,
+          backgroundColor: AppColors.warning,
         ),
       );
       return;
@@ -50,7 +52,7 @@ class _RateJobScreenState extends State<RateJobScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Rating submitted! Thank you.'),
-          backgroundColor: Colors.green,
+          backgroundColor: AppColors.success,
         ),
       );
       Navigator.pop(context);
@@ -58,7 +60,7 @@ class _RateJobScreenState extends State<RateJobScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(provider.error!),
-          backgroundColor: Colors.red,
+          backgroundColor: AppColors.error,
         ),
       );
       provider.clearError();
@@ -70,62 +72,67 @@ class _RateJobScreenState extends State<RateJobScreen> {
     final job = ModalRoute.of(context)!.settings.arguments as Job;
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Rate Collector'),
+        backgroundColor: AppColors.surface,
+        title: Text('Rate Collector', style: AppTypography.heading3),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Job info summary
-            Card(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      job.locationAddress,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15,
-                      ),
+            AppCard(
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: AppColors.primarySurface,
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${job.scheduledDate} • ${job.scheduledTime}',
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 13,
-                      ),
-                    ),
-                    if (job.collectorName != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        'Collector: ${job.collectorName}',
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 13,
+                    child: const Icon(Icons.delete_outline, color: AppColors.primary, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          job.locationAddress,
+                          style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
-                  ],
-                ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${job.scheduledDate} • ${job.scheduledTime}',
+                          style: AppTypography.caption,
+                        ),
+                        if (job.collectorName != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            'Collector: ${job.collectorName}',
+                            style: AppTypography.caption.copyWith(color: AppColors.primary),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: AppSpacing.xl),
 
             // Star rating
-            const Text(
+            Text(
               'How was the service?',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              style: AppTypography.heading3,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(5, (index) {
@@ -133,53 +140,60 @@ class _RateJobScreenState extends State<RateJobScreen> {
                 return GestureDetector(
                   onTap: () => setState(() => _rating = starValue),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
-                    child: Icon(
-                      starValue <= _rating ? Icons.star : Icons.star_border,
-                      size: 44,
-                      color: starValue <= _rating
-                          ? Colors.amber.shade600
-                          : Colors.grey.shade400,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: AnimatedScale(
+                      scale: starValue <= _rating ? 1.15 : 1.0,
+                      duration: const Duration(milliseconds: 150),
+                      child: Icon(
+                        starValue <= _rating ? Icons.star_rounded : Icons.star_outline_rounded,
+                        size: 48,
+                        color: starValue <= _rating
+                            ? AppColors.primary
+                            : AppColors.textHint,
+                      ),
                     ),
                   ),
                 );
               }),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               _ratingLabel,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontSize: 14,
+              style: AppTypography.bodyMedium.copyWith(
+                color: _rating > 0 ? AppColors.primary : AppColors.textSecondary,
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.lg),
 
             // Comment
-            TextField(
-              controller: _commentController,
-              maxLines: 4,
-              maxLength: 1000,
-              decoration: InputDecoration(
-                labelText: 'Comment (optional)',
-                hintText: 'Tell us about your experience...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+            AppCard(
+              padding: const EdgeInsets.all(4),
+              child: TextField(
+                controller: _commentController,
+                maxLines: 4,
+                maxLength: 1000,
+                style: AppTypography.body,
+                decoration: InputDecoration(
+                  labelText: 'Comment (optional)',
+                  hintText: 'Tell us about your experience...',
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  contentPadding: const EdgeInsets.all(16),
+                  labelStyle: AppTypography.label,
+                  hintStyle: AppTypography.body.copyWith(color: AppColors.textHint),
                 ),
-                alignLabelWithHint: true,
               ),
-            ),
-            const SizedBox(height: 24),
-
-            LoadingButton(
-              label: 'Submit Rating',
-              isLoading: _isSubmitting,
-              color: Colors.amber.shade700,
-              onPressed: _handleSubmit,
             ),
           ],
         ),
+      ),
+      bottomSheet: BottomCTA(
+        label: 'Submit Rating',
+        isLoading: _isSubmitting,
+        onPressed: _handleSubmit,
+        icon: Icons.star_rounded,
       ),
     );
   }

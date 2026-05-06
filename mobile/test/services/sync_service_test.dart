@@ -6,18 +6,18 @@ import 'package:wastewise/models/rating.dart';
 import 'package:wastewise/services/offline/offline_queue_service.dart';
 import 'package:wastewise/services/offline/connectivity_service.dart';
 import 'package:wastewise/services/offline/sync_service.dart';
-import 'package:wastewise/services/api/jobs_api.dart';
+import 'package:wastewise/services/api/job_api.dart';
 
 class MockOfflineQueueService extends Mock implements OfflineQueueService {}
 
 class MockConnectivityService extends Mock implements ConnectivityService {}
 
-class MockJobsApi extends Mock implements JobsApi {}
+class MockJobApi extends Mock implements JobApi {}
 
 void main() {
   late MockOfflineQueueService mockQueue;
   late MockConnectivityService mockConnectivity;
-  late MockJobsApi mockJobsApi;
+  late MockJobApi mockJobApi;
   late SyncService syncService;
   late StreamController<bool> connectivityController;
 
@@ -57,17 +57,18 @@ void main() {
   setUp(() {
     mockQueue = MockOfflineQueueService();
     mockConnectivity = MockConnectivityService();
-    mockJobsApi = MockJobsApi();
+    mockJobApi = MockJobApi();
     connectivityController = StreamController<bool>.broadcast();
 
     when(() => mockConnectivity.onConnectivityChanged)
         .thenAnswer((_) => connectivityController.stream);
     when(() => mockConnectivity.isOnline).thenReturn(true);
+    when(() => mockQueue.isSupported).thenReturn(true);
 
     syncService = SyncService(
       queueService: mockQueue,
       connectivityService: mockConnectivity,
-      jobsApi: mockJobsApi,
+      jobApi: mockJobApi,
     );
   });
 
@@ -83,7 +84,7 @@ void main() {
       when(() => mockQueue.markSyncing(any())).thenAnswer((_) async {});
       when(() => mockQueue.markSynced(any())).thenAnswer((_) async {});
       when(() => mockQueue.clearSynced()).thenAnswer((_) async {});
-      when(() => mockJobsApi.createJob(
+      when(() => mockJobApi.createJob(
             scheduledDate: '2026-04-20',
             scheduledTime: '08:00-10:00',
             locationAddress: '123 Test St',
@@ -107,16 +108,16 @@ void main() {
       when(() => mockQueue.markSyncing(any())).thenAnswer((_) async {});
       when(() => mockQueue.markSynced(any())).thenAnswer((_) async {});
       when(() => mockQueue.clearSynced()).thenAnswer((_) async {});
-      when(() => mockJobsApi.rateJob(
+      when(() => mockJobApi.rateJob(
             'job-123',
-            value: 5,
+            rating: 5,
             comment: 'Great',
           )).thenAnswer((_) async => _fakeRating());
 
       final result = await syncService.syncPendingItems();
 
       expect(result.synced, 1);
-      verify(() => mockJobsApi.rateJob('job-123', value: 5, comment: 'Great'))
+      verify(() => mockJobApi.rateJob('job-123', rating: 5, comment: 'Great'))
           .called(1);
     });
 
@@ -126,7 +127,7 @@ void main() {
       when(() => mockQueue.markSyncing(any())).thenAnswer((_) async {});
       when(() => mockQueue.markSynced(any())).thenAnswer((_) async {});
       when(() => mockQueue.clearSynced()).thenAnswer((_) async {});
-      when(() => mockJobsApi.completeJob(
+      when(() => mockJobApi.completeJob(
             'job-456',
             proofImageUrl: 'https://cdn.example.com/proof.jpg',
             collectorLat: null,
@@ -144,7 +145,7 @@ void main() {
       when(() => mockQueue.markSyncing(any())).thenAnswer((_) async {});
       when(() => mockQueue.markFailed(any(), any()))
           .thenAnswer((_) async {});
-      when(() => mockJobsApi.createJob(
+      when(() => mockJobApi.createJob(
             scheduledDate: any(named: 'scheduledDate'),
             scheduledTime: any(named: 'scheduledTime'),
             locationAddress: any(named: 'locationAddress'),
@@ -170,7 +171,7 @@ void main() {
       when(() => mockQueue.markFailed(any(), any()))
           .thenAnswer((_) async {});
       when(() => mockQueue.clearSynced()).thenAnswer((_) async {});
-      when(() => mockJobsApi.createJob(
+      when(() => mockJobApi.createJob(
             scheduledDate: any(named: 'scheduledDate'),
             scheduledTime: any(named: 'scheduledTime'),
             locationAddress: any(named: 'locationAddress'),
@@ -178,9 +179,9 @@ void main() {
             locationLng: any(named: 'locationLng'),
             notes: any(named: 'notes'),
           )).thenAnswer((_) async => _fakeJob());
-      when(() => mockJobsApi.rateJob(
+      when(() => mockJobApi.rateJob(
             any(),
-            value: any(named: 'value'),
+            rating: any(named: 'rating'),
             comment: any(named: 'comment'),
           )).thenThrow(Exception('Rate failed'));
 
@@ -220,7 +221,7 @@ void main() {
       when(() => mockQueue.markSyncing(any())).thenAnswer((_) async {});
       when(() => mockQueue.markSynced(any())).thenAnswer((_) async {});
       when(() => mockQueue.clearSynced()).thenAnswer((_) async {});
-      when(() => mockJobsApi.createJob(
+      when(() => mockJobApi.createJob(
             scheduledDate: any(named: 'scheduledDate'),
             scheduledTime: any(named: 'scheduledTime'),
             locationAddress: any(named: 'locationAddress'),
@@ -247,7 +248,7 @@ void main() {
       when(() => mockQueue.markSyncing(any())).thenAnswer((_) async {});
       when(() => mockQueue.markSynced(any())).thenAnswer((_) async {});
       when(() => mockQueue.clearSynced()).thenAnswer((_) async {});
-      when(() => mockJobsApi.createJob(
+      when(() => mockJobApi.createJob(
             scheduledDate: any(named: 'scheduledDate'),
             scheduledTime: any(named: 'scheduledTime'),
             locationAddress: any(named: 'locationAddress'),
@@ -272,7 +273,7 @@ void main() {
       when(() => mockQueue.markSyncing(any())).thenAnswer((_) async {});
       when(() => mockQueue.markFailed(any(), any()))
           .thenAnswer((_) async {});
-      when(() => mockJobsApi.createJob(
+      when(() => mockJobApi.createJob(
             scheduledDate: any(named: 'scheduledDate'),
             scheduledTime: any(named: 'scheduledTime'),
             locationAddress: any(named: 'locationAddress'),
@@ -309,7 +310,7 @@ Job _fakeJob() {
   return Job(
     id: 'job-new',
     householdId: 'hh-1',
-    status: JobStatus.REQUESTED,
+    status: JobStatus.requested,
     scheduledDate: '2026-04-20',
     scheduledTime: '08:00-10:00',
     locationAddress: '123 Test St',

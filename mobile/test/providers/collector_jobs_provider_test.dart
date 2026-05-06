@@ -4,12 +4,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:wastewise/models/job.dart';
 import 'package:wastewise/providers/collector_jobs_provider.dart';
-import 'package:wastewise/services/api/jobs_api.dart';
+import 'package:wastewise/services/api/job_api.dart';
 import 'package:wastewise/services/api/files_api.dart';
 import 'package:wastewise/services/websocket/websocket_service.dart';
 import 'package:wastewise/services/location/location_tracking_service.dart';
 
-class MockJobsApi extends Mock implements JobsApi {}
+class MockJobApi extends Mock implements JobApi {}
 
 class MockFilesApi extends Mock implements FilesApi {}
 
@@ -19,7 +19,7 @@ class MockLocationTrackingService extends Mock
     implements LocationTrackingService {}
 
 void main() {
-  late MockJobsApi mockJobsApi;
+  late MockJobApi mockJobApi;
   late MockFilesApi mockFilesApi;
   late MockWebSocketService mockWsService;
   late MockLocationTrackingService mockLocationService;
@@ -33,7 +33,7 @@ void main() {
     householdName: 'Test House',
     collectorId: 'col-1',
     collectorName: 'Test Collector',
-    status: JobStatus.ASSIGNED,
+    status: JobStatus.assigned,
     scheduledDate: '2026-04-20',
     scheduledTime: '08:00-10:00',
     locationAddress: '123 Test Street',
@@ -47,7 +47,7 @@ void main() {
     householdName: 'Test House',
     collectorId: 'col-1',
     collectorName: 'Test Collector',
-    status: JobStatus.IN_PROGRESS,
+    status: JobStatus.inProgress,
     scheduledDate: '2026-04-20',
     scheduledTime: '08:00-10:00',
     locationAddress: '123 Test Street',
@@ -57,12 +57,12 @@ void main() {
   );
 
   setUpAll(() {
-    registerFallbackValue(JobStatus.ASSIGNED);
+    registerFallbackValue(JobStatus.assigned);
     registerFallbackValue(File('/tmp/test.jpg'));
   });
 
   setUp(() {
-    mockJobsApi = MockJobsApi();
+    mockJobApi = MockJobApi();
     mockFilesApi = MockFilesApi();
     mockWsService = MockWebSocketService();
     mockLocationService = MockLocationTrackingService();
@@ -78,7 +78,7 @@ void main() {
     when(() => mockLocationService.activeJobId).thenReturn(null);
 
     provider = CollectorJobsProvider(
-      jobsApi: mockJobsApi,
+      jobApi: mockJobApi,
       filesApi: mockFilesApi,
       wsService: mockWsService,
       locationService: mockLocationService,
@@ -93,7 +93,7 @@ void main() {
 
   group('loadJobs', () {
     test('loads assigned jobs successfully', () async {
-      when(() => mockJobsApi.getAssignedJobs(
+      when(() => mockJobApi.getAssignedJobs(
             status: any(named: 'status'),
             page: any(named: 'page'),
             limit: any(named: 'limit'),
@@ -114,7 +114,7 @@ void main() {
     });
 
     test('sets error on failure', () async {
-      when(() => mockJobsApi.getAssignedJobs(
+      when(() => mockJobApi.getAssignedJobs(
             status: any(named: 'status'),
             page: any(named: 'page'),
             limit: any(named: 'limit'),
@@ -129,7 +129,7 @@ void main() {
 
   group('acceptJob', () {
     test('accepts job successfully', () async {
-      when(() => mockJobsApi.getAssignedJobs(
+      when(() => mockJobApi.getAssignedJobs(
             status: any(named: 'status'),
             page: any(named: 'page'),
             limit: any(named: 'limit'),
@@ -140,7 +140,7 @@ void main() {
             total: 1,
             pages: 1,
           ));
-      when(() => mockJobsApi.acceptJob('job-1'))
+      when(() => mockJobApi.acceptJob('job-1'))
           .thenAnswer((_) async => testJob);
 
       await provider.loadJobs();
@@ -148,11 +148,11 @@ void main() {
 
       expect(result, true);
       expect(provider.error, isNull);
-      verify(() => mockJobsApi.acceptJob('job-1')).called(1);
+      verify(() => mockJobApi.acceptJob('job-1')).called(1);
     });
 
     test('returns false on error', () async {
-      when(() => mockJobsApi.acceptJob('job-1'))
+      when(() => mockJobApi.acceptJob('job-1'))
           .thenThrow(Exception('Already accepted'));
 
       final result = await provider.acceptJob('job-1');
@@ -164,7 +164,7 @@ void main() {
 
   group('rejectJob', () {
     test('rejects job and removes from list', () async {
-      when(() => mockJobsApi.getAssignedJobs(
+      when(() => mockJobApi.getAssignedJobs(
             status: any(named: 'status'),
             page: any(named: 'page'),
             limit: any(named: 'limit'),
@@ -175,8 +175,8 @@ void main() {
             total: 1,
             pages: 1,
           ));
-      when(() => mockJobsApi.rejectJob('job-1', reason: any(named: 'reason')))
-          .thenAnswer((_) async => {'message': 'Job rejected'});
+      when(() => mockJobApi.rejectJob('job-1', reason: any(named: 'reason')))
+          .thenAnswer((_) async => {});
 
       await provider.loadJobs();
       expect(provider.jobs.length, 1);
@@ -189,7 +189,7 @@ void main() {
     });
 
     test('returns false on error', () async {
-      when(() => mockJobsApi.rejectJob('job-1', reason: any(named: 'reason')))
+      when(() => mockJobApi.rejectJob('job-1', reason: any(named: 'reason')))
           .thenThrow(Exception('Not assigned'));
 
       final result = await provider.rejectJob('job-1');
@@ -201,7 +201,7 @@ void main() {
 
   group('startJob', () {
     test('starts job and enables location tracking', () async {
-      when(() => mockJobsApi.getAssignedJobs(
+      when(() => mockJobApi.getAssignedJobs(
             status: any(named: 'status'),
             page: any(named: 'page'),
             limit: any(named: 'limit'),
@@ -212,7 +212,7 @@ void main() {
             total: 1,
             pages: 1,
           ));
-      when(() => mockJobsApi.startJob('job-1'))
+      when(() => mockJobApi.startJob('job-1'))
           .thenAnswer((_) async => inProgressJob);
       when(() => mockLocationService.startTracking('job-1'))
           .thenAnswer((_) async => true);
@@ -221,7 +221,7 @@ void main() {
       final result = await provider.startJob('job-1');
 
       expect(result, true);
-      expect(provider.jobs[0].status, JobStatus.IN_PROGRESS);
+      expect(provider.jobs[0].status, JobStatus.inProgress);
       verify(() => mockLocationService.startTracking('job-1')).called(1);
     });
   });
@@ -233,7 +233,7 @@ void main() {
         id: 'job-1',
         householdId: 'hh-1',
         collectorId: 'col-1',
-        status: JobStatus.COMPLETED,
+        status: JobStatus.completed,
         scheduledDate: '2026-04-20',
         scheduledTime: '08:00-10:00',
         locationAddress: '123 Test Street',
@@ -242,7 +242,7 @@ void main() {
         updatedAt: DateTime(2026, 4, 20),
       );
 
-      when(() => mockJobsApi.getAssignedJobs(
+      when(() => mockJobApi.getAssignedJobs(
             status: any(named: 'status'),
             page: any(named: 'page'),
             limit: any(named: 'limit'),
@@ -258,7 +258,7 @@ void main() {
                 fileKey: 'key-1',
                 fileUrl: 'https://cdn.example.com/proof.jpg',
               ));
-      when(() => mockJobsApi.completeJob(
+      when(() => mockJobApi.completeJob(
             'job-1',
             proofImageUrl: any(named: 'proofImageUrl'),
             collectorLat: any(named: 'collectorLat'),
@@ -270,7 +270,7 @@ void main() {
       final result = await provider.completeJob('job-1', proofImage: testFile);
 
       expect(result, true);
-      expect(provider.jobs[0].status, JobStatus.COMPLETED);
+      expect(provider.jobs[0].status, JobStatus.completed);
       verify(() => mockFilesApi.uploadProofImage(any())).called(1);
       verify(() => mockLocationService.stopTracking()).called(1);
     });
@@ -278,7 +278,7 @@ void main() {
 
   group('WebSocket updates', () {
     test('updates job status on WebSocket event', () async {
-      when(() => mockJobsApi.getAssignedJobs(
+      when(() => mockJobApi.getAssignedJobs(
             status: any(named: 'status'),
             page: any(named: 'page'),
             limit: any(named: 'limit'),
@@ -291,21 +291,21 @@ void main() {
           ));
 
       await provider.loadJobs();
-      expect(provider.jobs[0].status, JobStatus.ASSIGNED);
+      expect(provider.jobs[0].status, JobStatus.assigned);
 
       statusController.add(JobStatusUpdate(
         jobId: 'job-1',
-        status: JobStatus.IN_PROGRESS,
+        status: JobStatus.inProgress,
         updatedAt: DateTime.now(),
       ));
 
       await Future.delayed(const Duration(milliseconds: 50));
 
-      expect(provider.jobs[0].status, JobStatus.IN_PROGRESS);
+      expect(provider.jobs[0].status, JobStatus.inProgress);
     });
 
     test('stops location tracking when job leaves IN_PROGRESS', () async {
-      when(() => mockJobsApi.getAssignedJobs(
+      when(() => mockJobApi.getAssignedJobs(
             status: any(named: 'status'),
             page: any(named: 'page'),
             limit: any(named: 'limit'),
@@ -323,7 +323,7 @@ void main() {
 
       statusController.add(JobStatusUpdate(
         jobId: 'job-1',
-        status: JobStatus.COMPLETED,
+        status: JobStatus.completed,
         updatedAt: DateTime.now(),
       ));
 
@@ -339,7 +339,7 @@ void main() {
         id: 'job-2',
         householdId: 'hh-2',
         collectorId: 'col-1',
-        status: JobStatus.IN_PROGRESS,
+        status: JobStatus.inProgress,
         scheduledDate: '2026-04-21',
         scheduledTime: '10:00-12:00',
         locationAddress: '456 Other St',
@@ -347,7 +347,7 @@ void main() {
         updatedAt: DateTime(2026, 4, 16),
       );
 
-      when(() => mockJobsApi.getAssignedJobs(
+      when(() => mockJobApi.getAssignedJobs(
             status: any(named: 'status'),
             page: any(named: 'page'),
             limit: any(named: 'limit'),

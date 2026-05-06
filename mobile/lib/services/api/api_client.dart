@@ -14,6 +14,7 @@ class ApiClient {
       connectTimeout: const Duration(seconds: 15),
       receiveTimeout: const Duration(seconds: 15),
       headers: {'Content-Type': 'application/json'},
+      validateStatus: (status) => status != null && (status >= 200 && status < 300 || status == 304),
     ));
 
     dio.interceptors.add(InterceptorsWrapper(
@@ -26,6 +27,17 @@ class ApiClient {
       },
       onError: (error, handler) async {
         if (error.response?.statusCode == 401) {
+          final path = error.requestOptions.path;
+          debugPrint('[ApiClient] 401 on $path');
+
+          // Don't try to refresh or logout on auth endpoints — those errors
+          // mean the credentials/refresh token are invalid and should be
+          // handled by the caller (e.g. show "wrong password").
+          if (path.startsWith('/auth/')) {
+            handler.next(error);
+            return;
+          }
+
           final refreshed = await _tryRefreshToken();
           if (refreshed) {
             final retryOptions = error.requestOptions;
@@ -36,9 +48,10 @@ class ApiClient {
               handler.resolve(response);
               return;
             } catch (e) {
-              // refresh worked but retry failed
+              debugPrint('[ApiClient] Retry after refresh failed: $e');
             }
           }
+          debugPrint('[ApiClient] Triggering onUnauthorized -> logout');
           onUnauthorized?.call();
         }
         handler.next(error);
