@@ -44,6 +44,7 @@ import 'features/household/presentation/screens/schedule_review_payment_screen.d
 import 'features/household/presentation/screens/booking_confirmed_screen.dart';
 import 'features/household/presentation/screens/booking_details_screen.dart';
 import 'features/household/presentation/screens/job_tracking_screen.dart';
+import 'features/household/presentation/screens/transaction_history_screen.dart';
 import 'screens/household/subscription_plans_screen.dart';
 import 'screens/household/manage_subscription_screen.dart';
 
@@ -206,6 +207,7 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
           '/booking-details': (context) => BookingDetailsScreen(
             jobId: ModalRoute.of(context)?.settings.arguments as String? ?? '',
           ),
+          '/transactions': (context) => const TransactionHistoryScreen(),
           // Collector routes
           '/collector-home': (context) => const CollectorShell(),
           '/collector-jobs': (context) => const CollectorShell(),

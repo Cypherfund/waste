@@ -18,6 +18,7 @@ import { RejectJobDto } from './dto/reject-job.dto';
 import { JobResponseDto } from './dto/job-response.dto';
 import { JobFilterDto } from './dto/job-filter.dto';
 import { JobStatus, validateTransition } from '../common/enums/job-status.enum';
+import { PaymentStatus } from '../common/enums/payment-status.enum';
 import { UserRole } from '../common/enums/role.enum';
 import { PaginatedResponse, paginate } from '../common/dto/pagination.dto';
 import {
@@ -56,7 +57,7 @@ export class JobsService {
     }
 
     // Duplicate check: mirrors DDL unique partial index idx_jobs_no_duplicate
-    const activeStatuses = [JobStatus.REQUESTED, JobStatus.ASSIGNED, JobStatus.IN_PROGRESS];
+    const activeStatuses = [JobStatus.REQUESTED, JobStatus.ASSIGNED, JobStatus.IN_PROGRESS, JobStatus.PAYMENT_PENDING];
     const existingJob = await this.jobRepo.findOne({
       where: {
         householdId,
@@ -71,15 +72,23 @@ export class JobsService {
       );
     }
 
+    // Determine if manual payment verification is needed
+    const requiresPaymentVerification = dto.paymentMethod && dto.paymentRef;
+    const initialStatus = requiresPaymentVerification ? JobStatus.PAYMENT_PENDING : JobStatus.REQUESTED;
+    const paymentStatus = requiresPaymentVerification ? PaymentStatus.PENDING : PaymentStatus.NOT_REQUIRED;
+
     const job = this.jobRepo.create({
       householdId,
-      status: JobStatus.REQUESTED,
+      status: initialStatus,
       scheduledDate: dto.scheduledDate,
       scheduledTime: dto.scheduledTime,
       locationAddress: dto.locationAddress,
       locationLat: dto.locationLat ?? null,
       locationLng: dto.locationLng ?? null,
       notes: dto.notes ?? null,
+      paymentMethod: dto.paymentMethod ?? null,
+      paymentRef: dto.paymentRef ?? null,
+      paymentStatus,
     });
 
     const saved = await this.jobRepo.save(job);

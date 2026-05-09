@@ -51,4 +51,16 @@ export class CreateJobDto {
   @IsString()
   @MaxLength(1000)
   notes?: string;
+
+  @ApiPropertyOptional({ example: 'MOBILE_MONEY', description: 'Payment method (for manual payments)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  paymentMethod?: string;
+
+  @ApiPropertyOptional({ example: 'TX123456789', description: 'Payment reference/transaction ID' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  paymentRef?: string;
 }

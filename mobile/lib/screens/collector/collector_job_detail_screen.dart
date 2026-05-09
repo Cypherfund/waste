@@ -198,8 +198,8 @@ class _CollectorJobDetailScreenState extends State<CollectorJobDetailScreen> {
                     ),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(AppRadius.sm),
-                      child: FutureBuilder<List<int>>(
-                        future: _proofImage!.readAsBytes().then((b) => b.toList()),
+                      child: FutureBuilder<Uint8List>(
+                        future: _proofImage!.readAsBytes(),
                         builder: (context, snapshot) {
                           if (!snapshot.hasData) {
                             return const SizedBox(
@@ -208,7 +208,7 @@ class _CollectorJobDetailScreenState extends State<CollectorJobDetailScreen> {
                             );
                           }
                           return Image.memory(
-                            snapshot.data! as dynamic,
+                            snapshot.data!,
                             height: 200,
                             width: double.infinity,
                             fit: BoxFit.cover,

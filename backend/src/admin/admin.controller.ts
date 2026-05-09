@@ -18,6 +18,7 @@ import { AdminService } from './admin.service';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UserRole } from '../common/enums/role.enum';
+import { PaymentStatus } from '../common/enums/payment-status.enum';
 import { AdminUserFilterDto } from './dto/admin-user-filter.dto';
 import { AdminJobFilterDto } from './dto/admin-job-filter.dto';
 import { ManualAssignDto } from './dto/manual-assign.dto';
@@ -94,6 +95,30 @@ export class AdminController {
     @Body() dto: ManualAssignDto,
   ) {
     return this.adminService.manualReassign(id, dto.collectorId);
+  }
+
+  // ─── PAYMENT VERIFICATION ──────────────────────────────────────
+
+  @Get('jobs/pending-payment')
+  listPendingPaymentJobs() {
+    return this.adminService.listJobs({ paymentStatus: PaymentStatus.PENDING });
+  }
+
+  @Patch('jobs/:id/verify-payment')
+  verifyPayment(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('sub') adminId: string,
+  ) {
+    return this.adminService.verifyPayment(id, adminId);
+  }
+
+  @Patch('jobs/:id/reject-payment')
+  rejectPayment(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('sub') adminId: string,
+    @Body() body: { reason?: string },
+  ) {
+    return this.adminService.rejectPayment(id, adminId, body.reason);
   }
 
   // ─── DISPUTES ─────────────────────────────────────────────────

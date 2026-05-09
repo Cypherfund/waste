@@ -671,7 +671,7 @@ class _CollectorHomeTabState extends State<CollectorHomeTab>
                     _jobInfoLineCompact(
                       Icons.account_balance_wallet_outlined,
                       'Earnings',
-                      '1,400 XAF',
+                      '${job.quotedPrice?.toInt() ?? 0} XAF',
                     ),
                     _jobInfoLineCompact(
                       Icons.access_time_rounded,

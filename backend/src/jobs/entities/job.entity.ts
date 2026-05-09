@@ -11,6 +11,7 @@ import {
 import { User } from '../../users/entities/user.entity';
 import { JobStatus } from '../../common/enums/job-status.enum';
 import { PricingType } from '../../common/enums/pricing-type.enum';
+import { PaymentStatus } from '../../common/enums/payment-status.enum';
 
 @Entity('jobs')
 export class Job {
@@ -84,6 +85,24 @@ export class Job {
 
   @Column({ type: 'boolean', default: false, name: 'is_covered_by_subscription' })
   isCoveredBySubscription: boolean;
+
+  @Column({ type: 'enum', enum: PaymentStatus, default: PaymentStatus.NOT_REQUIRED, name: 'payment_status' })
+  paymentStatus: PaymentStatus;
+
+  @Column({ type: 'varchar', length: 50, nullable: true, name: 'payment_method' })
+  paymentMethod: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true, name: 'payment_ref' })
+  paymentRef: string | null;
+
+  @Column({ type: 'uuid', nullable: true, name: 'payment_verified_by' })
+  paymentVerifiedBy: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true, name: 'payment_verified_at' })
+  paymentVerifiedAt: Date | null;
+
+  @Column({ type: 'text', nullable: true, name: 'payment_rejection_reason' })
+  paymentRejectionReason: string | null;
 
   @Column({ type: 'int', default: 1 })
   version: number;

@@ -20,14 +20,18 @@ class ScheduleLocationScreen extends StatefulWidget {
 class _ScheduleLocationScreenState extends State<ScheduleLocationScreen> {
   final TextEditingController _instructionsController =
   TextEditingController();
+  final TextEditingController _manualAddressController =
+  TextEditingController();
 
   bool _isLoadingLocation = true;
+  bool _useManualAddress = false;
+  bool _gpsFailed = false;
   Position? _currentPosition;
 
-  String _area = 'Bonapriso, Douala';
-  String _city = 'Cameroon';
-  String _streetAddress = 'Rue 1278, Bonapriso';
-  String _nearbyAddress = 'Near Total Bonapriso';
+  String _area = '';
+  String _city = '';
+  String _streetAddress = '';
+  String _nearbyAddress = '';
 
   @override
   void initState() {
@@ -38,12 +42,15 @@ class _ScheduleLocationScreenState extends State<ScheduleLocationScreen> {
   @override
   void dispose() {
     _instructionsController.dispose();
+    _manualAddressController.dispose();
     super.dispose();
   }
 
   Future<void> _getCurrentLocation() async {
     setState(() {
       _isLoadingLocation = true;
+      _gpsFailed = false;
+      _useManualAddress = false;
     });
 
     try {
@@ -84,16 +91,16 @@ class _ScheduleLocationScreenState extends State<ScheduleLocationScreen> {
           _currentPosition = position;
           _area = [
             if (subLocality != null) subLocality,
-            locality ?? 'Douala',
+            if (locality != null) locality,
           ].join(', ');
 
-          _city = country ?? 'Cameroon';
+          _city = country ?? '';
 
-          _streetAddress = street ?? 'Rue 1278, Bonapriso';
+          _streetAddress = street ?? '';
 
           _nearbyAddress = subLocality != null
               ? 'Near $subLocality'
-              : 'Near Total Bonapriso';
+              : '';
 
           _isLoadingLocation = false;
         });
@@ -116,17 +123,28 @@ class _ScheduleLocationScreenState extends State<ScheduleLocationScreen> {
 
     setState(() {
       _currentPosition = position;
-      _area = 'Bonapriso, Douala';
-      _city = 'Cameroon';
-      _streetAddress = 'Rue 1278, Bonapriso';
-      _nearbyAddress = 'Near Total Bonapriso';
+      _area = '';
+      _city = '';
+      _streetAddress = '';
+      _nearbyAddress = '';
+      _gpsFailed = true;
+      _useManualAddress = true;
       _isLoadingLocation = false;
+    });
+  }
+
+  void _toggleAddressMode() {
+    setState(() {
+      _useManualAddress = !_useManualAddress;
+      if (_useManualAddress) {
+        _manualAddressController.text = _streetAddress;
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final canContinue = !_isLoadingLocation && _streetAddress.isNotEmpty;
+    final canContinue = !_isLoadingLocation && (_useManualAddress ? _manualAddressController.text.isNotEmpty : _streetAddress.isNotEmpty);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -194,33 +212,68 @@ class _ScheduleLocationScreenState extends State<ScheduleLocationScreen> {
                               color: Color(0xFF6B7280),
                             ),
                           )
-                              : Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _area,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w800,
-                                  color: Color(0xFF111827),
-                                ),
-                              ),
-                              const SizedBox(height: 5),
-                              Text(
-                                _city,
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                  color: Color(0xFF6B7280),
-                                ),
-                              ),
-                            ],
-                          ),
+                              : _gpsFailed
+                                  ? Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'Location detection failed',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w800,
+                                            color: Color(0xFFDC2626),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 5),
+                                        const Text(
+                                          'Please enter your address manually',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w500,
+                                            color: Color(0xFF6B7280),
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  : Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          _area.isNotEmpty ? _area : 'No address detected',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w800,
+                                            color: _area.isNotEmpty ? const Color(0xFF111827) : const Color(0xFF6B7280),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 5),
+                                        Text(
+                                          _city.isNotEmpty ? _city : '',
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w500,
+                                            color: Color(0xFF6B7280),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                         ),
                         GestureDetector(
                           onTap: _getCurrentLocation,
                           child: Text(
-                            'Change',
+                            _useManualAddress ? 'Retry GPS' : 'Change',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: _toggleAddressMode,
+                          child: Text(
+                            _useManualAddress ? 'Use GPS' : 'Enter Manually',
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w800,
@@ -238,6 +291,59 @@ class _ScheduleLocationScreenState extends State<ScheduleLocationScreen> {
                     const SizedBox(height: 10),
 
                     _buildAddressSummaryCard(),
+
+                    if (_useManualAddress || _gpsFailed) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        _gpsFailed ? 'Enter your address (required)' : 'Enter your address',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF111827),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF9FAFB),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: _gpsFailed ? const Color(0xFFDC2626) : const Color(0xFFE5E7EB),
+                            width: _gpsFailed ? 2 : 1,
+                          ),
+                        ),
+                        child: TextField(
+                          controller: _manualAddressController,
+                          decoration: InputDecoration(
+                            hintText: _gpsFailed 
+                                ? 'Please enter your complete address (e.g., Rue 1234, Makepe, Douala)'
+                                : 'Enter your complete address',
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.all(12),
+                            hintStyle: TextStyle(
+                              color: _gpsFailed ? const Color(0xFFDC2626).withOpacity(0.5) : null,
+                            ),
+                          ),
+                          onChanged: (value) {
+                            setState(() {
+                              _streetAddress = value;
+                              _area = value;
+                            });
+                          },
+                        ),
+                      ),
+                      if (_gpsFailed) ...[
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Address is required to continue',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFFDC2626),
+                          ),
+                        ),
+                      ],
+                    ],
 
                     const SizedBox(height: 24),
 

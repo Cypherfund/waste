@@ -90,7 +90,9 @@ class CollectorStartJobScreen extends StatelessWidget {
                     Text('Payment', style: AppTypography.caption),
                     const SizedBox(height: 4),
                     Text(
-                      '1,400 XAF',
+                      job.quotedPrice != null 
+                          ? '${job.quotedPrice!.toInt()} XAF'
+                          : '0 XAF',
                       style: AppTypography.heading3.copyWith(
                         color: AppColors.primary,
                       ),

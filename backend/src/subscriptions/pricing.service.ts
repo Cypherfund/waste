@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserSubscription } from './entities/user-subscription.entity';
+import { SubscriptionPlan } from './entities/subscription-plan.entity';
 import { SubscriptionStatus } from '../common/enums/subscription-status.enum';
 import { PricingType } from '../common/enums/pricing-type.enum';
 import { SystemConfigService } from '../config/system-config.service';
@@ -13,6 +14,7 @@ export interface PricingQuote {
   remainingPickupsThisWeek: number | null;
   planName: string | null;
   perPickupPrice: number;
+  subscriptionPrice: number;
   subscriptionSavingsMessage: string | null;
 }
 
@@ -23,14 +25,33 @@ export class PricingService {
   constructor(
     @InjectRepository(UserSubscription)
     private readonly subRepo: Repository<UserSubscription>,
+    @InjectRepository(SubscriptionPlan)
+    private readonly planRepo: Repository<SubscriptionPlan>,
     private readonly systemConfigService: SystemConfigService,
   ) {}
 
+  private async getRequiredNumber(key: string): Promise<number> {
+    const config = await this.systemConfigService['configRepo'].findOne({ where: { key } });
+    if (!config) {
+      throw new Error(`Required configuration '${key}' is not set in system config. Please configure this value in the database.`);
+    }
+    const parsed = parseFloat(config.value);
+    if (isNaN(parsed)) {
+      throw new Error(`Configuration '${key}' is not a valid number: ${config.value}`);
+    }
+    return parsed;
+  }
+
   async getQuoteForUser(userId: string): Promise<PricingQuote> {
-    const perPickupPrice = await this.systemConfigService.getNumber(
-      'pricing.per_pickup_price',
-      1000,
-    );
+    const perPickupPrice = await this.getRequiredNumber('pricing.per_pickup_price');
+    
+    // Get the lowest priced active subscription plan
+    const plans = await this.planRepo.find({ 
+      where: { isActive: true }, 
+      order: { price: 'ASC' } 
+    });
+    const cheapestPlan = plans[0];
+    const subscriptionPrice = cheapestPlan?.price;
 
     const sub = await this.getActiveSubscription(userId);
 
@@ -42,7 +63,8 @@ export class PricingService {
         remainingPickupsThisWeek: null,
         planName: null,
         perPickupPrice,
-        subscriptionSavingsMessage: await this.buildSavingsMessage(perPickupPrice),
+        subscriptionPrice: subscriptionPrice ?? 0,
+        subscriptionSavingsMessage: await this.buildSavingsMessage(perPickupPrice, subscriptionPrice),
       };
     }
 
@@ -56,6 +78,7 @@ export class PricingService {
         remainingPickupsThisWeek: sub.remainingPickupsThisWeek,
         planName: sub.plan?.name ?? null,
         perPickupPrice,
+        subscriptionPrice: sub.plan?.price ?? subscriptionPrice ?? 0,
         subscriptionSavingsMessage: null,
       };
     }
@@ -67,6 +90,7 @@ export class PricingService {
       remainingPickupsThisWeek: 0,
       planName: sub.plan?.name ?? null,
       perPickupPrice,
+      subscriptionPrice: sub.plan?.price ?? subscriptionPrice ?? 0,
       subscriptionSavingsMessage: null,
     };
   }
@@ -105,7 +129,8 @@ export class PricingService {
     const mondayStr = monday.toISOString().split('T')[0];
 
     if (sub.weekResetDate !== mondayStr) {
-      sub.remainingPickupsThisWeek = sub.plan?.pickupsPerWeek ?? 2;
+      const defaultPickupsPerWeek = await this.getRequiredNumber('pricing.subscription_pickups_per_week');
+      sub.remainingPickupsThisWeek = sub.plan?.pickupsPerWeek ?? defaultPickupsPerWeek;
       sub.weekResetDate = mondayStr;
       await this.subRepo.save(sub);
       this.logger.log(`Reset weekly pickups for user ${sub.userId} to ${sub.remainingPickupsThisWeek}`);
@@ -121,19 +146,15 @@ export class PricingService {
     return d;
   }
 
-  private async buildSavingsMessage(perPickupPrice: number): Promise<string | null> {
-    const planPrice = await this.systemConfigService.getNumber(
-      'pricing.subscription_price',
-      3500,
-    );
-    const pickupsPerWeek = await this.systemConfigService.getNumber(
-      'pricing.subscription_pickups_per_week',
-      2,
-    );
-    const monthlyPickups = pickupsPerWeek * 4;
+  private async buildSavingsMessage(perPickupPrice: number, subscriptionPrice?: number): Promise<string | null> {
+    if (!subscriptionPrice) return null;
+    
+    const pickupsPerWeek = await this.getRequiredNumber('pricing.subscription_pickups_per_week');
+    const weeksPerMonth = await this.getRequiredNumber('pricing.weeks_per_month');
+    const monthlyPickups = pickupsPerWeek * weeksPerMonth;
     const payAsYouGoCost = monthlyPickups * perPickupPrice;
-    const savings = payAsYouGoCost - planPrice;
+    const savings = payAsYouGoCost - subscriptionPrice;
     if (savings <= 0) return null;
-    return `Subscribe for ${planPrice.toLocaleString()} XAF/month — save up to ${savings.toLocaleString()} XAF/month`;
+    return `Subscribe for ${subscriptionPrice.toLocaleString()} XAF/month — save up to ${savings.toLocaleString()} XAF/month`;
   }
 }
