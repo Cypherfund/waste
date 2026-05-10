@@ -30,6 +30,9 @@ import {
   ProofEvents,
 } from '../events/events.types';
 import { FilesService } from '../files/files.service';
+import { PricingService } from '../subscriptions/pricing.service';
+import { PaymentService } from '../payments/payment.service';
+import { TransactionType } from '../payments/entities/payment-transaction.entity';
 
 @Injectable()
 export class JobsService {
@@ -42,6 +45,8 @@ export class JobsService {
     private readonly proofRepo: Repository<Proof>,
     private readonly eventEmitter: EventEmitter2,
     private readonly filesService: FilesService,
+    private readonly pricingService: PricingService,
+    private readonly paymentService: PaymentService,
   ) {}
 
   // ─── CRUD ─────────────────────────────────────────────────────
@@ -72,10 +77,33 @@ export class JobsService {
       );
     }
 
-    // Determine if manual payment verification is needed
-    const requiresPaymentVerification = dto.paymentMethod && dto.paymentRef;
-    const initialStatus = requiresPaymentVerification ? JobStatus.PAYMENT_PENDING : JobStatus.REQUESTED;
-    const paymentStatus = requiresPaymentVerification ? PaymentStatus.PENDING : PaymentStatus.NOT_REQUIRED;
+    // Check if real payment integration is enabled
+    const paymentIntegrationEnabled = await this.paymentService.isPaymentIntegrationEnabled();
+
+    // Determine payment flow
+    let requiresRealPayment = false;
+    let requiresManualVerification = false;
+
+    if (paymentIntegrationEnabled && dto.paymentCode && dto.paymentPhone) {
+      requiresRealPayment = true;
+    } else if (dto.paymentMethod && dto.paymentRef) {
+      requiresManualVerification = true;
+    }
+
+    const initialStatus = (requiresRealPayment || requiresManualVerification)
+      ? JobStatus.PAYMENT_PENDING
+      : JobStatus.REQUESTED;
+    const paymentStatus = (requiresRealPayment || requiresManualVerification)
+      ? PaymentStatus.PENDING
+      : PaymentStatus.NOT_REQUIRED;
+
+    // Get pricing quote from PricingService
+    const pricingQuote = await this.pricingService.getQuoteForUser(householdId);
+
+    // Consume pickup if covered by subscription
+    if (pricingQuote.isCoveredBySubscription) {
+      await this.pricingService.consumePickup(householdId);
+    }
 
     const job = this.jobRepo.create({
       householdId,
@@ -89,10 +117,31 @@ export class JobsService {
       paymentMethod: dto.paymentMethod ?? null,
       paymentRef: dto.paymentRef ?? null,
       paymentStatus,
+      quotedPrice: pricingQuote.quotedPrice,
+      pricingType: pricingQuote.pricingType,
+      isCoveredBySubscription: pricingQuote.isCoveredBySubscription,
     });
 
     const saved = await this.jobRepo.save(job);
     this.logger.log(`Job created: ${saved.id} by household ${householdId}`);
+
+    // Initiate real payment if required and not covered by subscription
+    if (requiresRealPayment && !pricingQuote.isCoveredBySubscription && dto.paymentCode && dto.paymentPhone) {
+      try {
+        const paymentTx = await this.paymentService.initiatePayment(householdId, {
+          type: TransactionType.CASHIN,
+          amount: pricingQuote.quotedPrice,
+          paymentCode: dto.paymentCode,
+          phone: dto.paymentPhone,
+          jobId: saved.id,
+        });
+        this.logger.log(`Payment initiated for job ${saved.id}: tx ${paymentTx.id}`);
+      } catch (error) {
+        this.logger.error(`Failed to initiate payment for job ${saved.id}: ${error.message}`);
+        // Job is already created - payment status is PENDING
+        // Admin can manually verify or user can retry
+      }
+    }
 
     this.emitEvent(JobEvents.CREATED, saved);
 
@@ -589,6 +638,12 @@ export class JobsService {
       locationLat: job.locationLat,
       locationLng: job.locationLng,
       notes: job.notes,
+      paymentMethod: job.paymentMethod,
+      paymentRef: job.paymentRef,
+      paymentStatus: job.paymentStatus,
+      quotedPrice: job.quotedPrice,
+      pricingType: job.pricingType,
+      isCoveredBySubscription: job.isCoveredBySubscription,
       assignedAt: job.assignedAt,
       startedAt: job.startedAt,
       completedAt: job.completedAt,

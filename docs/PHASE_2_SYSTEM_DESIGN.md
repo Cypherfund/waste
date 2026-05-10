@@ -676,6 +676,11 @@ INSERT INTO system_config (key, value, data_type, category, description, is_feat
   ('payout.bank_transfer_label', 'Bank Transfer', 'string', 'payout', 'Label shown for bank transfer in collector app', false),
   ('support.whatsapp_number', '+237677777777', 'string', 'support', 'WhatsApp support number', false),
   ('payment.manual_instructions', 'Send your payment of {amount} XAF to MTN MoMo: 6XX XXX XXX (WasteWise) or Orange Money: 6XX XXX XXX. Use your phone number as reference.', 'string', 'payment', 'Instructions shown to users when payment integration is disabled', false),
+  ('payment.gateway_url', 'http://127.0.0.1:8081', 'string', 'payment', 'Base URL for payment gateway API', false),
+  ('payment.callback_base_url', 'http://localhost:3000', 'string', 'payment', 'Publicly accessible base URL for payment callbacks', false),
+  ('payment.country_code', 'cmr', 'string', 'payment', 'Country code for payment provider lookup (e.g. cmr for Cameroon)', false),
+  ('payment.pending_timeout_minutes', '15', 'number', 'payment', 'Minutes before pending payment transactions auto-fail', false),
+  ('payment.poll_interval_seconds', '30', 'number', 'payment', 'Seconds between polling pending transactions', false),
   ('feature.wallet_system', 'true', 'boolean', 'feature', 'Enable wallet system', true),
   ('feature.offline_queue', 'true', 'boolean', 'feature', 'Enable offline action queue', true);
 
