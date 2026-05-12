@@ -260,6 +260,17 @@ class SyncService {
     await syncPendingItems();
   }
 
+  // Clear all cached jobs (called on logout)
+  Future<void> clearAllJobs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_jobsCacheKey);
+      debugPrint('[Sync] Cleared all cached jobs');
+    } catch (e) {
+      debugPrint('[Sync] Failed to clear cached jobs: $e');
+    }
+  }
+
   void dispose() {
     _connectivitySub?.cancel();
     _retryTimer?.cancel();

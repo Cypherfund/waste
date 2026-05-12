@@ -105,6 +105,7 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
     super.initState();
     _onboardingCompleted = widget.onboardingCompleted;
     _storage = SecureStorageService();
+
     _apiClient = ApiClient(storage: _storage);
     _authApi = AuthApi(_apiClient);
     _jobApi = JobApi(_apiClient);
@@ -124,23 +125,10 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
       jobApi: _jobApi,
     );
 
-    _authProvider = AuthProvider(
-      authApi: _authApi,
-      storage: _storage,
-      wsService: _wsService,
-    );
-
     _jobProvider = JobProvider(
       jobApi: _jobApi,
       syncService: _syncService,
       wsService: _wsService,
-    );
-
-    _collectorJobsProvider = CollectorJobsProvider(
-      jobApi: _jobApi,
-      filesApi: _filesApi,
-      wsService: _wsService,
-      locationService: _locationService,
     );
 
     _collectorEarningsProvider = CollectorEarningsProvider(
@@ -151,6 +139,27 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
     _subscriptionProvider = SubscriptionProvider(
       subscriptionApi: _subscriptionApi,
       walletApi: _walletApi,
+    );
+
+    _authProvider = AuthProvider(
+      authApi: _authApi,
+      storage: _storage,
+      wsService: _wsService,
+      onLogout: () {
+        _jobProvider.reset();
+        _subscriptionProvider.reset();
+        _collectorEarningsProvider.reset();
+      },
+    );
+
+    // Restore session immediately before UI builds
+    _authProvider.tryRestoreSession();
+
+    _collectorJobsProvider = CollectorJobsProvider(
+      jobApi: _jobApi,
+      filesApi: _filesApi,
+      wsService: _wsService,
+      locationService: _locationService,
     );
 
     _offlineQueueProvider = OfflineQueueProvider(

@@ -12,6 +12,7 @@ class AuthProvider extends ChangeNotifier {
   final AuthApi _authApi;
   final SecureStorageService _storage;
   final WebSocketService _wsService;
+  final VoidCallback? _onLogout;
 
   AuthStatus _status = AuthStatus.unknown;
   User? _user;
@@ -22,9 +23,11 @@ class AuthProvider extends ChangeNotifier {
     required AuthApi authApi,
     required SecureStorageService storage,
     required WebSocketService wsService,
+    VoidCallback? onLogout,
   })  : _authApi = authApi,
         _storage = storage,
-        _wsService = wsService {
+        _wsService = wsService,
+        _onLogout = onLogout {
     // Listen for WebSocket auth errors and logout
     _wsService.onAuthError = () {
       debugPrint('[AuthProvider] WebSocket auth error - logging out');
@@ -146,6 +149,8 @@ class AuthProvider extends ChangeNotifier {
     _user = null;
     _status = AuthStatus.unauthenticated;
     _error = null;
+    // Notify other providers to reset their state
+    _onLogout?.call();
     notifyListeners();
   }
 

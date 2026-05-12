@@ -346,11 +346,20 @@ class JobProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Clear all data
-  void clear() {
+  // Clear all data - called on logout
+  Future<void> reset() async {
     _jobs = [];
     _error = null;
     _isLoading = false;
+    _currentPage = 1;
+    _totalPages = 1;
+    _filterStatus = null;
+    // Clear local sync data
+    try {
+      await _syncService.clearAllJobs();
+    } catch (_) {
+      // Silent failure
+    }
     notifyListeners();
   }
   @override

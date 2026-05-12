@@ -49,8 +49,8 @@ class _ScheduleReviewPaymentScreenState
     switch (type) {
       case PickupScheduleType.oneTime:
         return 'One-time pickup';
-      case PickupScheduleType.weekly:
-        return 'Weekly pickup';
+      case PickupScheduleType.monthly:
+        return 'Monthly subscription';
       case PickupScheduleType.custom:
         return 'Custom schedule';
     }
@@ -60,7 +60,7 @@ class _ScheduleReviewPaymentScreenState
     switch (type) {
       case PickupScheduleType.oneTime:
         return 'General Waste';
-      case PickupScheduleType.weekly:
+      case PickupScheduleType.monthly:
         return 'General Waste';
       case PickupScheduleType.custom:
         return 'General Waste';
@@ -70,8 +70,8 @@ class _ScheduleReviewPaymentScreenState
   @override
   Widget build(BuildContext context) {
     final pickupTypeString = widget.arguments['pickupType'] as String? ?? 'oneTime';
-    final pickupType = pickupTypeString == 'weekly' 
-        ? PickupScheduleType.weekly 
+    final pickupType = pickupTypeString == 'monthly'
+        ? PickupScheduleType.monthly
         : PickupScheduleType.oneTime;
     final scheduledDate = widget.arguments['scheduledDate'] as DateTime;
     final scheduledTime = widget.arguments['scheduledTime'] as String;
@@ -347,7 +347,7 @@ class _ScheduleReviewPaymentScreenState
                     color: Color(0xFFFFA000), size: 18),
                 SizedBox(width: 8),
                 Text(
-                  'Weekly pickups used up',
+                  'Subscription pickups used up',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
@@ -512,16 +512,16 @@ class _ScheduleReviewPaymentScreenState
                 const SizedBox(width: 10),
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => setState(() => _pickupType = PickupScheduleType.weekly),
+                    onTap: () => setState(() => _pickupType = PickupScheduleType.monthly),
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: _pickupType == PickupScheduleType.weekly
+                        color: _pickupType == PickupScheduleType.monthly
                             ? AppColors.primary.withValues(alpha: 0.1)
                             : const Color(0xFFF9FAFB),
                         borderRadius: BorderRadius.circular(9),
                         border: Border.all(
-                          color: _pickupType == PickupScheduleType.weekly
+                          color: _pickupType == PickupScheduleType.monthly
                               ? AppColors.primary
                               : const Color(0xFFE5E7EB),
                         ),
@@ -530,18 +530,18 @@ class _ScheduleReviewPaymentScreenState
                         children: [
                           Icon(
                             Icons.repeat_outlined,
-                            color: _pickupType == PickupScheduleType.weekly
+                            color: _pickupType == PickupScheduleType.monthly
                                 ? AppColors.primary
                                 : const Color(0xFF6B7280),
                             size: 20,
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            'Weekly Subscription',
+                            'Monthly Subscription',
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
-                              color: _pickupType == PickupScheduleType.weekly
+                              color: _pickupType == PickupScheduleType.monthly
                                   ? AppColors.primary
                                   : const Color(0xFF374151),
                             ),
@@ -551,13 +551,13 @@ class _ScheduleReviewPaymentScreenState
                             (() {
                               final price = quote?.subscriptionPrice;
                               return price != null 
-                                  ? '${price.toStringAsFixed(0)} XAF/week'
+                                  ? '${price.toStringAsFixed(0)} XAF/month'
                                   : 'Contact for pricing';
                             })(),
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
-                              color: _pickupType == PickupScheduleType.weekly
+                              color: _pickupType == PickupScheduleType.monthly
                                   ? AppColors.primary
                                   : const Color(0xFF6B7280),
                             ),
@@ -569,7 +569,7 @@ class _ScheduleReviewPaymentScreenState
                 ),
               ],
             ),
-            if (hasActiveSubscription && _pickupType == PickupScheduleType.weekly) ...[
+            if (hasActiveSubscription && _pickupType == PickupScheduleType.monthly) ...[
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.all(8),

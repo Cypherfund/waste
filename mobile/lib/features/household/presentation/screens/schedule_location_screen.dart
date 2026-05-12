@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
@@ -66,16 +68,21 @@ class _ScheduleLocationScreenState extends State<ScheduleLocationScreen> {
         return;
       }
 
+      // Get position with timeout to prevent infinite loading
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
         ),
-      );
+      ).timeout(const Duration(seconds: 10), onTimeout: () {
+        throw TimeoutException('Location fetch timed out');
+      });
 
       final placemarks = await placemarkFromCoordinates(
         position.latitude,
         position.longitude,
-      );
+      ).timeout(const Duration(seconds: 5), onTimeout: () {
+        throw TimeoutException('Geocoding timed out');
+      });
 
       if (!mounted) return;
 
@@ -107,6 +114,8 @@ class _ScheduleLocationScreenState extends State<ScheduleLocationScreen> {
       } else {
         _useFallbackLocation(position: position);
       }
+    } on TimeoutException catch (_) {
+      _useFallbackLocation();
     } catch (_) {
       _useFallbackLocation();
     }

@@ -6,6 +6,7 @@ import '../../../../config/app_theme.dart';
 import '../../../../models/job.dart';
 import '../../../../providers/job_provider.dart';
 import '../../../../widgets/bottom_navigation.dart';
+import '../../../../widgets/skeleton_loader.dart';
 
 class BookingsListScreen extends StatefulWidget {
   const BookingsListScreen({super.key});
@@ -113,10 +114,9 @@ class _BookingsListScreenState extends State<BookingsListScreen>
               child: Consumer<JobProvider>(
                 builder: (context, jobProvider, _) {
                   if (jobProvider.isLoading) {
-                    return Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.primary,
-                      ),
+                    return const SingleChildScrollView(
+                      padding: EdgeInsets.fromLTRB(20, 16, 20, 24),
+                      child: SkeletonList(itemCount: 6),
                     );
                   }
 

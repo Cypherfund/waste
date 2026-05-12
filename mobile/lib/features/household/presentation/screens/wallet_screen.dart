@@ -237,41 +237,6 @@ class _WalletScreenState extends State<WalletScreen> {
   }
   
   Widget _buildRecentTransactions(BuildContext context) {
-    final transactions = [
-      {
-        'title': 'Pickup Payment',
-        'subtitle': 'Booking #ABC12345',
-        'amount': '-2,500 XAF',
-        'date': 'Today, 2:30 PM',
-        'icon': Icons.delete_outline,
-        'isCredit': false,
-      },
-      {
-        'title': 'Top Up',
-        'subtitle': 'Mobile Money',
-        'amount': '+10,000 XAF',
-        'date': 'Yesterday, 10:15 AM',
-        'icon': Icons.add_circle_outline,
-        'isCredit': true,
-      },
-      {
-        'title': 'Pickup Payment',
-        'subtitle': 'Booking #DEF67890',
-        'amount': '-2,500 XAF',
-        'date': 'Apr 20, 4:45 PM',
-        'icon': Icons.delete_outline,
-        'isCredit': false,
-      },
-      {
-        'title': 'Top Up',
-        'subtitle': 'Bank Transfer',
-        'amount': '+20,000 XAF',
-        'date': 'Apr 18, 9:00 AM',
-        'icon': Icons.add_circle_outline,
-        'isCredit': true,
-      },
-    ];
-    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -302,14 +267,48 @@ class _WalletScreenState extends State<WalletScreen> {
           ],
         ),
         const SizedBox(height: 16),
-        ...transactions.map((transaction) => _buildTransactionCard(
-          title: transaction['title'] as String,
-          subtitle: transaction['subtitle'] as String,
-          amount: transaction['amount'] as String,
-          date: transaction['date'] as String,
-          icon: transaction['icon'] as IconData,
-          isCredit: transaction['isCredit'] as bool,
-        )),
+        // Empty state - no hardcoded mock data
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Icon(
+                Icons.receipt_long_outlined,
+                size: 48,
+                color: Colors.grey.shade400,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'No transactions yet',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Your payment history will appear here',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade500,
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }

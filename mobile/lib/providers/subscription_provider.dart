@@ -123,4 +123,17 @@ class SubscriptionProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
   }
+
+  // Clear all data - called on logout
+  void reset() {
+    _plans = [];
+    _subscription = null;
+    _pricingQuote = null;
+    _appConfig = null;
+    _walletBalance = null;
+    _isLoading = false;
+    _isActing = false;
+    _error = null;
+    notifyListeners();
+  }
 }

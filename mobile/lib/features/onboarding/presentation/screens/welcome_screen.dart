@@ -222,12 +222,22 @@ class WelcomeScreen extends StatelessWidget {
         const SizedBox(height: 10),
         GestureDetector(
           onTap: onLogin,
-          child: Text(
-            'I already have an account',
-            style: TextStyle(
-              color: AppColors.primary,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withAlpha(0.9),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFE5E7EB)),
+            ),
+            child: Text(
+              'I already have an account',
+              style: TextStyle(
+                color: const Color(0xFF374151),
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                decoration: TextDecoration.underline,
+                decorationColor: const Color(0xFF374151),
+              ),
             ),
           ),
         ),

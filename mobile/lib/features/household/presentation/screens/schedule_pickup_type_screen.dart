@@ -3,7 +3,7 @@ import '../../../../config/app_theme.dart';
 
 enum PickupScheduleType {
   oneTime,
-  weekly,
+  monthly,
   custom,
 }
 
@@ -40,10 +40,10 @@ class _SchedulePickupTypeScreenState extends State<SchedulePickupTypeScreen> {
       icon: Icons.restore_from_trash_outlined,
     ),
     PickupScheduleTypeData(
-      type: PickupScheduleType.weekly,
-      title: 'Weekly pickup',
-      description: "We'll come every week",
-      icon: Icons.calendar_today_outlined,
+      type: PickupScheduleType.monthly,
+      title: 'Monthly subscription',
+      description: "Weekly pickups for a month",
+      icon: Icons.calendar_month_outlined,
     ),
     PickupScheduleTypeData(
       type: PickupScheduleType.custom,

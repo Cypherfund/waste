@@ -110,4 +110,17 @@ class CollectorEarningsProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
   }
+
+  // Clear all data - called on logout
+  void reset() {
+    _quickSummary = null;
+    _detailedSummary = null;
+    _walletBalance = null;
+    _payoutConfig = null;
+    _payoutHistory = [];
+    _isLoading = false;
+    _isWithdrawing = false;
+    _error = null;
+    notifyListeners();
+  }
 }

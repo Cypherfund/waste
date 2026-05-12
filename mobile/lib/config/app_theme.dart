@@ -136,57 +136,61 @@ class AppShadows {
 class AppTypography {
   AppTypography._();
 
+  /// Global font scale factor - increase to make all text larger
+  /// 1.0 = original size, 1.15 = 15% larger, 1.2 = 20% larger
+  static const double scale = 1.15;
+
   static TextStyle get heading1 => GoogleFonts.inter(
-        fontSize: 24,
+        fontSize: 24 * scale,
         fontWeight: FontWeight.w700,
         color: AppColors.textPrimary,
         height: 1.3,
       );
 
   static TextStyle get heading2 => GoogleFonts.inter(
-        fontSize: 20,
+        fontSize: 20 * scale,
         fontWeight: FontWeight.w700,
         color: AppColors.textPrimary,
         height: 1.3,
       );
 
   static TextStyle get heading3 => GoogleFonts.inter(
-        fontSize: 18,
+        fontSize: 18 * scale,
         fontWeight: FontWeight.w600,
         color: AppColors.textPrimary,
         height: 1.3,
       );
 
   static TextStyle get subtitle => GoogleFonts.inter(
-        fontSize: 16,
+        fontSize: 16 * scale,
         fontWeight: FontWeight.w500,
         color: AppColors.textPrimary,
         height: 1.4,
       );
 
   static TextStyle get body => GoogleFonts.inter(
-        fontSize: 14,
+        fontSize: 14 * scale,
         fontWeight: FontWeight.w400,
         color: AppColors.textPrimary,
         height: 1.5,
       );
 
   static TextStyle get bodyMedium => GoogleFonts.inter(
-        fontSize: 14,
+        fontSize: 14 * scale,
         fontWeight: FontWeight.w500,
         color: AppColors.textPrimary,
         height: 1.5,
       );
 
   static TextStyle get caption => GoogleFonts.inter(
-        fontSize: 12,
+        fontSize: 12 * scale,
         fontWeight: FontWeight.w400,
         color: AppColors.textSecondary,
         height: 1.4,
       );
 
   static TextStyle get overline => GoogleFonts.inter(
-        fontSize: 11,
+        fontSize: 11 * scale,
         fontWeight: FontWeight.w500,
         color: AppColors.textSecondary,
         letterSpacing: 0.5,
@@ -194,13 +198,13 @@ class AppTypography {
       );
 
   static TextStyle get button => GoogleFonts.inter(
-        fontSize: 16,
+        fontSize: 16 * scale,
         fontWeight: FontWeight.w600,
         height: 1.2,
       );
 
   static TextStyle get label => GoogleFonts.inter(
-        fontSize: 13,
+        fontSize: 13 * scale,
         fontWeight: FontWeight.w500,
         color: AppColors.textSecondary,
         height: 1.4,
@@ -237,7 +241,7 @@ class AppTheme {
         backgroundColor: AppColors.surface,
         foregroundColor: AppColors.textPrimary,
         titleTextStyle: GoogleFonts.inter(
-          fontSize: 18,
+          fontSize: 18 * AppTypography.scale,
           fontWeight: FontWeight.w600,
           color: AppColors.textPrimary,
         ),
@@ -321,11 +325,11 @@ class AppTheme {
         type: BottomNavigationBarType.fixed,
         elevation: 8,
         selectedLabelStyle: GoogleFonts.inter(
-          fontSize: 12,
+          fontSize: 12 * AppTypography.scale,
           fontWeight: FontWeight.w600,
         ),
         unselectedLabelStyle: GoogleFonts.inter(
-          fontSize: 12,
+          fontSize: 12 * AppTypography.scale,
           fontWeight: FontWeight.w400,
         ),
       ),
@@ -334,11 +338,11 @@ class AppTheme {
         unselectedLabelColor: AppColors.textSecondary,
         indicatorColor: AppColors.primary,
         labelStyle: GoogleFonts.inter(
-          fontSize: 14,
+          fontSize: 14 * AppTypography.scale,
           fontWeight: FontWeight.w600,
         ),
         unselectedLabelStyle: GoogleFonts.inter(
-          fontSize: 14,
+          fontSize: 14 * AppTypography.scale,
           fontWeight: FontWeight.w400,
         ),
       ),
