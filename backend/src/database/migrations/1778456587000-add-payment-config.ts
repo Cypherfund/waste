@@ -6,13 +6,17 @@ export class AddPaymentConfig1778456587000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Insert payment gateway configuration defaults
     await queryRunner.query(`
+<<<<<<< HEAD
       INSERT INTO "system_config" ("key", "value", "description", "category", "is_feature_flag")
+=======
+      INSERT INTO "system_config" ("key", "value", "description", "category")
+>>>>>>> 711d92581f06edad6e6e91ac60d4f079c6d85997
       VALUES 
-        ('payment.gateway_url', 'http://127.0.0.1:8081', 'Base URL for payment gateway API', 'payment', false),
-        ('payment.callback_base_url', 'http://localhost:3000', 'Base URL for payment callbacks (must be publicly accessible)', 'payment', false),
-        ('payment.country_code', 'cmr', 'Country code for payment providers (e.g. cmr for Cameroon)', 'payment', true),
-        ('payment.pending_timeout_minutes', '15', 'Minutes before pending payment transactions auto-fail', 'payment', false),
-        ('payment.poll_interval_seconds', '30', 'Seconds between polling pending transactions', 'payment', false)
+        ('payment.gateway_url', 'http://127.0.0.1:8081', 'Base URL for payment gateway API', 'payment'),
+        ('payment.callback_base_url', 'http://localhost:3000', 'Base URL for payment callbacks (must be publicly accessible)', 'payment'),
+        ('payment.country_code', 'cmr', 'Country code for payment providers (e.g. cmr for Cameroon)', 'payment'),
+        ('payment.pending_timeout_minutes', '15', 'Minutes before pending payment transactions auto-fail', 'payment'),
+        ('payment.poll_interval_seconds', '30', 'Seconds between polling pending transactions', 'payment')
       ON CONFLICT ("key") DO NOTHING
     `);
   }
