@@ -43,8 +43,9 @@ export class WalletController {
   }
 
   @Get('app-config')
-  getAppConfig(@CurrentUser() _user: JwtPayload) {
-    return this.walletService.getAppConfig();
+  getAppConfig(@CurrentUser() user: JwtPayload) {
+    const countryCode = user.countryCode ?? 'cmr';
+    return this.walletService.getAppConfig(countryCode);
   }
 
   @Get('payout-config')

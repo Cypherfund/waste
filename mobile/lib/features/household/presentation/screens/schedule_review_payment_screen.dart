@@ -8,6 +8,7 @@ import '../../../../config/app_theme.dart';
 import '../../../../providers/job_provider.dart';
 import '../../../../providers/subscription_provider.dart';
 import '../../../../models/subscription.dart';
+import '../../../../services/api/wallet_api.dart';
 import 'schedule_pickup_type_screen.dart';
 
 class ScheduleReviewPaymentScreen extends StatefulWidget {
@@ -637,7 +638,7 @@ class _ScheduleReviewPaymentScreenState
     if (paymentEnabled) {
       return _buildOnlinePaymentMethod();
     }
-    return _buildManualPaymentFlow(appConfig, amount);
+    return _buildManualPaymentFlow(subProvider, amount);
   }
 
   Widget _buildOnlinePaymentMethod() {
@@ -704,10 +705,10 @@ class _ScheduleReviewPaymentScreenState
     );
   }
 
-  Widget _buildManualPaymentFlow(dynamic appConfig, double amount) {
-    final instructions = (appConfig?.manualPaymentInstructions as String? ?? '')
-        .replaceAll('{amount}', amount.toStringAsFixed(0));
-    final whatsapp = appConfig?.supportWhatsapp as String? ?? '';
+  Widget _buildManualPaymentFlow(SubscriptionProvider subProvider, double amount) {
+    final appConfig = subProvider.appConfig;
+    final whatsapp = appConfig?.supportWhatsapp ?? '';
+    final providers = appConfig?.enabledManualPaymentProviders ?? [];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -789,9 +790,7 @@ class _ScheduleReviewPaymentScreenState
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      instructions.isNotEmpty
-                          ? instructions
-                          : 'Send ${amount.toStringAsFixed(0)} XAF via Mobile Money to: 6XX XXX XXX',
+                      'Send ${amount.toStringAsFixed(0)} XAF via one of the payment methods below:',
                       style: const TextStyle(
                         fontSize: 11,
                         height: 1.5,
@@ -799,7 +798,19 @@ class _ScheduleReviewPaymentScreenState
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
+                    // Payment provider list with copy buttons
+                    ...providers.map((provider) => _buildProviderPaymentCard(provider)),
+                    if (providers.isEmpty)
+                      const Text(
+                        'No payment providers configured. Please contact support.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF9CA3AF),
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    const SizedBox(height: 12),
                     Text(
                       'Step 2: Admin Confirmation',
                       style: TextStyle(
@@ -822,36 +833,6 @@ class _ScheduleReviewPaymentScreenState
                 ),
               ),
               const SizedBox(height: 10),
-              GestureDetector(
-                onTap: () {
-                  Clipboard.setData(ClipboardData(
-                    text: amount.toStringAsFixed(0),
-                  ));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Amount copied to clipboard'),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-                },
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.copy_rounded,
-                        size: 13, color: Color(0xFFFFA000)),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Copy amount: ${amount.toStringAsFixed(0)} XAF',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFFFFA000),
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             ],
           ),
         ),
@@ -983,6 +964,106 @@ class _ScheduleReviewPaymentScreenState
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildProviderPaymentCard(dynamic provider) {
+    final phone = provider.manualPaymentPhone ?? '';
+    final accountName = provider.manualPaymentAccountName;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF3E0),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: const Color(0xFFFFB74D)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFE0B2),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(
+              provider.paymentCode.contains('BANK') 
+                  ? Icons.account_balance 
+                  : Icons.phone_android,
+              color: const Color(0xFFE65100),
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  provider.providerName,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF111827),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  phone,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF374151),
+                  ),
+                ),
+                if (accountName != null && accountName.isNotEmpty)
+                  Text(
+                    accountName,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: Color(0xFF6B7280),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          GestureDetector(
+            onTap: () {
+              Clipboard.setData(ClipboardData(text: phone));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${provider.providerName} number copied'),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFA000),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.copy_rounded, size: 12, color: Colors.white),
+                  SizedBox(width: 4),
+                  Text(
+                    'Copy',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

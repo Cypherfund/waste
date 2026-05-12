@@ -51,6 +51,12 @@ export class PaymentProviderEntity {
   @Column({ type: 'boolean', default: true, name: 'is_enabled' })
   isEnabled: boolean;
 
+  @Column({ type: 'varchar', length: 20, nullable: true, name: 'manual_payment_phone' })
+  manualPaymentPhone: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true, name: 'manual_payment_account_name' })
+  manualPaymentAccountName: string | null;
+
   @Column({ type: 'timestamptz', default: () => 'NOW()', name: 'synced_at' })
   syncedAt: Date;
 

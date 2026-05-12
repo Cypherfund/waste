@@ -11,6 +11,7 @@ import { User } from '../users/entities/user.entity';
 import { PayoutRequest, PayoutRequestStatus } from './entities/payout-request.entity';
 import { SystemConfigService } from '../config/system-config.service';
 import { EarningsEvents, EarningsConfirmedPayload } from '../events/events.types';
+import { PaymentProviderEntity } from '../payments/entities/payment-provider.entity';
 
 @Injectable()
 export class WalletService {
@@ -21,6 +22,8 @@ export class WalletService {
     private readonly userRepo: Repository<User>,
     @InjectRepository(PayoutRequest)
     private readonly payoutRepo: Repository<PayoutRequest>,
+    @InjectRepository(PaymentProviderEntity)
+    private readonly paymentProviderRepo: Repository<PaymentProviderEntity>,
     private readonly systemConfigService: SystemConfigService,
     private readonly dataSource: DataSource,
   ) {}
@@ -48,8 +51,8 @@ export class WalletService {
     return { balance: Number(user.walletBalance) };
   }
 
-  // ── GET app config (payment integration + support) ───────────
-  async getAppConfig() {
+  // ── GET app config (payment integration + support + providers) ───────────
+  async getAppConfig(countryCode: string) {
     const [paymentEnabled, manualInstructions, whatsapp] = await Promise.all([
       this.systemConfigService.getBoolean('feature.payment_integration', false),
       this.systemConfigService.getString(
@@ -58,11 +61,41 @@ export class WalletService {
       ),
       this.systemConfigService.getString('support.whatsapp_number', ''),
     ]);
+
+    // Get enabled payment providers for manual payment
+    const providers = await this.getEnabledPaymentProviders(countryCode);
+
     return {
       paymentIntegrationEnabled: paymentEnabled,
       manualPaymentInstructions: manualInstructions,
       supportWhatsapp: whatsapp,
+      paymentProviders: providers,
     };
+  }
+
+  // ── GET enabled payment providers for manual payment ───────────
+  private async getEnabledPaymentProviders(countryCode: string): Promise<
+    Array<{
+      paymentCode: string;
+      providerName: string;
+      manualPaymentPhone: string | null;
+      manualPaymentAccountName: string | null;
+    }>
+  > {
+    const providers = await this.paymentProviderRepo.find({
+      where: {
+        countryCode,
+        isEnabled: true,
+      },
+      order: { providerName: 'ASC' },
+    });
+
+    return providers.map((p) => ({
+      paymentCode: p.paymentCode,
+      providerName: p.providerName,
+      manualPaymentPhone: p.manualPaymentPhone,
+      manualPaymentAccountName: p.manualPaymentAccountName,
+    }));
   }
 
   // ── GET payout config ─────────────────────────────────────────

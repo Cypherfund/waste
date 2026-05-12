@@ -58,22 +58,56 @@ class PayoutRequest {
       );
 }
 
+class PaymentProvider {
+  final String paymentCode;
+  final String providerName;
+  final String? manualPaymentPhone;
+  final String? manualPaymentAccountName;
+
+  PaymentProvider({
+    required this.paymentCode,
+    required this.providerName,
+    this.manualPaymentPhone,
+    this.manualPaymentAccountName,
+  });
+
+  factory PaymentProvider.fromJson(Map<String, dynamic> j) => PaymentProvider(
+        paymentCode: j['paymentCode'] as String,
+        providerName: j['providerName'] as String,
+        manualPaymentPhone: j['manualPaymentPhone'] as String?,
+        manualPaymentAccountName: j['manualPaymentAccountName'] as String?,
+      );
+
+  bool get hasManualPaymentDetails =>
+      manualPaymentPhone != null && manualPaymentPhone!.isNotEmpty;
+}
+
 class AppConfig {
   final bool paymentIntegrationEnabled;
   final String manualPaymentInstructions;
   final String supportWhatsapp;
+  final List<PaymentProvider> paymentProviders;
 
   AppConfig({
     required this.paymentIntegrationEnabled,
     required this.manualPaymentInstructions,
     required this.supportWhatsapp,
+    required this.paymentProviders,
   });
 
   factory AppConfig.fromJson(Map<String, dynamic> j) => AppConfig(
         paymentIntegrationEnabled: j['paymentIntegrationEnabled'] as bool? ?? false,
         manualPaymentInstructions: j['manualPaymentInstructions'] as String? ?? '',
         supportWhatsapp: j['supportWhatsapp'] as String? ?? '',
+        paymentProviders: (j['paymentProviders'] as List<dynamic>?)
+                ?.map((p) => PaymentProvider.fromJson(p as Map<String, dynamic>))
+                .toList() ??
+            [],
       );
+
+  /// Get providers that have manual payment details configured
+  List<PaymentProvider> get enabledManualPaymentProviders =>
+      paymentProviders.where((p) => p.hasManualPaymentDetails).toList();
 }
 
 class WalletApi {
