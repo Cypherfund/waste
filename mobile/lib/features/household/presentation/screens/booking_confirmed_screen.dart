@@ -14,6 +14,12 @@ class BookingConfirmedScreen extends StatelessWidget {
     required this.arguments,
   });
 
+  bool _isManualPayment(Job? job) {
+    if (job == null || job.notes == null) return false;
+    return job.notes!.contains('Payment: MOBILE_MONEY') || 
+           job.notes!.contains('Payment: BANK_TRANSFER');
+  }
+
   @override
   Widget build(BuildContext context) {
     final job = arguments['job'] as Job?;
@@ -55,8 +61,8 @@ class BookingConfirmedScreen extends StatelessWidget {
                                 ),
                               ],
                             ),
-                            child: const Icon(
-                              Icons.check_rounded,
+                            child: Icon(
+                              _isManualPayment(job) ? Icons.schedule_rounded : Icons.check_rounded,
                               color: Colors.white,
                               size: 44,
                             ),
@@ -67,8 +73,8 @@ class BookingConfirmedScreen extends StatelessWidget {
 
                     const SizedBox(height: 14),
 
-                    const Text(
-                      'Pickup Scheduled!',
+                    Text(
+                      _isManualPayment(job) ? 'Booking Submitted!' : 'Pickup Scheduled!',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 22,
@@ -80,8 +86,10 @@ class BookingConfirmedScreen extends StatelessWidget {
 
                     const SizedBox(height: 8),
 
-                    const Text(
-                      "We're finding a collector\nnear you.",
+                    Text(
+                      _isManualPayment(job) 
+                          ? "Your booking is submitted and awaiting\npayment confirmation from our admin.\nWe'll confirm shortly after payment verification."
+                          : "We're finding a collector\nnear you.",
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 13,

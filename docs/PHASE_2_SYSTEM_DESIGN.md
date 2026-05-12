@@ -665,6 +665,23 @@ INSERT INTO system_config (key, value, data_type, category, description, is_feat
   ('feature.sms_notifications', 'false', 'boolean', 'feature', 'Enable SMS fallback notifications', true),
   ('feature.surge_pricing', 'false', 'boolean', 'feature', 'Enable surge pricing', true),
   ('feature.location_tracking', 'true', 'boolean', 'feature', 'Enable real-time location tracking', true),
+  ('feature.payment_integration', 'true', 'boolean', 'feature', 'Enable payment integration', true),
+  ('pricing.per_pickup_price', '1000', 'number', 'pricing', 'Price per pickup for pay-as-you-go (XAF)', false),
+  ('pricing.subscription_price', '3500', 'number', 'pricing', 'Monthly subscription price (XAF)', false),
+  ('pricing.subscription_pickups_per_week', '2', 'number', 'pricing', 'Pickups included per week in standard plan', false),
+  ('payout.min_withdrawal', '1000', 'number', 'payout', 'Minimum withdrawal amount (XAF)', false),
+  ('payout.max_withdrawal', '500000', 'number', 'payout', 'Maximum withdrawal amount (XAF)', false),
+  ('payout.methods_enabled', 'MOBILE_MONEY,BANK_TRANSFER', 'string', 'payout', 'Comma-separated list of enabled payout methods', false),
+  ('payout.mobile_money_label', 'MTN Mobile Money / Orange Money', 'string', 'payout', 'Label shown for mobile money in collector app', false),
+  ('payout.bank_transfer_label', 'Bank Transfer', 'string', 'payout', 'Label shown for bank transfer in collector app', false),
+  ('support.whatsapp_number', '+237677777777', 'string', 'support', 'WhatsApp support number', false),
+  ('payment.manual_instructions', 'Send your payment of {amount} XAF to MTN MoMo: 6XX XXX XXX (WasteWise) or Orange Money: 6XX XXX XXX. Use your phone number as reference.', 'string', 'payment', 'Instructions shown to users when payment integration is disabled', false),
+  ('payment.gateway_url', 'http://127.0.0.1:8081', 'string', 'payment', 'Base URL for payment gateway API', false),
+  ('payment.callback_base_url', 'http://localhost:3000', 'string', 'payment', 'Publicly accessible base URL for payment callbacks', false),
+  ('payment.country_code', 'cmr', 'string', 'payment', 'Country code for payment provider lookup (e.g. cmr for Cameroon)', false),
+  ('payment.pending_timeout_minutes', '15', 'number', 'payment', 'Minutes before pending payment transactions auto-fail', false),
+  ('payment.poll_interval_seconds', '30', 'number', 'payment', 'Seconds between polling pending transactions', false),
+  ('feature.wallet_system', 'true', 'boolean', 'feature', 'Enable wallet system', true),
   ('feature.offline_queue', 'true', 'boolean', 'feature', 'Enable offline action queue', true);
 
 -- ============================================================
@@ -691,6 +708,92 @@ CREATE TRIGGER update_collector_availability_updated_at
   BEFORE UPDATE ON collector_availability
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 ```
+
+### 2.2b Countries & Payment Providers Tables
+
+```sql
+-- ============================================================
+-- TABLE: supported_countries
+-- Controls which countries the app is available in.
+-- A country can be active (manual payment only) before providers are synced.
+-- ============================================================
+CREATE TABLE supported_countries (
+  id           SERIAL PRIMARY KEY,
+  country_code VARCHAR(10)  NOT NULL,
+  country_name VARCHAR(100) NOT NULL,
+  phone_prefix VARCHAR(5)   NOT NULL,
+  flag_emoji   VARCHAR(10)  NULL,
+  currency     VARCHAR(3)   NOT NULL,
+  is_active    BOOLEAN      NOT NULL DEFAULT true,
+  created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  CONSTRAINT "UQ_supported_countries_code" UNIQUE (country_code)
+);
+
+-- Seed: only Cameroon active at launch
+INSERT INTO supported_countries (country_code, country_name, phone_prefix, flag_emoji, currency, is_active)
+VALUES
+  ('cmr', 'Cameroon',    '+237', '🇨🇲', 'XAF', true),
+  ('ken', 'Kenya',       '+254', '🇰🇪', 'KES', false),
+  ('nga', 'Nigeria',     '+234', '🇳🇬', 'NGN', false),
+  ('gha', 'Ghana',       '+233', '🇬🇭', 'GHS', false),
+  ('civ', 'Ivory Coast', '+225', '🇨🇮', 'XOF', false);
+
+-- ============================================================
+-- TABLE: payment_providers
+-- Admin-synced providers from the payment gateway.
+-- is_enabled = false hides the provider from users.
+-- is_global = true shows the provider to all countries (e.g. Stripe).
+-- ============================================================
+CREATE TABLE payment_providers (
+  id               SERIAL PRIMARY KEY,
+  payment_code     VARCHAR(20)   NOT NULL,
+  country_code     VARCHAR(10)   NOT NULL,
+  provider_name    VARCHAR(100)  NOT NULL,
+  currency         VARCHAR(3)    NOT NULL,
+  min_deposit      DECIMAL(12,2) NULL,
+  max_deposit      DECIMAL(12,2) NULL,
+  min_withdrawal   DECIMAL(12,2) NULL,
+  max_withdrawal   DECIMAL(12,2) NULL,
+  supports_cashin  BOOLEAN       NOT NULL DEFAULT true,
+  supports_cashout BOOLEAN       NOT NULL DEFAULT false,
+  image_url        TEXT          NULL,
+  is_global        BOOLEAN       NOT NULL DEFAULT false,
+  is_enabled       BOOLEAN       NOT NULL DEFAULT true,
+  synced_at        TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+  updated_at       TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+  CONSTRAINT "UQ_payment_providers_code_country" UNIQUE (payment_code, country_code)
+);
+
+-- ============================================================
+-- ALTER: users — add country_code
+-- Set at registration from the onboarding country picker.
+-- Existing users back-filled to 'cmr'.
+-- ============================================================
+ALTER TABLE users ADD COLUMN country_code VARCHAR(10) NULL;
+UPDATE users SET country_code = 'cmr' WHERE country_code IS NULL;
+```
+
+**Admin API for countries:**
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/admin/countries` | List all countries with `is_active` state |
+| `POST` | `/api/v1/admin/countries` | Add a new country |
+| `PATCH` | `/api/v1/admin/countries/:code` | Toggle `isActive` |
+
+**Admin API for providers:**
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/admin/payments/providers?countryCode=cmr` | List all providers (inc. disabled) |
+| `POST` | `/api/v1/admin/payments/providers/sync?countryCode=cmr` | Pull from gateway, upsert locally |
+| `PATCH` | `/api/v1/admin/payments/providers/:id` | Toggle `isEnabled` |
+
+**Public API:**
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/countries` | Active countries only (for onboarding picker) |
+| `GET` | `/api/v1/payments/providers` | Active providers for the JWT user's country |
+
+---
 
 ### 2.3 Index Strategy Summary
 

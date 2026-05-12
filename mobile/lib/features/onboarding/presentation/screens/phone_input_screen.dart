@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../../config/app_theme.dart';
+import '../../../../services/api/countries_api.dart';
+import '../../../../providers/countries_provider.dart';
 
 class PhoneInputScreen extends StatefulWidget {
   final String? initialPhone;
   final String initialCountryCode;
-  final void Function(String phone, String countryCode) onSendCode;
+  // callback delivers phone prefix (e.g. "+237") AND the ISO country code (e.g. "cmr")
+  final void Function(String phone, String phonePrefix, String countryCode) onSendCode;
   final VoidCallback onBack;
 
   const PhoneInputScreen({
@@ -21,25 +25,18 @@ class PhoneInputScreen extends StatefulWidget {
 
 class _PhoneInputScreenState extends State<PhoneInputScreen> {
   late final TextEditingController _phoneController;
-  String _selectedCode = '+237';
+  String _selectedPrefix = '+237';
+  String _selectedCountryCode = 'cmr';
   final _formKey = GlobalKey<FormState>();
-
-  static const _countryCodes = [
-    ('+237', '🇨🇲', 'Cameroon'),
-    ('+234', '🇳🇬', 'Nigeria'),
-    ('+254', '🇰🇪', 'Kenya'),
-    ('+233', '🇬🇭', 'Ghana'),
-    ('+225', '🇨🇮', 'Ivory Coast'),
-    ('+1', '🇺🇸', 'USA'),
-    ('+44', '🇬🇧', 'UK'),
-    ('+33', '🇫🇷', 'France'),
-  ];
 
   @override
   void initState() {
     super.initState();
     _phoneController = TextEditingController(text: widget.initialPhone ?? '');
-    _selectedCode = widget.initialCountryCode;
+    _selectedPrefix = widget.initialCountryCode;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<CountriesProvider>().loadCountries();
+    });
   }
 
   @override
@@ -51,7 +48,7 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
-    widget.onSendCode(_phoneController.text.trim(), _selectedCode);
+    widget.onSendCode(_phoneController.text.trim(), _selectedPrefix, _selectedCountryCode);
   }
 
   @override
@@ -150,11 +147,11 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(_flagForCode(_selectedCode),
+                  Text(_flagForCode(_selectedPrefix),
                       style: const TextStyle(fontSize: 22)),
                   const SizedBox(width: 6),
                   Text(
-                    _selectedCode,
+                    _selectedPrefix,
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -244,6 +241,7 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
 
   // ---------------- COUNTRY PICKER ----------------
   void _showCountryPicker() {
+    final countries = context.read<CountriesProvider>().countries;
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -266,16 +264,15 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
                 style: TextStyle(
                     fontSize: 18, fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
-            ...List.generate(_countryCodes.length, (i) {
-              final (code, flag, name) = _countryCodes[i];
-              final isSelected = code == _selectedCode;
+            ...countries.map((country) {
+              final isSelected = country.phonePrefix == _selectedPrefix;
               return ListTile(
-                leading: Text(flag,
+                leading: Text(country.flagEmoji ?? '🏳️',
                     style: const TextStyle(fontSize: 24)),
-                title: Text(name,
+                title: Text(country.countryName,
                     style: const TextStyle(
                         fontSize: 15, fontWeight: FontWeight.w500)),
-                trailing: Text(code,
+                trailing: Text(country.phonePrefix,
                     style: TextStyle(
                       fontSize: 14,
                       color: isSelected
@@ -290,11 +287,14 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
                 onTap: () {
-                  setState(() => _selectedCode = code);
+                  setState(() {
+                    _selectedPrefix = country.phonePrefix;
+                    _selectedCountryCode = country.countryCode;
+                  });
                   Navigator.pop(ctx);
                 },
               );
-            }),
+            }).toList(),
             const SizedBox(height: 16),
           ],
         ),
@@ -302,10 +302,9 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
     );
   }
 
-  String _flagForCode(String code) {
-    for (final entry in _countryCodes) {
-      if (entry.$1 == code) return entry.$2;
-    }
-    return '🏳️';
+  String _flagForCode(String prefix) {
+    final countries = context.read<CountriesProvider>().countries;
+    final match = countries.where((c) => c.phonePrefix == prefix).firstOrNull;
+    return match?.flagEmoji ?? '🏳️';
   }
 }

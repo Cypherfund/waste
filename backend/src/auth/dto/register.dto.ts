@@ -18,10 +18,10 @@ export class RegisterDto {
   @MaxLength(100)
   name: string;
 
-  @ApiProperty({ example: '+237670000000', description: 'Cameroon phone number' })
+  @ApiProperty({ example: '+237670000000', description: 'International phone number with country prefix' })
   @IsString()
-  @Matches(/^\+237[0-9]{9}$/, {
-    message: 'Phone must be a valid Cameroon number: +237XXXXXXXXX',
+  @Matches(/^\+[0-9]{7,15}$/, {
+    message: 'Phone must be a valid international number starting with +',
   })
   phone: string;
 
@@ -42,4 +42,10 @@ export class RegisterDto {
     message: 'Role must be HOUSEHOLD or COLLECTOR',
   })
   role: UserRole;
+
+  @ApiPropertyOptional({ example: 'cmr', description: 'Country code selected during registration (e.g. cmr, ken)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  countryCode?: string;
 }

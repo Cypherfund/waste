@@ -8,6 +8,8 @@ import { RatingsModule } from '../ratings/ratings.module';
 import { EarningsModule } from '../earnings/earnings.module';
 import { DisputesModule } from '../disputes/disputes.module';
 import { FilesModule } from '../files/files.module';
+import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
+import { PaymentsModule } from '../payments/payments.module';
 
 @Module({
   imports: [
@@ -16,6 +18,8 @@ import { FilesModule } from '../files/files.module';
     forwardRef(() => EarningsModule),
     forwardRef(() => DisputesModule),
     FilesModule,
+    SubscriptionsModule,
+    PaymentsModule,
   ],
   controllers: [JobsController],
   providers: [JobsService],

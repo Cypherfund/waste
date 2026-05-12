@@ -23,6 +23,10 @@ import { AdminModule } from './admin/admin.module';
 import { FilesModule } from './files/files.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { HealthModule } from './health/health.module';
+import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { WalletModule } from './wallet/wallet.module';
+import { PaymentsModule } from './payments/payments.module';
+import { CountriesModule } from './countries/countries.module';
 
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -69,6 +73,10 @@ import { CorrelationIdMiddleware } from './common/middleware/correlation-id.midd
     FilesModule,
     SchedulerModule,
     HealthModule,
+    SubscriptionsModule,
+    WalletModule,
+    PaymentsModule,
+    CountriesModule,
   ],
   providers: [
     // Global JWT auth guard — all routes require auth unless @Public()

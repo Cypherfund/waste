@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
 import '../models/job.dart';
 import '../services/api/api_client.dart';
 import '../services/api/job_api.dart';
 import '../services/api/files_api.dart';
 import '../services/websocket/websocket_service.dart';
 import '../services/location/location_tracking_service.dart';
-import 'dart:io';
 
 class CollectorJobsProvider extends ChangeNotifier {
   final JobApi _jobApi;
@@ -153,7 +153,7 @@ class CollectorJobsProvider extends ChangeNotifier {
 
   // ─── COMPLETE JOB ──────────────────────────────────────────
 
-  Future<bool> completeJob(String jobId, {required File proofImage}) async {
+  Future<bool> completeJob(String jobId, {required XFile proofImage}) async {
     _isActioning = true;
     _error = null;
     notifyListeners();

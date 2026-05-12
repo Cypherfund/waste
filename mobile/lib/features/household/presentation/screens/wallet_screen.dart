@@ -1,12 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../../config/app_theme.dart';
+import '../../../../providers/subscription_provider.dart';
 import '../../../../widgets/bottom_navigation.dart';
 
-class WalletScreen extends StatelessWidget {
+class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
 
   @override
+  State<WalletScreen> createState() => _WalletScreenState();
+}
+
+class _WalletScreenState extends State<WalletScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<SubscriptionProvider>().loadWalletBalance();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final sub = context.watch<SubscriptionProvider>();
+    final balance = sub.walletBalance ?? 0;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7F4),
       appBar: AppBar(
@@ -36,7 +54,7 @@ class WalletScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Balance Card
-            _buildBalanceCard(),
+            _buildBalanceCard(balance),
             
             const SizedBox(height: 24),
             
@@ -54,7 +72,7 @@ class WalletScreen extends StatelessWidget {
     );
   }
   
-  Widget _buildBalanceCard() {
+  Widget _buildBalanceCard(double balance) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -94,9 +112,9 @@ class WalletScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          const Text(
-            '25,000 XAF',
-            style: TextStyle(
+          Text(
+            '${balance.toStringAsFixed(0)} XAF',
+            style: const TextStyle(
               fontSize: 36,
               fontWeight: FontWeight.bold,
               color: Colors.white,
@@ -104,7 +122,7 @@ class WalletScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '≈ \$41.67 USD',
+            '≈ \$${(balance / 600).toStringAsFixed(2)} USD',
             style: TextStyle(
               fontSize: 14,
               color: Colors.white.withValues(alpha: 0.8),

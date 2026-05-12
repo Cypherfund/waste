@@ -180,6 +180,7 @@ class _ScheduleDateTimeScreenState extends State<ScheduleDateTimeScreen> {
                           ...widget.arguments ?? {},
                           'scheduledDate': _selectedDate,
                           'scheduledTime': _selectedTimeSlot,
+                          'pickupType': 'oneTime', // Default, will be overridden at payment
                         },
                       );
                     }

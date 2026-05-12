@@ -7,15 +7,18 @@ import {
   Param,
   Query,
   Body,
+  Res,
   ParseUUIDPipe,
   ParseIntPipe,
   DefaultValuePipe,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UserRole } from '../common/enums/role.enum';
+import { PaymentStatus } from '../common/enums/payment-status.enum';
 import { AdminUserFilterDto } from './dto/admin-user-filter.dto';
 import { AdminJobFilterDto } from './dto/admin-job-filter.dto';
 import { ManualAssignDto } from './dto/manual-assign.dto';
@@ -24,13 +27,23 @@ import { ReviewFraudFlagDto } from '../fraud/dto/review-fraud-flag.dto';
 import { DisputeStatus } from '../common/enums/dispute-status.enum';
 import { FraudFlagStatus } from '../common/enums/fraud-type.enum';
 import { FraudSeverity } from '../common/enums/fraud-severity.enum';
+import { EarningStatus } from '../common/enums/earning-status.enum';
+import { WalletService } from '../wallet/wallet.service';
+import { PayoutRequestStatus } from '../wallet/entities/payout-request.entity';
+import { CountriesService } from '../countries/countries.service';
+import { PaymentService } from '../payments/payment.service';
 
 @ApiTags('Admin')
 @ApiBearerAuth()
 @Controller('admin')
 @Roles(UserRole.ADMIN)
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly walletService: WalletService,
+    private readonly countriesService: CountriesService,
+    private readonly paymentService: PaymentService,
+  ) {}
 
   // ─── USERS ────────────────────────────────────────────────────
 
@@ -86,6 +99,30 @@ export class AdminController {
     @Body() dto: ManualAssignDto,
   ) {
     return this.adminService.manualReassign(id, dto.collectorId);
+  }
+
+  // ─── PAYMENT VERIFICATION ──────────────────────────────────────
+
+  @Get('jobs/pending-payment')
+  listPendingPaymentJobs() {
+    return this.adminService.listJobs({ paymentStatus: PaymentStatus.PENDING });
+  }
+
+  @Patch('jobs/:id/verify-payment')
+  verifyPayment(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('sub') adminId: string,
+  ) {
+    return this.adminService.verifyPayment(id, adminId);
+  }
+
+  @Patch('jobs/:id/reject-payment')
+  rejectPayment(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('sub') adminId: string,
+    @Body() body: { reason?: string },
+  ) {
+    return this.adminService.rejectPayment(id, adminId, body.reason);
   }
 
   // ─── DISPUTES ─────────────────────────────────────────────────
@@ -144,6 +181,112 @@ export class AdminController {
     @Body() body: { value: string },
   ) {
     return this.adminService.updateConfig(key, body.value, adminId);
+  }
+
+  // ─── EARNINGS / PAYOUTS ────────────────────────────────────────
+
+  @Get('earnings')
+  listEarnings(
+    @Query('status') status?: EarningStatus,
+    @Query('collectorId') collectorId?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page?: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit?: number,
+  ) {
+    return this.adminService.listEarnings({ status, collectorId, from, to, page, limit });
+  }
+
+  @Post('earnings/:id/pay')
+  markAsPaid(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('sub') adminId: string,
+  ) {
+    return this.adminService.markAsPaid(id, adminId);
+  }
+
+  @Get('earnings/export')
+  async exportEarnings(
+    @Query('status') status?: EarningStatus,
+    @Query('collectorId') collectorId?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Res() res?: Response,
+  ) {
+    const csv = await this.adminService.exportEarningsCsv({ status, collectorId, from, to });
+    res!.setHeader('Content-Type', 'text/csv');
+    res!.setHeader('Content-Disposition', 'attachment; filename="earnings.csv"');
+    res!.send(csv);
+  }
+
+  // ─── PAYOUT REQUESTS ────────────────────────────────────────────
+
+  @Get('payouts')
+  listPayouts(
+    @Query('status') status?: PayoutRequestStatus,
+    @Query('collectorId') collectorId?: string,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page?: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit?: number,
+  ) {
+    return this.walletService.adminListPayoutRequests({ status, collectorId, page, limit });
+  }
+
+  @Patch('payouts/:id')
+  reviewPayout(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('sub') adminId: string,
+    @Body() body: { action: 'approve' | 'reject' | 'mark_paid'; adminNote?: string },
+  ) {
+    return this.walletService.adminReviewPayout(id, adminId, body.action, body.adminNote);
+  }
+
+  // ─── COUNTRIES ────────────────────────────────────────────────
+
+  @Get('countries')
+  listCountries() {
+    return this.countriesService.listAll();
+  }
+
+  @Post('countries')
+  createCountry(
+    @Body() body: {
+      countryCode: string;
+      countryName: string;
+      phonePrefix: string;
+      flagEmoji?: string;
+      currency: string;
+      isActive?: boolean;
+    },
+  ) {
+    return this.countriesService.create(body);
+  }
+
+  @Patch('countries/:code')
+  toggleCountry(
+    @Param('code') code: string,
+    @Body() body: { isActive: boolean },
+  ) {
+    return this.countriesService.setActive(code, body.isActive);
+  }
+
+  // ─── PAYMENT PROVIDERS ────────────────────────────────────────
+
+  @Get('payments/providers')
+  listProviders(@Query('countryCode') countryCode?: string) {
+    return this.paymentService.listAllProviders(countryCode);
+  }
+
+  @Post('payments/providers/sync')
+  syncProviders(@Query('countryCode') countryCode: string) {
+    return this.paymentService.syncProviders(countryCode);
+  }
+
+  @Patch('payments/providers/:id')
+  toggleProvider(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { isEnabled: boolean },
+  ) {
+    return this.paymentService.toggleProvider(id, body.isEnabled);
   }
 
   // ─── STATS & PERFORMANCE ──────────────────────────────────────

@@ -31,6 +31,8 @@ class JobStatusBadge extends StatelessWidget {
 
   String get _label {
     switch (status) {
+      case JobStatus.paymentPending:
+        return 'Payment Pending';
       case JobStatus.requested:
         return 'Requested';
       case JobStatus.assigned:
@@ -52,6 +54,8 @@ class JobStatusBadge extends StatelessWidget {
 
   Color get _backgroundColor {
     switch (status) {
+      case JobStatus.paymentPending:
+        return Colors.purple.withValues(alpha: 0.1);
       case JobStatus.requested:
         return AppColors.badgeRequested.withValues(alpha: 0.1);
       case JobStatus.assigned:
@@ -73,6 +77,8 @@ class JobStatusBadge extends StatelessWidget {
 
   Color get _textColor {
     switch (status) {
+      case JobStatus.paymentPending:
+        return Colors.purple;
       case JobStatus.requested:
         return AppColors.badgeRequested;
       case JobStatus.assigned:

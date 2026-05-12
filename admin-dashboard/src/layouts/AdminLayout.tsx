@@ -9,12 +9,18 @@ import {
   Settings,
   LogOut,
   Trash2,
+  DollarSign,
+  CreditCard,
+  Wallet,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/users', label: 'Users', icon: Users },
   { to: '/jobs', label: 'Jobs', icon: Briefcase },
+  { to: '/earnings', label: 'Earnings', icon: DollarSign },
+  { to: '/subscriptions', label: 'Subscriptions', icon: CreditCard },
+  { to: '/payouts', label: 'Payouts', icon: Wallet },
   { to: '/disputes', label: 'Disputes', icon: AlertTriangle },
   { to: '/fraud-flags', label: 'Fraud Flags', icon: Shield },
   { to: '/config', label: 'Config', icon: Settings },

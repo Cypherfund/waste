@@ -13,6 +13,9 @@ import { AssignmentModule } from '../assignment/assignment.module';
 import { DisputesModule } from '../disputes/disputes.module';
 import { FraudModule } from '../fraud/fraud.module';
 import { EarningsModule } from '../earnings/earnings.module';
+import { WalletModule } from '../wallet/wallet.module';
+import { CountriesModule } from '../countries/countries.module';
+import { PaymentsModule } from '../payments/payments.module';
 
 @Module({
   imports: [
@@ -23,6 +26,9 @@ import { EarningsModule } from '../earnings/earnings.module';
     DisputesModule,
     FraudModule,
     EarningsModule,
+    WalletModule,
+    CountriesModule,
+    PaymentsModule,
   ],
   controllers: [AdminController],
   providers: [AdminService],

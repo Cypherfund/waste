@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
@@ -19,7 +19,7 @@ class CollectorCompleteJobScreen extends StatefulWidget {
 
 class _CollectorCompleteJobScreenState
     extends State<CollectorCompleteJobScreen> {
-  File? _proofImage;
+  XFile? _proofImage;
 
   @override
   Widget build(BuildContext context) {
@@ -155,24 +155,96 @@ class _CollectorCompleteJobScreenState
   Widget _buildPhotoPreview() {
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
-      child: Image.file(
-        _proofImage!,
-        width: double.infinity,
-        fit: BoxFit.cover,
+      child: FutureBuilder<Uint8List>(
+        future: _proofImage!.readAsBytes(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          return Image.memory(
+            snapshot.data!,
+            width: double.infinity,
+            fit: BoxFit.cover,
+          );
+        },
       ),
     );
   }
 
   Future<void> _pickProofImage() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(
-      source: ImageSource.camera,
-      maxWidth: 1280,
-      maxHeight: 1280,
-      imageQuality: 80,
+    if (kIsWeb) {
+      try {
+        final picker = ImagePicker();
+        final picked = await picker.pickImage(
+          source: ImageSource.gallery,
+          maxWidth: 1280,
+          maxHeight: 1280,
+          imageQuality: 80,
+        );
+        if (picked != null && mounted) setState(() => _proofImage = picked);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Could not open file picker: $e')),
+          );
+        }
+      }
+      return;
+    }
+
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 36, height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 12),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined),
+              title: const Text('Take a photo'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choose from gallery'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
     );
-    if (picked != null) {
-      setState(() => _proofImage = File(picked.path));
+
+    if (source == null) return;
+
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: source,
+        maxWidth: 1280,
+        maxHeight: 1280,
+        imageQuality: 80,
+      );
+      if (picked != null && mounted) {
+        setState(() => _proofImage = picked);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not access ${source == ImageSource.camera ? 'camera' : 'gallery'}: $e')),
+        );
+      }
     }
   }
 
@@ -189,6 +261,16 @@ class _CollectorCompleteJobScreenState
         context,
         '/collector-job-completed',
         arguments: widget.job,
+      );
+    } else if (!success && mounted) {
+      // Show error message to user
+      final error = provider.error ?? 'Failed to submit proof. Please try again.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
       );
     }
   }

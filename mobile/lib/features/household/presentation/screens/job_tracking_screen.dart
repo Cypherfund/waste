@@ -41,6 +41,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
 
     // Navigate to appropriate status screen based on job status
     switch (job.status) {
+      case JobStatus.paymentPending:
+        // Stay on current screen for payment pending
+        break;
       case JobStatus.requested:
         // Navigator.pushReplacement(
         //   context,

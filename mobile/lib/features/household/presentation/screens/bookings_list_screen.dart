@@ -370,7 +370,6 @@ class _BookingsListScreenState extends State<BookingsListScreen>
       Job job, {
         required bool isUpcoming,
       }) {
-    print('Opening booking ${job.id} - Status: ${job.status} - Upcoming: $isUpcoming');
     if (isUpcoming &&
         (job.status == JobStatus.requested ||
             job.status == JobStatus.assigned ||
@@ -391,6 +390,8 @@ class _BookingsListScreenState extends State<BookingsListScreen>
 
   Color _getStatusColor(JobStatus status) {
     switch (status) {
+      case JobStatus.paymentPending:
+        return Colors.purple;
       case JobStatus.requested:
         return const Color(0xFFF97316);
       case JobStatus.assigned:
@@ -412,6 +413,8 @@ class _BookingsListScreenState extends State<BookingsListScreen>
 
   String _getStatusText(JobStatus status) {
     switch (status) {
+      case JobStatus.paymentPending:
+        return 'Payment Pending';
       case JobStatus.requested:
         return 'Assigned';
       case JobStatus.assigned:
@@ -427,7 +430,7 @@ class _BookingsListScreenState extends State<BookingsListScreen>
       case JobStatus.cancelled:
         return 'Cancelled';
       case JobStatus.disputed:
-        return 'Issue';
+        return 'Disputed';
     }
   }
 }

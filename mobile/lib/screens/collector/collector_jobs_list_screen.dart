@@ -71,7 +71,35 @@ class _CollectorJobsListScreenState extends State<CollectorJobsListScreen>
           ),
         ),
       ),
-      body: TabBarView(
+      body: Column(
+        children: [
+          if (provider.error != null)
+            Material(
+              color: Colors.red.shade50,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline, color: Colors.red, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        provider.error!,
+                        style: const TextStyle(fontSize: 12, color: Colors.red),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.refresh, size: 16),
+                      onPressed: () => provider.loadJobs(refresh: true),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          Expanded(
+            child: TabBarView(
         controller: _tabController,
         children: [
           _JobTab(
@@ -97,6 +125,9 @@ class _CollectorJobsListScreenState extends State<CollectorJobsListScreen>
             emptySubtitle: 'Completed jobs will show here',
             emptyIcon: Icons.check_circle_outline,
             onRefresh: () => provider.loadJobs(refresh: true),
+          ),
+        ],
+            ),
           ),
         ],
       ),
