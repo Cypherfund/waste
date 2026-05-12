@@ -86,7 +86,7 @@ class WebSocketService {
   io.Socket? _socket;
   String? _currentUserId;
   String? _currentRole;
-  VoidCallback? onAuthError;
+  VoidCallback? onWsAuthError;
   final _jobStatusController = StreamController<JobStatusUpdate>.broadcast();
   final _collectorAssignedController =
       StreamController<CollectorAssignedEvent>.broadcast();
@@ -143,10 +143,11 @@ class WebSocketService {
 
     _socket!.on('error', (data) {
       debugPrint('[WS] Error: $data');
-      // If server says not authenticated, disconnect and trigger callback
+      // If server says not authenticated, disconnect the socket only.
+      // Do NOT log out the user — the HTTP session may still be valid.
       if (data is Map && (data['message']?.toString().toLowerCase().contains('not authenticated') ?? false)) {
         disconnect();
-        onAuthError?.call();
+        onWsAuthError?.call();
       }
     });
 

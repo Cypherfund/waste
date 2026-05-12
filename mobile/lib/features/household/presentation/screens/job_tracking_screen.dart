@@ -45,21 +45,21 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
         // Stay on current screen for payment pending
         break;
       case JobStatus.requested:
-        // Navigator.pushReplacement(
-        //   context,
-        //   MaterialPageRoute(
-        //     builder: (context) => BookingStatusRequestedScreen(jobId: widget.jobId),
-        //   ),
-        // );
-        // break;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => BookingStatusRequestedScreen(jobId: widget.jobId),
+          ),
+        );
+        break;
       case JobStatus.assigned:
-        // Navigator.pushReplacement(
-        //   context,
-        //   MaterialPageRoute(
-        //     builder: (context) => BookingStatusAssignedScreen(jobId: widget.jobId),
-        //   ),
-        // );
-        // break;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => BookingStatusAssignedScreen(jobId: widget.jobId),
+          ),
+        );
+        break;
       case JobStatus.inProgress:
         Navigator.pushReplacement(
           context,

@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+import '../../config/app_config.dart';
 import '../../models/auth_response.dart';
 import 'api_client.dart';
 
@@ -34,6 +36,15 @@ class AuthApi {
       if (countryCode != null && countryCode.isNotEmpty) 'countryCode': countryCode,
     });
     return AuthResponse.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<TokenResponse> refreshTokens(String refreshToken) async {
+    // Use a separate Dio instance to bypass the auth interceptor (avoid loops).
+    final response = await Dio(BaseOptions(
+      baseUrl: AppConfig.apiBaseUrl,
+      headers: {'Content-Type': 'application/json'},
+    )).post('/auth/refresh', data: {'refreshToken': refreshToken});
+    return TokenResponse.fromJson(response.data as Map<String, dynamic>);
   }
 
   Future<void> logout() async {

@@ -18,6 +18,8 @@ class BookingDetailsScreen extends StatefulWidget {
 }
 
 class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
+  bool _isCancelling = false;
+
   @override
   void initState() {
     super.initState();
@@ -769,6 +771,108 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
   
+  Future<void> _showCancelConfirmation(Job job) async {
+    final isAssigned = job.status == JobStatus.assigned;
+    final shouldCancel = await showDialog<bool>(
+      context: context,
+      barrierDismissible: !_isCancelling,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          titlePadding: const EdgeInsets.fromLTRB(22, 22, 22, 8),
+          contentPadding: const EdgeInsets.fromLTRB(22, 0, 22, 18),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          title: const Text(
+            'Cancel booking?',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF111827),
+            ),
+          ),
+          content: Text(
+            isAssigned
+                ? 'Are you sure you want to cancel? A collector has already been assigned.'
+                : 'Are you sure you want to cancel this pickup request? This action cannot be undone.',
+            style: const TextStyle(
+              fontSize: 13,
+              height: 1.45,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF6B7280),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text(
+                'Yes, Cancel',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFFDC2626),
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text(
+                'Keep Booking',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF111827),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldCancel == true && mounted) {
+      await _cancelBooking(job);
+    }
+  }
+
+  Future<void> _cancelBooking(Job job) async {
+    setState(() => _isCancelling = true);
+
+    try {
+      final jobProvider = context.read<JobProvider>();
+      final success = await jobProvider.cancelJob(job.id);
+
+      if (!mounted) return;
+
+      if (success) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/bookings',
+          (route) => route.settings.name == '/home',
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(jobProvider.error ?? 'Failed to cancel booking'),
+            backgroundColor: Colors.red.shade600,
+          ),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to cancel booking. Please try again.'),
+          backgroundColor: Color(0xFFDC2626),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isCancelling = false);
+    }
+  }
+
   Widget _buildBottomActions() {
     return Consumer<JobProvider>(
       builder: (context, jobProvider, _) {
@@ -777,9 +881,105 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         if (job == null) return const SizedBox.shrink();
         
         // Show different actions based on status
-        if (job.status == JobStatus.requested || 
-            job.status == JobStatus.assigned ||
-            job.status == JobStatus.inProgress) {
+        if (job.status == JobStatus.requested ||
+            job.status == JobStatus.assigned) {
+          return Container(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, -5),
+                ),
+              ],
+            ),
+            child: SafeArea(
+              top: false,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 52,
+                      child: OutlinedButton(
+                        onPressed: _isCancelling
+                            ? null
+                            : () => _showCancelConfirmation(job),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFFDC2626),
+                          disabledForegroundColor:
+                              const Color(0xFFDC2626).withValues(alpha: 0.45),
+                          side: BorderSide(
+                            color: _isCancelling
+                                ? const Color(0xFFDC2626).withValues(alpha: 0.35)
+                                : const Color(0xFFDC2626),
+                            width: 1.2,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: _isCancelling
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFFDC2626),
+                                ),
+                              )
+                            : const Text(
+                                'Cancel',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: SizedBox(
+                      height: 52,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          disabledBackgroundColor:
+                              AppColors.primary.withValues(alpha: 0.55),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          elevation: 0,
+                        ),
+                        onPressed: _isCancelling
+                            ? null
+                            : () {
+                                Navigator.pushNamed(
+                                  context,
+                                  '/job-tracking',
+                                  arguments: job.id,
+                                );
+                              },
+                        child: const Text(
+                          'Track Pickup',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        if (job.status == JobStatus.inProgress) {
           return Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -793,6 +993,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               ],
             ),
             child: SafeArea(
+              top: false,
               child: SizedBox(
                 width: double.infinity,
                 height: 56,

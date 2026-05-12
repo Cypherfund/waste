@@ -89,7 +89,9 @@ class _ScheduleLocationScreenState extends State<ScheduleLocationScreen> {
       if (placemarks.isNotEmpty) {
         final place = placemarks.first;
 
-        final street = _clean(place.street);
+        final rawStreet = _clean(place.street);
+        final isJustNumber = rawStreet != null && RegExp(r'^\d+$').hasMatch(rawStreet);
+        final street = isJustNumber ? null : rawStreet;
         final subLocality = _clean(place.subLocality);
         final locality = _clean(place.locality);
         final country = _clean(place.country);
@@ -103,7 +105,10 @@ class _ScheduleLocationScreenState extends State<ScheduleLocationScreen> {
 
           _city = country ?? '';
 
-          _streetAddress = street ?? '';
+          _streetAddress = street ??
+              [subLocality, locality]
+                  .whereType<String>()
+                  .join(', ');
 
           _nearbyAddress = subLocality != null
               ? 'Near $subLocality'

@@ -151,6 +151,31 @@ export class PaymentService {
     return qb.getMany();
   }
 
+  // ── CREATE provider (admin) ─────────────────────────────────────
+  async createProvider(data: Partial<PaymentProviderEntity>): Promise<PaymentProviderEntity> {
+    const provider = this.providerRepo.create(data);
+    return this.providerRepo.save(provider);
+  }
+
+  // ── UPDATE provider (admin) ─────────────────────────────────────
+  async updateProvider(id: number, data: Partial<PaymentProviderEntity>): Promise<PaymentProviderEntity> {
+    const provider = await this.providerRepo.findOne({ where: { id } });
+    if (!provider) {
+      throw new NotFoundException(`Payment provider ${id} not found`);
+    }
+    Object.assign(provider, data);
+    return this.providerRepo.save(provider);
+  }
+
+  // ── DELETE provider (admin) ─────────────────────────────────────
+  async deleteProvider(id: number): Promise<void> {
+    const provider = await this.providerRepo.findOne({ where: { id } });
+    if (!provider) {
+      throw new NotFoundException(`Payment provider ${id} not found`);
+    }
+    await this.providerRepo.remove(provider);
+  }
+
   // ── INITIATE payment ─────────────────────────────────────────────
   async initiatePayment(userId: string, dto: InitiatePaymentDto): Promise<PaymentTransaction> {
     // Validate provider exists

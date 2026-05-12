@@ -183,6 +183,28 @@ export interface EarningsListResponse {
   };
 }
 
+// ─── Payment Providers ───────────────────────────────────────────
+export interface PaymentProvider {
+  id: number;
+  paymentCode: string;
+  countryCode: string;
+  providerName: string;
+  currency: string;
+  minDeposit: number | null;
+  maxDeposit: number | null;
+  minWithdrawal: number | null;
+  maxWithdrawal: number | null;
+  supportsCashin: boolean;
+  supportsCashout: boolean;
+  imageUrl: string | null;
+  isGlobal: boolean;
+  isEnabled: boolean;
+  manualPaymentPhone: string | null;
+  manualPaymentAccountName: string | null;
+  syncedAt: string;
+  updatedAt: string;
+}
+
 // ─── Stats ───────────────────────────────────────────────────────
 export interface DashboardStats {
   totalUsers: number;

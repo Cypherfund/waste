@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../providers/auth_provider.dart';
 import '../../../../widgets/bottom_navigation.dart';
+import '../widgets/account_switcher_sheet.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -24,6 +25,11 @@ class ProfileScreen extends StatelessWidget {
         ),
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.switch_account_outlined, color: Colors.black),
+            tooltip: 'Switch Account',
+            onPressed: () => AccountSwitcherSheet.show(context),
+          ),
           IconButton(
             icon: const Icon(Icons.settings_outlined, color: Colors.black),
             onPressed: () {

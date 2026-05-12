@@ -71,12 +71,15 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
       if (placemarks.isNotEmpty && mounted) {
         final place = placemarks.first;
 
-        final street = place.street?.trim();
+        final rawStreet = place.street?.trim();
         final locality = place.locality?.trim();
+        final subLocality = place.subLocality?.trim();
+        final isJustNumber = rawStreet != null && RegExp(r'^\d+$').hasMatch(rawStreet);
+        final street = isJustNumber ? null : (rawStreet?.isNotEmpty == true ? rawStreet : null);
+        final fallback = [subLocality, locality].where((s) => s != null && s.isNotEmpty).join(', ');
 
         setState(() {
-          _currentAddress =
-          '${street?.isNotEmpty == true ? street : 'Bonapriso'}, ${locality?.isNotEmpty == true ? locality : 'Douala'}';
+          _currentAddress = street ?? (fallback.isNotEmpty ? fallback : 'Bonapriso, Douala');
           _isLoadingLocation = false;
         });
       }
@@ -146,10 +149,6 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                             : _buildDashboardEmptyPickup(),
 
                         const SizedBox(height: 22),
-
-                        _buildDashboardQuickActions(),
-
-                        const SizedBox(height: 16),
 
                         _buildSubscriptionCard(),
 
@@ -600,93 +599,6 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     );
   }
 
-  Widget _buildDashboardQuickActions() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Quick Actions',
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w800,
-            color: Color(0xFF111827),
-          ),
-        ),
-        const SizedBox(height: 14),
-        Row(
-          children: [
-            Expanded(
-              child: _quickActionTile(
-                icon: Icons.schedule_rounded,
-                label: 'Schedule\nPickup',
-                selected: true,
-                onTap: () => _navigateToScheduleFlow(),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _quickActionTile(
-                icon: Icons.event_note_rounded,
-                label: 'My\nBookings',
-                onTap: () => Navigator.pushNamed(context, '/bookings'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _quickActionTile(
-                icon: Icons.account_balance_wallet_outlined,
-                label: 'Wallet',
-                onTap: () => Navigator.pushNamed(context, '/wallet'),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _quickActionTile({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-    bool selected = false,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.primary : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: selected ? AppColors.primary : const Color(0xFFE5E7EB),
-          ),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              size: 24,
-              color: selected ? Colors.white : AppColors.primary,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: selected ? Colors.white : const Color(0xFF111827),
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-
   Widget _buildSubscriptionCard() {
     final sub = context.watch<SubscriptionProvider>();
     final subscription = sub.subscription;
@@ -809,12 +721,19 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                 ],
               ),
             ),
-            Text(
-              'Subscribe',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
                 color: AppColors.primary,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Text(
+                'Subscribe',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
               ),
             ),
           ],

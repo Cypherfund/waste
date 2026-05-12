@@ -4,6 +4,7 @@ import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/collector_earnings_provider.dart';
 import '../../widgets/app_card.dart';
+import '../../features/household/presentation/widgets/account_switcher_sheet.dart';
 
 class CollectorProfileTab extends StatefulWidget {
   const CollectorProfileTab({super.key});
@@ -35,7 +36,20 @@ class _CollectorProfileTabState extends State<CollectorProfileTab> {
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
           children: [
             // Header
-            Text('Profile', style: AppTypography.heading2),
+            Row(
+              children: [
+                Text('Profile', style: AppTypography.heading2),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.switch_account_outlined,
+                      color: AppColors.textPrimary),
+                  tooltip: 'Switch Account',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: () => AccountSwitcherSheet.show(context),
+                ),
+              ],
+            ),
             const SizedBox(height: 20),
 
             // Profile card

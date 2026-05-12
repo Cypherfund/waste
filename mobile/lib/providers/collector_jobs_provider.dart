@@ -255,6 +255,14 @@ class CollectorJobsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void reset() {
+    _jobs = [];
+    _isLoading = false;
+    _isActioning = false;
+    _error = null;
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     _statusSub?.cancel();
