@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
@@ -160,52 +161,91 @@ class _CollectorNavigateScreenState extends State<CollectorNavigateScreen> {
       body: Stack(
         children: [
           // Map fills the whole screen
-          Positioned.fill(
-            child: GoogleMap(
-              initialCameraPosition: CameraPosition(
-                target: _pickupLatLng,
-                zoom: _defaultZoom,
-              ),
-              onMapCreated: (controller) {
-                _mapController = controller;
-                _fitBounds();
-              },
-              markers: {
-                Marker(
-                  markerId: const MarkerId('destination'),
-                  position: _pickupLatLng,
-                  icon: BitmapDescriptor.defaultMarkerWithHue(
-                    BitmapDescriptor.hueGreen,
-                  ),
-                  infoWindow: const InfoWindow(title: 'Pickup location'),
-                ),
-                if (_currentPosition != null)
-                  Marker(
-                    markerId: const MarkerId('collector'),
-                    position: _currentPosition!,
-                    icon: BitmapDescriptor.defaultMarkerWithHue(
-                      BitmapDescriptor.hueAzure,
+          if (kIsWeb)
+            Positioned.fill(
+              child: Container(
+                color: const Color(0xFFEFF3F0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.navigation_rounded, size: 48, color: Color(0xFF16A34A)),
+                    const SizedBox(height: 12),
+                    Text(
+                      widget.job.locationAddress.isNotEmpty ? widget.job.locationAddress : 'Pickup location',
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF111827)),
+                      textAlign: TextAlign.center,
                     ),
-                    infoWindow: const InfoWindow(title: 'You'),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Lat ${_pickupLatLng.latitude.toStringAsFixed(5)}, Lng ${_pickupLatLng.longitude.toStringAsFixed(5)}',
+                      style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+                    ),
+                    const SizedBox(height: 16),
+                    GestureDetector(
+                      onTap: () => launchUrl(
+                        Uri.parse('https://www.google.com/maps/dir/?api=1&destination=${_pickupLatLng.latitude},${_pickupLatLng.longitude}'),
+                        mode: LaunchMode.externalApplication,
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF16A34A),
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: const Text('Open Navigation in Maps', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            Positioned.fill(
+              child: GoogleMap(
+                initialCameraPosition: CameraPosition(
+                  target: _pickupLatLng,
+                  zoom: _defaultZoom,
+                ),
+                onMapCreated: (controller) {
+                  _mapController = controller;
+                  _fitBounds();
+                },
+                markers: {
+                  Marker(
+                    markerId: const MarkerId('destination'),
+                    position: _pickupLatLng,
+                    icon: BitmapDescriptor.defaultMarkerWithHue(
+                      BitmapDescriptor.hueGreen,
+                    ),
+                    infoWindow: const InfoWindow(title: 'Pickup location'),
                   ),
-              },
-              polylines: {
-                if (_currentPosition != null)
-                  Polyline(
-                    polylineId: const PolylineId('route'),
-                    points: _buildRoutePoints(),
-                    color: AppColors.primary,
-                    width: 5,
-                    patterns: [],
-                  ),
-              },
-              myLocationEnabled: true,
-              myLocationButtonEnabled: false,
-              zoomControlsEnabled: false,
-              mapToolbarEnabled: false,
-              compassEnabled: false,
+                  if (_currentPosition != null)
+                    Marker(
+                      markerId: const MarkerId('collector'),
+                      position: _currentPosition!,
+                      icon: BitmapDescriptor.defaultMarkerWithHue(
+                        BitmapDescriptor.hueAzure,
+                      ),
+                      infoWindow: const InfoWindow(title: 'You'),
+                    ),
+                },
+                polylines: {
+                  if (_currentPosition != null)
+                    Polyline(
+                      polylineId: const PolylineId('route'),
+                      points: _buildRoutePoints(),
+                      color: AppColors.primary,
+                      width: 5,
+                      patterns: [],
+                    ),
+                },
+                myLocationEnabled: true,
+                myLocationButtonEnabled: false,
+                zoomControlsEnabled: false,
+                mapToolbarEnabled: false,
+                compassEnabled: false,
+              ),
             ),
-          ),
 
           // Top bar: back + title
           Positioned(

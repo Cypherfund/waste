@@ -1,9 +1,11 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../config/app_theme.dart';
 import '../../../../models/job.dart';
@@ -198,6 +200,32 @@ class _BookingStatusOnTheWayScreenState
   Widget _buildRealMapCard(Job job) {
     final pickupLatLng = _pickupLatLng(job);
     final collectorLatLng = _collectorLatLng(job);
+
+    if (kIsWeb) {
+      final mapsUrl = 'https://www.google.com/maps?q=${pickupLatLng.latitude},${pickupLatLng.longitude}';
+      return Container(
+        width: double.infinity,
+        height: 128,
+        decoration: BoxDecoration(
+          color: const Color(0xFFEFF3F0),
+          borderRadius: BorderRadius.circular(9),
+          border: Border.all(color: const Color(0xFFE5E7EB)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.location_on_rounded, size: 28, color: Color(0xFF16A34A)),
+            const SizedBox(width: 8),
+            const Text('Collector is on the way', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+            const SizedBox(width: 12),
+            GestureDetector(
+              onTap: () => launchUrl(Uri.parse(mapsUrl), mode: LaunchMode.externalApplication),
+              child: const Text('View on Maps', style: TextStyle(fontSize: 12, color: Color(0xFF16A34A), fontWeight: FontWeight.w700)),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Container(
       width: double.infinity,

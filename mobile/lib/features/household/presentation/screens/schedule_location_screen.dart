@@ -1,9 +1,11 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../config/app_theme.dart';
 
@@ -440,6 +442,43 @@ class _ScheduleLocationScreenState extends State<ScheduleLocationScreen> {
       _currentPosition!.latitude,
       _currentPosition!.longitude,
     );
+
+    if (kIsWeb) {
+      final mapsUrl = 'https://www.google.com/maps?q=${selectedLatLng.latitude},${selectedLatLng.longitude}';
+      return Container(
+        width: double.infinity,
+        height: 210,
+        decoration: BoxDecoration(
+          color: const Color(0xFFEFF3F0),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFE5E7EB)),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.location_on_rounded, size: 36, color: AppColors.primary),
+            const SizedBox(height: 8),
+            Text(
+              _streetAddress.isNotEmpty ? _streetAddress : 'Location selected',
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF111827)),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            GestureDetector(
+              onTap: () => launchUrl(Uri.parse(mapsUrl), mode: LaunchMode.externalApplication),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text('Open in Maps', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Container(
       width: double.infinity,

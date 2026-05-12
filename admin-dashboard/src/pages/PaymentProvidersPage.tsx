@@ -32,6 +32,7 @@ export default function PaymentProvidersPage() {
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [syncing, setSyncing] = useState(false);
+  const [syncCountry, setSyncCountry] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<PaymentProvider | null>(null);
 
   const fetchProviders = useCallback(
@@ -112,17 +113,18 @@ export default function PaymentProvidersPage() {
   };
 
   const handleSync = async () => {
-    if (!countryFilter) {
-      setFeedback('Select a country filter first to sync providers for that country.');
+    const code = syncCountry.trim().toUpperCase();
+    if (!code) {
+      setFeedback('Enter a country code to sync (e.g. CM).');
       return;
     }
     setSyncing(true);
     try {
-      const result = await paymentProvidersApi.sync(countryFilter);
-      setFeedback(`Sync complete: ${(result as { synced?: number }).synced ?? 0} synced.`);
+      const result = await paymentProvidersApi.sync(code);
+      setFeedback(`Sync complete for ${code}: ${(result as { synced?: number; updated?: number }).synced ?? 0} new, ${(result as { synced?: number; updated?: number }).updated ?? 0} updated.`);
       run();
     } catch {
-      setFeedback('Sync failed.');
+      setFeedback('Sync failed. Check the country code and gateway connectivity.');
     } finally {
       setSyncing(false);
     }
@@ -135,10 +137,17 @@ export default function PaymentProvidersPage() {
     <div>
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Payment Providers</h1>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <input
+            value={syncCountry}
+            onChange={(e) => setSyncCountry(e.target.value.toUpperCase())}
+            placeholder="Country code (e.g. CM)"
+            maxLength={10}
+            className="w-44 rounded border border-gray-300 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+          />
           <button
             onClick={handleSync}
-            disabled={syncing}
+            disabled={syncing || !syncCountry.trim()}
             className="inline-flex items-center gap-1.5 rounded border px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
           >
             <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
@@ -157,7 +166,7 @@ export default function PaymentProvidersPage() {
       <div className="mb-4 flex items-center gap-3">
         <select
           value={countryFilter}
-          onChange={(e) => setCountryFilter(e.target.value)}
+          onChange={(e) => { setCountryFilter(e.target.value); if (e.target.value) setSyncCountry(e.target.value); }}
           className="rounded border border-gray-300 px-3 py-1.5 text-sm"
         >
           <option value="">All Countries</option>
