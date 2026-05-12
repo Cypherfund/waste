@@ -15,7 +15,9 @@ import 'services/api/files_api.dart';
 import 'services/api/earnings_api.dart';
 import 'services/api/subscription_api.dart';
 import 'services/api/wallet_api.dart';
+import 'services/api/countries_api.dart';
 import 'providers/subscription_provider.dart';
+import 'providers/countries_provider.dart';
 import 'services/storage/secure_storage.dart';
 import 'services/websocket/websocket_service.dart';
 import 'services/location/location_tracking_service.dart';
@@ -85,6 +87,8 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
   late final EarningsApi _earningsApi;
   late final WalletApi _walletApi;
   late final SubscriptionApi _subscriptionApi;
+  late final CountriesApi _countriesApi;
+  late final CountriesProvider _countriesProvider;
   late final WebSocketService _wsService;
   late final LocationTrackingService _locationService;
   late final OfflineQueueService _queueService;
@@ -108,6 +112,8 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
     _earningsApi = EarningsApi(_apiClient);
     _walletApi = WalletApi(_apiClient);
     _subscriptionApi = SubscriptionApi(_apiClient);
+    _countriesApi = CountriesApi(_apiClient);
+    _countriesProvider = CountriesProvider(countriesApi: _countriesApi);
     _wsService = WebSocketService();
     _locationService = LocationTrackingService(wsService: _wsService);
     _queueService = OfflineQueueService();
@@ -170,6 +176,7 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
         ChangeNotifierProvider.value(value: _collectorEarningsProvider),
         ChangeNotifierProvider.value(value: _offlineQueueProvider),
         ChangeNotifierProvider.value(value: _subscriptionProvider),
+        ChangeNotifierProvider.value(value: _countriesProvider),
         Provider.value(value: widget.connectivityService),
         Provider.value(value: _locationService),
         Provider.value(value: _queueService),

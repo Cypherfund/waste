@@ -30,6 +30,8 @@ import { FraudSeverity } from '../common/enums/fraud-severity.enum';
 import { EarningStatus } from '../common/enums/earning-status.enum';
 import { WalletService } from '../wallet/wallet.service';
 import { PayoutRequestStatus } from '../wallet/entities/payout-request.entity';
+import { CountriesService } from '../countries/countries.service';
+import { PaymentService } from '../payments/payment.service';
 
 @ApiTags('Admin')
 @ApiBearerAuth()
@@ -39,6 +41,8 @@ export class AdminController {
   constructor(
     private readonly adminService: AdminService,
     private readonly walletService: WalletService,
+    private readonly countriesService: CountriesService,
+    private readonly paymentService: PaymentService,
   ) {}
 
   // ─── USERS ────────────────────────────────────────────────────
@@ -234,6 +238,55 @@ export class AdminController {
     @Body() body: { action: 'approve' | 'reject' | 'mark_paid'; adminNote?: string },
   ) {
     return this.walletService.adminReviewPayout(id, adminId, body.action, body.adminNote);
+  }
+
+  // ─── COUNTRIES ────────────────────────────────────────────────
+
+  @Get('countries')
+  listCountries() {
+    return this.countriesService.listAll();
+  }
+
+  @Post('countries')
+  createCountry(
+    @Body() body: {
+      countryCode: string;
+      countryName: string;
+      phonePrefix: string;
+      flagEmoji?: string;
+      currency: string;
+      isActive?: boolean;
+    },
+  ) {
+    return this.countriesService.create(body);
+  }
+
+  @Patch('countries/:code')
+  toggleCountry(
+    @Param('code') code: string,
+    @Body() body: { isActive: boolean },
+  ) {
+    return this.countriesService.setActive(code, body.isActive);
+  }
+
+  // ─── PAYMENT PROVIDERS ────────────────────────────────────────
+
+  @Get('payments/providers')
+  listProviders(@Query('countryCode') countryCode?: string) {
+    return this.paymentService.listAllProviders(countryCode);
+  }
+
+  @Post('payments/providers/sync')
+  syncProviders(@Query('countryCode') countryCode: string) {
+    return this.paymentService.syncProviders(countryCode);
+  }
+
+  @Patch('payments/providers/:id')
+  toggleProvider(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { isEnabled: boolean },
+  ) {
+    return this.paymentService.toggleProvider(id, body.isEnabled);
   }
 
   // ─── STATS & PERFORMANCE ──────────────────────────────────────

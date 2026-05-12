@@ -97,6 +97,7 @@ class AuthProvider extends ChangeNotifier {
     required String password,
     required String role,
     String? email,
+    String? countryCode,
   }) async {
     _isLoading = true;
     _error = null;
@@ -110,6 +111,7 @@ class AuthProvider extends ChangeNotifier {
         password: password,
         role: role,
         email: email,
+        countryCode: countryCode,
       );
       debugPrint('AuthProvider: Register successful. User role: ${response.user.role}, isHousehold: ${response.user.isHousehold}, isCollector: ${response.user.isCollector}');
 

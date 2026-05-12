@@ -28,13 +28,15 @@ enum UserRole { collector, household }
 class OnboardingData {
   UserRole? selectedRole;
   String? phoneNumber;
-  String? countryCode;
+  String? phonePrefix;      // e.g. "+237"
+  String? countryCode;      // e.g. "cmr"
   bool otpVerified;
 
   OnboardingData({
     this.selectedRole,
     this.phoneNumber,
-    this.countryCode = '+237',
+    this.phonePrefix = '+237',
+    this.countryCode = 'cmr',
     this.otpVerified = false,
   });
 }
@@ -93,10 +95,11 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       _slide(
         PhoneInputScreen(
           initialPhone: _data.phoneNumber,
-          initialCountryCode: _data.countryCode ?? '+237',
-          onSendCode: (phone, code) {
+          initialCountryCode: _data.phonePrefix ?? '+237',
+          onSendCode: (phone, phonePrefix, countryCode) {
             _data.phoneNumber = phone;
-            _data.countryCode = code;
+            _data.phonePrefix = phonePrefix;
+            _data.countryCode = countryCode;
             _goToOtp();
           },
           onBack: () => _navigatorKey.currentState?.pop(),
@@ -109,7 +112,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     _navigatorKey.currentState?.push(
       _slide(
         OtpScreen(
-          phoneNumber: '${_data.countryCode} ${_data.phoneNumber}',
+          phoneNumber: '${_data.phonePrefix} ${_data.phoneNumber}',
           onVerified: () {
             _data.otpVerified = true;
             _goToCompleteProfile();
@@ -124,7 +127,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     _navigatorKey.currentState?.push(
       _slide(
         CompleteProfileScreen(
-          phone: '${_data.countryCode}${_data.phoneNumber}',
+          phone: '${_data.phonePrefix}${_data.phoneNumber}',
+          countryCode: _data.countryCode ?? 'cmr',
           role: _data.selectedRole ?? UserRole.household,
           onComplete: () async {
             await markOnboardingCompleted();

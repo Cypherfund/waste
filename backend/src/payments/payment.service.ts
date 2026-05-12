@@ -11,6 +11,7 @@ import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { AxiosResponse } from 'axios';
 import { PaymentTransaction, TransactionStatus, TransactionType } from './entities/payment-transaction.entity';
+import { PaymentProviderEntity } from './entities/payment-provider.entity';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import { PaymentCallbackDto } from './dto/payment-callback.dto';
 import {
@@ -26,12 +27,12 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 @Injectable()
 export class PaymentService {
   private readonly logger = new Logger(PaymentService.name);
-  private providersCache: Map<string, { providers: PaymentProvider[]; timestamp: number }> = new Map();
-  private readonly PROVIDER_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
   constructor(
     @InjectRepository(PaymentTransaction)
     private readonly transactionRepo: Repository<PaymentTransaction>,
+    @InjectRepository(PaymentProviderEntity)
+    private readonly providerRepo: Repository<PaymentProviderEntity>,
     private readonly httpService: HttpService,
     private readonly systemConfigService: SystemConfigService,
     private readonly featureFlagService: FeatureFlagService,
@@ -51,66 +52,128 @@ export class PaymentService {
     return this.systemConfigService.getString('payment.country_code', 'cmr');
   }
 
-  // ── FETCH providers from gateway ─────────────────────────────────
-  async getProviders(countryCode?: string): Promise<PaymentProvider[]> {
+  // ── GET providers from local DB (admin-synced) ────────────────────
+  async getProviders(countryCode?: string): Promise<PaymentProviderEntity[]> {
     const code = countryCode || (await this.getCountryCode());
-    const cacheKey = code;
-    const cached = this.providersCache.get(cacheKey);
+    return this.providerRepo
+      .createQueryBuilder('p')
+      .where('p.is_enabled = true')
+      .andWhere('(p.country_code = :code OR p.is_global = true)', { code })
+      .orderBy('p.provider_name', 'ASC')
+      .getMany();
+  }
 
-    if (cached && Date.now() - cached.timestamp < this.PROVIDER_CACHE_TTL_MS) {
-      return cached.providers;
-    }
-
+  // ── SYNC providers from gateway into local DB ─────────────────────
+  async syncProviders(countryCode: string): Promise<{ synced: number; updated: number }> {
     const baseUrl = await this.getGatewayBaseUrl();
-    const url = `${baseUrl}/payment-api/payment/providers/${code}`;
+    const url = `${baseUrl}/payment-api/payment/providers/${countryCode}`;
 
-    try {
-      const response: AxiosResponse<GatewayProvidersResponse> = await firstValueFrom(
-        this.httpService.get<GatewayProvidersResponse>(url),
-      );
-      const data = response.data;
+    const response: AxiosResponse<GatewayProvidersResponse> = await firstValueFrom(
+      this.httpService.get<GatewayProvidersResponse>(url),
+    );
+    const data = response.data;
 
-      if (!data.success) {
-        throw new InternalServerErrorException(`Gateway error: ${data.message}`);
-      }
-
-      // Cache only active providers that support MOBILE_WALLET
-      const providers = data.data.filter(
-        (p: PaymentProvider) => p.bactive && p.supportedMethods.includes('MOBILE_WALLET'),
-      );
-
-      this.providersCache.set(cacheKey, { providers, timestamp: Date.now() });
-      return providers;
-    } catch (error) {
-      this.logger.error(`Failed to fetch providers: ${error.message}`);
-      // Return cached if available, even if stale
-      if (cached) {
-        return cached.providers;
-      }
-      throw new InternalServerErrorException('Failed to fetch payment providers');
+    if (!data.success) {
+      throw new InternalServerErrorException(`Gateway error: ${data.message}`);
     }
+
+    const gatewayProviders = data.data.filter(
+      (p: PaymentProvider) => p.bactive && p.supportedMethods.includes('MOBILE_WALLET'),
+    );
+
+    let synced = 0;
+    let updated = 0;
+
+    for (const gp of gatewayProviders) {
+      const existing = await this.providerRepo.findOne({
+        where: { paymentCode: gp.strPaymentCode, countryCode },
+      });
+
+      if (existing) {
+        existing.providerName = gp.strProviderName;
+        existing.currency = gp.currency;
+        existing.minDeposit = gp.dbMinDepositAmount;
+        existing.maxDeposit = gp.dbMaxDepositAmount;
+        existing.minWithdrawal = gp.dbMinWithdrawalAmount;
+        existing.maxWithdrawal = gp.dbMaxWithdrawalAmount;
+        existing.supportsCashin = gp.bcashin;
+        existing.supportsCashout = gp.bcashout;
+        existing.imageUrl = gp.strImageUrl ?? null;
+        existing.syncedAt = new Date();
+        await this.providerRepo.save(existing);
+        updated++;
+      } else {
+        const provider = this.providerRepo.create({
+          paymentCode: gp.strPaymentCode,
+          countryCode,
+          providerName: gp.strProviderName,
+          currency: gp.currency,
+          minDeposit: gp.dbMinDepositAmount,
+          maxDeposit: gp.dbMaxDepositAmount,
+          minWithdrawal: gp.dbMinWithdrawalAmount,
+          maxWithdrawal: gp.dbMaxWithdrawalAmount,
+          supportsCashin: gp.bcashin,
+          supportsCashout: gp.bcashout,
+          imageUrl: gp.strImageUrl ?? null,
+          isEnabled: true,
+          isGlobal: false,
+          syncedAt: new Date(),
+        });
+        await this.providerRepo.save(provider);
+        synced++;
+      }
+    }
+
+    this.logger.log(`Provider sync [${countryCode}]: ${synced} new, ${updated} updated`);
+    return { synced, updated };
+  }
+
+  // ── TOGGLE provider enabled/disabled ─────────────────────────────
+  async toggleProvider(id: number, isEnabled: boolean): Promise<PaymentProviderEntity> {
+    const provider = await this.providerRepo.findOne({ where: { id } });
+    if (!provider) {
+      throw new NotFoundException(`Payment provider ${id} not found`);
+    }
+    provider.isEnabled = isEnabled;
+    return this.providerRepo.save(provider);
+  }
+
+  // ── LIST all providers (admin, includes disabled) ─────────────────
+  async listAllProviders(countryCode?: string): Promise<PaymentProviderEntity[]> {
+    const qb = this.providerRepo
+      .createQueryBuilder('p')
+      .orderBy('p.country_code', 'ASC')
+      .addOrderBy('p.provider_name', 'ASC');
+
+    if (countryCode) {
+      qb.where('p.country_code = :countryCode', { countryCode });
+    }
+    return qb.getMany();
   }
 
   // ── INITIATE payment ─────────────────────────────────────────────
   async initiatePayment(userId: string, dto: InitiatePaymentDto): Promise<PaymentTransaction> {
     // Validate provider exists
     const providers = await this.getProviders();
-    const provider = providers.find((p) => p.strPaymentCode === dto.paymentCode);
+    const provider = providers.find((p) => p.paymentCode === dto.paymentCode);
     if (!provider) {
       throw new BadRequestException(`Invalid payment code: ${dto.paymentCode}`);
     }
 
     // Validate limits
     const minAmount = dto.type === TransactionType.CASHIN
-      ? provider.dbMinDepositAmount
-      : provider.dbMinWithdrawalAmount;
+      ? provider.minDeposit
+      : provider.minWithdrawal;
     const maxAmount = dto.type === TransactionType.CASHIN
-      ? provider.dbMaxDepositAmount
-      : provider.dbMaxWithdrawalAmount;
+      ? provider.maxDeposit
+      : provider.maxWithdrawal;
 
-    if (dto.amount < minAmount || dto.amount > maxAmount) {
+    if (
+      (minAmount !== null && dto.amount < minAmount) ||
+      (maxAmount !== null && dto.amount > maxAmount)
+    ) {
       throw new BadRequestException(
-        `Amount must be between ${minAmount} and ${maxAmount} ${provider.currency}`,
+        `Amount must be between ${minAmount ?? 0} and ${maxAmount ?? '∞'} ${provider.currency}`,
       );
     }
 
@@ -122,7 +185,7 @@ export class PaymentService {
       amount: dto.amount,
       currency: provider.currency,
       paymentCode: dto.paymentCode,
-      providerName: provider.strProviderName,
+      providerName: provider.providerName,
       phone: dto.phone,
       internalRef,
       gatewayTransactionId: null,

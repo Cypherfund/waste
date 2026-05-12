@@ -6,12 +6,13 @@ import { PaymentController } from './payment.controller';
 import { PaymentEventsService } from './payment-events.service';
 import { PaymentSchedulerService } from './payment-scheduler.service';
 import { PaymentTransaction } from './entities/payment-transaction.entity';
+import { PaymentProviderEntity } from './entities/payment-provider.entity';
 import { SystemConfigModule } from '../config/system-config.module';
 import { Job } from '../jobs/entities/job.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([PaymentTransaction, Job]),
+    TypeOrmModule.forFeature([PaymentTransaction, PaymentProviderEntity, Job]),
     HttpModule,
     SystemConfigModule,
   ],

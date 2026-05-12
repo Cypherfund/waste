@@ -14,7 +14,7 @@ import { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import { PaymentCallbackDto } from './dto/payment-callback.dto';
 import { CurrentUser, JwtPayload } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
-import { PaymentProvider } from './types/gateway.types';
+import { PaymentProviderEntity } from './entities/payment-provider.entity';
 import { PaymentTransaction } from './entities/payment-transaction.entity';
 
 @ApiTags('Payments')
@@ -22,14 +22,15 @@ import { PaymentTransaction } from './entities/payment-transaction.entity';
 export class PaymentController {
   constructor(private readonly paymentService: PaymentService) {}
 
-  // ── GET providers (public, cached) ────────────────────────────
-  @ApiOperation({ summary: 'Get available payment providers for a country' })
-  @Public()
-  @Get('providers/:countryCode')
+  // ── GET providers for logged-in user (by their stored country) ──
+  @ApiOperation({ summary: 'Get available payment providers for the current user\'s country' })
+  @ApiBearerAuth()
+  @Get('providers')
   async getProviders(
-    @Param('countryCode') countryCode: string,
-  ): Promise<PaymentProvider[]> {
-    return this.paymentService.getProviders(countryCode);
+    @CurrentUser() user: JwtPayload,
+    @Query('countryCode') countryCode?: string,
+  ): Promise<PaymentProviderEntity[]> {
+    return this.paymentService.getProviders(countryCode ?? user.countryCode ?? undefined);
   }
 
   // ── INITIATE payment ───────────────────────────────────────────
