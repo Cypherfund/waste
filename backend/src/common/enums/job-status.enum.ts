@@ -1,4 +1,5 @@
 export enum JobStatus {
+  PAYMENT_PENDING = 'PAYMENT_PENDING',
   REQUESTED = 'REQUESTED',
   ASSIGNED = 'ASSIGNED',
   IN_PROGRESS = 'IN_PROGRESS',
@@ -10,6 +11,7 @@ export enum JobStatus {
 }
 
 export const ALLOWED_TRANSITIONS: Record<JobStatus, JobStatus[]> = {
+  [JobStatus.PAYMENT_PENDING]: [JobStatus.REQUESTED, JobStatus.CANCELLED],
   [JobStatus.REQUESTED]: [JobStatus.ASSIGNED, JobStatus.CANCELLED],
   [JobStatus.ASSIGNED]: [JobStatus.IN_PROGRESS, JobStatus.REQUESTED, JobStatus.CANCELLED],
   [JobStatus.IN_PROGRESS]: [JobStatus.COMPLETED, JobStatus.CANCELLED],

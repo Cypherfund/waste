@@ -37,6 +37,8 @@ class JobApi {
     double? locationLat,
     double? locationLng,
     String? notes,
+    String? paymentMethod,
+    String? paymentRef,
   }) async {
     final response = await _client.dio.post('/jobs', data: {
       'scheduledDate': scheduledDate,
@@ -45,6 +47,8 @@ class JobApi {
       if (locationLat != null) 'locationLat': locationLat,
       if (locationLng != null) 'locationLng': locationLng,
       if (notes != null && notes.isNotEmpty) 'notes': notes,
+      if (paymentMethod != null && paymentMethod.isNotEmpty) 'paymentMethod': paymentMethod,
+      if (paymentRef != null && paymentRef.isNotEmpty) 'paymentRef': paymentRef,
     });
     return Job.fromJson(response.data as Map<String, dynamic>);
   }

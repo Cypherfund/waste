@@ -899,6 +899,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   
   Color _getStatusColor(JobStatus status) {
     switch (status) {
+      case JobStatus.paymentPending:
+        return Colors.purple;
       case JobStatus.requested:
         return Colors.orange;
       case JobStatus.assigned:
@@ -920,6 +922,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   
   IconData _getStatusIcon(JobStatus status) {
     switch (status) {
+      case JobStatus.paymentPending:
+        return Icons.payment;
       case JobStatus.requested:
         return Icons.search;
       case JobStatus.assigned:
@@ -941,6 +945,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   
   String _getStatusText(JobStatus status) {
     switch (status) {
+      case JobStatus.paymentPending:
+        return 'Payment Pending';
       case JobStatus.requested:
         return 'Finding Collector';
       case JobStatus.assigned:
@@ -962,6 +968,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   
   String _getStatusDescription(JobStatus status) {
     switch (status) {
+      case JobStatus.paymentPending:
+        return 'Waiting for admin to verify your payment';
       case JobStatus.requested:
         return 'We\'re looking for an available collector';
       case JobStatus.assigned:
@@ -971,13 +979,13 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       case JobStatus.completed:
         return 'Pickup completed successfully';
       case JobStatus.validated:
-        return 'You have confirmed the pickup';
+        return 'Pickup confirmed by collector';
       case JobStatus.rated:
         return 'You have rated this pickup';
       case JobStatus.cancelled:
-        return 'This booking was cancelled';
+        return 'This pickup was cancelled';
       case JobStatus.disputed:
-        return 'This pickup is under review';
+        return 'There is a dispute with this pickup';
     }
   }
 }

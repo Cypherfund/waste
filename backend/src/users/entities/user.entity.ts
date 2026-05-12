@@ -57,6 +57,9 @@ export class User {
   @Column({ type: 'decimal', precision: 12, scale: 2, default: 0, name: 'wallet_balance' })
   walletBalance: number;
 
+  @Column({ type: 'varchar', length: 10, nullable: true, name: 'country_code' })
+  countryCode: string | null;
+
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt: Date;
 

@@ -155,14 +155,14 @@ class _CollectorCompleteJobScreenState
   Widget _buildPhotoPreview() {
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
-      child: FutureBuilder<List<int>>(
-        future: _proofImage!.readAsBytes().then((b) => b.toList()),
+      child: FutureBuilder<Uint8List>(
+        future: _proofImage!.readAsBytes(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
           return Image.memory(
-            snapshot.data! as dynamic,
+            snapshot.data!,
             width: double.infinity,
             fit: BoxFit.cover,
           );
@@ -261,6 +261,16 @@ class _CollectorCompleteJobScreenState
         context,
         '/collector-job-completed',
         arguments: widget.job,
+      );
+    } else if (!success && mounted) {
+      // Show error message to user
+      final error = provider.error ?? 'Failed to submit proof. Please try again.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
       );
     }
   }

@@ -10,6 +10,7 @@ import '../../onboarding_flow.dart';
 class CompleteProfileScreen extends StatefulWidget {
   final String phone;
   final UserRole role;
+  final String countryCode;
   final VoidCallback onComplete;
   final VoidCallback onBack;
 
@@ -17,6 +18,7 @@ class CompleteProfileScreen extends StatefulWidget {
     super.key,
     required this.phone,
     required this.role,
+    required this.countryCode,
     required this.onComplete,
     required this.onBack,
   });
@@ -51,6 +53,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       phone: widget.phone,
       password: _passwordController.text,
       role: roleString,
+      countryCode: widget.countryCode,
     );
 
     if (!mounted) return;

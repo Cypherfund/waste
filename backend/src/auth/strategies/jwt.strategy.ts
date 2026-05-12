@@ -24,13 +24,13 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   async validate(payload: JwtPayload): Promise<JwtPayload> {
     const user = await this.userRepo.findOne({
       where: { id: payload.sub },
-      select: ['id', 'role', 'isActive'],
+      select: ['id', 'role', 'isActive', 'countryCode'],
     });
 
     if (!user || !user.isActive) {
       throw new UnauthorizedException('User not found or deactivated');
     }
 
-    return { sub: payload.sub, role: payload.role };
+    return { sub: payload.sub, role: payload.role, countryCode: user.countryCode ?? null };
   }
 }

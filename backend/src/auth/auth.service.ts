@@ -71,6 +71,7 @@ export class AuthService {
       email: dto.email || null,
       passwordHash,
       role: dto.role,
+      countryCode: dto.countryCode ?? null,
     });
 
     const savedUser = await this.userRepo.save(user);
@@ -166,7 +167,7 @@ export class AuthService {
   // --- Private helpers ---
 
   private async generateTokens(user: User): Promise<TokenResponseDto> {
-    const payload = { sub: user.id, role: user.role };
+    const payload = { sub: user.id, role: user.role, countryCode: user.countryCode ?? null };
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload),

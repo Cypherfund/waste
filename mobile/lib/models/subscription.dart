@@ -89,6 +89,7 @@ class PricingQuote {
   final int? remainingPickupsThisWeek;
   final String? planName;
   final double perPickupPrice;
+  final double? subscriptionPrice;
   final String? subscriptionSavingsMessage;
 
   PricingQuote({
@@ -98,6 +99,7 @@ class PricingQuote {
     this.remainingPickupsThisWeek,
     this.planName,
     required this.perPickupPrice,
+    this.subscriptionPrice,
     this.subscriptionSavingsMessage,
   });
 
@@ -114,6 +116,7 @@ class PricingQuote {
       remainingPickupsThisWeek: json['remainingPickupsThisWeek'] as int?,
       planName: json['planName'] as String?,
       perPickupPrice: (json['perPickupPrice'] as num).toDouble(),
+      subscriptionPrice: (json['subscriptionPrice'] as num?)?.toDouble(),
       subscriptionSavingsMessage: json['subscriptionSavingsMessage'] as String?,
     );
   }

@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { JobStatus } from '../../common/enums/job-status.enum';
+import { PricingType } from '../../common/enums/pricing-type.enum';
 
 export class JobResponseDto {
   @ApiProperty()
@@ -37,6 +38,24 @@ export class JobResponseDto {
 
   @ApiPropertyOptional({ nullable: true })
   notes: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  paymentMethod: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  paymentRef: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  paymentStatus: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  quotedPrice: number | null;
+
+  @ApiPropertyOptional({ enum: PricingType, nullable: true })
+  pricingType: PricingType | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  isCoveredBySubscription: boolean | null;
 
   @ApiPropertyOptional({ nullable: true })
   assignedAt: Date | null;

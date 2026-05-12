@@ -17,6 +17,7 @@ const mockStats = {
   avgCompletionTimeMinutes: 35,
   earningsTotal: 150000,
   earningsPending: 25000,
+  paymentIntegrationEnabled: true,
   jobsByStatus: { REQUESTED: 5, ASSIGNED: 4, IN_PROGRESS: 6, COMPLETED: 250 },
 };
 

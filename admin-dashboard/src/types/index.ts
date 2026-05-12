@@ -53,6 +53,9 @@ export interface Job {
   locationLng: number | null;
   address: string | null;
   notes: string | null;
+  paymentMethod: string | null;
+  paymentRef: string | null;
+  paymentStatus: string | null;
   assignedAt: string | null;
   startedAt: string | null;
   completedAt: string | null;

@@ -1,6 +1,7 @@
 import 'proof.dart';
 
 enum JobStatus {
+  paymentPending,
   requested,
   assigned,
   inProgress,
@@ -14,6 +15,7 @@ enum JobStatus {
     final lowerValue = value.toLowerCase();
     // Handle camelCase conversion from snake_case or uppercase if needed
     if (lowerValue == 'in_progress') return JobStatus.inProgress;
+    if (lowerValue == 'payment_pending') return JobStatus.paymentPending;
     
     return JobStatus.values.firstWhere(
       (e) => e.name.toLowerCase() == lowerValue,
@@ -21,7 +23,10 @@ enum JobStatus {
     );
   }
 
-  String toBackendString() => name.toUpperCase();
+  String toBackendString() {
+    if (this == JobStatus.paymentPending) return 'PAYMENT_PENDING';
+    return name.toUpperCase();
+  }
 }
 
 class Job {
@@ -38,6 +43,9 @@ class Job {
   final double? locationLat;
   final double? locationLng;
   final String? notes;
+  final String? paymentMethod;
+  final String? paymentRef;
+  final String? paymentStatus;
   final DateTime? assignedAt;
   final DateTime? startedAt;
   final DateTime? completedAt;
@@ -48,6 +56,9 @@ class Job {
   final int? rating;
   final String? ratingComment;
   final Proof? proof;
+  final double? quotedPrice;
+  final String? pricingType;
+  final bool? isCoveredBySubscription;
 
   Job({
     required this.id,
@@ -63,6 +74,9 @@ class Job {
     this.locationLat,
     this.locationLng,
     this.notes,
+    this.paymentMethod,
+    this.paymentRef,
+    this.paymentStatus,
     this.assignedAt,
     this.startedAt,
     this.completedAt,
@@ -73,6 +87,9 @@ class Job {
     this.rating,
     this.ratingComment,
     this.proof,
+    this.quotedPrice,
+    this.pricingType,
+    this.isCoveredBySubscription,
   });
 
   factory Job.fromJson(Map<String, dynamic> json) {
@@ -94,26 +111,32 @@ class Job {
           ? double.tryParse(json['locationLng'].toString())
           : null,
       notes: json['notes'] as String?,
+      paymentMethod: json['paymentMethod'] as String?,
+      paymentRef: json['paymentRef'] as String?,
+      paymentStatus: json['paymentStatus'] as String?,
       assignedAt: json['assignedAt'] != null
-          ? DateTime.parse(json['assignedAt'] as String)
+          ? DateTime.tryParse(json['assignedAt'] as String)
           : null,
       startedAt: json['startedAt'] != null
-          ? DateTime.parse(json['startedAt'] as String)
+          ? DateTime.tryParse(json['startedAt'] as String)
           : null,
       completedAt: json['completedAt'] != null
-          ? DateTime.parse(json['completedAt'] as String)
+          ? DateTime.tryParse(json['completedAt'] as String)
           : null,
       validatedAt: json['validatedAt'] != null
-          ? DateTime.parse(json['validatedAt'] as String)
+          ? DateTime.tryParse(json['validatedAt'] as String)
           : null,
       cancelledAt: json['cancelledAt'] != null
-          ? DateTime.parse(json['cancelledAt'] as String)
+          ? DateTime.tryParse(json['cancelledAt'] as String)
           : null,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
       rating: json['rating'] as int?,
       ratingComment: json['ratingComment'] as String?,
       proof: json['proof'] != null ? Proof.fromJson(json['proof'] as Map<String, dynamic>) : null,
+      quotedPrice: json['quotedPrice'] != null ? double.tryParse(json['quotedPrice'].toString()) : null,
+      pricingType: json['pricingType'] as String?,
+      isCoveredBySubscription: json['isCoveredBySubscription'] as bool?,
     );
   }
 
@@ -142,6 +165,9 @@ class Job {
       'rating': rating,
       'ratingComment': ratingComment,
       'proof': proof?.toJson(),
+      'quotedPrice': quotedPrice,
+      'pricingType': pricingType,
+      'isCoveredBySubscription': isCoveredBySubscription,
     };
   }
 

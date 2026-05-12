@@ -2,12 +2,14 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { join } from 'path';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: ['error', 'warn', 'log'],
   });
 
@@ -15,10 +17,22 @@ async function bootstrap() {
   const port = configService.get<number>('port', 3000);
   const apiPrefix = configService.get<string>('apiPrefix', 'api/v1');
   const corsOrigins = configService.get<string[]>('cors.origins', ['http://localhost:5173']);
+  const storageType = configService.get<string>('STORAGE_TYPE', 'local');
+  const uploadsDir = configService.get<string>('UPLOADS_DIR', './uploads');
+  
   logger.log(`CORS Origins: ${JSON.stringify(corsOrigins)}`);
+  logger.log(`Storage Type: ${storageType}`);
 
   // Global prefix
   app.setGlobalPrefix(apiPrefix);
+  
+  // Serve static files if using local storage
+  if (storageType === 'local') {
+    app.useStaticAssets(join(__dirname, '..', uploadsDir), {
+      prefix: '/uploads/',
+    });
+    logger.log(`Serving static files from: ${uploadsDir}`);
+  }
 
   // Security headers
   app.use(helmet());

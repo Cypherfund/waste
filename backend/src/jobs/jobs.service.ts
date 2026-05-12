@@ -18,6 +18,7 @@ import { RejectJobDto } from './dto/reject-job.dto';
 import { JobResponseDto } from './dto/job-response.dto';
 import { JobFilterDto } from './dto/job-filter.dto';
 import { JobStatus, validateTransition } from '../common/enums/job-status.enum';
+import { PaymentStatus } from '../common/enums/payment-status.enum';
 import { UserRole } from '../common/enums/role.enum';
 import { PaginatedResponse, paginate } from '../common/dto/pagination.dto';
 import {
@@ -29,6 +30,9 @@ import {
   ProofEvents,
 } from '../events/events.types';
 import { FilesService } from '../files/files.service';
+import { PricingService } from '../subscriptions/pricing.service';
+import { PaymentService } from '../payments/payment.service';
+import { TransactionType } from '../payments/entities/payment-transaction.entity';
 
 @Injectable()
 export class JobsService {
@@ -41,6 +45,8 @@ export class JobsService {
     private readonly proofRepo: Repository<Proof>,
     private readonly eventEmitter: EventEmitter2,
     private readonly filesService: FilesService,
+    private readonly pricingService: PricingService,
+    private readonly paymentService: PaymentService,
   ) {}
 
   // ─── CRUD ─────────────────────────────────────────────────────
@@ -56,7 +62,7 @@ export class JobsService {
     }
 
     // Duplicate check: mirrors DDL unique partial index idx_jobs_no_duplicate
-    const activeStatuses = [JobStatus.REQUESTED, JobStatus.ASSIGNED, JobStatus.IN_PROGRESS];
+    const activeStatuses = [JobStatus.REQUESTED, JobStatus.ASSIGNED, JobStatus.IN_PROGRESS, JobStatus.PAYMENT_PENDING];
     const existingJob = await this.jobRepo.findOne({
       where: {
         householdId,
@@ -71,19 +77,71 @@ export class JobsService {
       );
     }
 
+    // Check if real payment integration is enabled
+    const paymentIntegrationEnabled = await this.paymentService.isPaymentIntegrationEnabled();
+
+    // Determine payment flow
+    let requiresRealPayment = false;
+    let requiresManualVerification = false;
+
+    if (paymentIntegrationEnabled && dto.paymentCode && dto.paymentPhone) {
+      requiresRealPayment = true;
+    } else if (dto.paymentMethod && dto.paymentRef) {
+      requiresManualVerification = true;
+    }
+
+    const initialStatus = (requiresRealPayment || requiresManualVerification)
+      ? JobStatus.PAYMENT_PENDING
+      : JobStatus.REQUESTED;
+    const paymentStatus = (requiresRealPayment || requiresManualVerification)
+      ? PaymentStatus.PENDING
+      : PaymentStatus.NOT_REQUIRED;
+
+    // Get pricing quote from PricingService
+    const pricingQuote = await this.pricingService.getQuoteForUser(householdId);
+
+    // Consume pickup if covered by subscription
+    if (pricingQuote.isCoveredBySubscription) {
+      await this.pricingService.consumePickup(householdId);
+    }
+
     const job = this.jobRepo.create({
       householdId,
-      status: JobStatus.REQUESTED,
+      status: initialStatus,
       scheduledDate: dto.scheduledDate,
       scheduledTime: dto.scheduledTime,
       locationAddress: dto.locationAddress,
       locationLat: dto.locationLat ?? null,
       locationLng: dto.locationLng ?? null,
       notes: dto.notes ?? null,
+      paymentMethod: dto.paymentMethod ?? null,
+      paymentRef: dto.paymentRef ?? null,
+      paymentStatus,
+      quotedPrice: pricingQuote.quotedPrice,
+      pricingType: pricingQuote.pricingType,
+      isCoveredBySubscription: pricingQuote.isCoveredBySubscription,
     });
 
     const saved = await this.jobRepo.save(job);
     this.logger.log(`Job created: ${saved.id} by household ${householdId}`);
+
+    // Initiate real payment if required and not covered by subscription
+    if (requiresRealPayment && !pricingQuote.isCoveredBySubscription && dto.paymentCode && dto.paymentPhone) {
+      try {
+        const paymentTx = await this.paymentService.initiatePayment(householdId, {
+          type: TransactionType.CASHIN,
+          amount: pricingQuote.quotedPrice,
+          paymentCode: dto.paymentCode,
+          phone: dto.paymentPhone,
+          jobId: saved.id,
+        });
+        this.logger.log(`Payment initiated for job ${saved.id}: tx ${paymentTx.id}`);
+      } catch (error) {
+        this.logger.error(`Failed to initiate payment for job ${saved.id}: ${error.message}`);
+        // Job is already created - payment status is PENDING
+        // Admin can manually verify or user can retry
+      }
+    }
 
     this.emitEvent(JobEvents.CREATED, saved);
 
@@ -580,6 +638,12 @@ export class JobsService {
       locationLat: job.locationLat,
       locationLng: job.locationLng,
       notes: job.notes,
+      paymentMethod: job.paymentMethod,
+      paymentRef: job.paymentRef,
+      paymentStatus: job.paymentStatus,
+      quotedPrice: job.quotedPrice,
+      pricingType: job.pricingType,
+      isCoveredBySubscription: job.isCoveredBySubscription,
       assignedAt: job.assignedAt,
       startedAt: job.startedAt,
       completedAt: job.completedAt,
