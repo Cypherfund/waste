@@ -97,6 +97,7 @@ export class UsersService {
       longitude: user.longitude,
       avgRating: user.avgRating,
       totalCompleted: user.totalCompleted,
+      countryCode: user.countryCode,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };

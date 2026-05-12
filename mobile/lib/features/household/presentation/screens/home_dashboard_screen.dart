@@ -37,6 +37,12 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     });
   }
 
+  void _navigateToScheduleFlow() {
+    // Always go directly to date/time selection
+    // Payment choice (one-time vs subscription) will be handled at payment screen
+    Navigator.pushNamed(context, '/schedule-date-time');
+  }
+
   Future<void> _getCurrentLocation() async {
     try {
       var permission = await Geolocator.checkPermission();
@@ -486,7 +492,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                 ),
                 const SizedBox(height: 20),
                 GestureDetector(
-                  onTap: () => Navigator.pushNamed(context, '/schedule-pickup'),
+                  onTap: () => _navigateToScheduleFlow(),
                   child: Text(
                     'Schedule now',
                     style: TextStyle(
@@ -538,7 +544,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                 icon: Icons.schedule_rounded,
                 label: 'Schedule\nPickup',
                 selected: true,
-                onTap: () => Navigator.pushNamed(context, '/schedule-pickup'),
+                onTap: () => _navigateToScheduleFlow(),
               ),
             ),
             const SizedBox(width: 12),
@@ -780,8 +786,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                 SizedBox(
                   height: 36,
                   child: ElevatedButton(
-                    onPressed: () =>
-                        Navigator.pushNamed(context, '/schedule-pickup'),
+                    onPressed: () => _navigateToScheduleFlow(),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,

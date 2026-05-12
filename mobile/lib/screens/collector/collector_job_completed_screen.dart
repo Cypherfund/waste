@@ -47,7 +47,7 @@ class CollectorJobCompletedScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                '1,400 XAF',
+                '${job.quotedPrice?.toInt() ?? 0} XAF',
                 style: AppTypography.heading1.copyWith(
                   color: AppColors.primary,
                   fontSize: 36,

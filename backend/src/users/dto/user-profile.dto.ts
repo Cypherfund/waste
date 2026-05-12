@@ -35,6 +35,9 @@ export class UserProfileDto {
   @ApiProperty({ description: 'Total completed jobs (collectors only)' })
   totalCompleted: number;
 
+  @ApiPropertyOptional({ nullable: true, description: 'User country code (e.g. cmr, ken)' })
+  countryCode: string | null;
+
   @ApiProperty()
   createdAt: Date;
 

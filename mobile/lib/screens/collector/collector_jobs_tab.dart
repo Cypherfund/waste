@@ -371,7 +371,7 @@ class _CompletedTab extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    '+1,400 XAF',
+                    '+${job.quotedPrice?.toInt() ?? 0} XAF',
                     style: AppTypography.bodyMedium.copyWith(
                       color: AppColors.primary,
                       fontWeight: FontWeight.w600,

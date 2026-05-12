@@ -48,6 +48,16 @@ export const jobsApi = {
     client
       .post(`/jobs/${jobId}/cancel`, { reason })
       .then((r) => r.data),
+
+  verifyPayment: (jobId: string) =>
+    client
+      .patch(`/admin/jobs/${jobId}/verify-payment`)
+      .then((r) => r.data),
+
+  rejectPayment: (jobId: string, reason?: string) =>
+    client
+      .patch(`/admin/jobs/${jobId}/reject-payment`, { reason })
+      .then((r) => r.data),
 };
 
 export const disputesApi = {

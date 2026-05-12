@@ -2,6 +2,7 @@ export * from './role.enum';
 export * from './job-status.enum';
 export * from './earning-status.enum';
 export * from './notification-type.enum';
+export * from './payment-status.enum';
 export * from './notification-channel.enum';
 export * from './fraud-type.enum';
 export * from './fraud-severity.enum';

@@ -51,4 +51,28 @@ export class CreateJobDto {
   @IsString()
   @MaxLength(1000)
   notes?: string;
+
+  @ApiPropertyOptional({ example: 'MOBILE_MONEY', description: 'Payment method (for manual payments)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  paymentMethod?: string;
+
+  @ApiPropertyOptional({ example: 'TX123456789', description: 'Payment reference/transaction ID (for manual verification)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  paymentRef?: string;
+
+  @ApiPropertyOptional({ example: '105', description: 'Payment provider code (e.g. 105 for MTN, 106 for Orange) for real payments' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  paymentCode?: string;
+
+  @ApiPropertyOptional({ example: '650931636', description: 'Phone number for mobile money payment (Cameroon format, 9 digits starting with 6)' })
+  @IsOptional()
+  @IsString()
+  @Matches(/^6[0-9]{8}$/, { message: 'paymentPhone must be a valid Cameroon mobile number (9 digits starting with 6)' })
+  paymentPhone?: string;
 }

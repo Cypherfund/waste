@@ -1,10 +1,9 @@
-import { IsString, IsUrl, IsOptional, IsNumber, Min, Max } from 'class-validator';
+import { IsString, IsOptional, IsNumber, Min, Max } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CompleteJobDto {
   @ApiProperty({ example: 'https://cdn.example.com/proof/abc123.jpg' })
   @IsString()
-  @IsUrl()
   proofImageUrl: string;
 
   @ApiPropertyOptional({ example: 4.0435 })

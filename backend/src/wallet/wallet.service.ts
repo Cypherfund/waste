@@ -10,7 +10,6 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { User } from '../users/entities/user.entity';
 import { PayoutRequest, PayoutRequestStatus } from './entities/payout-request.entity';
 import { SystemConfigService } from '../config/system-config.service';
-import { FeatureFlagService, FEATURE_FLAGS } from '../config/feature-flags';
 import { EarningsEvents, EarningsConfirmedPayload } from '../events/events.types';
 
 @Injectable()
@@ -23,7 +22,6 @@ export class WalletService {
     @InjectRepository(PayoutRequest)
     private readonly payoutRepo: Repository<PayoutRequest>,
     private readonly systemConfigService: SystemConfigService,
-    private readonly featureFlagService: FeatureFlagService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -143,32 +141,27 @@ export class WalletService {
         .where('id = :id', { id: collectorId })
         .execute();
 
-      const payoutIntegrationEnabled = await this.featureFlagService.isEnabled(
-        FEATURE_FLAGS.PAYMENT_INTEGRATION,
-        false,
-      );
-
       const request = em.getRepository(PayoutRequest).create({
         collectorId,
         amount: dto.amount,
         method: dto.method,
         accountNumber: dto.accountNumber ?? null,
         accountName: dto.accountName ?? null,
-        status: payoutIntegrationEnabled
-          ? PayoutRequestStatus.APPROVED
-          : PayoutRequestStatus.PENDING,
+        status: PayoutRequestStatus.PENDING, // Admin will review and process manually
       });
 
       const saved = await em.getRepository(PayoutRequest).save(request);
 
-      if (payoutIntegrationEnabled) {
-        this.logger.log(
-          `Payment integration active — auto-approved payout ${saved.id} for ${dto.amount} XAF`,
-        );
-      }
+      this.logger.log(
+        `Payout request ${saved.id} created for ${dto.amount} XAF — pending admin review`,
+      );
 
       return saved;
     });
+
+    // Note: Real cashout (sending money to collector's phone) is not yet implemented.
+    // For now, admin manually processes payouts via the admin dashboard.
+    // When a cashout API becomes available, this is where we'd initiate it.
 
     return result;
   }

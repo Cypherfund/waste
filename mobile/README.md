@@ -238,3 +238,4 @@ flutter build web --dart-define=API_BASE_URL=http://10.12.1.172:3000/api/v1 --da
 npm run dev -- --host
 
 flutter build apk --dart-define=API_BASE_URL=http://10.12.1.172:3000/api/v1 --dart-define=WS_BASE_URL=ws://10.12.1.172:3000
+flutter build apk --dart-define=API_BASE_URL=http://192.168.43.77:3000/api/v1 --dart-define=WS_BASE_URL=ws://192.168.43.77:3000

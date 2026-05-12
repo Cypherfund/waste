@@ -86,6 +86,8 @@ class JobsProvider extends ChangeNotifier {
     double? locationLat,
     double? locationLng,
     String? notes,
+    String? paymentMethod,
+    String? paymentRef,
   }) async {
     _isLoading = true;
     _error = null;
@@ -99,6 +101,8 @@ class JobsProvider extends ChangeNotifier {
         locationLat: locationLat,
         locationLng: locationLng,
         notes: notes,
+        paymentMethod: paymentMethod,
+        paymentRef: paymentRef,
       );
       _jobs.insert(0, job);
       _wsService.subscribeToJob(job.id);

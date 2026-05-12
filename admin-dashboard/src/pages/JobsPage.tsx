@@ -6,6 +6,7 @@ import ErrorBox from '../components/ErrorBox';
 import type { Job, JobListResponse, AdminUser } from '../types';
 
 const JOB_STATUSES = [
+  'PAYMENT_PENDING',
   'REQUESTED',
   'ASSIGNED',
   'IN_PROGRESS',
@@ -15,8 +16,16 @@ const JOB_STATUSES = [
   'CANCELLED',
 ];
 
+const PAYMENT_STATUSES = [
+  'PENDING',
+  'VERIFIED',
+  'REJECTED',
+  'NOT_REQUIRED',
+];
+
 export default function JobsPage() {
   const [statusFilter, setStatusFilter] = useState('');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [page, setPage] = useState(1);
@@ -33,14 +42,20 @@ export default function JobsPage() {
   const [reassignCollectorId, setReassignCollectorId] = useState('');
   const [reassignLoading, setReassignLoading] = useState(false);
   const [reassignError, setReassignError] = useState('');
+  const [paymentRejectReason, setPaymentRejectReason] = useState('');
+  const [showRejectReason, setShowRejectReason] = useState(false);
+  const [paymentVerifyLoading, setPaymentVerifyLoading] = useState(false);
+  const [paymentRejectLoading, setPaymentRejectLoading] = useState(false);
+  const [paymentError, setPaymentError] = useState('');
 
   const fetchJobs = useCallback(() => {
     const params: Record<string, string> = { page: String(page), limit: '20' };
     if (statusFilter) params.status = statusFilter;
+    if (paymentStatusFilter) params.paymentStatus = paymentStatusFilter;
     if (dateFrom) params.dateFrom = dateFrom;
     if (dateTo) params.dateTo = dateTo;
     return jobsApi.list(params);
-  }, [statusFilter, dateFrom, dateTo, page]);
+  }, [statusFilter, paymentStatusFilter, dateFrom, dateTo, page]);
 
   const { data, loading, error, run } = useAsync<JobListResponse>(fetchJobs);
 
@@ -111,6 +126,45 @@ export default function JobsPage() {
     }
   };
 
+  const handleVerifyPayment = async () => {
+    if (!selectedJob) return;
+    setPaymentVerifyLoading(true);
+    setPaymentError('');
+    try {
+      await jobsApi.verifyPayment(selectedJob.id);
+      setFeedback(`Payment verified successfully. Job moved to REQUESTED status.`);
+      setSelectedJob(null);
+      run();
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || 'Payment verification failed';
+      setPaymentError(typeof msg === 'string' ? msg : JSON.stringify(msg));
+    } finally {
+      setPaymentVerifyLoading(false);
+    }
+  };
+
+  const handleRejectPayment = async () => {
+    if (!selectedJob) return;
+    setPaymentRejectLoading(true);
+    setPaymentError('');
+    try {
+      await jobsApi.rejectPayment(selectedJob.id, paymentRejectReason);
+      setFeedback(`Payment rejected. Job cancelled.`);
+      setSelectedJob(null);
+      setPaymentRejectReason('');
+      run();
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || 'Payment rejection failed';
+      setPaymentError(typeof msg === 'string' ? msg : JSON.stringify(msg));
+    } finally {
+      setPaymentRejectLoading(false);
+    }
+  };
+
   return (
     <div>
       <h1 className="mb-4 text-2xl font-bold text-gray-900">Jobs</h1>
@@ -125,8 +179,23 @@ export default function JobsPage() {
           }}
           className="rounded border border-gray-300 px-3 py-1.5 text-sm"
         >
-          <option value="">All Statuses</option>
+          <option value="">All Job Statuses</option>
           {JOB_STATUSES.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+        <select
+          value={paymentStatusFilter}
+          onChange={(e) => {
+            setPaymentStatusFilter(e.target.value);
+            setPage(1);
+          }}
+          className="rounded border border-gray-300 px-3 py-1.5 text-sm"
+        >
+          <option value="">All Payment Statuses</option>
+          {PAYMENT_STATUSES.map((s) => (
             <option key={s} value={s}>
               {s}
             </option>
@@ -312,7 +381,81 @@ export default function JobsPage() {
                   <span className="ml-1">{selectedJob.notes}</span>
                 </div>
               )}
+              {selectedJob.paymentMethod && (
+                <div>
+                  <span className="text-gray-500">Payment Method:</span>
+                  <span className="ml-1">{selectedJob.paymentMethod}</span>
+                </div>
+              )}
+              {selectedJob.paymentRef && (
+                <div>
+                  <span className="text-gray-500">Payment Ref:</span>
+                  <span className="ml-1 font-mono text-xs">{selectedJob.paymentRef}</span>
+                </div>
+              )}
             </div>
+
+            {/* Payment Verification — only for PAYMENT_PENDING jobs */}
+            {selectedJob.status === 'PAYMENT_PENDING' && (
+              <div className="mb-4 rounded border border-purple-200 bg-purple-50 p-3">
+                <p className="mb-2 text-sm font-medium text-purple-800">
+                  Payment Verification Required
+                </p>
+                <p className="mb-3 text-xs text-purple-600">
+                  User has submitted payment information. Please verify the payment before
+                  allowing this job to proceed to assignment.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleVerifyPayment}
+                    disabled={paymentVerifyLoading}
+                    className="rounded bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                  >
+                    {paymentVerifyLoading ? 'Verifying...' : 'Verify Payment'}
+                  </button>
+                  <button
+                    onClick={() => setShowRejectReason(true)}
+                    disabled={paymentRejectLoading}
+                    className="rounded border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                  >
+                    Reject
+                  </button>
+                </div>
+                {showRejectReason && (
+                  <div className="mt-3">
+                    <textarea
+                      value={paymentRejectReason}
+                      onChange={(e) => setPaymentRejectReason(e.target.value)}
+                      placeholder="Reason for rejection (optional)"
+                      className="w-full rounded border px-2 py-1.5 text-sm"
+                      rows={2}
+                    />
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        onClick={handleRejectPayment}
+                        disabled={paymentRejectLoading || !paymentRejectReason}
+                        className="rounded bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                      >
+                        {paymentRejectLoading ? 'Rejecting...' : 'Confirm Rejection'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowRejectReason(false);
+                          setPaymentRejectReason('');
+                          setPaymentError('');
+                        }}
+                        className="rounded border px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {paymentError && (
+                  <p className="mt-2 text-xs text-red-600">{paymentError}</p>
+                )}
+              </div>
+            )}
 
             {/* Manual Assignment — only for REQUESTED jobs */}
             {selectedJob.status === 'REQUESTED' && (
@@ -441,6 +584,7 @@ export default function JobsPage() {
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
+    PAYMENT_PENDING: 'bg-purple-100 text-purple-700',
     REQUESTED: 'bg-blue-100 text-blue-700',
     ASSIGNED: 'bg-yellow-100 text-yellow-700',
     IN_PROGRESS: 'bg-orange-100 text-orange-700',

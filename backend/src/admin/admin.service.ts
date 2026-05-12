@@ -23,6 +23,7 @@ import { AdminJobFilterDto } from './dto/admin-job-filter.dto';
 import { ResolveDisputeDto } from '../disputes/dto/resolve-dispute.dto';
 import { ReviewFraudFlagDto } from '../fraud/dto/review-fraud-flag.dto';
 import { JobStatus } from '../common/enums/job-status.enum';
+import { PaymentStatus } from '../common/enums/payment-status.enum';
 import { UserRole } from '../common/enums/role.enum';
 import { EarningStatus } from '../common/enums/earning-status.enum';
 import { DisputeStatus } from '../common/enums/dispute-status.enum';
@@ -112,6 +113,7 @@ export class AdminService {
     const where: FindOptionsWhere<Job> = {};
 
     if (filters.status) where.status = filters.status;
+    if (filters.paymentStatus) where.paymentStatus = filters.paymentStatus;
     if (filters.collectorId) where.collectorId = filters.collectorId;
     if (filters.householdId) where.householdId = filters.householdId;
 
@@ -253,6 +255,64 @@ export class AdminService {
     );
 
     return results;
+  }
+
+  // ─── PAYMENT VERIFICATION ──────────────────────────────────────
+
+  async verifyPayment(jobId: string, adminId: string): Promise<JobResponseDto> {
+    const job = await this.jobRepo.findOne({ where: { id: jobId } });
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+
+    if (job.paymentStatus !== PaymentStatus.PENDING) {
+      throw new BadRequestException('Job is not pending payment verification');
+    }
+
+    if (job.status !== JobStatus.PAYMENT_PENDING) {
+      throw new BadRequestException('Job is not in PAYMENT_PENDING status');
+    }
+
+    // Update payment status and job status
+    job.paymentStatus = PaymentStatus.VERIFIED;
+    job.paymentVerifiedBy = adminId;
+    job.paymentVerifiedAt = new Date();
+    job.status = JobStatus.REQUESTED; // Move to REQUESTED for assignment
+
+    const saved = await this.jobRepo.save(job);
+    this.logger.log(`Admin ${adminId} verified payment for job ${jobId}`);
+
+    // Trigger job assignment since it's now verified
+    this.assignmentService.autoAssign(jobId);
+
+    return this.jobsService.toResponseDto(saved);
+  }
+
+  async rejectPayment(jobId: string, adminId: string, reason?: string): Promise<JobResponseDto> {
+    const job = await this.jobRepo.findOne({ where: { id: jobId } });
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+
+    if (job.paymentStatus !== PaymentStatus.PENDING) {
+      throw new BadRequestException('Job is not pending payment verification');
+    }
+
+    if (job.status !== JobStatus.PAYMENT_PENDING) {
+      throw new BadRequestException('Job is not in PAYMENT_PENDING status');
+    }
+
+    // Update payment status and job status
+    job.paymentStatus = PaymentStatus.REJECTED;
+    job.paymentRejectionReason = reason ?? 'Payment verification failed';
+    job.status = JobStatus.CANCELLED;
+    job.cancelledAt = new Date();
+    job.cancellationReason = 'Payment rejected by admin';
+
+    const saved = await this.jobRepo.save(job);
+    this.logger.log(`Admin ${adminId} rejected payment for job ${jobId}: ${reason}`);
+
+    return this.jobsService.toResponseDto(saved);
   }
 
   // ─── STATS ────────────────────────────────────────────────────
