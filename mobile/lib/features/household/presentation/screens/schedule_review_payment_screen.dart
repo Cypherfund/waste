@@ -175,7 +175,7 @@ class _ScheduleReviewPaymentScreenState
 
                     const SizedBox(height: 22),
 
-                    _buildPricingBanner(quote),
+                    _buildPricingBanner(quote, subProvider),
 
                     const SizedBox(height: 22),
 
@@ -183,7 +183,7 @@ class _ScheduleReviewPaymentScreenState
 
                     const SizedBox(height: 22),
 
-                    if (!isFree) _buildPaymentSection(subProvider, totalPrice),
+                    if (!isFree) _buildPaymentSection(subProvider, totalPrice, pickupType),
                   ],
                 ),
               ),
@@ -257,21 +257,56 @@ class _ScheduleReviewPaymentScreenState
     );
   }
 
-  Widget _buildPricingBanner(PricingQuote? quote) {
+  Widget _buildPricingBanner(PricingQuote? quote, SubscriptionProvider subProvider) {
+    // Show loading state only briefly, then show offline/price unavailable
     if (quote == null) {
+      final isLoading = subProvider.isLoading;
+      final error = subProvider.error;
+      
       return Container(
-        padding: const EdgeInsets.all(14),
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFFF9FAFB),
+          color: isLoading ? const Color(0xFFF9FAFB) : const Color(0xFFFFF8E1),
           borderRadius: BorderRadius.circular(9),
-          border: Border.all(color: const Color(0xFFE5E7EB)),
-        ),
-        child: const Center(
-          child: SizedBox(
-            height: 18,
-            width: 18,
-            child: CircularProgressIndicator(strokeWidth: 2),
+          border: Border.all(
+            color: isLoading ? const Color(0xFFE5E7EB) : const Color(0xFFFFA000),
           ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              isLoading ? Icons.sync_rounded : Icons.signal_wifi_off_rounded,
+              color: isLoading ? const Color(0xFF6B7280) : const Color(0xFFFFA000),
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isLoading ? 'Loading pricing...' : 'Pricing unavailable offline',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: isLoading ? const Color(0xFF111827) : const Color(0xFF111827),
+                    ),
+                  ),
+                  if (!isLoading && error != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Standard price: 1000 XAF per pickup',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF6B7280),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
         ),
       );
     }
@@ -631,14 +666,25 @@ class _ScheduleReviewPaymentScreenState
     );
   }
 
-  Widget _buildPaymentSection(SubscriptionProvider subProvider, double amount) {
+  Widget _buildPaymentSection(SubscriptionProvider subProvider, double amount, PickupScheduleType pickupType) {
     final appConfig = subProvider.appConfig;
     final paymentEnabled = appConfig?.paymentIntegrationEnabled ?? false;
+
+    // Calculate correct amount based on pickup type
+    double displayAmount = amount;
+    if (pickupType == PickupScheduleType.monthly) {
+      // Get monthly plan price from available plans
+      final plans = subProvider.plans;
+      if (plans.isNotEmpty) {
+        // Use the first available plan's monthly price
+        displayAmount = plans.first.monthlyPrice ?? amount;
+      }
+    }
 
     if (paymentEnabled) {
       return _buildOnlinePaymentMethod();
     }
-    return _buildManualPaymentFlow(subProvider, amount);
+    return _buildManualPaymentFlow(subProvider, displayAmount, pickupType);
   }
 
   Widget _buildOnlinePaymentMethod() {
@@ -705,10 +751,14 @@ class _ScheduleReviewPaymentScreenState
     );
   }
 
-  Widget _buildManualPaymentFlow(SubscriptionProvider subProvider, double amount) {
+  Widget _buildManualPaymentFlow(SubscriptionProvider subProvider, double amount, PickupScheduleType pickupType) {
     final appConfig = subProvider.appConfig;
     final whatsapp = appConfig?.supportWhatsapp ?? '';
     final providers = appConfig?.enabledManualPaymentProviders ?? [];
+
+    final isMonthly = pickupType == PickupScheduleType.monthly;
+    final paymentLabel = isMonthly ? 'Monthly Subscription Payment' : 'One-time Pickup Payment';
+    final amountLabel = isMonthly ? 'Monthly fee' : 'Pickup cost';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -756,10 +806,10 @@ class _ScheduleReviewPaymentScreenState
                         color: Colors.white, size: 14),
                   ),
                   const SizedBox(width: 8),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'MANUAL PAYMENT REQUIRED',
-                      style: TextStyle(
+                      paymentLabel.toUpperCase(),
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w900,
                         color: Color(0xFFE65100),
@@ -790,7 +840,7 @@ class _ScheduleReviewPaymentScreenState
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Send ${amount.toStringAsFixed(0)} XAF via one of the payment methods below:',
+                      'Send ${amount.toStringAsFixed(0)} XAF ($amountLabel) via one of the payment methods below:',
                       style: const TextStyle(
                         fontSize: 11,
                         height: 1.5,

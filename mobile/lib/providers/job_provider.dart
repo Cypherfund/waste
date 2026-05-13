@@ -14,6 +14,7 @@ class JobProvider extends ChangeNotifier {
   
   List<Job> _jobs = [];
   bool _isLoading = false;
+  bool _isInitialLoading = false;
   String? _error;
   int _currentPage = 1;
   int _totalPages = 1;
@@ -49,6 +50,7 @@ class JobProvider extends ChangeNotifier {
   // Getters
   List<Job> get jobs => _jobs;
   bool get isLoading => _isLoading;
+  bool get isInitialLoading => _isInitialLoading;
   String? get error => _error;
   int get currentPage => _currentPage;
   int get totalPages => _totalPages;
@@ -101,6 +103,11 @@ class JobProvider extends ChangeNotifier {
     if (refresh) _currentPage = 1;
     if (_isLoading && !refresh) return;
 
+    // Only show skeleton loader on initial load when no cached jobs
+    final bool hasCachedJobs = _jobs.isNotEmpty;
+    if (!hasCachedJobs) {
+      _isInitialLoading = true;
+    }
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -144,6 +151,7 @@ class JobProvider extends ChangeNotifier {
       }
     } finally {
       _isLoading = false;
+      _isInitialLoading = false;
       notifyListeners();
     }
   }

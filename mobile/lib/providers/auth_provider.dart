@@ -49,13 +49,22 @@ class AuthProvider extends ChangeNotifier {
       if (user != null && token != null && (user.isHousehold || user.isCollector)) {
         _user = user;
         _status = AuthStatus.authenticated;
-        _connectWebSocket(token);
+        // Try to connect WebSocket but don't fail restoration if offline
+        try {
+          _connectWebSocket(token);
+        } catch (_) {
+          // WebSocket connection failed (likely offline) - that's OK
+          // It will retry when online
+          debugPrint('[AuthProvider] WebSocket connection failed during restore - offline mode');
+        }
       } else {
         await _storage.clearAll();
         _status = AuthStatus.unauthenticated;
       }
-    } catch (_) {
-      await _storage.clearAll();
+    } catch (e) {
+      // On error, stay in unknown state - don't clear storage immediately
+      // This allows retry without losing the session
+      debugPrint('[AuthProvider] Session restore error: $e');
       _status = AuthStatus.unauthenticated;
     }
     notifyListeners();

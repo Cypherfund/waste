@@ -11,9 +11,20 @@ class CollectorStartJobScreen extends StatelessWidget {
 
   const CollectorStartJobScreen({super.key, required this.job});
 
+  String _formatScheduledDate(String date, String time) {
+    final parsedDate = DateTime.tryParse(date);
+    if (parsedDate == null) return '$date at $time';
+    
+    final day = parsedDate.day.toString().padLeft(2, '0');
+    final month = parsedDate.month.toString().padLeft(2, '0');
+    final year = parsedDate.year;
+    return '$day/$month/$year at $time';
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<CollectorJobsProvider>();
+    final bool canStart = _canStartJob();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -34,6 +45,12 @@ class CollectorStartJobScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildDetailRow('Customer', job.householdName ?? 'Customer'),
+                const Divider(height: 20, color: AppColors.divider),
+                _buildDetailRow(
+                  'Scheduled Date',
+                  _formatScheduledDate(job.scheduledDate, job.scheduledTime),
+                  icon: Icons.calendar_today_outlined,
+                ),
                 const Divider(height: 20, color: AppColors.divider),
                 _buildDetailRow('Waste Type', 'Household Waste', icon: Icons.delete_outline),
                 const Divider(height: 20, color: AppColors.divider),
@@ -140,13 +157,27 @@ class CollectorStartJobScreen extends StatelessWidget {
           ),
           const SizedBox(height: 32),
 
-          // Start Pickup button
+          // Start Pickup button - disabled if too early
           LoadingButton(
-            label: 'Start Pickup',
+            label: canStart ? 'Start Pickup' : 'Too Early - Check Date',
             icon: Icons.play_arrow,
             isLoading: provider.isActioning,
-            onPressed: () => _handleStartPickup(context, provider),
+            onPressed: canStart ? () => _handleStartPickup(context, provider) : null,
           ),
+          if (!canStart) ...[
+            const SizedBox(height: 12),
+            Center(
+              child: Text(
+                'You can start this job on or after ${_formatScheduledDate(job.scheduledDate, job.scheduledTime).split(' at ').first}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFFF97316),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -182,8 +213,48 @@ class CollectorStartJobScreen extends StatelessWidget {
     );
   }
 
+  bool _canStartJob() {
+    final scheduledDate = DateTime.tryParse(job.scheduledDate);
+    if (scheduledDate == null) return true; // Allow if can't parse
+    
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final jobDate = DateTime(scheduledDate.year, scheduledDate.month, scheduledDate.day);
+    
+    // Can only start on or after the scheduled date
+    return !jobDate.isAfter(today);
+  }
+
+  void _showTooEarlyDialog(BuildContext context) {
+    final scheduledDate = DateTime.tryParse(job.scheduledDate);
+    final formattedDate = scheduledDate != null
+        ? '${scheduledDate.day}/${scheduledDate.month}/${scheduledDate.year}'
+        : job.scheduledDate;
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Too Early'),
+        content: Text(
+          'This job is scheduled for $formattedDate. You can only start it on or after the scheduled date.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _handleStartPickup(
       BuildContext context, CollectorJobsProvider provider) async {
+    if (!_canStartJob()) {
+      _showTooEarlyDialog(context);
+      return;
+    }
+    
     Navigator.pushReplacementNamed(
       context,
       '/collector-complete-job',

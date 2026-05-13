@@ -113,7 +113,7 @@ class _BookingsListScreenState extends State<BookingsListScreen>
             Expanded(
               child: Consumer<JobProvider>(
                 builder: (context, jobProvider, _) {
-                  if (jobProvider.isLoading) {
+                  if (jobProvider.isInitialLoading) {
                     return const SingleChildScrollView(
                       padding: EdgeInsets.fromLTRB(20, 16, 20, 24),
                       child: SkeletonList(itemCount: 6),

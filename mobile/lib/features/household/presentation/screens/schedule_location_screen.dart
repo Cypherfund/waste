@@ -28,6 +28,7 @@ class _ScheduleLocationScreenState extends State<ScheduleLocationScreen> {
   bool _isLoadingLocation = true;
   bool _useManualAddress = false;
   bool _gpsFailed = false;
+  bool _mapError = false;
   Position? _currentPosition;
 
   String _area = '';
@@ -149,6 +150,95 @@ class _ScheduleLocationScreenState extends State<ScheduleLocationScreen> {
         _manualAddressController.text = _streetAddress;
       }
     });
+  }
+
+  bool _isAddressMalformed() {
+    // Check if the detected address is likely malformed/invalid
+    if (_streetAddress.isEmpty && _area.isEmpty) return true;
+    if (_streetAddress.length < 3 && _area.length < 3) return true;
+    // Check for suspicious coordinates-only patterns (common geocoding errors)
+    final coordPattern = RegExp(r'^\d+\.\d+,\s*-?\d+\.\d+$');
+    if (coordPattern.hasMatch(_streetAddress)) return true;
+    // Check for generic "unnamed" patterns
+    if (_streetAddress.toLowerCase().contains('unnamed')) return true;
+    return false;
+  }
+
+  void _onMapError() {
+    if (!mounted) return;
+    setState(() {
+      _mapError = true;
+    });
+  }
+
+  Widget _buildMalformedAddressWarning() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF3E0),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFFFA000)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded,
+                  color: Color(0xFFF97316), size: 18),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Address may be incomplete',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFF97316),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'The detected address appears incomplete. Please enter your detailed address manually.',
+            style: TextStyle(
+              fontSize: 11,
+              color: Color(0xFF6B7280),
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: _toggleAddressMode,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF97316),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.edit_location_alt_outlined,
+                      color: Colors.white, size: 16),
+                  SizedBox(width: 6),
+                  Text(
+                    'Enter Address Manually',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -299,6 +389,13 @@ class _ScheduleLocationScreenState extends State<ScheduleLocationScreen> {
 
                     const SizedBox(height: 10),
 
+                    // Show malformed address warning if detected
+                    if (!_isLoadingLocation && !_useManualAddress && _isAddressMalformed())
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: _buildMalformedAddressWarning(),
+                      ),
+
                     _buildAddressSummaryCard(),
 
                     if (_useManualAddress || _gpsFailed) ...[
@@ -447,29 +544,60 @@ class _ScheduleLocationScreenState extends State<ScheduleLocationScreen> {
       clipBehavior: Clip.antiAlias,
       child: Stack(
         children: [
-          GoogleMap(
-            initialCameraPosition: CameraPosition(
-              target: selectedLatLng,
-              zoom: 15.5,
-            ),
-            markers: {
-              Marker(
-                markerId: const MarkerId('pickup_location'),
-                position: selectedLatLng,
-                icon: BitmapDescriptor.defaultMarkerWithHue(
-                  BitmapDescriptor.hueGreen,
-                ),
-              ),
-            },
-            myLocationEnabled: false,
-            myLocationButtonEnabled: false,
-            zoomControlsEnabled: false,
-            mapToolbarEnabled: false,
-            compassEnabled: false,
-            rotateGesturesEnabled: false,
-            tiltGesturesEnabled: false,
-            scrollGesturesEnabled: true,
-            zoomGesturesEnabled: true,
+          Builder(
+            builder: (context) {
+              try {
+                return GoogleMap(
+                  initialCameraPosition: CameraPosition(
+                    target: selectedLatLng,
+                    zoom: 15.5,
+                  ),
+                  markers: {
+                    Marker(
+                      markerId: const MarkerId('pickup_location'),
+                      position: selectedLatLng,
+                      icon: BitmapDescriptor.defaultMarkerWithHue(
+                        BitmapDescriptor.hueGreen,
+                      ),
+                    ),
+                  },
+                  myLocationEnabled: false,
+                  myLocationButtonEnabled: false,
+                  zoomControlsEnabled: false,
+                  mapToolbarEnabled: false,
+                  compassEnabled: false,
+                  rotateGesturesEnabled: false,
+                  tiltGesturesEnabled: false,
+                  scrollGesturesEnabled: true,
+                  zoomGesturesEnabled: true,
+                  onMapCreated: (controller) {
+                    // Map loaded successfully, clear any error state
+                    if (_mapError) {
+                      setState(() {
+                        _mapError = false;
+                      });
+                    }
+                  },
+                );
+              } catch (e) {
+                // Delay error state to avoid build phase issues
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _onMapError();
+                });
+                return Container(
+                  color: const Color(0xFFFFF8E1),
+                  child: const Center(
+                    child: Text(
+                      'Map failed to load',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFFE65100),
+                      ),
+                    ),
+                  ),
+                );
+              }
+            }
           ),
 
           if (_isLoadingLocation)
@@ -484,6 +612,66 @@ class _ScheduleLocationScreenState extends State<ScheduleLocationScreen> {
                       strokeWidth: 2.4,
                       color: AppColors.primary,
                     ),
+                  ),
+                ),
+              ),
+            ),
+
+          // Map error overlay
+          if (_mapError)
+            Positioned.fill(
+              child: Container(
+                color: const Color(0xFFFFF8E1),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.map_outlined,
+                        color: Color(0xFFFFA000),
+                        size: 40,
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Map unavailable',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFFE65100),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Check your internet connection',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF6B7280),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _mapError = false;
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFA000),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'Retry Map',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
