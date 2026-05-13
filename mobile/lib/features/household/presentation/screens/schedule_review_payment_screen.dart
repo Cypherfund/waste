@@ -673,11 +673,10 @@ class _ScheduleReviewPaymentScreenState
     // Calculate correct amount based on pickup type
     double displayAmount = amount;
     if (pickupType == PickupScheduleType.monthly) {
-      // Get monthly plan price from available plans
-      final plans = subProvider.plans;
-      if (plans.isNotEmpty) {
-        // Use the first available plan's monthly price
-        displayAmount = plans.first.monthlyPrice ?? amount;
+      // Use the subscription price from the pricing quote if available
+      final subscriptionPrice = subProvider.pricingQuote?.subscriptionPrice;
+      if (subscriptionPrice != null) {
+        displayAmount = subscriptionPrice;
       }
     }
 
