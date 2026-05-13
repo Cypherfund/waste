@@ -24,6 +24,7 @@ class BookingStatusAssignedScreen extends StatefulWidget {
 class _BookingStatusAssignedScreenState
     extends State<BookingStatusAssignedScreen> {
   Timer? _refreshTimer;
+  bool _isCancelling = false;
 
   @override
   void initState() {
@@ -45,7 +46,7 @@ class _BookingStatusAssignedScreenState
   }
 
   Future<void> _refreshJobStatus() async {
-    if (!mounted) return;
+    if (!mounted || _isCancelling) return;
 
     final jobProvider = context.read<JobProvider>();
     await jobProvider.refreshJob(widget.jobId);
@@ -95,7 +96,7 @@ class _BookingStatusAssignedScreenState
             color: Color(0xFF111827),
             size: 16,
           ),
-          onPressed: () => Navigator.pop(context),
+          onPressed: _isCancelling ? null : () => Navigator.pop(context),
         ),
         title: const Text(
           'My Booking',
@@ -121,51 +122,54 @@ class _BookingStatusAssignedScreenState
               );
             }
 
-            return RefreshIndicator(
-              color: AppColors.primary,
-              onRefresh: _refreshJobStatus,
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
-                child: Column(
-                  children: [
-                    Text(
-                      'Assigned',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.primary,
+            return Column(
+              children: [
+                Expanded(
+                  child: RefreshIndicator(
+                    color: AppColors.primary,
+                    onRefresh: _refreshJobStatus,
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
+                      child: Column(
+                        children: [
+                          Text(
+                            'Assigned',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w900,
+                              color: AppColors.primary,
+                            ),
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          const Text(
+                            'Your collector is on the way',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 13,
+                              height: 1.35,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF6B7280),
+                            ),
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          _buildCollectorCard(),
+
+                          const SizedBox(height: 14),
+
+                          _buildBookingInfoCard(job),
+                        ],
                       ),
                     ),
-
-                    const SizedBox(height: 12),
-
-                    const Text(
-                      'Your collector is on the way',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 13,
-                        height: 1.35,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF6B7280),
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    _buildCollectorCard(),
-
-                    const SizedBox(height: 14),
-
-                    _buildBookingInfoCard(job),
-
-                    const SizedBox(height: 16),
-
-                    _buildTrackButton(job),
-                  ],
+                  ),
                 ),
-              ),
+                _buildBottomActions(job),
+              ],
             );
           },
         ),
@@ -404,35 +408,199 @@ class _BookingStatusAssignedScreenState
     );
   }
 
-  Widget _buildTrackButton(Job job) {
-    return SizedBox(
+  Widget _buildBottomActions(Job job) {
+    return Container(
       width: double.infinity,
-      height: 48,
-      child: ElevatedButton(
-        onPressed: () {
-          Navigator.pushNamed(
-            context,
-            '/job-tracking',
-            arguments: job.id,
-          );
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
-        child: const Text(
-          'Track Live',
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w800,
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          top: BorderSide(
+            color: Color(0xFFE5E7EB),
+            width: 1,
           ),
         ),
       ),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          children: [
+            Expanded(
+              child: SizedBox(
+                height: 48,
+                child: OutlinedButton(
+                  onPressed:
+                      _isCancelling ? null : () => _showCancelConfirmation(job),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFFDC2626),
+                    disabledForegroundColor:
+                        const Color(0xFFDC2626).withValues(alpha: 0.45),
+                    side: BorderSide(
+                      color: _isCancelling
+                          ? const Color(0xFFDC2626).withValues(alpha: 0.35)
+                          : const Color(0xFFDC2626),
+                      width: 1.2,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                  ),
+                  child: _isCancelling
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Color(0xFFDC2626),
+                          ),
+                        )
+                      : const Text(
+                          'Cancel Booking',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: SizedBox(
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: _isCancelling
+                      ? null
+                      : () {
+                          Navigator.pushNamed(
+                            context,
+                            '/job-tracking',
+                            arguments: job.id,
+                          );
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor:
+                        AppColors.primary.withValues(alpha: 0.55),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                  ),
+                  child: const Text(
+                    'Track Live',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
+  }
+
+  Future<void> _showCancelConfirmation(Job job) async {
+    final shouldCancel = await showDialog<bool>(
+      context: context,
+      barrierDismissible: !_isCancelling,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          titlePadding: const EdgeInsets.fromLTRB(22, 22, 22, 8),
+          contentPadding: const EdgeInsets.fromLTRB(22, 0, 22, 18),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          title: const Text(
+            'Cancel booking?',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF111827),
+            ),
+          ),
+          content: const Text(
+            'Are you sure you want to cancel this pickup? A collector has already been assigned.',
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.45,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF6B7280),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text(
+                'Yes, Cancel',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFFDC2626),
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text(
+                'Keep Booking',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF111827),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldCancel == true && mounted) {
+      await _cancelBooking(job);
+    }
+  }
+
+  Future<void> _cancelBooking(Job job) async {
+    setState(() => _isCancelling = true);
+
+    try {
+      final jobProvider = context.read<JobProvider>();
+      final success = await jobProvider.cancelJob(job.id);
+
+      if (!mounted) return;
+
+      if (success) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/bookings',
+          (route) => route.settings.name == '/home',
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(jobProvider.error ?? 'Failed to cancel booking'),
+            backgroundColor: Colors.red.shade600,
+          ),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to cancel booking. Please try again.'),
+          backgroundColor: Color(0xFFDC2626),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isCancelling = false);
+    }
   }
 
   String _shortId(String id) {

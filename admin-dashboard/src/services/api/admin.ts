@@ -14,6 +14,7 @@ import {
   PayoutRequest,
   PayoutListResponse,
   PayoutConfig,
+  PaymentProvider,
 } from '../../types';
 
 export const usersApi = {
@@ -137,4 +138,25 @@ export const subscriptionPlansApi = {
 
   update: (id: string, body: { name?: string; price?: number; pickupsPerWeek?: number; isActive?: boolean; description?: string }) =>
     client.patch<SubscriptionPlan>(`/subscriptions/admin/plans/${id}`, body).then((r) => r.data),
+};
+
+export const paymentProvidersApi = {
+  list: (countryCode?: string) =>
+    client
+      .get<PaymentProvider[]>('/admin/payments/providers', {
+        params: countryCode ? { countryCode } : {},
+      })
+      .then((r) => r.data),
+
+  create: (body: Partial<PaymentProvider>) =>
+    client.post<PaymentProvider>('/admin/payments/providers', body).then((r) => r.data),
+
+  update: (id: number, body: Partial<PaymentProvider>) =>
+    client.patch<PaymentProvider>(`/admin/payments/providers/${id}`, body).then((r) => r.data),
+
+  remove: (id: number) =>
+    client.delete(`/admin/payments/providers/${id}`).then((r) => r.data),
+
+  sync: (countryCode: string) =>
+    client.post(`/admin/payments/providers/sync`, null, { params: { countryCode } }).then((r) => r.data),
 };

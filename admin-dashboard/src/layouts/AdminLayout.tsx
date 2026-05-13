@@ -23,6 +23,7 @@ const NAV_ITEMS = [
   { to: '/payouts', label: 'Payouts', icon: Wallet },
   { to: '/disputes', label: 'Disputes', icon: AlertTriangle },
   { to: '/fraud-flags', label: 'Fraud Flags', icon: Shield },
+  { to: '/payment-providers', label: 'Payment Providers', icon: CreditCard },
   { to: '/config', label: 'Config', icon: Settings },
 ];
 

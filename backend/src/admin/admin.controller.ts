@@ -4,6 +4,7 @@ import {
   Post,
   Put,
   Patch,
+  Delete,
   Param,
   Query,
   Body,
@@ -281,12 +282,22 @@ export class AdminController {
     return this.paymentService.syncProviders(countryCode);
   }
 
+  @Post('payments/providers')
+  createProvider(@Body() body: Record<string, unknown>) {
+    return this.paymentService.createProvider(body as any);
+  }
+
   @Patch('payments/providers/:id')
-  toggleProvider(
+  updateProvider(
     @Param('id', ParseIntPipe) id: number,
-    @Body() body: { isEnabled: boolean },
+    @Body() body: Record<string, unknown>,
   ) {
-    return this.paymentService.toggleProvider(id, body.isEnabled);
+    return this.paymentService.updateProvider(id, body as any);
+  }
+
+  @Delete('payments/providers/:id')
+  deleteProvider(@Param('id', ParseIntPipe) id: number) {
+    return this.paymentService.deleteProvider(id);
   }
 
   // ─── STATS & PERFORMANCE ──────────────────────────────────────

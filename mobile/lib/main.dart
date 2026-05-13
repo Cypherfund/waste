@@ -145,8 +145,10 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
       authApi: _authApi,
       storage: _storage,
       wsService: _wsService,
+      syncService: _syncService,
       onLogout: () {
         _jobProvider.reset();
+        _collectorJobsProvider.reset();
         _subscriptionProvider.reset();
         _collectorEarningsProvider.reset();
       },
@@ -169,7 +171,7 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
     );
 
     _apiClient.onUnauthorized = () {
-      _authProvider.logout();
+      _authProvider.setSessionExpired();
     };
 
     _syncService.initialize();
@@ -197,6 +199,10 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
         theme: AppTheme.lightTheme,
         routes: {
           '/login': (context) => const LoginScreen(),
+          '/add-account': (context) => LoginScreen(
+            addAccountMode: true,
+            onSignUp: null,
+          ),
           '/register': (context) => const RegisterScreen(),
           '/home': (context) => const HomeDashboardScreen(),
           '/bookings': (context) => const BookingsListScreen(),

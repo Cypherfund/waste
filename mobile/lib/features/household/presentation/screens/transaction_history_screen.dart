@@ -308,11 +308,14 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Text(
-                      _formatDate(transaction.date),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade500,
+                    Flexible(
+                      child: Text(
+                        _formatDate(transaction.date),
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade500,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),

@@ -143,7 +143,15 @@ class SyncService {
 
   // ─── LOCAL DATA MANAGEMENT ─────────────────────────────────
 
-  static const String _jobsCacheKey = 'cached_jobs';
+  static const String _jobsCacheKeyPrefix = 'cached_jobs';
+  String? _activeUserId;
+
+  String get _jobsCacheKey =>
+      _activeUserId != null ? '${_jobsCacheKeyPrefix}_$_activeUserId' : _jobsCacheKeyPrefix;
+
+  void setActiveUser(String? userId) {
+    _activeUserId = userId;
+  }
 
   Future<void> syncJobs(List<Job> jobs) async {
     try {
@@ -260,7 +268,7 @@ class SyncService {
     await syncPendingItems();
   }
 
-  // Clear all cached jobs (called on logout)
+  // Clear cached jobs for the current active user (called on logout/switch)
   Future<void> clearAllJobs() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -268,6 +276,17 @@ class SyncService {
       debugPrint('[Sync] Cleared all cached jobs');
     } catch (e) {
       debugPrint('[Sync] Failed to clear cached jobs: $e');
+    }
+  }
+
+  // Clear cached jobs for a specific user (called when removing a saved account)
+  Future<void> clearJobsForUser(String userId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('${_jobsCacheKeyPrefix}_$userId');
+      debugPrint('[Sync] Cleared cached jobs for user $userId');
+    } catch (e) {
+      debugPrint('[Sync] Failed to clear cached jobs for user: $e');
     }
   }
 

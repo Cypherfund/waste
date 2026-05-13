@@ -9,8 +9,13 @@ import '../../features/onboarding/onboarding_flow.dart';
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback? onSignUp;
+  final bool addAccountMode;
 
-  const LoginScreen({super.key, this.onSignUp});
+  const LoginScreen({
+    super.key,
+    this.onSignUp,
+    this.addAccountMode = false,
+  });
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -21,6 +26,26 @@ class _LoginScreenState extends State<LoginScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = context.read<AuthProvider>();
+      final msg = auth.sessionExpiredMessage;
+      if (msg != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: const Color(0xFFDC2626),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+        auth.clearSessionExpiredMessage();
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -39,6 +64,11 @@ class _LoginScreenState extends State<LoginScreen> {
     );
 
     if (auth.status == AuthStatus.authenticated) {
+      if (widget.addAccountMode) {
+        // Account is auto-saved by AuthProvider; just pop back to profile
+        if (mounted) Navigator.pop(context);
+        return;
+      }
       await markOnboardingCompleted();
       if (mounted) {
         final route = auth.user?.isCollector == true ? '/collector-home' : '/home';

@@ -11,6 +11,7 @@ import ConfigPage from '../pages/ConfigPage';
 import EarningsPage from '../pages/EarningsPage';
 import SubscriptionsPage from '../pages/SubscriptionsPage';
 import PayoutsPage from '../pages/PayoutsPage';
+import PaymentProvidersPage from '../pages/PaymentProvidersPage';
 
 export const router = createBrowserRouter([
   {
@@ -34,6 +35,7 @@ export const router = createBrowserRouter([
       { path: 'subscriptions', element: <SubscriptionsPage /> },
       { path: 'payouts', element: <PayoutsPage /> },
       { path: 'config', element: <ConfigPage /> },
+      { path: 'payment-providers', element: <PaymentProvidersPage /> },
     ],
   },
 ]);
