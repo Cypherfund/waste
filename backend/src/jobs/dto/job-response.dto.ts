@@ -18,6 +18,15 @@ export class JobResponseDto {
   @ApiPropertyOptional({ nullable: true })
   collectorName?: string | null;
 
+  @ApiPropertyOptional({ nullable: true })
+  collectorPhone?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  collectorRating?: number | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  collectorAvatarUrl?: string | null;
+
   @ApiProperty({ enum: JobStatus })
   status: JobStatus;
 

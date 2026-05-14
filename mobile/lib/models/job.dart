@@ -36,6 +36,9 @@ class Job {
   final String? householdPhone;
   final String? collectorId;
   final String? collectorName;
+  final String? collectorPhone;
+  final double? collectorRating;
+  final String? collectorAvatarUrl;
   final JobStatus status;
   final String scheduledDate;
   final String scheduledTime;
@@ -67,6 +70,9 @@ class Job {
     this.householdPhone,
     this.collectorId,
     this.collectorName,
+    this.collectorPhone,
+    this.collectorRating,
+    this.collectorAvatarUrl,
     required this.status,
     required this.scheduledDate,
     required this.scheduledTime,
@@ -100,6 +106,9 @@ class Job {
       householdPhone: json['householdPhone'] as String?,
       collectorId: json['collectorId'] as String?,
       collectorName: json['collectorName'] as String?,
+      collectorPhone: json['collectorPhone'] as String?,
+      collectorRating: json['collectorRating'] != null ? double.tryParse(json['collectorRating'].toString()) : null,
+      collectorAvatarUrl: json['collectorAvatarUrl'] as String?,
       status: JobStatus.fromString(json['status'] as String),
       scheduledDate: json['scheduledDate'] as String,
       scheduledTime: json['scheduledTime'] as String,
@@ -148,6 +157,9 @@ class Job {
       'householdPhone': householdPhone,
       'collectorId': collectorId,
       'collectorName': collectorName,
+      'collectorPhone': collectorPhone,
+      'collectorRating': collectorRating,
+      'collectorAvatarUrl': collectorAvatarUrl,
       'status': status.toBackendString(),
       'scheduledDate': scheduledDate,
       'scheduledTime': scheduledTime,

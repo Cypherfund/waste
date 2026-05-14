@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../config/app_theme.dart';
 import '../../../../models/job.dart';
@@ -158,7 +159,7 @@ class _BookingStatusAssignedScreenState
 
                           const SizedBox(height: 20),
 
-                          _buildCollectorCard(),
+                          _buildCollectorCard(job),
 
                           const SizedBox(height: 14),
 
@@ -177,7 +178,7 @@ class _BookingStatusAssignedScreenState
     );
   }
 
-  Widget _buildCollectorCard() {
+  Widget _buildCollectorCard(Job job) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
@@ -200,9 +201,21 @@ class _BookingStatusAssignedScreenState
               CircleAvatar(
                 radius: 30,
                 backgroundColor: const Color(0xFFEAF5EA),
-                backgroundImage: const AssetImage(
-                  'assets/images/collectors/jean-claude.png',
-                ),
+                backgroundImage: job.collectorAvatarUrl != null
+                    ? NetworkImage(job.collectorAvatarUrl!)
+                    : null,
+                child: job.collectorAvatarUrl == null
+                    ? Text(
+                        job.collectorName?.isNotEmpty == true
+                            ? job.collectorName![0].toUpperCase()
+                            : 'C',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF16A34A),
+                        ),
+                      )
+                    : null,
                 onBackgroundImageError: (_, __) {},
               ),
 
@@ -212,9 +225,9 @@ class _BookingStatusAssignedScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Jean Claude',
-                      style: TextStyle(
+                    Text(
+                      job.collectorName?.isNotEmpty == true ? job.collectorName! : 'Collector',
+                      style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w900,
                         color: Color(0xFF111827),
@@ -222,18 +235,20 @@ class _BookingStatusAssignedScreenState
                     ),
                     const SizedBox(height: 6),
                     Row(
-                      children: const [
-                        Icon(
+                      children: [
+                        const Icon(
                           Icons.star_rounded,
                           color: Color(0xFFF59E0B),
                           size: 15,
                         ),
-                        SizedBox(width: 4),
+                        const SizedBox(width: 4),
                         Text(
-                          '4.8 (128 trips)',
-                          style: TextStyle(
+                          job.collectorRating != null
+                              ? job.collectorRating!.toStringAsFixed(1)
+                              : 'New',
+                          style: const TextStyle(
                             fontSize: 11,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w700,
                             color: Color(0xFF6B7280),
                           ),
                         ),
@@ -276,7 +291,14 @@ class _BookingStatusAssignedScreenState
 
               _smallGreenButton(
                 icon: Icons.call_rounded,
-                onTap: () {},
+                onTap: () async {
+                  if (job.collectorPhone != null) {
+                    final uri = Uri.parse('tel:${job.collectorPhone}');
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri);
+                    }
+                  }
+                },
               ),
 
               const SizedBox(width: 8),

@@ -510,20 +510,34 @@ class _BookingStatusCompletedScreenState extends State<BookingStatusCompletedScr
               CircleAvatar(
                 radius: 25,
                 backgroundColor: AppColors.primaryLight.withValues(alpha: 0.2),
-                child: Icon(
-                  Icons.person,
-                  color: AppColors.primary,
-                  size: 25,
-                ),
+                backgroundImage: job.collectorAvatarUrl != null
+                    ? NetworkImage(job.collectorAvatarUrl!)
+                    : null,
+                child: job.collectorAvatarUrl == null
+                    ? Text(
+                        job.collectorName?.isNotEmpty == true
+                            ? job.collectorName![0].toUpperCase()
+                            : 'C',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
+                        ),
+                      )
+                    : Icon(
+                        Icons.person,
+                        color: AppColors.primary,
+                        size: 25,
+                      ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'John Doe',
-                      style: TextStyle(
+                    Text(
+                      job.collectorName?.isNotEmpty == true ? job.collectorName! : 'Collector',
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                         color: Colors.black87,
@@ -539,7 +553,9 @@ class _BookingStatusCompletedScreenState extends State<BookingStatusCompletedScr
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '4.8',
+                          job.collectorRating != null
+                              ? job.collectorRating!.toStringAsFixed(1)
+                              : 'New',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -548,7 +564,7 @@ class _BookingStatusCompletedScreenState extends State<BookingStatusCompletedScr
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          '• ID: CDR-1234',
+                          '• ID: ${job.collectorId?.substring(0, 8).toUpperCase() ?? 'N/A'}',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey.shade600,
