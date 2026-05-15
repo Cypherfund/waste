@@ -425,6 +425,33 @@ class _BookingStatusAssignedScreenState
               ),
             ],
           ),
+
+          // Notes section (if available)
+          if (job.notes != null && job.notes!.isNotEmpty) ...[
+            const SizedBox(height: 13),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.note_outlined,
+                  size: 16,
+                  color: Color(0xFF6B7280),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    job.notes!,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      height: 1.35,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF6B7280),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

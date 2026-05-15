@@ -82,6 +82,37 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
       ),
       body: Column(
         children: [
+          // Coming Soon Banner
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF3CD),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFFFEAA7)),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  color: const Color(0xFF856404),
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Payment methods integration is coming soon!',
+                    style: TextStyle(
+                      color: const Color(0xFF856404),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
           // Payment Methods List
           Expanded(
             child: ListView.builder(

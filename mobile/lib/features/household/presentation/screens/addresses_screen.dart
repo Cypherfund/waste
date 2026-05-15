@@ -47,6 +47,56 @@ class _AddressesScreenState extends State<AddressesScreen> {
     ),
   ];
 
+  void _addAddress() {
+    // TODO: Implement add address dialog
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Add address feature coming soon!')),
+    );
+  }
+
+  void _editAddress(Address address) {
+    // TODO: Implement edit address dialog
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Edit ${address.label} address feature coming soon!')),
+    );
+  }
+
+  void _deleteAddress(String id) {
+    setState(() {
+      _addresses.removeWhere((address) => address.id == id);
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Address deleted')),
+    );
+  }
+
+  void _setDefault(String id) {
+    setState(() {
+      for (var address in _addresses) {
+        if (address.id == id) {
+          _addresses[_addresses.indexOf(address)] = Address(
+            id: address.id,
+            label: address.label,
+            address: address.address,
+            landmark: address.landmark,
+            isDefault: true,
+          );
+        } else if (address.isDefault) {
+          _addresses[_addresses.indexOf(address)] = Address(
+            id: address.id,
+            label: address.label,
+            address: address.address,
+            landmark: address.landmark,
+            isDefault: false,
+          );
+        }
+      }
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Default address updated')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

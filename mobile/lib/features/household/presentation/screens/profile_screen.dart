@@ -2,12 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../providers/auth_provider.dart';
+import '../../../../providers/job_provider.dart';
+import '../../../../models/job.dart';
 import '../../../../widgets/bottom_navigation.dart';
 import '../widgets/account_switcher_sheet.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -25,11 +32,6 @@ class ProfileScreen extends StatelessWidget {
         ),
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.switch_account_outlined, color: Colors.black),
-            tooltip: 'Switch Account',
-            onPressed: () => AccountSwitcherSheet.show(context),
-          ),
           IconButton(
             icon: const Icon(Icons.settings_outlined, color: Colors.black),
             onPressed: () {
@@ -136,10 +138,15 @@ class ProfileScreen extends StatelessWidget {
               CircleAvatar(
                 radius: 50,
                 backgroundColor: AppColors.primaryLight.withValues(alpha: 0.2),
-                child: Icon(
-                  Icons.person,
-                  color: AppColors.primary,
-                  size: 50,
+                child: Text(
+                  user.name?.isNotEmpty == true
+                      ? user.name![0].toUpperCase()
+                      : 'U',
+                  style: const TextStyle(
+                    fontSize: 40,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
                 ),
               ),
               Positioned(
@@ -178,20 +185,55 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: AppColors.primaryLight.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              'HOUSEHOLD',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.primary,
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'HOUSEHOLD',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () => AccountSwitcherSheet.show(context),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.switch_account_outlined,
+                        size: 14,
+                        color: Colors.grey.shade700,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Switch',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -199,13 +241,25 @@ class ProfileScreen extends StatelessWidget {
   }
   
   Widget _buildStatsRow() {
+    final jobProvider = context.watch<JobProvider>();
+    final jobs = jobProvider.jobs;
+    
+    // Calculate real stats
+    final completedJobs = jobs.where((job) => job.status == JobStatus.completed).length;
+    final wasteRecycled = completedJobs * 10; // Default 10kg per pickup
+    final ratings = jobs
+        .where((job) => job.status == JobStatus.completed && job.rating != null)
+        .map((job) => job.rating!)
+        .toList();
+    final avgRating = ratings.isEmpty ? 0.0 : ratings.reduce((a, b) => a + b) / ratings.length;
+    
     return Row(
       children: [
         Expanded(
           child: _buildStatCard(
             icon: Icons.event_note,
             label: 'Total Pickups',
-            value: '24',
+            value: '$completedJobs',
             color: AppColors.primary,
           ),
         ),
@@ -214,7 +268,7 @@ class ProfileScreen extends StatelessWidget {
           child: _buildStatCard(
             icon: Icons.recycling,
             label: 'Waste Recycled',
-            value: '156 kg',
+            value: '$wasteRecycled kg',
             color: Colors.green,
           ),
         ),
@@ -223,7 +277,7 @@ class ProfileScreen extends StatelessWidget {
           child: _buildStatCard(
             icon: Icons.star,
             label: 'Rating',
-            value: '4.8',
+            value: avgRating > 0 ? avgRating.toStringAsFixed(1) : 'New',
             color: Colors.orange,
           ),
         ),
@@ -322,7 +376,43 @@ class ProfileScreen extends StatelessWidget {
           icon: Icons.info_outline,
           title: 'About',
           onTap: () {
-            // Show about dialog
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('About WasteWise'),
+                content: const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'WasteWise',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text('Version 1.0.0'),
+                    SizedBox(height: 16),
+                    Text(
+                      'A smart waste management solution connecting households with waste collectors for efficient and sustainable waste disposal.',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      '© 2026 WasteWise. All rights reserved.',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Close'),
+                  ),
+                ],
+              ),
+            );
           },
         ),
         const SizedBox(height: 16),

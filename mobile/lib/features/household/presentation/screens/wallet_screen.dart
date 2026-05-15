@@ -1,8 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../providers/subscription_provider.dart';
 import '../../../../widgets/bottom_navigation.dart';
+
+class Transaction {
+  final String id;
+  final String title;
+  final String? subtitle;
+  final double amount;
+  final DateTime date;
+  final String type; // 'credit' or 'debit'
+  final String? category;
+  final String status;
+
+  const Transaction({
+    required this.id,
+    required this.title,
+    this.subtitle,
+    required this.amount,
+    required this.date,
+    required this.type,
+    this.category,
+    this.status = 'completed',
+  });
+}
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -12,6 +35,39 @@ class WalletScreen extends StatefulWidget {
 }
 
 class _WalletScreenState extends State<WalletScreen> {
+  final List<Transaction> _transactions = [
+    Transaction(
+      id: '1',
+      title: 'Pickup Payment',
+      subtitle: 'Booking #ABC12345',
+      amount: -2500,
+      date: DateTime(2026, 4, 25, 14, 30),
+      type: 'debit',
+      category: 'pickup',
+      status: 'completed',
+    ),
+    Transaction(
+      id: '2',
+      title: 'Wallet Top Up',
+      subtitle: 'Via Mobile Money',
+      amount: 10000,
+      date: DateTime(2026, 4, 24, 10, 15),
+      type: 'credit',
+      category: 'top_up',
+      status: 'completed',
+    ),
+    Transaction(
+      id: '3',
+      title: 'Subscription Payment',
+      subtitle: 'Monthly Plan',
+      amount: -4500,
+      date: DateTime(2026, 4, 20, 09, 00),
+      type: 'debit',
+      category: 'subscription',
+      status: 'completed',
+    ),
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -120,15 +176,7 @@ class _WalletScreenState extends State<WalletScreen> {
               color: Colors.white,
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            '≈ \$${(balance / 600).toStringAsFixed(2)} USD',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.white.withValues(alpha: 0.8),
-            ),
-          ),
-        ],
+                  ],
       ),
     );
   }
@@ -267,10 +315,9 @@ class _WalletScreenState extends State<WalletScreen> {
           ],
         ),
         const SizedBox(height: 16),
-        // Empty state - no hardcoded mock data
+        // Recent transactions
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
@@ -284,26 +331,17 @@ class _WalletScreenState extends State<WalletScreen> {
           ),
           child: Column(
             children: [
-              Icon(
-                Icons.receipt_long_outlined,
-                size: 48,
-                color: Colors.grey.shade400,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'No transactions yet',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Your payment history will appear here',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade500,
+              ...List.generate(
+                _transactions.take(3).length,
+                (index) => _buildTransactionCard(
+                  title: _transactions[index].title,
+                  subtitle: _transactions[index].subtitle ?? '',
+                  amount: _transactions[index].amount.toString(),
+                  date: DateFormat('MMM dd, yyyy').format(_transactions[index].date),
+                  icon: _transactions[index].type == 'credit' 
+                      ? Icons.arrow_downward 
+                      : Icons.arrow_upward,
+                  isCredit: _transactions[index].type == 'credit',
                 ),
               ),
             ],

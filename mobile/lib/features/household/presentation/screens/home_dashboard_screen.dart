@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
@@ -181,11 +183,8 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
             children: [
               Text(
                 'Hello, $firstName 👋',
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF111827),
-                  letterSpacing: -0.3,
+                style: AppTypography.heading1.copyWith(
+                  color: const Color(0xFF111827),
                 ),
               ),
               const SizedBox(height: 8),
@@ -321,28 +320,42 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
       ),
       child: Row(
         children: [
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Your area is 80% clean this week 🌱',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF1F2937),
-                  ),
-                ),
-                SizedBox(height: 6),
-                Text(
-                  "Let's keep it going!",
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF6B7280),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
+          Expanded(
+            child: Consumer<JobProvider>(
+              builder: (context, jobProvider, _) {
+                final jobs = jobProvider.jobs;
+                final thisWeek = DateTime.now().subtract(const Duration(days: 7));
+                final weeklyJobs = jobs.where((job) => 
+                  job.createdAt.isAfter(thisWeek) && 
+                  job.status == JobStatus.completed
+                ).length;
+                
+                // Calculate cleanliness based on weekly pickups (max 10 pickups = 100%)
+                final cleanliness = (weeklyJobs / 10 * 100).clamp(0, 100);
+                
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Your area is ${cleanliness.toInt()}% clean this week 🌱',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF1F2937),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      "Let's keep it going!",
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF6B7280),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
 
@@ -721,18 +734,21 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                 ],
               ),
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Text(
-                'Subscribe',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
+            GestureDetector(
+              onTap: () => Navigator.pushNamed(context, '/subscription-plans'),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  'Subscribe',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),
@@ -759,14 +775,41 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'You usually schedule\nevery 3 days.',
-                  style: TextStyle(
-                    fontSize: 15,
-                    height: 1.35,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF1F2937),
-                  ),
+                Consumer<JobProvider>(
+                  builder: (context, jobProvider, _) {
+                    final jobs = jobProvider.jobs;
+                    final completedJobs = jobs.where((job) => job.status == JobStatus.completed).toList();
+                    
+                    if (completedJobs.length < 2) {
+                      return const Text(
+                        'Start scheduling pickups\nto see your pattern!',
+                        style: TextStyle(
+                          fontSize: 15,
+                          height: 1.35,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF1F2937),
+                        ),
+                      );
+                    }
+                    
+                    // Calculate average days between pickups
+                    completedJobs.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+                    int totalDays = 0;
+                    for (int i = 1; i < completedJobs.length; i++) {
+                      totalDays += completedJobs[i].createdAt.difference(completedJobs[i-1].createdAt).inDays;
+                    }
+                    final avgDays = totalDays / (completedJobs.length - 1);
+                    
+                    return Text(
+                      'You usually schedule\nevery ${avgDays.round()} days.',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        height: 1.35,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF1F2937),
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 4),
                 const Text(
