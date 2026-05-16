@@ -91,8 +91,9 @@ export default async function Home() {
             <div className="relative flex justify-center">
               <div className="relative w-[280px] h-[560px] bg-neutral-900 rounded-[3rem] p-3 shadow-2xl">
                 <div className="w-full h-full bg-gradient-to-b from-primary-500 to-primary-700 rounded-[2.3rem] flex flex-col items-center justify-center text-white overflow-hidden">
-                  <img src="/logo-white.png" alt="KmerTrash" className="h-16 w-auto mb-0" />
-                  <p className="text-2xl font-bold">{t.phoneName}</p>
+                  <img src="/logo-white-h-2.png" alt="KmerTrash" className="h-17 w-auto mb-0" />
+                   {/* <img src="/logo-2.png" alt="KmerTrash" className="h-17 w-auto mb-0" /> */}
+                  {/* <p className="text-2xl font-bold">{t.phoneName}</p> */}
                   <p className="text-sm opacity-80 mt-1">{t.phoneSubtitle}</p>
                   <div className="mt-8 space-y-3 w-full px-6">
                     <div className="bg-white/20 rounded-xl p-3 flex items-center gap-3">

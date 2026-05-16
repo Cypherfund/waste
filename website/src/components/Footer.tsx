@@ -18,8 +18,8 @@ export default function Footer({ dict }: FooterProps) {
           {/* Brand */}
           <div className="col-span-1 md:col-span-1">
             <div className="flex items-center gap-2 mb-4">
-              <img src="/logo-white.png" alt="KmerTrash Logo" className="h-7 w-auto" />
-              <span className="text-lg font-bold text-white">KmerTrash</span>
+              <img src="/logo-white-h-2.png" alt="KmerTrash Logo" className="h-16 w-auto" />
+              {/* <span className="text-lg font-bold text-white">KmerTrash</span> */}
             </div>
             <p className="text-sm text-neutral-400 leading-relaxed">
               {dict.footer.tagline}

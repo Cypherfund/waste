@@ -47,8 +47,8 @@ export default function Header({ lang, dict }: HeaderProps) {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <img src="/logo.png" alt="KmerTrash Logo" className="h-8 w-auto" />
-            <span className="text-xl font-bold text-primary-700">KmerTrash</span>
+            <img src="/logo-2.png" alt="KmerTrash Logo" className="h-16 w-auto" />
+            {/* <span className="text-xl font-bold text-primary-700">KmerTrash</span> */}
           </Link>
 
           {/* Desktop Nav */}
