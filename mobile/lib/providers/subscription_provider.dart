@@ -124,9 +124,8 @@ class SubscriptionProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Clear all data - called on logout
+  // Clear user-specific data on logout — plans are kept since they are not user-specific
   void reset() {
-    _plans = [];
     _subscription = null;
     _pricingQuote = null;
     _appConfig = null;

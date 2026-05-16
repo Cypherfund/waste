@@ -39,10 +39,15 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
 
     if (!mounted) return;
 
-    // Navigate to appropriate status screen based on job status
+    // For assigned/inProgress, only show live tracking if the pickup is today or earlier.
+    // If the pickup is scheduled for a future date, show the requested/pending screen instead.
+    final scheduledDate = DateTime.tryParse(job.scheduledDate);
+    final today = DateTime.now();
+    final isPickupDay = scheduledDate == null ||
+        !scheduledDate.isAfter(DateTime(today.year, today.month, today.day + 1));
+
     switch (job.status) {
       case JobStatus.paymentPending:
-        // Stay on current screen for payment pending
         break;
       case JobStatus.requested:
         Navigator.pushReplacement(
@@ -53,10 +58,14 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
         );
         break;
       case JobStatus.assigned:
+        // If the pickup hasn't arrived yet, show the "confirmed/upcoming" screen
+        // rather than the "collector on the way" screen.
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => BookingStatusAssignedScreen(jobId: widget.jobId),
+            builder: (context) => isPickupDay
+                ? BookingStatusAssignedScreen(jobId: widget.jobId)
+                : BookingStatusRequestedScreen(jobId: widget.jobId),
           ),
         );
         break;
@@ -64,7 +73,9 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => BookingStatusOnTheWayScreen(jobId: widget.jobId),
+            builder: (context) => isPickupDay
+                ? BookingStatusOnTheWayScreen(jobId: widget.jobId)
+                : BookingStatusAssignedScreen(jobId: widget.jobId),
           ),
         );
         break;

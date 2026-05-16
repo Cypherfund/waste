@@ -51,6 +51,7 @@ import 'features/household/presentation/screens/notifications_screen.dart';
 import 'features/household/presentation/screens/support_screen.dart';
 import 'features/household/presentation/screens/payment_methods_screen.dart';
 import 'features/household/presentation/screens/addresses_screen.dart';
+import 'features/household/presentation/screens/top_up_wallet_screen.dart';
 import 'screens/household/subscription_plans_screen.dart';
 import 'screens/household/manage_subscription_screen.dart';
 
@@ -238,6 +239,7 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
           '/support': (context) => const SupportScreen(),
           '/payment-methods': (context) => const PaymentMethodsScreen(),
           '/addresses': (context) => const AddressesScreen(),
+          '/top-up': (context) => const TopUpWalletScreen(),
           // Collector routes
           '/collector-home': (context) => const CollectorShell(),
           '/collector-jobs': (context) => const CollectorShell(),

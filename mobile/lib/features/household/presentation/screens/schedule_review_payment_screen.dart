@@ -258,11 +258,9 @@ class _ScheduleReviewPaymentScreenState
   }
 
   Widget _buildPricingBanner(PricingQuote? quote, SubscriptionProvider subProvider) {
-    // Show loading state only briefly, then show offline/price unavailable
     if (quote == null) {
       final isLoading = subProvider.isLoading;
-      final error = subProvider.error;
-      
+
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(16),
@@ -276,7 +274,7 @@ class _ScheduleReviewPaymentScreenState
         child: Row(
           children: [
             Icon(
-              isLoading ? Icons.sync_rounded : Icons.signal_wifi_off_rounded,
+              isLoading ? Icons.sync_rounded : Icons.wifi_off_rounded,
               color: isLoading ? const Color(0xFF6B7280) : const Color(0xFFFFA000),
               size: 20,
             ),
@@ -286,26 +284,44 @@ class _ScheduleReviewPaymentScreenState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    isLoading ? 'Loading pricing...' : 'Pricing unavailable offline',
-                    style: TextStyle(
+                    isLoading ? 'Loading pricing...' : 'Could not load pricing',
+                    style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
-                      color: isLoading ? const Color(0xFF111827) : const Color(0xFF111827),
+                      color: Color(0xFF111827),
                     ),
                   ),
-                  if (!isLoading && error != null) ...[
+                  if (!isLoading) ...[
                     const SizedBox(height: 4),
-                    Text(
-                      'Standard price: 1000 XAF per pickup',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFF6B7280),
-                      ),
+                    const Text(
+                      'Check your connection and try again.',
+                      style: TextStyle(fontSize: 11, color: Color(0xFF6B7280)),
                     ),
                   ],
                 ],
               ),
             ),
+            if (!isLoading) ...[
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () => subProvider.loadPricingQuote(),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFA000),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text(
+                    'Retry',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       );

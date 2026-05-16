@@ -235,6 +235,14 @@ class AuthProvider extends ChangeNotifier {
     _savedAccounts = await _storage.getSavedAccounts();
   }
 
+  /// Called by the login screen to ensure saved accounts are visible after logout.
+  Future<void> loadSavedAccountsIfNeeded() async {
+    if (_savedAccounts.isEmpty) {
+      await _loadSavedAccounts();
+      notifyListeners();
+    }
+  }
+
   Future<void> _addCurrentAccountToSaved(AuthResponse response) async {
     final account = SavedAccount(
       id: response.user.id,

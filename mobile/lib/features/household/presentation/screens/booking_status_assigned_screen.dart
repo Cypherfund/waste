@@ -216,7 +216,6 @@ class _BookingStatusAssignedScreenState
                         ),
                       )
                     : null,
-                onBackgroundImageError: (_, __) {},
               ),
 
               const SizedBox(width: 13),

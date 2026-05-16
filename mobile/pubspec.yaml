@@ -78,6 +78,7 @@ flutter:
     - assets/images/scheduling/
     - assets/images/status/
     - assets/images/empty_states/
+    - shorebird.yaml
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

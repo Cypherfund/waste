@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../config/app_theme.dart';
+import '../../models/saved_account.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/app_text_field.dart';
 import '../../widgets/loading_button.dart';
@@ -32,6 +33,8 @@ class _LoginScreenState extends State<LoginScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final auth = context.read<AuthProvider>();
+      // Load saved accounts from storage so profiles show up after logout
+      auth.loadSavedAccountsIfNeeded();
       final msg = auth.sessionExpiredMessage;
       if (msg != null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -223,6 +226,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ),
+
+                  // Saved profiles section
+                  if (!widget.addAccountMode && auth.savedAccounts.isNotEmpty) ..._buildSavedAccounts(auth),
                 ],
               ),
             ),
@@ -230,6 +236,39 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
     );
+  }
+
+  List<Widget> _buildSavedAccounts(AuthProvider auth) {
+    return [
+      const SizedBox(height: 28),
+      Row(
+        children: [
+          const Expanded(child: Divider()),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              'or continue as',
+              style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+            ),
+          ),
+          const Expanded(child: Divider()),
+        ],
+      ),
+      const SizedBox(height: 16),
+      ...auth.savedAccounts.map((account) => _SavedAccountTile(
+        account: account,
+        isSwitching: auth.isSwitching,
+        onTap: () async {
+          await auth.switchAccount(account);
+          if (!mounted) return;
+          if (auth.status == AuthStatus.authenticated) {
+            await markOnboardingCompleted();
+            final route = account.isCollector ? '/collector-home' : '/home';
+            Navigator.pushNamedAndRemoveUntil(context, route, (r) => false);
+          }
+        },
+      )),
+    ];
   }
 
   Widget _buildLogo() {
@@ -266,6 +305,89 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _SavedAccountTile extends StatelessWidget {
+  final SavedAccount account;
+  final bool isSwitching;
+  final VoidCallback onTap;
+
+  const _SavedAccountTile({
+    required this.account,
+    required this.isSwitching,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: InkWell(
+        onTap: isSwitching ? null : onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE5E7EB)),
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: account.isHousehold
+                    ? AppColors.primary.withValues(alpha: 0.12)
+                    : const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                child: Text(
+                  account.initials,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: account.isHousehold
+                        ? AppColors.primary
+                        : const Color(0xFFF59E0B),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      account.name,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF111827),
+                      ),
+                    ),
+                    Text(
+                      '${account.isHousehold ? 'Household' : 'Collector'} · ${account.phone}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF9CA3AF),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isSwitching)
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else
+                Icon(Icons.arrow_forward_ios_rounded,
+                    size: 14, color: Colors.grey.shade400),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
