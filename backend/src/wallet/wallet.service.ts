@@ -44,22 +44,23 @@ export class WalletService {
     );
   }
 
-  // ── GET wallet balance ────────────────────────────────────────
-  async getBalance(collectorId: string): Promise<{ balance: number }> {
-    const user = await this.userRepo.findOne({ where: { id: collectorId } });
+  // ── GET wallet balance (any user role) ───────────────────────
+  async getBalance(userId: string): Promise<{ balance: number }> {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
     return { balance: Number(user.walletBalance) };
   }
 
   // ── GET app config (payment integration + support + providers) ───────────
   async getAppConfig(countryCode: string) {
-    const [paymentEnabled, manualInstructions, whatsapp] = await Promise.all([
+    const [paymentEnabled, manualInstructions, whatsapp, minAdvanceHoursStr] = await Promise.all([
       this.systemConfigService.getBoolean('feature.payment_integration', false),
       this.systemConfigService.getString(
         'payment.manual_instructions',
         'Send your payment to the admin via Mobile Money. Use your phone number as reference.',
       ),
       this.systemConfigService.getString('support.whatsapp_number', ''),
+      this.systemConfigService.getString('booking.min_advance_hours', '24'),
     ]);
 
     // Get enabled payment providers for manual payment
@@ -70,6 +71,7 @@ export class WalletService {
       manualPaymentInstructions: manualInstructions,
       supportWhatsapp: whatsapp,
       paymentProviders: providers,
+      minAdvanceHours: parseInt(minAdvanceHoursStr, 10) || 24,
     };
   }
 

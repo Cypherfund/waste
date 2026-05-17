@@ -12,6 +12,10 @@ import {
   DollarSign,
   CreditCard,
   Wallet,
+  Megaphone,
+  Target,
+  Trophy,
+  Banknote,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -25,6 +29,11 @@ const NAV_ITEMS = [
   { to: '/fraud-flags', label: 'Fraud Flags', icon: Shield },
   { to: '/payment-providers', label: 'Payment Providers', icon: CreditCard },
   { to: '/config', label: 'Config', icon: Settings },
+  // Growth
+  { to: '/marketers', label: 'Marketers', icon: Megaphone },
+  { to: '/growth-leads', label: 'Growth Leads', icon: Target },
+  { to: '/commissions', label: 'Commissions', icon: Trophy },
+  { to: '/marketer-payouts', label: 'Mkt Payouts', icon: Banknote },
 ];
 
 export default function AdminLayout() {

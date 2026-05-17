@@ -3,29 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../providers/subscription_provider.dart';
+import '../../../../services/api/wallet_api.dart';
 import '../../../../widgets/bottom_navigation.dart';
-
-class Transaction {
-  final String id;
-  final String title;
-  final String? subtitle;
-  final double amount;
-  final DateTime date;
-  final String type; // 'credit' or 'debit'
-  final String? category;
-  final String status;
-
-  const Transaction({
-    required this.id,
-    required this.title,
-    this.subtitle,
-    required this.amount,
-    required this.date,
-    required this.type,
-    this.category,
-    this.status = 'completed',
-  });
-}
+import '../../../../widgets/skeleton_loader.dart';
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -35,45 +15,38 @@ class WalletScreen extends StatefulWidget {
 }
 
 class _WalletScreenState extends State<WalletScreen> {
-  final List<Transaction> _transactions = [
-    Transaction(
-      id: '1',
-      title: 'Pickup Payment',
-      subtitle: 'Booking #ABC12345',
-      amount: -2500,
-      date: DateTime(2026, 4, 25, 14, 30),
-      type: 'debit',
-      category: 'pickup',
-      status: 'completed',
-    ),
-    Transaction(
-      id: '2',
-      title: 'Wallet Top Up',
-      subtitle: 'Via Mobile Money',
-      amount: 10000,
-      date: DateTime(2026, 4, 24, 10, 15),
-      type: 'credit',
-      category: 'top_up',
-      status: 'completed',
-    ),
-    Transaction(
-      id: '3',
-      title: 'Subscription Payment',
-      subtitle: 'Monthly Plan',
-      amount: -4500,
-      date: DateTime(2026, 4, 20, 09, 00),
-      type: 'debit',
-      category: 'subscription',
-      status: 'completed',
-    ),
-  ];
+  List<PaymentTransaction> _transactions = [];
+  bool _isLoadingTransactions = true;
+  String? _transactionsError;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<SubscriptionProvider>().loadWalletBalance();
+      _loadTransactions();
     });
+  }
+
+  Future<void> _loadTransactions() async {
+    try {
+      final walletApi = context.read<WalletApi>();
+      final transactions = await walletApi.getMyTransactions(limit: 5);
+      if (mounted) {
+        setState(() {
+          _transactions = transactions;
+          _isLoadingTransactions = false;
+          _transactionsError = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingTransactions = false;
+          _transactionsError = 'Failed to load transactions';
+        });
+      }
+    }
   }
 
   @override
@@ -331,19 +304,48 @@ class _WalletScreenState extends State<WalletScreen> {
           ),
           child: Column(
             children: [
-              ...List.generate(
-                _transactions.take(3).length,
-                (index) => _buildTransactionCard(
-                  title: _transactions[index].title,
-                  subtitle: _transactions[index].subtitle ?? '',
-                  amount: _transactions[index].amount.toString(),
-                  date: DateFormat('MMM dd, yyyy').format(_transactions[index].date),
-                  icon: _transactions[index].type == 'credit' 
-                      ? Icons.arrow_downward 
-                      : Icons.arrow_upward,
-                  isCredit: _transactions[index].type == 'credit',
+              if (_isLoadingTransactions)
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                  child: SkeletonList(itemCount: 3, itemHeight: 80),
+                )
+              else if (_transactionsError != null)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      _transactionsError!,
+                      style: TextStyle(color: Colors.grey.shade600),
+                    ),
+                  ),
+                )
+              else if (_transactions.isEmpty)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      'No transactions yet',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                )
+              else
+                ...List.generate(
+                  _transactions.take(3).length,
+                  (index) => _buildTransactionCard(
+                    title: _transactions[index].description ?? _transactions[index].type,
+                    subtitle: _transactions[index].jobId != null ? 'Job #${_transactions[index].jobId}' : _transactions[index].providerName ?? '',
+                    amount: _transactions[index].amount.toStringAsFixed(0),
+                    date: DateFormat('MMM dd, yyyy').format(_transactions[index].createdAt),
+                    icon: _transactions[index].isCredit 
+                        ? Icons.arrow_downward 
+                        : Icons.arrow_upward,
+                    isCredit: _transactions[index].isCredit,
+                  ),
                 ),
-              ),
             ],
           ),
         ),

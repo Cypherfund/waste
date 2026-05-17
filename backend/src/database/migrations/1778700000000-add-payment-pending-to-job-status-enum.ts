@@ -4,6 +4,9 @@ export class AddPaymentPendingToJobStatusEnum1778700000000 implements MigrationI
   name = 'AddPaymentPendingToJobStatusEnum1778700000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    const exists = await queryRunner.query(`SELECT 1 FROM pg_enum WHERE enumlabel='PAYMENT_PENDING' AND enumtypid=(SELECT oid FROM pg_type WHERE typname='jobs_status_enum')`);
+    if (exists.length > 0) { console.log('Job status enum migration: already applied, skipping.'); return; }
+
     // Add PAYMENT_PENDING to the jobs_status_enum
     await queryRunner.query(`
       ALTER TYPE "jobs_status_enum" ADD VALUE 'PAYMENT_PENDING';

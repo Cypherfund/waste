@@ -1,15 +1,28 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { User } from './entities/user.entity';
+import { UserAddress } from './entities/user-address.entity';
 import { UserProfileDto } from './dto/user-profile.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+
+export interface CreateAddressDto {
+  label: string;
+  address: string;
+  landmark?: string;
+  lat?: number;
+  lng?: number;
+  isDefault?: boolean;
+}
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    @InjectRepository(UserAddress)
+    private readonly addressRepo: Repository<UserAddress>,
+    private readonly dataSource: DataSource,
   ) {}
 
   async getProfile(userId: string): Promise<UserProfileDto> {
@@ -82,6 +95,51 @@ export class UsersService {
 
   async countFlaggedCollectors(): Promise<number> {
     return this.userRepo.count({ where: { role: 'COLLECTOR' as any, isActive: false } });
+  }
+
+  // ── ADDRESS CRUD ──────────────────────────────────────────────
+
+  async listAddresses(userId: string): Promise<UserAddress[]> {
+    return this.addressRepo.find({
+      where: { userId },
+      order: { isDefault: 'DESC', createdAt: 'ASC' },
+    });
+  }
+
+  async createAddress(userId: string, dto: CreateAddressDto): Promise<UserAddress> {
+    return this.dataSource.transaction(async (em) => {
+      if (dto.isDefault) {
+        await em.getRepository(UserAddress).update({ userId }, { isDefault: false });
+      }
+      const address = em.getRepository(UserAddress).create({
+        userId,
+        label: dto.label,
+        address: dto.address,
+        landmark: dto.landmark ?? null,
+        lat: dto.lat ?? null,
+        lng: dto.lng ?? null,
+        isDefault: dto.isDefault ?? false,
+      });
+      return em.getRepository(UserAddress).save(address);
+    });
+  }
+
+  async deleteAddress(userId: string, addressId: string): Promise<void> {
+    const address = await this.addressRepo.findOne({ where: { id: addressId, userId } });
+    if (!address) throw new NotFoundException('Address not found');
+    await this.addressRepo.remove(address);
+  }
+
+  async setDefaultAddress(userId: string, addressId: string): Promise<UserAddress> {
+    return this.dataSource.transaction(async (em) => {
+      const address = await em
+        .getRepository(UserAddress)
+        .findOne({ where: { id: addressId, userId } });
+      if (!address) throw new NotFoundException('Address not found');
+      await em.getRepository(UserAddress).update({ userId }, { isDefault: false });
+      address.isDefault = true;
+      return em.getRepository(UserAddress).save(address);
+    });
   }
 
   private toProfileDto(user: User): UserProfileDto {

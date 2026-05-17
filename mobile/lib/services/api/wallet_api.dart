@@ -110,6 +110,45 @@ class AppConfig {
       paymentProviders.where((p) => p.hasManualPaymentDetails).toList();
 }
 
+class PaymentTransaction {
+  final String id;
+  final String type; // 'CASHIN', 'CASHOUT', 'REFUND', etc.
+  final double amount;
+  final String status; // 'PENDING', 'COMPLETED', 'FAILED'
+  final DateTime createdAt;
+  final String? providerName;
+  final String? paymentCode;
+  final String? jobId;
+  final String? description;
+
+  PaymentTransaction({
+    required this.id,
+    required this.type,
+    required this.amount,
+    required this.status,
+    required this.createdAt,
+    this.providerName,
+    this.paymentCode,
+    this.jobId,
+    this.description,
+  });
+
+  factory PaymentTransaction.fromJson(Map<String, dynamic> j) => PaymentTransaction(
+        id: j['id'] as String,
+        type: j['type'] as String,
+        amount: (j['amount'] as num).toDouble(),
+        status: j['status'] as String,
+        createdAt: DateTime.parse(j['createdAt'] as String),
+        providerName: j['providerName'] as String?,
+        paymentCode: j['paymentCode'] as String?,
+        jobId: j['jobId'] as String?,
+        description: j['description'] as String?,
+      );
+
+  bool get isCredit => type == 'CASHIN' || type == 'REFUND';
+  bool get isDebit => type == 'CASHOUT' || type == 'PAYMENT';
+}
+
 class WalletApi {
   final ApiClient _client;
   WalletApi(this._client);
@@ -148,6 +187,13 @@ class WalletApi {
     final response = await _client.dio.get('/wallet/payouts');
     return (response.data as List)
         .map((p) => PayoutRequest.fromJson(p as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<List<PaymentTransaction>> getMyTransactions({int limit = 20}) async {
+    final response = await _client.dio.get('/payments/my-transactions', queryParameters: {'limit': limit});
+    return (response.data as List)
+        .map((t) => PaymentTransaction.fromJson(t as Map<String, dynamic>))
         .toList();
   }
 }

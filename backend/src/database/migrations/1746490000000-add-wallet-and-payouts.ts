@@ -4,6 +4,9 @@ export class AddWalletAndPayouts1746490000000 implements MigrationInterface {
   name = 'AddWalletAndPayouts1746490000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    const exists = await queryRunner.query(`SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='payout_requests'`);
+    if (exists.length > 0) { console.log('Wallet migration: already applied, skipping.'); return; }
+
     // ── wallet_balance on users ─────────────────────────────────────
     await queryRunner.query(`
       ALTER TABLE "users"

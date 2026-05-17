@@ -27,6 +27,7 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { WalletModule } from './wallet/wallet.module';
 import { PaymentsModule } from './payments/payments.module';
 import { CountriesModule } from './countries/countries.module';
+import { GrowthModule } from './growth/growth.module';
 
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -77,6 +78,7 @@ import { CorrelationIdMiddleware } from './common/middleware/correlation-id.midd
     WalletModule,
     PaymentsModule,
     CountriesModule,
+    GrowthModule,
   ],
   providers: [
     // Global JWT auth guard — all routes require auth unless @Public()

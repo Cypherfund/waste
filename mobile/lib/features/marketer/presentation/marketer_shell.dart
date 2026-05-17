@@ -1,0 +1,76 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/marketer_provider.dart';
+import 'screens/marketer_dashboard_screen.dart';
+import 'screens/marketer_leads_screen.dart';
+import 'screens/marketer_commissions_screen.dart';
+import 'screens/marketer_profile_screen.dart';
+
+class MarketerShell extends StatefulWidget {
+  const MarketerShell({super.key});
+
+  @override
+  State<MarketerShell> createState() => _MarketerShellState();
+}
+
+class _MarketerShellState extends State<MarketerShell> {
+  int _currentIndex = 0;
+
+  final _pages = const [
+    MarketerDashboardScreen(),
+    MarketerLeadsScreen(),
+    MarketerCommissionsScreen(),
+    MarketerProfileScreen(),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<MarketerProvider>().loadDashboard();
+      context.read<MarketerProvider>().refreshUnreadCount();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final unread = context.watch<MarketerProvider>().unreadCount;
+
+    return Scaffold(
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _pages,
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _currentIndex,
+        onDestinationSelected: (i) => setState(() => _currentIndex = i),
+        destinations: [
+          const NavigationDestination(
+            icon: Icon(Icons.dashboard_outlined),
+            selectedIcon: Icon(Icons.dashboard),
+            label: 'Dashboard',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.people_outline),
+            selectedIcon: Icon(Icons.people),
+            label: 'Leads',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.monetization_on_outlined),
+            selectedIcon: Icon(Icons.monetization_on),
+            label: 'Earnings',
+          ),
+          NavigationDestination(
+            icon: Badge(
+              isLabelVisible: unread > 0,
+              label: Text('$unread'),
+              child: const Icon(Icons.person_outline),
+            ),
+            selectedIcon: const Icon(Icons.person),
+            label: 'Profile',
+          ),
+        ],
+      ),
+    );
+  }
+}

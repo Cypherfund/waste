@@ -379,13 +379,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             showDialog(
               context: context,
               builder: (context) => AlertDialog(
-                title: const Text('About WasteWise'),
+                title: const Text('About KmerTrash'),
                 content: const Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'WasteWise',
+                      'KmerTrash',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -400,7 +400,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     SizedBox(height: 16),
                     Text(
-                      '© 2026 WasteWise. All rights reserved.',
+                      '© 2026 KmerTrash. All rights reserved.',
                       style: TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                   ],

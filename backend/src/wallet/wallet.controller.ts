@@ -36,9 +36,6 @@ export class WalletController {
 
   @Get('balance')
   async getBalance(@CurrentUser() user: JwtPayload) {
-    if (user.role !== UserRole.COLLECTOR) {
-      throw new ForbiddenException('Only collectors have a wallet');
-    }
     return this.walletService.getBalance(user.sub);
   }
 

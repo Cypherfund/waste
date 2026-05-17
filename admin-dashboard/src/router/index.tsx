@@ -12,6 +12,10 @@ import EarningsPage from '../pages/EarningsPage';
 import SubscriptionsPage from '../pages/SubscriptionsPage';
 import PayoutsPage from '../pages/PayoutsPage';
 import PaymentProvidersPage from '../pages/PaymentProvidersPage';
+import MarketersPage from '../pages/MarketersPage';
+import GrowthLeadsPage from '../pages/GrowthLeadsPage';
+import CommissionsPage from '../pages/CommissionsPage';
+import MarketerPayoutsPage from '../pages/MarketerPayoutsPage';
 
 export const router = createBrowserRouter([
   {
@@ -36,6 +40,10 @@ export const router = createBrowserRouter([
       { path: 'payouts', element: <PayoutsPage /> },
       { path: 'config', element: <ConfigPage /> },
       { path: 'payment-providers', element: <PaymentProvidersPage /> },
+      { path: 'marketers', element: <MarketersPage /> },
+      { path: 'growth-leads', element: <GrowthLeadsPage /> },
+      { path: 'commissions', element: <CommissionsPage /> },
+      { path: 'marketer-payouts', element: <MarketerPayoutsPage /> },
     ],
   },
 ]);

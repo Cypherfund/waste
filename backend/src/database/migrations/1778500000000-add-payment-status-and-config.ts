@@ -4,6 +4,9 @@ export class AddPaymentStatusAndConfig1778500000000 implements MigrationInterfac
   name = 'AddPaymentStatusAndConfig1778500000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    const exists = await queryRunner.query(`SELECT 1 FROM information_schema.columns WHERE table_name='jobs' AND column_name='payment_status'`);
+    if (exists.length > 0) { console.log('Payment status migration: already applied, skipping.'); return; }
+
     // ── Add payment_status column to jobs table ──────────────────────
     await queryRunner.query(`
       ALTER TABLE "jobs" 
