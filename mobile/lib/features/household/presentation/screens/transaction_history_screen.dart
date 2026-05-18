@@ -1,28 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../../../../config/app_theme.dart';
-
-class Transaction {
-  final String id;
-  final String title;
-  final String? subtitle;
-  final double amount;
-  final DateTime date;
-  final String type; // 'credit' or 'debit'
-  final String? category; // 'pickup', 'top_up', 'transfer', etc.
-  final String status; // 'completed', 'pending', 'failed'
-
-  const Transaction({
-    required this.id,
-    required this.title,
-    this.subtitle,
-    required this.amount,
-    required this.date,
-    required this.type,
-    this.category,
-    this.status = 'completed',
-  });
-}
+import '../../../../services/api/wallet_api.dart';
+import '../../../../widgets/skeleton_loader.dart';
 
 class TransactionHistoryScreen extends StatefulWidget {
   const TransactionHistoryScreen({super.key});
@@ -33,96 +14,45 @@ class TransactionHistoryScreen extends StatefulWidget {
 
 class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   String _selectedFilter = 'all';
-  
-  final List<Transaction> _transactions = [
-    Transaction(
-      id: '1',
-      title: 'Pickup Payment',
-      subtitle: 'Booking #ABC12345',
-      amount: -2500,
-      date: DateTime(2026, 4, 25, 14, 30),
-      type: 'debit',
-      category: 'pickup',
-      status: 'completed',
-    ),
-    Transaction(
-      id: '2',
-      title: 'Top Up',
-      subtitle: 'Mobile Money - MTN',
-      amount: 10000,
-      date: DateTime(2026, 4, 24, 10, 15),
-      type: 'credit',
-      category: 'top_up',
-      status: 'completed',
-    ),
-    Transaction(
-      id: '3',
-      title: 'Pickup Payment',
-      subtitle: 'Booking #DEF67890',
-      amount: -2500,
-      date: DateTime(2026, 4, 20, 16, 45),
-      type: 'debit',
-      category: 'pickup',
-      status: 'completed',
-    ),
-    Transaction(
-      id: '4',
-      title: 'Top Up',
-      subtitle: 'Bank Transfer',
-      amount: 20000,
-      date: DateTime(2026, 4, 18, 9, 0),
-      type: 'credit',
-      category: 'top_up',
-      status: 'completed',
-    ),
-    Transaction(
-      id: '5',
-      title: 'Pickup Payment',
-      subtitle: 'Booking #GHI11223',
-      amount: -2500,
-      date: DateTime(2026, 4, 15, 11, 20),
-      type: 'debit',
-      category: 'pickup',
-      status: 'completed',
-    ),
-    Transaction(
-      id: '6',
-      title: 'Top Up',
-      subtitle: 'Mobile Money - Orange',
-      amount: 5000,
-      date: DateTime(2026, 4, 10, 14, 0),
-      type: 'credit',
-      category: 'top_up',
-      status: 'completed',
-    ),
-    Transaction(
-      id: '7',
-      title: 'Pickup Payment',
-      subtitle: 'Booking #JKL44556',
-      amount: -2500,
-      date: DateTime(2026, 4, 8, 9, 30),
-      type: 'debit',
-      category: 'pickup',
-      status: 'completed',
-    ),
-    Transaction(
-      id: '8',
-      title: 'Top Up',
-      subtitle: 'Mobile Money - MTN',
-      amount: 15000,
-      date: DateTime(2026, 4, 5, 16, 45),
-      type: 'credit',
-      category: 'top_up',
-      status: 'completed',
-    ),
-  ];
+  List<PaymentTransaction> _transactions = [];
+  bool _isLoading = true;
+  String? _error;
 
-  List<Transaction> get _filteredTransactions {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadTransactions();
+    });
+  }
+
+  Future<void> _loadTransactions() async {
+    try {
+      final walletApi = context.read<WalletApi>();
+      final transactions = await walletApi.getMyTransactions(limit: 50);
+      if (mounted) {
+        setState(() {
+          _transactions = transactions;
+          _isLoading = false;
+          _error = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _error = 'Failed to load transactions';
+        });
+      }
+    }
+  }
+
+  List<PaymentTransaction> get _filteredTransactions {
     switch (_selectedFilter) {
       case 'credit':
-        return _transactions.where((t) => t.type == 'credit').toList();
+        return _transactions.where((t) => t.isCredit).toList();
       case 'debit':
-        return _transactions.where((t) => t.type == 'debit').toList();
+        return _transactions.where((t) => t.isDebit).toList();
       default:
         return _transactions;
     }
@@ -156,16 +86,31 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
           
           // Transactions List
           Expanded(
-            child: _filteredTransactions.isEmpty
-                ? _buildEmptyState()
-                : ListView.builder(
-                    padding: const EdgeInsets.all(20),
-                    itemCount: _filteredTransactions.length,
-                    itemBuilder: (context, index) {
-                      final transaction = _filteredTransactions[index];
-                      return _buildTransactionCard(transaction);
-                    },
-                  ),
+            child: _isLoading
+                ? const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    child: SkeletonList(itemCount: 8, itemHeight: 80),
+                  )
+                : _error != null
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(40),
+                          child: Text(
+                            _error!,
+                            style: TextStyle(color: Colors.grey.shade600),
+                          ),
+                        ),
+                      )
+                    : _filteredTransactions.isEmpty
+                        ? _buildEmptyState()
+                        : ListView.builder(
+                            padding: const EdgeInsets.all(20),
+                            itemCount: _filteredTransactions.length,
+                            itemBuilder: (context, index) {
+                              final transaction = _filteredTransactions[index];
+                              return _buildTransactionCard(transaction);
+                            },
+                          ),
           ),
         ],
       ),
@@ -249,8 +194,12 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
     );
   }
   
-  Widget _buildTransactionCard(Transaction transaction) {
-    final isCredit = transaction.type == 'credit';
+  Widget _buildTransactionCard(PaymentTransaction transaction) {
+    final isCredit = transaction.isCredit;
+    final title = transaction.description ?? transaction.type;
+    final subtitle = transaction.jobId != null
+        ? 'Job #${transaction.jobId}'
+        : transaction.providerName ?? '';
     
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -288,17 +237,17 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  transaction.title,
+                  title,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: Colors.black87,
                   ),
                 ),
-                if (transaction.subtitle != null) ...[
+                if (subtitle.isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Text(
-                    transaction.subtitle!,
+                    subtitle,
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey.shade600,
@@ -310,7 +259,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                   children: [
                     Flexible(
                       child: Text(
-                        _formatDate(transaction.date),
+                        _formatDate(transaction.createdAt),
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 12,

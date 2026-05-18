@@ -61,7 +61,7 @@ class AuthProvider extends ChangeNotifier {
       final user = await _storage.getUser();
       final refreshToken = await _storage.getRefreshToken();
 
-      if (user == null || refreshToken == null || (!user.isHousehold && !user.isCollector)) {
+      if (user == null || refreshToken == null || (!user.isHousehold && !user.isCollector && !user.isMarketer)) {
         await _storage.clearAll();
         _status = AuthStatus.unauthenticated;
         notifyListeners();
@@ -128,8 +128,8 @@ class AuthProvider extends ChangeNotifier {
       final response = await _authApi.login(phone: phone, password: password);
       debugPrint('AuthProvider: Login successful. User role: ${response.user.role}, isHousehold: ${response.user.isHousehold}, isCollector: ${response.user.isCollector}');
 
-      if (!response.user.isHousehold && !response.user.isCollector) {
-        throw Exception('This app is for household and collector users only. Your role: ${response.user.role}');
+      if (!response.user.isHousehold && !response.user.isCollector && !response.user.isMarketer) {
+        throw Exception('This app is for household, collector and marketer users only. Your role: ${response.user.role}');
       }
 
       await _persistSession(response);
@@ -176,8 +176,8 @@ class AuthProvider extends ChangeNotifier {
       );
       debugPrint('AuthProvider: Register successful. User role: ${response.user.role}, isHousehold: ${response.user.isHousehold}, isCollector: ${response.user.isCollector}');
 
-      if (!response.user.isHousehold && !response.user.isCollector) {
-        throw Exception('This app is for household and collector users only. Your role: ${response.user.role}');
+      if (!response.user.isHousehold && !response.user.isCollector && !response.user.isMarketer) {
+        throw Exception('This app is for household, collector and marketer users only. Your role: ${response.user.role}');
       }
 
       await _persistSession(response);

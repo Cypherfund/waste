@@ -43,4 +43,5 @@ class User {
 
   bool get isHousehold => role == 'HOUSEHOLD';
   bool get isCollector => role == 'COLLECTOR';
+  bool get isMarketer => role == 'MARKETER';
 }

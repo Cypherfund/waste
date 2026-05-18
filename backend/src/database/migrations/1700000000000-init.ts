@@ -4,6 +4,16 @@ export class Init1700000000000 implements MigrationInterface {
     name = 'Init1700000000000'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
+        // If the database already has these objects (e.g. created outside migrations),
+        // skip this entire migration. Check for `jobs` table as a proxy.
+        const alreadyRan = await queryRunner.query(
+            `SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'jobs'`
+        );
+        if (alreadyRan.length > 0) {
+            console.log('Init migration: database already set up, skipping.');
+            return;
+        }
+
         await queryRunner.query(`CREATE TYPE "public"."users_role_enum" AS ENUM('HOUSEHOLD', 'COLLECTOR', 'ADMIN')`);
         await queryRunner.query(`CREATE TABLE "users" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(100) NOT NULL, "email" character varying(255), "phone" character varying(20) NOT NULL, "password_hash" character varying(255) NOT NULL, "role" "public"."users_role_enum" NOT NULL, "is_active" boolean NOT NULL DEFAULT true, "avatar_url" character varying(500), "latitude" numeric(10,8), "longitude" numeric(11,8), "fcm_token" character varying(500), "refresh_token_hash" character varying(255), "avg_rating" numeric(3,2) NOT NULL DEFAULT '0', "total_completed" integer NOT NULL DEFAULT '0', "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "UQ_97672ac88f789774dd47f7c8be3" UNIQUE ("email"), CONSTRAINT "UQ_a000cca60bcf04454e727699490" UNIQUE ("phone"), CONSTRAINT "PK_a3ffb1c0c8416b9fc6f907b7433" PRIMARY KEY ("id"))`);
         await queryRunner.query(`CREATE INDEX "IDX_a000cca60bcf04454e72769949" ON "users" ("phone") `);

@@ -4,6 +4,9 @@ export class AddCountriesAndProviders1778456800000 implements MigrationInterface
   name = 'AddCountriesAndProviders1778456800000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    const exists = await queryRunner.query(`SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='supported_countries'`);
+    if (exists.length > 0) { console.log('Countries migration: already applied, skipping.'); return; }
+
     // ── supported_countries ──────────────────────────────────────
     await queryRunner.query(`
       CREATE TABLE "supported_countries" (

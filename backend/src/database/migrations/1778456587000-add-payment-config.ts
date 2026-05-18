@@ -4,13 +4,9 @@ export class AddPaymentConfig1778456587000 implements MigrationInterface {
   name = 'AddPaymentConfig1778456587000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // Insert payment gateway configuration defaults
+    // Insert payment gateway configuration defaults (idempotent via ON CONFLICT)
     await queryRunner.query(`
-<<<<<<< HEAD
-      INSERT INTO "system_config" ("key", "value", "description", "category", "is_feature_flag")
-=======
       INSERT INTO "system_config" ("key", "value", "description", "category")
->>>>>>> 711d92581f06edad6e6e91ac60d4f079c6d85997
       VALUES 
         ('payment.gateway_url', 'http://127.0.0.1:8081', 'Base URL for payment gateway API', 'payment'),
         ('payment.callback_base_url', 'http://localhost:3000', 'Base URL for payment callbacks (must be publicly accessible)', 'payment'),

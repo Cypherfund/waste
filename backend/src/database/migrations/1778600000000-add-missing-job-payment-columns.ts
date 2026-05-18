@@ -4,6 +4,9 @@ export class AddMissingJobPaymentColumns1778600000000 implements MigrationInterf
   name = 'AddMissingJobPaymentColumns1778600000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    const exists = await queryRunner.query(`SELECT 1 FROM information_schema.columns WHERE table_name='jobs' AND column_name='payment_method'`);
+    if (exists.length > 0) { console.log('Job payment columns migration: already applied, skipping.'); return; }
+
     // Add missing payment-related columns to jobs table
     await queryRunner.query(`
       ALTER TABLE "jobs" 

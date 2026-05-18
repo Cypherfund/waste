@@ -54,6 +54,9 @@ import 'features/household/presentation/screens/addresses_screen.dart';
 import 'features/household/presentation/screens/top_up_wallet_screen.dart';
 import 'screens/household/subscription_plans_screen.dart';
 import 'screens/household/manage_subscription_screen.dart';
+import 'features/marketer/data/marketer_api.dart';
+import 'features/marketer/providers/marketer_provider.dart';
+import 'features/marketer/presentation/marketer_shell.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -104,6 +107,8 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
   late final CollectorEarningsProvider _collectorEarningsProvider;
   late final SubscriptionProvider _subscriptionProvider;
   late final OfflineQueueProvider _offlineQueueProvider;
+  late final MarketerApi _marketerApi;
+  late final MarketerProvider _marketerProvider;
 
   @override
   void initState() {
@@ -120,6 +125,8 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
     _subscriptionApi = SubscriptionApi(_apiClient);
     _countriesApi = CountriesApi(_apiClient);
     _countriesProvider = CountriesProvider(countriesApi: _countriesApi);
+    _marketerApi = MarketerApi(_apiClient);
+    _marketerProvider = MarketerProvider(api: _marketerApi);
     _wsService = WebSocketService();
     _locationService = LocationTrackingService(wsService: _wsService);
     _queueService = OfflineQueueService();
@@ -193,13 +200,14 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
         ChangeNotifierProvider.value(value: _offlineQueueProvider),
         ChangeNotifierProvider.value(value: _subscriptionProvider),
         ChangeNotifierProvider.value(value: _countriesProvider),
+        ChangeNotifierProvider.value(value: _marketerProvider),
         Provider.value(value: widget.connectivityService),
         Provider.value(value: _locationService),
         Provider.value(value: _queueService),
         Provider.value(value: _syncService),
       ],
       child: MaterialApp(
-        title: 'WasteWise',
+        title: 'KmerTrash',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         routes: {
@@ -273,6 +281,9 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
                       if (auth.user?.isCollector == true) {
                         return const CollectorShell();
                       }
+                      if (auth.user?.isMarketer == true) {
+                        return const MarketerShell();
+                      }
                       return const HomeDashboardScreen();
                     case AuthStatus.unauthenticated:
                       return LoginScreen(
@@ -304,21 +315,58 @@ class _SplashScreen extends StatefulWidget {
   State<_SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<_SplashScreen> {
+class _SplashScreenState extends State<_SplashScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _fadeAnim;
+
   @override
   void initState() {
     super.initState();
-    // Restore session when splash screen initializes
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _fadeAnim = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
+    _controller.forward();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AuthProvider>().tryRestoreSession();
     });
   }
 
   @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: CircularProgressIndicator(),
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: FadeTransition(
+        opacity: _fadeAnim,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(
+                'assets/images/logo-2.png',
+                width: 240,
+                fit: BoxFit.contain,
+              ),
+              const SizedBox(height: 48),
+              const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1B5E20)),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

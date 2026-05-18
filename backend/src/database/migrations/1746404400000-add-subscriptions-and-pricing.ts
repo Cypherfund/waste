@@ -4,6 +4,9 @@ export class AddSubscriptionsAndPricing1746404400000 implements MigrationInterfa
     name = 'AddSubscriptionsAndPricing1746404400000'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
+        const exists = await queryRunner.query(`SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='subscription_plans'`);
+        if (exists.length > 0) { console.log('Subscriptions migration: already applied, skipping.'); return; }
+
         // ─── subscription_plans ───────────────────────────────────────────
         await queryRunner.query(`
             CREATE TABLE "subscription_plans" (

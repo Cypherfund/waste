@@ -4,24 +4,39 @@ export class CompleteDdlEnhancements1746404500000 implements MigrationInterface 
     name = 'CompleteDdlEnhancements1746404500000'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-        // ─── Extensions ───────────────────────────────────────────
+        const exists = await queryRunner.query(`SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='idempotency_cache'`);
+        if (exists.length > 0) { console.log('DDL enhancements migration: already applied, skipping.'); return; }
+
+        // ─── Extensions (may require superuser, skip gracefully) ────
         await queryRunner.query(`
-            CREATE EXTENSION IF NOT EXISTS "pg_trgm"
+            DO $$ BEGIN
+                CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+            EXCEPTION WHEN insufficient_privilege THEN
+                RAISE NOTICE 'pg_trgm extension skipped (insufficient privileges)';
+            END $$
         `);
         
         await queryRunner.query(`
-            CREATE EXTENSION IF NOT EXISTS "earthdistance" CASCADE
+            DO $$ BEGIN
+                CREATE EXTENSION IF NOT EXISTS "earthdistance" CASCADE;
+            EXCEPTION WHEN insufficient_privilege THEN
+                RAISE NOTICE 'earthdistance extension skipped (insufficient privileges)';
+            END $$
         `);
 
         // ─── Additional Indexes ───────────────────────────────────────
         
-        // Location index for users (collectors)
+        // Location index for users (collectors) - requires earthdistance
         await queryRunner.query(`
-            CREATE INDEX IF NOT EXISTS "idx_users_location" 
-            ON "users" USING gist (
-                ll_to_earth(latitude, longitude)
-            ) 
-            WHERE role = 'COLLECTOR' AND latitude IS NOT NULL
+            DO $$ BEGIN
+                CREATE INDEX IF NOT EXISTS "idx_users_location" 
+                ON "users" USING gist (
+                    ll_to_earth(latitude, longitude)
+                ) 
+                WHERE role = 'COLLECTOR' AND latitude IS NOT NULL;
+            EXCEPTION WHEN undefined_function THEN
+                RAISE NOTICE 'Location index skipped (earthdistance not available)';
+            END $$
         `);
 
         // Additional job indexes
@@ -48,11 +63,15 @@ export class CompleteDdlEnhancements1746404500000 implements MigrationInterface 
         `);
 
         await queryRunner.query(`
-            CREATE INDEX IF NOT EXISTS "idx_jobs_location" 
-            ON "jobs" USING gist (
-                ll_to_earth(location_lat, location_lng)
-            ) 
-            WHERE location_lat IS NOT NULL
+            DO $$ BEGIN
+                CREATE INDEX IF NOT EXISTS "idx_jobs_location" 
+                ON "jobs" USING gist (
+                    ll_to_earth(location_lat, location_lng)
+                ) 
+                WHERE location_lat IS NOT NULL;
+            EXCEPTION WHEN undefined_function THEN
+                RAISE NOTICE 'Jobs location index skipped (earthdistance not available)';
+            END $$
         `);
 
         await queryRunner.query(`

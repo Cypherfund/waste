@@ -205,6 +205,110 @@ export interface PaymentProvider {
   updatedAt: string;
 }
 
+// ─── Growth / Ambassadors ───────────────────────────────────────
+export interface Marketer {
+  id: string;
+  userId: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  referralCode: string;
+  territory: string | null;
+  status: 'PENDING' | 'ACTIVE' | 'SUSPENDED';
+  totalLeads: number;
+  totalRegistered: number;
+  totalQualified: number;
+  totalExpired: number;
+  conversionRate: number;
+  qualificationRate: number;
+  totalEarned: number;
+  totalPaid: number;
+  pendingAmount: number;
+  approvedAmount: number;
+  dailyLeadsCreated: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GrowthLead {
+  id: string;
+  marketerId: string;
+  name: string;
+  phone: string;
+  type: 'HOUSEHOLD' | 'COLLECTOR';
+  area: string | null;
+  notes: string | null;
+  source: 'FIELD' | 'ONLINE' | 'REFERRAL';
+  referralToken: string;
+  referralCode: string;
+  status: 'INVITED' | 'REGISTERED' | 'QUALIFIED' | 'EXPIRED';
+  invitedAt: string;
+  registeredAt: string | null;
+  qualifiedAt: string | null;
+  expiresAt: string;
+  smsStatus: string;
+  smsRetryCount: number;
+  createdAt: string;
+}
+
+export interface CommissionScheme {
+  id: string;
+  name: string;
+  type: 'HOUSEHOLD_ONBOARDING' | 'COLLECTOR_ONBOARDING' | 'SUBSCRIPTION_PAYMENT';
+  description: string | null;
+  commissionType: 'FIXED' | 'PERCENTAGE';
+  amount: number;
+  isActive: boolean;
+  isAutoAssigned: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CommissionTransaction {
+  id: string;
+  marketerProfileId: string;
+  schemeId: string;
+  leadId: string;
+  triggerType: string;
+  referenceId: string;
+  referenceType: string;
+  amount: number;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'PAID';
+  description: string | null;
+  rejectionReason: string | null;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+  paidAt: string | null;
+  createdAt: string;
+  marketerProfile?: { id: string; user?: { name: string; phone: string } };
+}
+
+export interface CommissionTransactionsResponse {
+  data: CommissionTransaction[];
+  total: number;
+}
+
+export interface MarketerPayoutRequest {
+  id: string;
+  marketerProfileId: string;
+  amount: number;
+  method: string;
+  accountNumber: string;
+  accountName: string | null;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'PAID';
+  adminNote: string | null;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+  paidAt: string | null;
+  createdAt: string;
+  marketerProfile?: { id: string; user?: { name: string; phone: string } };
+}
+
+export interface MarketerPayoutsResponse {
+  data: MarketerPayoutRequest[];
+  total: number;
+}
+
 // ─── Stats ───────────────────────────────────────────────────────
 export interface DashboardStats {
   totalUsers: number;

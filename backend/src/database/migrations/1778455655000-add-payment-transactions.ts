@@ -4,6 +4,9 @@ export class AddPaymentTransactions1778455655000 implements MigrationInterface {
   name = 'AddPaymentTransactions1778455655000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    const exists = await queryRunner.query(`SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='payment_transactions'`);
+    if (exists.length > 0) { console.log('Payment transactions migration: already applied, skipping.'); return; }
+
     // Create enum types
     await queryRunner.query(`
       CREATE TYPE "transaction_type_enum" AS ENUM ('CASHIN', 'CASHOUT')

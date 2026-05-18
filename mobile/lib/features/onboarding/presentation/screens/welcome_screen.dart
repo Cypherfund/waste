@@ -81,39 +81,36 @@ class WelcomeScreen extends StatelessWidget {
 
   // ---------------- HEADER ----------------
   Widget _buildHeader() {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Image.asset(
-          'assets/images/logo.png',
-          width: 42,
-          height: 42,
-          errorBuilder: (_, __, ___) => Icon(
-            Icons.recycling,
-            color: AppColors.primary,
-            size: 42,
+          'assets/images/logo-2.png',
+          height: 52,
+          fit: BoxFit.contain,
+          alignment: Alignment.centerLeft,
+          errorBuilder: (_, __, ___) => Row(
+            children: [
+              Icon(Icons.recycling, color: AppColors.primary, size: 42),
+              const SizedBox(width: 8),
+              Text(
+                'KmerTrash',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'KmerTrash',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-                color: AppColors.primary,
-                letterSpacing: -0.5,
-              ),
-            ),
-            Text(
-              'Clean Today, Green Tomorrow.',
-              style: TextStyle(
-                fontSize: 11,
-                color: Colors.grey.shade500,
-              ),
-            ),
-          ],
+        const SizedBox(height: 4),
+        Text(
+          'Clean Today, Green Tomorrow.',
+          style: TextStyle(
+            fontSize: 11,
+            color: Colors.grey.shade500,
+          ),
         ),
       ],
     );
