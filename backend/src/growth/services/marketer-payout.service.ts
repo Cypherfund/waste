@@ -184,9 +184,13 @@ export class MarketerPayoutService {
       throw new BadRequestException('Payout request must be approved before marking as paid');
     }
 
+    if (!paidReference) {
+      throw new BadRequestException('Payment reference is required when marking as paid');
+    }
+
     payout.status = PayoutStatus.PAID;
     payout.paidAt = new Date();
-    payout.paidReference = paidReference || null;
+    payout.paidReference = paidReference;
 
     const saved = await this.payoutRepo.save(payout);
 

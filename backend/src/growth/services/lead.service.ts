@@ -345,6 +345,27 @@ export class LeadService {
     });
   }
 
+  async claimReferralToken(token: string): Promise<Lead> {
+    const lead = await this.leadRepo.findOne({
+      where: { referralToken: token },
+      relations: ['marketer'],
+    });
+
+    if (!lead) {
+      throw new NotFoundException('Invalid referral token');
+    }
+
+    if (lead.status !== LeadStatus.INVITED) {
+      throw new BadRequestException('This referral link has already been used');
+    }
+
+    if (lead.expiresAt && new Date() > new Date(lead.expiresAt)) {
+      throw new BadRequestException('This referral link has expired');
+    }
+
+    return lead;
+  }
+
   async getMarketerLeads(marketerId: string, status?: LeadStatus): Promise<Lead[]> {
     const where: any = { marketerId };
     if (status) {

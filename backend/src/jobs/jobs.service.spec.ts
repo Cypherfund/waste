@@ -10,6 +10,7 @@ import { PaymentStatus } from '../common/enums/payment-status.enum';
 import { PricingService } from '../subscriptions/pricing.service';
 import { PricingType } from '../common/enums/pricing-type.enum';
 import { FilesService } from '../files/files.service';
+import { PaymentService } from '../payments/payment.service';
 
 describe('JobsService - Pricing Integration', () => {
   let service: JobsService;
@@ -18,6 +19,7 @@ describe('JobsService - Pricing Integration', () => {
   let eventEmitter: any;
   let filesService: any;
   let pricingService: any;
+  let paymentService: any;
 
   const makeJob = (overrides: any = {}): any => ({
     id: 'job-1',
@@ -78,6 +80,11 @@ describe('JobsService - Pricing Integration', () => {
       consumePickup: jest.fn(),
     };
 
+    paymentService = {
+      isPaymentIntegrationEnabled: jest.fn().mockResolvedValue(false),
+      initiatePayment: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         JobsService,
@@ -86,6 +93,7 @@ describe('JobsService - Pricing Integration', () => {
         { provide: EventEmitter2, useValue: eventEmitter },
         { provide: FilesService, useValue: filesService },
         { provide: PricingService, useValue: pricingService },
+        { provide: PaymentService, useValue: paymentService },
       ],
     }).compile();
 

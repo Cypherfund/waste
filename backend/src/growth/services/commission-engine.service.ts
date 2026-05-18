@@ -103,6 +103,15 @@ export class CommissionEngineService {
       amount = (parseFloat(scheme.amount.toString()) / 100) * payload.amount;
     }
 
+    // Idempotency: check if commission already exists for this lead + trigger + reference
+    const existing = await this.transactionRepo.findOne({
+      where: { leadId: lead.id, triggerType: TriggerType.FIRST_SUCCESSFUL_BOOKING, referenceId: payload.bookingId },
+    });
+    if (existing) {
+      this.logger.log(`Commission already exists for booking ${payload.bookingId}, skipping`);
+      return;
+    }
+
     // Mark lead as qualified first
     await this.leadService.markLeadQualified(lead.id);
 
@@ -173,6 +182,15 @@ export class CommissionEngineService {
 
     // Calculate amount
     const amount = parseFloat(scheme.amount.toString());
+
+    // Idempotency check
+    const existing = await this.transactionRepo.findOne({
+      where: { leadId: lead.id, triggerType: TriggerType.FIRST_PICKUP_COMPLETED, referenceId: payload.jobId },
+    });
+    if (existing) {
+      this.logger.log(`Commission already exists for job ${payload.jobId}, skipping`);
+      return;
+    }
 
     // Mark lead as qualified
     await this.leadService.markLeadQualified(lead.id);
@@ -245,6 +263,15 @@ export class CommissionEngineService {
     // Calculate amount (always percentage for subscriptions)
     const percentage = parseFloat(scheme.amount.toString());
     const amount = (percentage / 100) * payload.amount;
+
+    // Idempotency check
+    const existing = await this.transactionRepo.findOne({
+      where: { leadId: lead.id, triggerType: TriggerType.SUBSCRIPTION_PAID, referenceId: payload.subscriptionId },
+    });
+    if (existing) {
+      this.logger.log(`Commission already exists for subscription ${payload.subscriptionId}, skipping`);
+      return;
+    }
 
     // Create commission transaction
     const transaction = this.transactionRepo.create({

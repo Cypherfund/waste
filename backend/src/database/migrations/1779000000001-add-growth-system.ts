@@ -155,6 +155,7 @@ export class AddGrowthSystem1779000000001 implements MigrationInterface {
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_ct_profile" ON "commission_transactions"("marketer_profile_id")`);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_ct_status" ON "commission_transactions"("status")`);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_ct_created" ON "commission_transactions"("created_at")`);
+    await queryRunner.query(`CREATE UNIQUE INDEX IF NOT EXISTS "UQ_ct_lead_trigger_ref" ON "commission_transactions"("lead_id", "trigger_type", "reference_id")`);
 
     // 6. Create marketer_payout_requests table
     await queryRunner.query(`

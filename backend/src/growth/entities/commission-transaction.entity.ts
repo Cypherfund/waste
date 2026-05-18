@@ -27,6 +27,7 @@ export enum CommissionStatus {
 }
 
 @Entity('commission_transactions')
+@Index('UQ_ct_lead_trigger_ref', ['leadId', 'triggerType', 'referenceId'], { unique: true })
 export class CommissionTransaction {
   @PrimaryGeneratedColumn('uuid')
   id: string;

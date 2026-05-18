@@ -7,6 +7,7 @@ import { AssignmentService } from '../assignment/assignment.service';
 import { DisputesService } from '../disputes/disputes.service';
 import { FraudService } from '../fraud/fraud.service';
 import { SystemConfigService } from '../config/system-config.service';
+import { FeatureFlagService } from '../config/feature-flags';
 import { Job } from '../jobs/entities/job.entity';
 import { Dispute } from '../disputes/entities/dispute.entity';
 import { Earning } from '../earnings/entities/earning.entity';
@@ -26,6 +27,7 @@ describe('AdminService', () => {
   let disputesService: any;
   let fraudService: any;
   let systemConfigService: any;
+  let featureFlagService: any;
   let jobRepo: any;
   let disputeRepo: any;
   let earningRepo: any;
@@ -100,6 +102,10 @@ describe('AdminService', () => {
       }),
     };
 
+    featureFlagService = {
+      isEnabled: jest.fn().mockResolvedValue(false),
+    };
+
     jobRepo = {
       findAndCount: jest.fn().mockResolvedValue([[], 0]),
       count: jest.fn().mockResolvedValue(10),
@@ -144,6 +150,7 @@ describe('AdminService', () => {
         { provide: DisputesService, useValue: disputesService },
         { provide: FraudService, useValue: fraudService },
         { provide: SystemConfigService, useValue: systemConfigService },
+        { provide: FeatureFlagService, useValue: featureFlagService },
         { provide: getRepositoryToken(Job), useValue: jobRepo },
         { provide: getRepositoryToken(Dispute), useValue: disputeRepo },
         { provide: getRepositoryToken(Earning), useValue: earningRepo },
