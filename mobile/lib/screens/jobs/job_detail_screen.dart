@@ -172,6 +172,8 @@ class JobDetailScreen extends StatelessWidget {
 
   IconData _statusIcon(JobStatus status) {
     switch (status) {
+      case JobStatus.paymentPending:
+        return Icons.payment;
       case JobStatus.requested:
         return Icons.schedule;
       case JobStatus.assigned:

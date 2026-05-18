@@ -165,5 +165,160 @@ describe('LeadService', () => {
         expect.objectContaining({ totalExpired: 3 }),
       );
     });
+
+    it('should allow expiring a REGISTERED lead (only QUALIFIED is blocked)', async () => {
+      leadRepo.findOne.mockResolvedValue({
+        id: 'lead-1',
+        status: LeadStatus.REGISTERED,
+        marketerId: 'marketer-1',
+      });
+      profileRepo.findOne.mockResolvedValue({
+        userId: 'marketer-1',
+        totalExpired: 1,
+      });
+
+      const result = await service.expireLead('lead-1');
+      expect(result).toHaveProperty('status', LeadStatus.EXPIRED);
+    });
+  });
+
+  describe('createLead - daily limit', () => {
+    it('should reject when daily limit is reached (atomic update affects 0 rows)', async () => {
+      profileRepo.findOne.mockResolvedValue({
+        id: 'profile-1',
+        userId: 'marketer-1',
+        dailyLeadsCreated: 20,
+        dailyLeadsResetAt: new Date(),
+      });
+
+      // Atomic update returns affected: 0 (limit reached)
+      dataSource.createQueryBuilder.mockReturnValue({
+        update: jest.fn().mockReturnThis(),
+        set: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        execute: jest.fn().mockResolvedValue({ affected: 0 }),
+      });
+
+      await expect(
+        service.createLead('marketer-1', {
+          name: 'Test Lead',
+          phone: '+237600099001',
+          type: 'HOUSEHOLD' as any,
+        }),
+      ).rejects.toThrow();
+    });
+  });
+
+  describe('convertLeadToUser', () => {
+    it('should reject converting a lead that is not INVITED', async () => {
+      leadRepo.findOne.mockResolvedValue({
+        id: 'lead-1',
+        status: LeadStatus.REGISTERED,
+      });
+
+      await expect(
+        service.convertLeadToUser('lead-1', 'user-1'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should update lead status to REGISTERED and increment marketer totalRegistered', async () => {
+      leadRepo.findOne.mockResolvedValue({
+        id: 'lead-1',
+        status: LeadStatus.INVITED,
+        marketerId: 'marketer-1',
+        name: 'Test Lead',
+      });
+      profileRepo.findOne.mockResolvedValue({
+        id: 'profile-1',
+        userId: 'marketer-1',
+        totalRegistered: 5,
+        totalLeads: 10,
+      });
+
+      await service.convertLeadToUser('lead-1', 'user-1');
+
+      expect(leadRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: LeadStatus.REGISTERED,
+          registeredUserId: 'user-1',
+        }),
+      );
+      expect(profileRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          totalRegistered: 6,
+          conversionRate: 60, // 6/10 * 100
+        }),
+      );
+    });
+
+    it('should throw NotFoundException if lead does not exist', async () => {
+      leadRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.convertLeadToUser('nonexistent', 'user-1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('markLeadQualified', () => {
+    it('should reject qualifying a lead that is not REGISTERED', async () => {
+      leadRepo.findOne.mockResolvedValue({
+        id: 'lead-1',
+        status: LeadStatus.INVITED,
+      });
+
+      await expect(
+        service.markLeadQualified('lead-1'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should update status and compute qualificationRate safely when totalRegistered is 0', async () => {
+      leadRepo.findOne.mockResolvedValue({
+        id: 'lead-1',
+        status: LeadStatus.REGISTERED,
+        marketerId: 'marketer-1',
+        name: 'Test Lead',
+      });
+      profileRepo.findOne.mockResolvedValue({
+        id: 'profile-1',
+        userId: 'marketer-1',
+        totalQualified: 0,
+        totalRegistered: 0,
+      });
+
+      await service.markLeadQualified('lead-1');
+
+      // Should not produce NaN/Infinity
+      expect(profileRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          totalQualified: 1,
+          qualificationRate: 0, // guarded division by zero
+        }),
+      );
+    });
+
+    it('should compute qualificationRate correctly when totalRegistered > 0', async () => {
+      leadRepo.findOne.mockResolvedValue({
+        id: 'lead-1',
+        status: LeadStatus.REGISTERED,
+        marketerId: 'marketer-1',
+        name: 'Test Lead',
+      });
+      profileRepo.findOne.mockResolvedValue({
+        id: 'profile-1',
+        userId: 'marketer-1',
+        totalQualified: 4,
+        totalRegistered: 10,
+      });
+
+      await service.markLeadQualified('lead-1');
+
+      expect(profileRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          totalQualified: 5,
+          qualificationRate: 50, // 5/10 * 100
+        }),
+      );
+    });
   });
 });
