@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/marketer_models.dart';
 import '../../providers/marketer_provider.dart';
+import '../../../../services/api/wallet_api.dart';
 
 class MarketerCommissionsScreen extends StatefulWidget {
   const MarketerCommissionsScreen({super.key});
@@ -177,10 +178,24 @@ class _PayoutsTab extends StatelessWidget {
     );
   }
 
-  void _showPayoutDialog(BuildContext context) {
+  Future<void> _showPayoutDialog(BuildContext context) async {
+    final provider = context.read<MarketerProvider>();
+    if (provider.payoutConfig == null) {
+      await provider.loadPayoutConfig();
+    }
+
+    if (!context.mounted) return;
+
     final amountCtrl = TextEditingController();
     final accountCtrl = TextEditingController();
-    String method = 'MTN_MOMO';
+
+    final List<PayoutMethod> methods = provider.payoutConfig?.methods.isNotEmpty == true
+        ? provider.payoutConfig!.methods
+        : [
+            PayoutMethod(key: 'MTN_MOMO', label: 'MTN MoMo'),
+            PayoutMethod(key: 'ORANGE_MONEY', label: 'Orange Money'),
+          ];
+    String method = methods.first.key;
 
     showDialog(
       context: context,
@@ -197,13 +212,11 @@ class _PayoutsTab extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                // ignore: deprecated_member_use
                 value: method,
                 decoration: const InputDecoration(labelText: 'Method', border: OutlineInputBorder()),
-                items: const [
-                  DropdownMenuItem(value: 'MTN_MOMO', child: Text('MTN MoMo')),
-                  DropdownMenuItem(value: 'ORANGE_MONEY', child: Text('Orange Money')),
-                ],
+                items: methods
+                    .map((m) => DropdownMenuItem(value: m.key, child: Text(m.label)))
+                    .toList(),
                 onChanged: (v) => setDialogState(() => method = v!),
               ),
               const SizedBox(height: 12),

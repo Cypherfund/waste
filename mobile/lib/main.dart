@@ -126,7 +126,7 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
     _countriesApi = CountriesApi(_apiClient);
     _countriesProvider = CountriesProvider(countriesApi: _countriesApi);
     _marketerApi = MarketerApi(_apiClient);
-    _marketerProvider = MarketerProvider(api: _marketerApi);
+    _marketerProvider = MarketerProvider(api: _marketerApi, walletApi: _walletApi);
     _wsService = WebSocketService();
     _locationService = LocationTrackingService(wsService: _wsService);
     _queueService = OfflineQueueService();

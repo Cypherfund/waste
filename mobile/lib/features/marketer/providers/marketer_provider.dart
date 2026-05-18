@@ -1,11 +1,15 @@
 import 'package:flutter/foundation.dart';
 import '../data/marketer_api.dart';
 import '../models/marketer_models.dart';
+import '../../../services/api/wallet_api.dart';
 
 class MarketerProvider extends ChangeNotifier {
   final MarketerApi _api;
+  final WalletApi _walletApi;
 
-  MarketerProvider({required MarketerApi api}) : _api = api;
+  MarketerProvider({required MarketerApi api, required WalletApi walletApi})
+      : _api = api,
+        _walletApi = walletApi;
 
   MarketerDashboard? _dashboard;
   MarketerDashboard? get dashboard => _dashboard;
@@ -24,6 +28,9 @@ class MarketerProvider extends ChangeNotifier {
 
   int _unreadCount = 0;
   int get unreadCount => _unreadCount;
+
+  PayoutConfig? _payoutConfig;
+  PayoutConfig? get payoutConfig => _payoutConfig;
 
   bool _loading = false;
   bool get loading => _loading;
@@ -125,6 +132,15 @@ class MarketerProvider extends ChangeNotifier {
       );
       _unreadCount = (_unreadCount - 1).clamp(0, 999);
       notifyListeners();
+    }
+  }
+
+  Future<void> loadPayoutConfig() async {
+    try {
+      _payoutConfig = await _walletApi.getPayoutConfig();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading payout config: $e');
     }
   }
 

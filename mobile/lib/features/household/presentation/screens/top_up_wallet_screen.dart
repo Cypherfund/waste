@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../../config/app_theme.dart';
+import '../../../../providers/subscription_provider.dart';
 
 class TopUpWalletScreen extends StatefulWidget {
   const TopUpWalletScreen({super.key});
@@ -10,11 +12,21 @@ class TopUpWalletScreen extends StatefulWidget {
 
 class _TopUpWalletScreenState extends State<TopUpWalletScreen> {
   final TextEditingController _amountController = TextEditingController();
-  String _selectedMethod = 'mobile_money';
+  String? _selectedMethod;
   int _selectedAmount = 0;
-  
+
   final List<int> _quickAmounts = [1000, 2000, 5000, 10000, 20000, 50000];
-  
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final sub = context.read<SubscriptionProvider>();
+      if (sub.walletBalance == null) sub.loadWalletBalance();
+      if (sub.appConfig == null) sub.loadPricingQuote();
+    });
+  }
+
   @override
   void dispose() {
     _amountController.dispose();
@@ -76,53 +88,70 @@ class _TopUpWalletScreenState extends State<TopUpWalletScreen> {
   }
   
   Widget _buildCurrentBalance() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    return Consumer<SubscriptionProvider>(
+      builder: (context, sub, _) {
+        final balance = sub.walletBalance;
+        final balanceText = balance != null
+            ? '${balance.toStringAsFixed(0)} XAF'
+            : sub.isLoading
+                ? '— XAF'
+                : '— XAF';
+
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.account_balance_wallet,
-            color: AppColors.primary,
-            size: 24,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Current Balance',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade600,
-                  ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.account_balance_wallet,
+                color: AppColors.primary,
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Current Balance',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    balance == null && sub.isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(
+                            balanceText,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                const Text(
-                  '25,000 XAF',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
   
@@ -237,62 +266,57 @@ class _TopUpWalletScreenState extends State<TopUpWalletScreen> {
   }
   
   Widget _buildPaymentMethod() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Payment Method',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
-          ),
-        ),
-        const SizedBox(height: 16),
-        
-        _buildPaymentMethodOption(
-          id: 'mobile_money',
-          title: 'Mobile Money',
-          subtitle: 'MTN, Orange, Nexttel',
-          icon: Icons.phone_android,
-          isSelected: _selectedMethod == 'mobile_money',
-          onTap: () {
-            setState(() {
-              _selectedMethod = 'mobile_money';
-            });
-          },
-        ),
-        
-        const SizedBox(height: 12),
-        
-        _buildPaymentMethodOption(
-          id: 'bank_transfer',
-          title: 'Bank Transfer',
-          subtitle: 'Direct bank transfer',
-          icon: Icons.account_balance,
-          isSelected: _selectedMethod == 'bank_transfer',
-          onTap: () {
-            setState(() {
-              _selectedMethod = 'bank_transfer';
-            });
-          },
-        ),
-        
-        const SizedBox(height: 12),
-        
-        _buildPaymentMethodOption(
-          id: 'card',
-          title: 'Credit/Debit Card',
-          subtitle: 'Visa, Mastercard',
-          icon: Icons.credit_card,
-          isSelected: _selectedMethod == 'card',
-          onTap: () {
-            setState(() {
-              _selectedMethod = 'card';
-            });
-          },
-        ),
-      ],
+    return Consumer<SubscriptionProvider>(
+      builder: (context, sub, _) {
+        final providers = sub.appConfig?.enabledManualPaymentProviders ?? [];
+
+        // Auto-select first provider if none selected yet
+        if (_selectedMethod == null && providers.isNotEmpty) {
+          _selectedMethod = providers.first.paymentCode;
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Payment Method',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (sub.isLoading && providers.isEmpty)
+              const Center(child: CircularProgressIndicator())
+            else if (providers.isEmpty)
+              Text(
+                'No payment methods available.',
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+              )
+            else
+              ...providers.asMap().entries.map((entry) {
+                final i = entry.key;
+                final p = entry.value;
+                return Padding(
+                  padding: EdgeInsets.only(top: i == 0 ? 0 : 12),
+                  child: _buildPaymentMethodOption(
+                    id: p.paymentCode,
+                    title: p.providerName,
+                    subtitle: p.manualPaymentPhone ?? '',
+                    icon: Icons.phone_android,
+                    isSelected: _selectedMethod == p.paymentCode,
+                    onTap: () {
+                      setState(() {
+                        _selectedMethod = p.paymentCode;
+                      });
+                    },
+                  ),
+                );
+              }),
+          ],
+        );
+      },
     );
   }
   
@@ -385,7 +409,7 @@ class _TopUpWalletScreenState extends State<TopUpWalletScreen> {
     final amount = _amountController.text.isNotEmpty
         ? int.tryParse(_amountController.text) ?? 0
         : 0;
-    final canSubmit = amount > 0;
+    final canSubmit = amount > 0 && _selectedMethod != null;
     
     return SizedBox(
       width: double.infinity,
@@ -460,17 +484,12 @@ class _TopUpWalletScreenState extends State<TopUpWalletScreen> {
     );
   }
   
-  String _getPaymentMethodName(String method) {
-    switch (method) {
-      case 'mobile_money':
-        return 'Mobile Money';
-      case 'bank_transfer':
-        return 'Bank Transfer';
-      case 'card':
-        return 'Credit/Debit Card';
-      default:
-        return 'Unknown';
-    }
+  String _getPaymentMethodName(String? method) {
+    if (method == null) return 'Unknown';
+    final sub = context.read<SubscriptionProvider>();
+    final providers = sub.appConfig?.enabledManualPaymentProviders ?? [];
+    final match = providers.where((p) => p.paymentCode == method).toList();
+    return match.isNotEmpty ? match.first.providerName : method;
   }
   
   void _showSuccessDialog(int amount) {
