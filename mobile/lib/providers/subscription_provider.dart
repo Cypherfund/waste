@@ -61,17 +61,16 @@ class SubscriptionProvider extends ChangeNotifier {
 
   Future<void> loadPricingQuote() async {
     try {
-      final results = await Future.wait([
-        _api.getPricingQuote(),
-        _walletApi.getAppConfig(),
-      ]);
-      _pricingQuote = results[0] as PricingQuote;
-      _appConfig = results[1] as AppConfig;
+      _appConfig = await _walletApi.getAppConfig();
     } catch (e) {
       _error = ApiClient.extractErrorMessage(e);
-    } finally {
-      notifyListeners();
     }
+    try {
+      _pricingQuote = await _api.getPricingQuote();
+    } catch (_) {
+      // pricing-quote endpoint may not exist; ignore silently
+    }
+    notifyListeners();
   }
 
   Future<void> loadWalletBalance() async {

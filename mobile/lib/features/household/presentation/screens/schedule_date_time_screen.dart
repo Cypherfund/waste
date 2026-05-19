@@ -46,7 +46,8 @@ class _ScheduleDateTimeScreenState extends State<ScheduleDateTimeScreen> {
     super.initState();
 
     final now = DateTime.now();
-    _minDate = DateTime(now.year, now.month, now.day);
+    final tomorrow = now.add(const Duration(days: 1));
+    _minDate = DateTime(tomorrow.year, tomorrow.month, tomorrow.day);
     _maxDate = _minDate.add(const Duration(days: 30));
 
     _selectedDate = _firstAvailableDate(_minDate);

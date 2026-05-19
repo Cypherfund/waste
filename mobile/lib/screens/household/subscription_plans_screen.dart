@@ -18,8 +18,8 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final sub = context.read<SubscriptionProvider>();
-      // Only fetch if not already cached — avoids skeleton on every visit
-      if (sub.plans.isEmpty) sub.loadPlans();
+      sub.loadPlans();
+      if (sub.pricingQuote == null) sub.loadPricingQuote();
     });
   }
 
@@ -59,20 +59,11 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
                 // Plans
                 ...sub.plans.map((plan) => _buildPlanCard(plan, perPickup)),
 
-                if (sub.plans.isEmpty)
-                  _buildPlanCard(
-                    SubscriptionPlan(
-                      id: '',
-                      name: 'Standard Plan',
-                      price: 3500,
-                      currency: 'XAF',
-                      pickupsPerWeek: 2,
-                      isActive: true,
-                      description:
-                          '2 pickups per week. Save up to 4,500 XAF/month.',
-                    ),
-                    perPickup,
-                  ),
+                if (sub.plans.isEmpty && sub.error != null)
+                  _buildPlansError(sub),
+
+                if (sub.plans.isEmpty && sub.error == null && !sub.isLoading)
+                  _buildPlansError(sub),
 
                 const SizedBox(height: 20),
                 const _Divider(),
@@ -360,6 +351,55 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
         ),
       );
     }
+  }
+
+  Widget _buildPlansError(SubscriptionProvider sub) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8E1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFFA000)),
+      ),
+      child: Column(
+        children: [
+          const Icon(Icons.wifi_off_rounded, color: Color(0xFFFFA000), size: 32),
+          const SizedBox(height: 12),
+          const Text(
+            'Could not load plans',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF111827),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            sub.error ?? 'Check your connection and try again.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 40,
+            child: ElevatedButton(
+              onPressed: () => sub.loadPlans(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFFA000),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Retry',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildSkeletonLoader() {

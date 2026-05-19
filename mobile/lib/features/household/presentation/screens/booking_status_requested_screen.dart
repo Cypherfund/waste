@@ -145,26 +145,41 @@ class _BookingStatusRequestedScreenState
                       child: Column(
                         children: [
                           const SizedBox(height: 2),
-                          Text(
-                            'Requested',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w900,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          const Text(
-                            "We're finding a collector\nnear you...",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 13,
-                              height: 1.45,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xFF6B7280),
-                            ),
-                          ),
+                          Builder(builder: (context) {
+                            final scheduledDate = DateTime.tryParse(job.scheduledDate);
+                            final today = DateTime.now();
+                            final todayMidnight = DateTime(today.year, today.month, today.day);
+                            final isOverdue = scheduledDate != null &&
+                                scheduledDate.isBefore(todayMidnight);
+                            return Column(
+                              children: [
+                                Text(
+                                  isOverdue ? 'Pending Assignment' : 'Requested',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w900,
+                                    color: isOverdue
+                                        ? const Color(0xFFEF4444)
+                                        : AppColors.primary,
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                                Text(
+                                  isOverdue
+                                      ? "Your scheduled date has passed.\nA collector will be assigned shortly."
+                                      : "We're finding a collector\nnear you...",
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    height: 1.45,
+                                    fontWeight: FontWeight.w500,
+                                    color: Color(0xFF6B7280),
+                                  ),
+                                ),
+                              ],
+                            );
+                          }),
                           const SizedBox(height: 18),
                           _buildStatusIllustration(),
                           const SizedBox(height: 18),

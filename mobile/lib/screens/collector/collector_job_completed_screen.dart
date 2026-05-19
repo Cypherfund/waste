@@ -47,10 +47,12 @@ class CollectorJobCompletedScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                '${job.quotedPrice?.toInt() ?? 0} XAF',
+                job.quotedPrice != null && job.quotedPrice! > 0
+                    ? '${job.quotedPrice!.toInt()} XAF'
+                    : 'Payment pending',
                 style: AppTypography.heading1.copyWith(
                   color: AppColors.primary,
-                  fontSize: 36,
+                  fontSize: job.quotedPrice != null && job.quotedPrice! > 0 ? 36 : 22,
                 ),
               ),
               const SizedBox(height: 24),

@@ -142,7 +142,10 @@ class _AccountSwitcherSheetState extends State<AccountSwitcherSheet> {
                                   if (context.mounted) {
                                     setState(() => _switchingId = null);
                                     Navigator.pop(context);
-                                    final route = account.isCollector
+                                  }
+                                  if (context.mounted) {
+                                    final isCollector = auth.user?.isCollector == true;
+                                    final route = isCollector
                                         ? '/collector-home'
                                         : '/home';
                                     Navigator.pushNamedAndRemoveUntil(

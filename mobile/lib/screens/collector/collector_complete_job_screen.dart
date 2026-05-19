@@ -20,6 +20,7 @@ class CollectorCompleteJobScreen extends StatefulWidget {
 class _CollectorCompleteJobScreenState
     extends State<CollectorCompleteJobScreen> {
   XFile? _proofImage;
+  bool _cashConfirmed = false;
 
   @override
   Widget build(BuildContext context) {
@@ -55,6 +56,12 @@ class _CollectorCompleteJobScreenState
                   : _buildPhotoPreview(),
             ),
             const SizedBox(height: 20),
+
+            // Cash payment confirmation
+            if (_requiresCashConfirmation()) ...[  
+              _buildCashConfirmation(),
+              const SizedBox(height: 16),
+            ],
 
             // Action buttons
             if (_proofImage == null)
@@ -104,9 +111,98 @@ class _CollectorCompleteJobScreenState
                 label: 'Submit Proof',
                 icon: Icons.check,
                 isLoading: provider.isActioning,
-                onPressed: () => _handleSubmitProof(provider),
+                onPressed: _canSubmit() ? () => _handleSubmitProof(provider) : null,
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  bool _requiresCashConfirmation() {
+    final j = widget.job;
+    return j.isCoveredBySubscription != true &&
+        j.quotedPrice != null &&
+        j.quotedPrice! > 0 &&
+        (j.paymentStatus == 'PENDING' || j.paymentStatus == null);
+  }
+
+  bool _canSubmit() {
+    if (_requiresCashConfirmation()) return _cashConfirmed;
+    return true;
+  }
+
+  Widget _buildCashConfirmation() {
+    return GestureDetector(
+      onTap: () => setState(() => _cashConfirmed = !_cashConfirmed),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: _cashConfirmed
+              ? const Color(0xFFEAF5EA)
+              : const Color(0xFFFFF8E1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: _cashConfirmed
+                ? AppColors.primary
+                : const Color(0xFFFFA000),
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: _cashConfirmed ? AppColors.primary : Colors.transparent,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: _cashConfirmed
+                      ? AppColors.primary
+                      : const Color(0xFFFFA000),
+                  width: 2,
+                ),
+              ),
+              child: _cashConfirmed
+                  ? const Icon(Icons.check_rounded,
+                      color: Colors.white, size: 16)
+                  : null,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _cashConfirmed
+                        ? 'Cash collected ✓'
+                        : 'Confirm cash payment',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: _cashConfirmed
+                          ? AppColors.primary
+                          : const Color(0xFF92400E),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Tap to confirm you collected '
+                    '${widget.job.quotedPrice!.toStringAsFixed(0)} XAF in cash',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: _cashConfirmed
+                          ? const Color(0xFF374151)
+                          : const Color(0xFF92400E),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -257,10 +353,11 @@ class _CollectorCompleteJobScreenState
     );
 
     if (success && mounted) {
+      final updatedJob = provider.getJobById(widget.job.id) ?? widget.job;
       Navigator.pushReplacementNamed(
         context,
         '/collector-job-completed',
-        arguments: widget.job,
+        arguments: updatedJob,
       );
     } else if (!success && mounted) {
       // Show error message to user

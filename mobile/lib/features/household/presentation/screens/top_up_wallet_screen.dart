@@ -275,6 +275,9 @@ class _TopUpWalletScreenState extends State<TopUpWalletScreen> {
           _selectedMethod = providers.first.paymentCode;
         }
 
+        final config = sub.appConfig;
+        final instructions = config?.manualPaymentInstructions ?? '';
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -287,12 +290,49 @@ class _TopUpWalletScreenState extends State<TopUpWalletScreen> {
               ),
             ),
             const SizedBox(height: 16),
+            if (config != null && !config.paymentIntegrationEnabled && instructions.isNotEmpty) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF8E1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFFFA000)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.info_outline_rounded, color: Color(0xFFFFA000), size: 18),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        instructions,
+                        style: const TextStyle(fontSize: 12, color: Color(0xFF374151), height: 1.5),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+            ],
             if (sub.isLoading && providers.isEmpty)
               const Center(child: CircularProgressIndicator())
-            else if (providers.isEmpty)
-              Text(
-                'No payment methods available.',
-                style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+            else if (providers.isEmpty && !sub.isLoading)
+              Column(
+                children: [
+                  Text(
+                    'No payment methods available.',
+                    style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                  ),
+                  if (sub.error != null) ...[
+                    const SizedBox(height: 8),
+                    TextButton.icon(
+                      onPressed: () => sub.loadPricingQuote(),
+                      icon: const Icon(Icons.refresh_rounded, size: 16),
+                      label: const Text('Retry'),
+                    ),
+                  ],
+                ],
               )
             else
               ...providers.asMap().entries.map((entry) {

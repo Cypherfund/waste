@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../models/user.dart';
 import '../models/auth_response.dart';
@@ -68,28 +69,37 @@ class AuthProvider extends ChangeNotifier {
         return;
       }
 
-      // Proactively validate the session by attempting a token refresh.
-      // This prevents the "flash home then kicked" UX when tokens are stale.
-      final refreshed = await _tryRefreshTokens(refreshToken);
+      final accessToken = await _storage.getAccessToken();
 
-      if (!refreshed) {
-        debugPrint('[AuthProvider] Stored session invalid — clearing and redirecting to login');
-        await _storage.clearAll();
-        _sessionExpiredMessage = 'Your session expired. Please log in again.';
-        _status = AuthStatus.unauthenticated;
-        notifyListeners();
-        return;
+      // Only hit the network if the access token is missing or expiring within 60 seconds.
+      // This avoids an unnecessary network call on every app open when the token is still valid.
+      final needsRefresh = accessToken == null || _isTokenExpiredOrExpiring(accessToken);
+
+      if (needsRefresh) {
+        debugPrint('[AuthProvider] Access token missing or expiring — refreshing...');
+        final refreshed = await _tryRefreshTokens(refreshToken);
+
+        if (!refreshed) {
+          debugPrint('[AuthProvider] Stored session invalid — clearing and redirecting to login');
+          await _storage.clearAll();
+          _sessionExpiredMessage = 'Your session expired. Please log in again.';
+          _status = AuthStatus.unauthenticated;
+          notifyListeners();
+          return;
+        }
+      } else {
+        debugPrint('[AuthProvider] Access token still valid — skipping refresh');
       }
 
-      final newToken = await _storage.getAccessToken();
+      final activeToken = await _storage.getAccessToken();
       _user = user;
       _status = AuthStatus.authenticated;
       _syncService.setActiveUser(user.id);
       await _loadSavedAccounts();
       // Try to connect WebSocket but don't fail restoration if offline
-      if (newToken != null) {
+      if (activeToken != null) {
         try {
-          _connectWebSocket(newToken);
+          _connectWebSocket(activeToken);
         } catch (_) {
           debugPrint('[AuthProvider] WebSocket connection failed during restore - offline mode');
         }
@@ -100,6 +110,28 @@ class AuthProvider extends ChangeNotifier {
       _status = AuthStatus.unauthenticated;
     }
     notifyListeners();
+  }
+
+  /// Decodes the JWT payload (no signature verification) and returns true
+  /// if the token is already expired or will expire within the next 60 seconds.
+  bool _isTokenExpiredOrExpiring(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return true;
+      // Base64url decode the payload part
+      String payload = parts[1];
+      // Pad to a multiple of 4
+      final pad = payload.length % 4;
+      if (pad != 0) payload += '=' * (4 - pad);
+      final decoded = utf8.decode(base64Url.decode(payload));
+      final json = jsonDecode(decoded) as Map<String, dynamic>;
+      final exp = json['exp'] as int?;
+      if (exp == null) return true;
+      final expiryTime = DateTime.fromMillisecondsSinceEpoch(exp * 1000);
+      return DateTime.now().isAfter(expiryTime.subtract(const Duration(seconds: 60)));
+    } catch (_) {
+      return true;
+    }
   }
 
   Future<bool> _tryRefreshTokens(String refreshToken) async {

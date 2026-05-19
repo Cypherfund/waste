@@ -27,6 +27,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   }
 
   Future<void> _loadTransactions() async {
+    if (mounted) setState(() { _isLoading = true; _error = null; });
     try {
       final walletApi = context.read<WalletApi>();
       final transactions = await walletApi.getMyTransactions(limit: 50);
@@ -34,14 +35,13 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
         setState(() {
           _transactions = transactions;
           _isLoading = false;
-          _error = null;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _error = 'Failed to load transactions';
+          _error = e.toString().replaceFirst('Exception: ', '');
         });
       }
     }

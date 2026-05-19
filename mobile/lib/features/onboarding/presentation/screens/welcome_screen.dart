@@ -86,17 +86,17 @@ class WelcomeScreen extends StatelessWidget {
       children: [
         Image.asset(
           'assets/images/logo-2.png',
-          height: 52,
+          height: 72,
           fit: BoxFit.contain,
           alignment: Alignment.centerLeft,
           errorBuilder: (_, __, ___) => Row(
             children: [
-              Icon(Icons.recycling, color: AppColors.primary, size: 42),
-              const SizedBox(width: 8),
+              Icon(Icons.recycling, color: AppColors.primary, size: 56),
+              const SizedBox(width: 10),
               Text(
                 'KmerTrash',
                 style: TextStyle(
-                  fontSize: 24,
+                  fontSize: 28,
                   fontWeight: FontWeight.w800,
                   color: AppColors.primary,
                 ),
@@ -104,11 +104,12 @@ class WelcomeScreen extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
         Text(
           'Clean Today, Green Tomorrow.',
           style: TextStyle(
-            fontSize: 11,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
             color: Colors.grey.shade500,
           ),
         ),
@@ -160,10 +161,9 @@ class WelcomeScreen extends StatelessWidget {
   Widget _buildFeatures() {
     return Column(
       children: [
-        _featureItem(Icons.verified, 'Verified collectors'),
-        _featureItem(Icons.camera_alt, 'Photo proof for every pickup'),
-        _featureItem(Icons.lock, 'Secure payments'),
-        _featureItem(Icons.local_shipping, 'Serving neighborhoods across Douala'),
+        _featureItem(Icons.verified_user_rounded, 'Verified collectors'),
+        _featureItem(Icons.camera_alt_rounded, 'Photo proof for every pickup'),
+        _featureItem(Icons.lock_rounded, 'Secure & easy payments'),
       ],
     );
   }

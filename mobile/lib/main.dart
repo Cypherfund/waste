@@ -15,6 +15,8 @@ import 'services/api/files_api.dart';
 import 'services/api/earnings_api.dart';
 import 'services/api/subscription_api.dart';
 import 'services/api/wallet_api.dart';
+import 'services/api/notifications_api.dart';
+import 'providers/notifications_provider.dart';
 import 'services/api/countries_api.dart';
 import 'providers/subscription_provider.dart';
 import 'providers/countries_provider.dart';
@@ -109,6 +111,8 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
   late final OfflineQueueProvider _offlineQueueProvider;
   late final MarketerApi _marketerApi;
   late final MarketerProvider _marketerProvider;
+  late final NotificationsApi _notificationsApi;
+  late final NotificationsProvider _notificationsProvider;
 
   @override
   void initState() {
@@ -127,6 +131,8 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
     _countriesProvider = CountriesProvider(countriesApi: _countriesApi);
     _marketerApi = MarketerApi(_apiClient);
     _marketerProvider = MarketerProvider(api: _marketerApi, walletApi: _walletApi);
+    _notificationsApi = NotificationsApi(_apiClient);
+    _notificationsProvider = NotificationsProvider(api: _notificationsApi);
     _wsService = WebSocketService();
     _locationService = LocationTrackingService(wsService: _wsService);
     _queueService = OfflineQueueService();
@@ -163,6 +169,7 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
         _collectorJobsProvider.reset();
         _subscriptionProvider.reset();
         _collectorEarningsProvider.reset();
+        _notificationsProvider.reset();
       },
     );
 
@@ -201,6 +208,8 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
         ChangeNotifierProvider.value(value: _subscriptionProvider),
         ChangeNotifierProvider.value(value: _countriesProvider),
         ChangeNotifierProvider.value(value: _marketerProvider),
+        ChangeNotifierProvider.value(value: _notificationsProvider),
+        Provider.value(value: _walletApi),
         Provider.value(value: widget.connectivityService),
         Provider.value(value: _locationService),
         Provider.value(value: _queueService),

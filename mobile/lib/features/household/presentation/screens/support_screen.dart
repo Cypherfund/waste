@@ -63,28 +63,20 @@ class SupportScreen extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         
-        Row(
-          children: [
-            Expanded(
-              child: _buildContactCard(
-                icon: Icons.phone,
-                title: 'Call Us',
-                subtitle: '+237 6 70 00 00 00',
-                color: AppColors.primary,
-                onTap: () => _makePhoneCall('+237670000000'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildContactCard(
-                icon: Icons.message,
-                title: 'WhatsApp',
-                subtitle: '+237 6 70 00 00 00',
-                color: Colors.green,
-                onTap: () => _openWhatsApp('+237670000000'),
-              ),
-            ),
-          ],
+        _buildContactCard(
+          icon: Icons.phone,
+          title: 'Call Us',
+          subtitle: '+237 6 70 00 00 00',
+          color: AppColors.primary,
+          onTap: () => _makePhoneCall('+237670000000'),
+        ),
+        const SizedBox(height: 12),
+        _buildContactCard(
+          icon: Icons.message,
+          title: 'WhatsApp',
+          subtitle: '+237 6 70 00 00 00',
+          color: Colors.green,
+          onTap: () => _openWhatsApp('+237670000000'),
         ),
         
         const SizedBox(height: 12),
@@ -276,7 +268,7 @@ class SupportScreen extends StatelessWidget {
         
         _buildQuickLink(
           icon: Icons.info,
-          title: 'About Hysacam',
+          title: 'About KmerTrash',
           onTap: () {
             // Show about dialog
           },

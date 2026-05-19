@@ -40,10 +40,12 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   }
 
   Future<void> _pickDate() async {
+    final tomorrow = DateTime.now().add(const Duration(days: 1));
+    final firstAllowedDate = DateTime(tomorrow.year, tomorrow.month, tomorrow.day);
     final picked = await showDatePicker(
       context: context,
-      initialDate: _scheduledDate,
-      firstDate: DateTime.now(),
+      initialDate: _scheduledDate.isBefore(firstAllowedDate) ? firstAllowedDate : _scheduledDate,
+      firstDate: firstAllowedDate,
       lastDate: DateTime.now().add(const Duration(days: 90)),
       builder: (context, child) {
         return Theme(

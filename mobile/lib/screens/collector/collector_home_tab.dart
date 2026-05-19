@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -350,16 +351,22 @@ class _CollectorHomeTabState extends State<CollectorHomeTab>
   }
 
   Widget _buildTodayGoalCard() {
+    final earnings = context.watch<CollectorEarningsProvider>();
+    const double goal = 10000.0;
+    final double todayEarned = earnings.quickSummary?.today ?? 0;
+    final double progress = (todayEarned / goal).clamp(0.0, 1.0);
+    final int percentage = (progress * 100).toInt();
+
     return _card(
       radius: 12,
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
       child: Row(
         children: [
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   'Today Goal',
                   style: TextStyle(
                     fontSize: 12,
@@ -367,17 +374,17 @@ class _CollectorHomeTabState extends State<CollectorHomeTab>
                     color: Color(0xFF111827),
                   ),
                 ),
-                SizedBox(height: 9),
+                const SizedBox(height: 9),
                 Text(
-                  '10,000 XAF',
-                  style: TextStyle(
-                    fontSize: 15,
+                  '${todayEarned.toStringAsFixed(0)} / ${goal.toStringAsFixed(0)} XAF',
+                  style: const TextStyle(
+                    fontSize: 13,
                     fontWeight: FontWeight.w900,
                     color: Color(0xFF2E7D32),
                   ),
                 ),
-                SizedBox(height: 4),
-                Text(
+                const SizedBox(height: 4),
+                const Text(
                   'Daily earnings goal',
                   style: TextStyle(
                     fontSize: 10,
@@ -398,7 +405,7 @@ class _CollectorHomeTabState extends State<CollectorHomeTab>
                   width: 54,
                   height: 54,
                   child: CircularProgressIndicator(
-                    value: 0.86,
+                    value: progress,
                     strokeWidth: 5,
                     backgroundColor: const Color(0xFFE5E7EB),
                     valueColor: AlwaysStoppedAnimation<Color>(
@@ -407,9 +414,9 @@ class _CollectorHomeTabState extends State<CollectorHomeTab>
                     strokeCap: StrokeCap.round,
                   ),
                 ),
-                const Text(
-                  '86%',
-                  style: TextStyle(
+                Text(
+                  '$percentage%',
+                  style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w900,
                     color: Color(0xFF111827),
@@ -528,226 +535,11 @@ class _CollectorHomeTabState extends State<CollectorHomeTab>
       Job job,
       CollectorJobsProvider provider,
       ) {
-    return Column(
-      children: [
-        Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: const Color(0xFFEF4444),
-              width: 1.1,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFFFF7F7),
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(9),
-                    topRight: Radius.circular(9),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    _redPill('NEW JOB ASSIGNED'),
-                    const Spacer(),
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          'Respond within',
-                          style: TextStyle(
-                            fontSize: 7,
-                            height: 1,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFFEF4444),
-                          ),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          '00:25',
-                          style: TextStyle(
-                            fontSize: 14,
-                            height: 1,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFFEF4444),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: const Color(0xFFF1F1F1),
-                      width: 1,
-                    ),
-                  ),
-                child: Column(
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 26,
-                          height: 26,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFFFE4E4),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.person_rounded,
-                            size: 16,
-                            color: Color(0xFFEF4444),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                job.householdName ?? 'Marie Claire',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  height: 1.15,
-                                  fontWeight: FontWeight.w900,
-                                  color: Color(0xFF111827),
-                                ),
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                job.locationAddress,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 9,
-                                  height: 1.2,
-                                  fontWeight: FontWeight.w500,
-                                  color: Color(0xFF6B7280),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    const Divider(
-                      height: 1,
-                      thickness: 1,
-                      color: Color(0xFFE5E7EB),
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    _jobInfoLineCompact(
-                      Icons.delete_outline_rounded,
-                      'Waste Type',
-                      'Household Waste',
-                    ),
-                    _jobInfoLineCompact(
-                      Icons.trending_up_rounded,
-                      'Distance',
-                      '2.4 km',
-                    ),
-                    _jobInfoLineCompact(
-                      Icons.account_balance_wallet_outlined,
-                      'Earnings',
-                      '${job.quotedPrice?.toInt() ?? 0} XAF',
-                    ),
-                    _jobInfoLineCompact(
-                      Icons.access_time_rounded,
-                      'Time Window',
-                      job.scheduledTime,
-                    ),
-                  ],
-                ),
-              ),
-              ),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 10),
-
-        Row(
-          children: [
-            Expanded(
-              child: SizedBox(
-                height: 34,
-                child: OutlinedButton(
-                  onPressed: provider.isActioning
-                      ? null
-                      : () => _handleRejectJob(provider, job.id),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFFEF4444),
-                    side: const BorderSide(
-                      color: Color(0xFFEF4444),
-                      width: 1,
-                    ),
-                    padding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(7),
-                    ),
-                  ),
-                  child: const Text(
-                    'Reject',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: SizedBox(
-                height: 34,
-                child: ElevatedButton(
-                  onPressed: provider.isActioning
-                      ? null
-                      : () => _handleAcceptJob(provider, job),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(7),
-                    ),
-                  ),
-                  child: const Text(
-                    'Accept',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
+    return _NewJobCard(
+      job: job,
+      provider: provider,
+      onAccept: () => _handleAcceptJob(provider, job),
+      onReject: () => _handleRejectJob(provider, job.id),
     );
   }
 
@@ -997,5 +789,363 @@ class _CollectorHomeTabState extends State<CollectorHomeTab>
     String jobId,
   ) async {
     await provider.rejectJob(jobId);
+  }
+}
+
+// ─── New Job Card with live countdown + pulse animation ───────────────────────
+
+class _NewJobCard extends StatefulWidget {
+  final Job job;
+  final CollectorJobsProvider provider;
+  final VoidCallback onAccept;
+  final VoidCallback onReject;
+
+  const _NewJobCard({
+    required this.job,
+    required this.provider,
+    required this.onAccept,
+    required this.onReject,
+  });
+
+  @override
+  State<_NewJobCard> createState() => _NewJobCardState();
+}
+
+class _NewJobCardState extends State<_NewJobCard>
+    with SingleTickerProviderStateMixin {
+  static const int _totalSeconds = 25 * 60;
+  late int _remainingSeconds;
+  Timer? _countdownTimer;
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _remainingSeconds = _totalSeconds;
+
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() {
+        if (_remainingSeconds > 0) {
+          _remainingSeconds--;
+        } else {
+          _countdownTimer?.cancel();
+        }
+      });
+    });
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.8).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  String get _formattedTime {
+    final minutes = _remainingSeconds ~/ 60;
+    final seconds = _remainingSeconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  Color get _timerColor {
+    if (_remainingSeconds > 10 * 60) return const Color(0xFFEF4444);
+    if (_remainingSeconds > 5 * 60) return const Color(0xFFF59E0B);
+    return const Color(0xFFDC2626);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        AnimatedBuilder(
+          animation: _pulseAnimation,
+          builder: (context, child) {
+            return Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: const Color(0xFFEF4444).withValues(
+                      alpha: (0.4 + 0.6 * (_pulseController.value)).clamp(0.4, 1.0)),
+                  width: 1.1 + (_pulseAnimation.value - 1.0) * 0.4,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFEF4444).withValues(
+                        alpha: 0.08 * _pulseAnimation.value),
+                    blurRadius: 8 * _pulseAnimation.value,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+              child: child,
+            );
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFFF7F7),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(9),
+                    topRight: Radius.circular(9),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    _RedPill(label: 'NEW JOB ASSIGNED', pulseController: _pulseController),
+                    const Spacer(),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        const Text(
+                          'Respond within',
+                          style: TextStyle(
+                            fontSize: 7,
+                            height: 1,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFFEF4444),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _formattedTime,
+                          style: TextStyle(
+                            fontSize: 14,
+                            height: 1,
+                            fontWeight: FontWeight.w900,
+                            color: _timerColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFF1F1F1)),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 26,
+                            height: 26,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFFFE4E4),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.person_rounded,
+                              size: 16,
+                              color: Color(0xFFEF4444),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  widget.job.householdName ?? 'Customer',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    height: 1.15,
+                                    fontWeight: FontWeight.w900,
+                                    color: Color(0xFF111827),
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  widget.job.locationAddress,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 9,
+                                    height: 1.2,
+                                    fontWeight: FontWeight.w500,
+                                    color: Color(0xFF6B7280),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      const Divider(height: 1, thickness: 1, color: Color(0xFFE5E7EB)),
+                      const SizedBox(height: 10),
+                      _JobInfoRow(
+                        icon: Icons.delete_outline_rounded,
+                        label: 'Waste Type',
+                        value: 'Household Waste',
+                      ),
+                      _JobInfoRow(
+                        icon: Icons.account_balance_wallet_outlined,
+                        label: 'Earnings',
+                        value: widget.job.quotedPrice != null && widget.job.quotedPrice! > 0
+                            ? '${widget.job.quotedPrice!.toInt()} XAF'
+                            : 'TBD',
+                      ),
+                      _JobInfoRow(
+                        icon: Icons.access_time_rounded,
+                        label: 'Time Window',
+                        value: widget.job.scheduledTime,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: SizedBox(
+                height: 34,
+                child: OutlinedButton(
+                  onPressed: widget.provider.isActioning ? null : widget.onReject,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFFEF4444),
+                    side: const BorderSide(color: Color(0xFFEF4444), width: 1),
+                    padding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(7)),
+                  ),
+                  child: const Text('Reject',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: SizedBox(
+                height: 34,
+                child: ElevatedButton(
+                  onPressed: widget.provider.isActioning ? null : widget.onAccept,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(7)),
+                  ),
+                  child: const Text('Accept',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _RedPill extends StatelessWidget {
+  final String label;
+  final AnimationController pulseController;
+
+  const _RedPill({required this.label, required this.pulseController});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: pulseController,
+      builder: (_, __) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFE8E8),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.notifications_active_rounded,
+              size: 12,
+              color: Color.lerp(
+                  const Color(0xFFEF4444), const Color(0xFFDC2626), pulseController.value),
+            ),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 8,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFFEF4444),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _JobInfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _JobInfoRow({required this.icon, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 9),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 13, color: AppColors.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: const TextStyle(
+                        fontSize: 9,
+                        height: 1.15,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF111827))),
+                const SizedBox(height: 2),
+                Text(value,
+                    style: const TextStyle(
+                        fontSize: 9,
+                        height: 1.15,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF374151))),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

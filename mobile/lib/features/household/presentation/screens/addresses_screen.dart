@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import '../../../../config/app_theme.dart';
 
 class Address {
@@ -46,56 +48,6 @@ class _AddressesScreenState extends State<AddressesScreen> {
       landmark: 'Opposite Embassy',
     ),
   ];
-
-  void _addAddress() {
-    // TODO: Implement add address dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Add address feature coming soon!')),
-    );
-  }
-
-  void _editAddress(Address address) {
-    // TODO: Implement edit address dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Edit ${address.label} address feature coming soon!')),
-    );
-  }
-
-  void _deleteAddress(String id) {
-    setState(() {
-      _addresses.removeWhere((address) => address.id == id);
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Address deleted')),
-    );
-  }
-
-  void _setDefault(String id) {
-    setState(() {
-      for (var address in _addresses) {
-        if (address.id == id) {
-          _addresses[_addresses.indexOf(address)] = Address(
-            id: address.id,
-            label: address.label,
-            address: address.address,
-            landmark: address.landmark,
-            isDefault: true,
-          );
-        } else if (address.isDefault) {
-          _addresses[_addresses.indexOf(address)] = Address(
-            id: address.id,
-            label: address.label,
-            address: address.address,
-            landmark: address.landmark,
-            isDefault: false,
-          );
-        }
-      }
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Default address updated')),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -348,79 +300,35 @@ class _AddressesScreenState extends State<AddressesScreen> {
   }
   
   void _showAddAddressDialog() {
-    _showAddressDialog(null);
+    _showAddressSheet(null);
   }
-  
+
   void _showEditAddressDialog(Address address, int index) {
-    _showAddressDialog(address, index: index);
+    _showAddressSheet(address, index: index);
   }
-  
-  void _showAddressDialog(Address? address, {int? index}) {
-    final labelController = TextEditingController(text: address?.label ?? '');
-    final addressController = TextEditingController(text: address?.address ?? '');
-    final landmarkController = TextEditingController(text: address?.landmark ?? '');
-    
-    showDialog(
+
+  void _showAddressSheet(Address? address, {int? index}) {
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: Text(address == null ? 'Add Address' : 'Edit Address'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: labelController,
-                decoration: const InputDecoration(
-                  labelText: 'Label (e.g., Home, Office)',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: addressController,
-                maxLines: 2,
-                decoration: const InputDecoration(
-                  labelText: 'Address',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: landmarkController,
-                decoration: const InputDecoration(
-                  labelText: 'Landmark (optional)',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // Save address logic
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    address == null ? 'Address added' : 'Address updated',
-                  ),
-                ),
-              );
-            },
-            child: Text(
-              'Save',
-              style: TextStyle(color: AppColors.primary),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _AddressFormSheet(
+        existing: address,
+        onSave: (newAddress) {
+          setState(() {
+            if (index != null) {
+              _addresses[index] = newAddress;
+            } else {
+              _addresses.add(newAddress);
+            }
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(index == null ? 'Address added' : 'Address updated'),
+              backgroundColor: AppColors.primary,
             ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -475,6 +383,242 @@ class _AddressesScreenState extends State<AddressesScreen> {
     });
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Default address updated')),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Address form bottom sheet
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _AddressFormSheet extends StatefulWidget {
+  final Address? existing;
+  final void Function(Address) onSave;
+
+  const _AddressFormSheet({required this.onSave, this.existing});
+
+  @override
+  State<_AddressFormSheet> createState() => _AddressFormSheetState();
+}
+
+class _AddressFormSheetState extends State<_AddressFormSheet> {
+  late final TextEditingController _labelCtrl;
+  late final TextEditingController _addressCtrl;
+  late final TextEditingController _landmarkCtrl;
+  bool _loadingGps = false;
+  String? _gpsError;
+
+  @override
+  void initState() {
+    super.initState();
+    _labelCtrl = TextEditingController(text: widget.existing?.label ?? '');
+    _addressCtrl = TextEditingController(text: widget.existing?.address ?? '');
+    _landmarkCtrl = TextEditingController(text: widget.existing?.landmark ?? '');
+  }
+
+  @override
+  void dispose() {
+    _labelCtrl.dispose();
+    _addressCtrl.dispose();
+    _landmarkCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _useCurrentLocation() async {
+    setState(() { _loadingGps = true; _gpsError = null; });
+    try {
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        setState(() { _gpsError = 'Location permission denied.'; _loadingGps = false; });
+        return;
+      }
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      ).timeout(const Duration(seconds: 10));
+
+      final placemarks = await placemarkFromCoordinates(pos.latitude, pos.longitude);
+      if (placemarks.isNotEmpty) {
+        final p = placemarks.first;
+        final parts = [
+          p.street,
+          p.subLocality,
+          p.locality,
+        ].where((s) => s != null && s.isNotEmpty).toList();
+        _addressCtrl.text = parts.join(', ');
+      }
+    } catch (e) {
+      setState(() { _gpsError = 'Could not get location. Enter manually.'; });
+    } finally {
+      if (mounted) setState(() => _loadingGps = false);
+    }
+  }
+
+  void _save() {
+    final label = _labelCtrl.text.trim();
+    final address = _addressCtrl.text.trim();
+    if (label.isEmpty || address.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Label and address are required')),
+      );
+      return;
+    }
+    final saved = Address(
+      id: widget.existing?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      label: label,
+      address: address,
+      landmark: _landmarkCtrl.text.trim().isEmpty ? null : _landmarkCtrl.text.trim(),
+      isDefault: widget.existing?.isDefault ?? false,
+    );
+    Navigator.pop(context);
+    widget.onSave(saved);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: EdgeInsets.fromLTRB(20, 16, 20, 20 + bottomInset),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle
+            Center(
+              child: Container(
+                width: 36, height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              widget.existing == null ? 'Add Address' : 'Edit Address',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.black87),
+            ),
+            const SizedBox(height: 20),
+
+            // Label
+            _field(controller: _labelCtrl, label: 'Label', hint: 'Home, Office, etc.'),
+            const SizedBox(height: 14),
+
+            // Address + GPS button
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: _field(
+                    controller: _addressCtrl,
+                    label: 'Address',
+                    hint: 'Street, area, city',
+                    maxLines: 2,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                SizedBox(
+                  height: 54,
+                  child: ElevatedButton(
+                    onPressed: _loadingGps ? null : _useCurrentLocation,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primarySurface,
+                      foregroundColor: AppColors.primary,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                    ),
+                    child: _loadingGps
+                        ? const SizedBox(
+                            width: 18, height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.my_location_rounded, size: 22),
+                  ),
+                ),
+              ],
+            ),
+            if (_gpsError != null) ...[
+              const SizedBox(height: 6),
+              Text(_gpsError!,
+                  style: const TextStyle(fontSize: 11, color: Colors.red)),
+            ],
+            const SizedBox(height: 14),
+
+            // Landmark
+            _field(
+              controller: _landmarkCtrl,
+              label: 'Landmark (optional)',
+              hint: 'Near school, opposite market…',
+            ),
+            const SizedBox(height: 24),
+
+            // Save button
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: _save,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Save Address',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _field({
+    required TextEditingController controller,
+    required String label,
+    String? hint,
+    int maxLines = 1,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: const TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87)),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          maxLines: maxLines,
+          style: const TextStyle(fontSize: 14),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(fontSize: 13, color: Colors.grey.shade400),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            filled: true,
+            fillColor: const Color(0xFFF9FAFB),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
