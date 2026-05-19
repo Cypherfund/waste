@@ -6,7 +6,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindOptionsWhere, Between, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
+import { Repository, FindOptionsWhere, Between, MoreThanOrEqual, LessThanOrEqual, In } from 'typeorm';
 import { UsersService } from '../users/users.service';
 import { JobsService } from '../jobs/jobs.service';
 import { AssignmentService } from '../assignment/assignment.service';
@@ -108,6 +108,18 @@ export class AdminService {
   }
 
   // ─── JOBS ─────────────────────────────────────────────────────
+
+  async listPendingPaymentJobs(): Promise<PaginatedResponse<JobResponseDto>> {
+    const [jobs, total] = await this.jobRepo.findAndCount({
+      where: {
+        paymentStatus: In([PaymentStatus.PENDING, PaymentStatus.AWAITING_ADMIN_VERIFICATION]) as any,
+      },
+      relations: ['household', 'collector'],
+      order: { createdAt: 'DESC' },
+      take: 100,
+    });
+    return paginate(jobs.map((j) => this.jobsService.toResponseDto(j)), total, 1, 100);
+  }
 
   async listJobs(filters: AdminJobFilterDto): Promise<PaginatedResponse<JobResponseDto>> {
     const where: FindOptionsWhere<Job> = {};
@@ -265,7 +277,8 @@ export class AdminService {
       throw new NotFoundException('Job not found');
     }
 
-    if (job.paymentStatus !== PaymentStatus.PENDING) {
+    const verifiableStatuses = [PaymentStatus.PENDING, PaymentStatus.AWAITING_ADMIN_VERIFICATION];
+    if (!verifiableStatuses.includes(job.paymentStatus as PaymentStatus)) {
       throw new BadRequestException('Job is not pending payment verification');
     }
 
@@ -294,7 +307,8 @@ export class AdminService {
       throw new NotFoundException('Job not found');
     }
 
-    if (job.paymentStatus !== PaymentStatus.PENDING) {
+    const pendingStatuses = [PaymentStatus.PENDING, PaymentStatus.AWAITING_ADMIN_VERIFICATION];
+    if (!pendingStatuses.includes(job.paymentStatus as PaymentStatus)) {
       throw new BadRequestException('Job is not pending payment verification');
     }
 
@@ -302,12 +316,11 @@ export class AdminService {
       throw new BadRequestException('Job is not in PAYMENT_PENDING status');
     }
 
-    // Update payment status and job status
+    // REJECTED = admin explicitly rejected the submitted proof/ref
+    // PAYMENT_FAILED = distinct from CANCELLED; allows household to resubmit payment
     job.paymentStatus = PaymentStatus.REJECTED;
     job.paymentRejectionReason = reason ?? 'Payment verification failed';
-    job.status = JobStatus.CANCELLED;
-    job.cancelledAt = new Date();
-    job.cancellationReason = 'Payment rejected by admin';
+    job.status = JobStatus.PAYMENT_FAILED;
 
     const saved = await this.jobRepo.save(job);
     this.logger.log(`Admin ${adminId} rejected payment for job ${jobId}: ${reason}`);

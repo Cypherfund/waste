@@ -16,6 +16,8 @@ import {
   Target,
   Trophy,
   Banknote,
+  ClipboardCheck,
+  Coins,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -34,6 +36,9 @@ const NAV_ITEMS = [
   { to: '/growth-leads', label: 'Growth Leads', icon: Target },
   { to: '/commissions', label: 'Commissions', icon: Trophy },
   { to: '/marketer-payouts', label: 'Mkt Payouts', icon: Banknote },
+  // Payments
+  { to: '/pending-payments', label: 'Pending Payments', icon: ClipboardCheck },
+  { to: '/collector-float', label: 'Collector Float', icon: Coins },
 ];
 
 export default function AdminLayout() {

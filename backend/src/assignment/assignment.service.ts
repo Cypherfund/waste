@@ -24,6 +24,7 @@ import {
   JobAssignmentTimeoutPayload,
 } from '../events/events.types';
 import { JobStatus } from '../common/enums/job-status.enum';
+import { PaymentMode } from '../common/enums/payment-mode.enum';
 import { UserRole } from '../common/enums/role.enum';
 import {
   CollectorCandidate,
@@ -336,6 +337,7 @@ export class AssignmentService {
         u.latitude,
         u.longitude,
         u.avg_rating as "avgRating",
+        u.collector_float_balance as "collectorFloatBalance",
         (
           SELECT COUNT(*) FROM jobs j
           WHERE j.collector_id = u.id
@@ -385,6 +387,19 @@ export class AssignmentService {
         if (distanceKm > config.maxRadiusKm) continue;
       }
       // If no coordinates on collector → include (manual fallback per spec)
+
+      // Filter: float balance for CASH jobs
+      if (job.paymentMode === PaymentMode.CASH && job.quotedPrice) {
+        const earningRate = 0.7;
+        const platformShare = Number(job.quotedPrice) * (1 - earningRate);
+        const floatBalance = Number(raw.collectorFloatBalance ?? 0);
+        if (floatBalance < platformShare) {
+          this.logger.debug(
+            `Skipping collector ${raw.id} for CASH job ${job.id}: insufficient float (${floatBalance} < ${platformShare} XAF)`,
+          );
+          continue;
+        }
+      }
 
       // Filter: timeslot availability
       const available = await this.timeslotsService.isCollectorAvailable(

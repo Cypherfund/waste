@@ -19,7 +19,6 @@ import { AdminService } from './admin.service';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UserRole } from '../common/enums/role.enum';
-import { PaymentStatus } from '../common/enums/payment-status.enum';
 import { AdminUserFilterDto } from './dto/admin-user-filter.dto';
 import { AdminJobFilterDto } from './dto/admin-job-filter.dto';
 import { ManualAssignDto } from './dto/manual-assign.dto';
@@ -106,7 +105,7 @@ export class AdminController {
 
   @Get('jobs/pending-payment')
   listPendingPaymentJobs() {
-    return this.adminService.listJobs({ paymentStatus: PaymentStatus.PENDING });
+    return this.adminService.listPendingPaymentJobs();
   }
 
   @Patch('jobs/:id/verify-payment')
@@ -298,6 +297,17 @@ export class AdminController {
   @Delete('payments/providers/:id')
   deleteProvider(@Param('id', ParseIntPipe) id: number) {
     return this.paymentService.deleteProvider(id);
+  }
+
+  // ─── COLLECTOR FLOAT TOP-UP ──────────────────────────────────
+
+  @Post('users/:id/float-topup')
+  floatTopUp(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('sub') adminId: string,
+    @Body() body: { amount: number; note?: string },
+  ) {
+    return this.walletService.adminFloatTopUp(id, body.amount, adminId, body.note);
   }
 
   // ─── STATS & PERFORMANCE ──────────────────────────────────────

@@ -7,6 +7,13 @@ import { SubscriptionStatus } from '../common/enums/subscription-status.enum';
 import { PricingType } from '../common/enums/pricing-type.enum';
 import { SystemConfigService } from '../config/system-config.service';
 
+export interface RecommendedPlan {
+  id: string;
+  name: string;
+  price: number;
+  pickupsPerWeek: number;
+}
+
 export interface PricingQuote {
   quotedPrice: number;
   pricingType: PricingType;
@@ -16,6 +23,7 @@ export interface PricingQuote {
   perPickupPrice: number;
   subscriptionPrice: number;
   subscriptionSavingsMessage: string | null;
+  recommendedPlan: RecommendedPlan | null;
 }
 
 @Injectable()
@@ -55,6 +63,9 @@ export class PricingService {
 
     const sub = await this.getActiveSubscription(userId);
 
+    const buildRecommendedPlan = (plan?: SubscriptionPlan): RecommendedPlan | null =>
+      plan ? { id: plan.id, name: plan.name, price: plan.price, pickupsPerWeek: plan.pickupsPerWeek } : null;
+
     if (!sub) {
       return {
         quotedPrice: perPickupPrice,
@@ -65,6 +76,7 @@ export class PricingService {
         perPickupPrice,
         subscriptionPrice: subscriptionPrice ?? 0,
         subscriptionSavingsMessage: await this.buildSavingsMessage(perPickupPrice, subscriptionPrice),
+        recommendedPlan: buildRecommendedPlan(cheapestPlan),
       };
     }
 
@@ -80,9 +92,11 @@ export class PricingService {
         perPickupPrice,
         subscriptionPrice: sub.plan?.price ?? subscriptionPrice ?? 0,
         subscriptionSavingsMessage: null,
+        recommendedPlan: null,
       };
     }
 
+    // Active subscription but pickups exhausted — recommend renewal/upgrade
     return {
       quotedPrice: perPickupPrice,
       pricingType: PricingType.PAY_PER_PICKUP,
@@ -92,6 +106,7 @@ export class PricingService {
       perPickupPrice,
       subscriptionPrice: sub.plan?.price ?? subscriptionPrice ?? 0,
       subscriptionSavingsMessage: null,
+      recommendedPlan: buildRecommendedPlan(cheapestPlan),
     };
   }
 

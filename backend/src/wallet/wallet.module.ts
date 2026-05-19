@@ -2,12 +2,13 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '../users/entities/user.entity';
 import { PayoutRequest } from './entities/payout-request.entity';
+import { CollectorFloatLedger } from './entities/collector-float-ledger.entity';
 import { PaymentProviderEntity } from '../payments/entities/payment-provider.entity';
 import { WalletService } from './wallet.service';
 import { WalletController } from './wallet.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, PayoutRequest, PaymentProviderEntity])],
+  imports: [TypeOrmModule.forFeature([User, PayoutRequest, CollectorFloatLedger, PaymentProviderEntity])],
   providers: [WalletService],
   controllers: [WalletController],
   exports: [WalletService],

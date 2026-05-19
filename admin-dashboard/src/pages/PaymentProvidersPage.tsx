@@ -22,6 +22,10 @@ const EMPTY_FORM: Partial<PaymentProvider> = {
   isEnabled: true,
   manualPaymentPhone: null,
   manualPaymentAccountName: null,
+  manualInstructions: null,
+  integrationEnabled: false,
+  manualInstructionsEnabled: false,
+  manualProofRequired: false,
 };
 
 export default function PaymentProvidersPage() {
@@ -202,6 +206,8 @@ export default function PaymentProvidersPage() {
                 <th className="px-4 py-3">Cashout</th>
                 <th className="px-4 py-3">Limits (dep/with)</th>
                 <th className="px-4 py-3">Manual Phone</th>
+                <th className="px-4 py-3">Manual</th>
+                <th className="px-4 py-3">Proof Req.</th>
                 <th className="px-4 py-3">Enabled</th>
                 <th className="px-4 py-3">Actions</th>
               </tr>
@@ -243,6 +249,16 @@ export default function PaymentProvidersPage() {
                     {p.manualPaymentAccountName && (
                       <div className="text-gray-400">{p.manualPaymentAccountName}</div>
                     )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`text-xs font-medium ${p.manualInstructionsEnabled ? 'text-green-600' : 'text-gray-400'}`}>
+                      {p.manualInstructionsEnabled ? '✓' : '—'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`text-xs font-medium ${p.manualProofRequired ? 'text-amber-600' : 'text-gray-400'}`}>
+                      {p.manualProofRequired ? '✓' : '—'}
+                    </span>
                   </td>
                   <td className="px-4 py-3">
                     <button onClick={() => handleToggle(p)} title="Toggle enabled">
@@ -386,12 +402,24 @@ export default function PaymentProvidersPage() {
                     placeholder="Account holder name"
                   />
                 </Field>
+                <Field label="Manual Instructions" span={2}>
+                  <textarea
+                    rows={3}
+                    value={form.manualInstructions ?? ''}
+                    onChange={(e) => setField('manualInstructions', e.target.value || null)}
+                    className="w-full rounded border border-gray-300 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                    placeholder="Step-by-step instructions shown to users when this provider is selected"
+                  />
+                </Field>
               </div>
               <div className="mt-3 flex flex-wrap gap-4">
                 <Toggle label="Supports Cashin" value={!!form.supportsCashin} onChange={(v) => setField('supportsCashin', v)} />
                 <Toggle label="Supports Cashout" value={!!form.supportsCashout} onChange={(v) => setField('supportsCashout', v)} />
                 <Toggle label="Global" value={!!form.isGlobal} onChange={(v) => setField('isGlobal', v)} />
                 <Toggle label="Enabled" value={!!form.isEnabled} onChange={(v) => setField('isEnabled', v)} />
+                <Toggle label="Integration Enabled" value={!!form.integrationEnabled} onChange={(v) => setField('integrationEnabled', v)} />
+                <Toggle label="Manual Instructions" value={!!form.manualInstructionsEnabled} onChange={(v) => setField('manualInstructionsEnabled', v)} />
+                <Toggle label="Proof Required" value={!!form.manualProofRequired} onChange={(v) => setField('manualProofRequired', v)} />
               </div>
             </div>
             <div className="flex justify-end gap-2 border-t px-5 py-3">

@@ -153,7 +153,12 @@ class CollectorJobsProvider extends ChangeNotifier {
 
   // ─── COMPLETE JOB ──────────────────────────────────────────
 
-  Future<bool> completeJob(String jobId, {required XFile proofImage}) async {
+  Future<bool> completeJob(
+    String jobId, {
+    required XFile proofImage,
+    bool? cashCollected,
+    double? collectedAmount,
+  }) async {
     _isActioning = true;
     _error = null;
     notifyListeners();
@@ -176,6 +181,8 @@ class CollectorJobsProvider extends ChangeNotifier {
         proofImageUrl: uploadResult.fileUrl,
         collectorLat: lat,
         collectorLng: lng,
+        cashCollected: cashCollected,
+        collectedAmount: collectedAmount,
       );
 
       _locationService.stopTracking();

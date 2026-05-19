@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNumber, Min, Max } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsBoolean, Min, Max } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CompleteJobDto {
@@ -19,4 +19,15 @@ export class CompleteJobDto {
   @Min(-180)
   @Max(180)
   collectorLng?: number;
+
+  @ApiPropertyOptional({ example: true, description: 'Required for CASH jobs: confirm cash was collected from household' })
+  @IsOptional()
+  @IsBoolean()
+  cashCollected?: boolean;
+
+  @ApiPropertyOptional({ example: 5000, description: 'Amount collected in cash (audit only; should equal quotedPrice)' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  collectedAmount?: number;
 }

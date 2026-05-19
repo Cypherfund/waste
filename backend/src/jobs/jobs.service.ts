@@ -7,7 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindOptionsWhere, In } from 'typeorm';
+import { Repository, FindOptionsWhere, In, DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Job } from './entities/job.entity';
 import { Proof } from './entities/proof.entity';
@@ -19,6 +19,9 @@ import { JobResponseDto } from './dto/job-response.dto';
 import { JobFilterDto } from './dto/job-filter.dto';
 import { JobStatus, validateTransition } from '../common/enums/job-status.enum';
 import { PaymentStatus } from '../common/enums/payment-status.enum';
+import { PaymentMode } from '../common/enums/payment-mode.enum';
+import { User } from '../users/entities/user.entity';
+import { CollectorFloatLedger, FloatLedgerType } from '../wallet/entities/collector-float-ledger.entity';
 import { UserRole } from '../common/enums/role.enum';
 import { PaginatedResponse, paginate } from '../common/dto/pagination.dto';
 import {
@@ -47,6 +50,7 @@ export class JobsService {
     private readonly filesService: FilesService,
     private readonly pricingService: PricingService,
     private readonly paymentService: PaymentService,
+    private readonly dataSource: DataSource,
   ) {}
 
   // ─── CRUD ─────────────────────────────────────────────────────
@@ -77,28 +81,54 @@ export class JobsService {
       );
     }
 
-    // Check if real payment integration is enabled
-    const paymentIntegrationEnabled = await this.paymentService.isPaymentIntegrationEnabled();
-
-    // Determine payment flow
-    let requiresRealPayment = false;
-    let requiresManualVerification = false;
-
-    if (paymentIntegrationEnabled && dto.paymentCode && dto.paymentPhone) {
-      requiresRealPayment = true;
-    } else if (dto.paymentMethod && dto.paymentRef) {
-      requiresManualVerification = true;
-    }
-
-    const initialStatus = (requiresRealPayment || requiresManualVerification)
-      ? JobStatus.PAYMENT_PENDING
-      : JobStatus.REQUESTED;
-    const paymentStatus = (requiresRealPayment || requiresManualVerification)
-      ? PaymentStatus.PENDING
-      : PaymentStatus.NOT_REQUIRED;
-
-    // Get pricing quote from PricingService
+    // Get pricing quote first (server-side, never trusts client amount)
     const pricingQuote = await this.pricingService.getQuoteForUser(householdId);
+
+    // Determine payment mode and statuses
+    let paymentMode: PaymentMode = PaymentMode.NONE;
+    let initialStatus: JobStatus = JobStatus.REQUESTED;
+    let paymentStatus: PaymentStatus = PaymentStatus.NOT_REQUIRED;
+
+    if (pricingQuote.isCoveredBySubscription) {
+      // 1. Subscription-covered: no payment required
+      paymentMode = PaymentMode.NONE;
+      initialStatus = JobStatus.REQUESTED;
+      paymentStatus = PaymentStatus.NOT_REQUIRED;
+    } else if (dto.paymentMode === PaymentMode.CASH) {
+      // 2. Cash: collector collects at pickup
+      paymentMode = PaymentMode.CASH;
+      initialStatus = JobStatus.REQUESTED;
+      paymentStatus = PaymentStatus.PENDING;
+      if (dto.paymentRef || dto.paymentCode || dto.paymentPhone) {
+        throw new BadRequestException('paymentRef, paymentCode, and paymentPhone must not be provided for CASH payments');
+      }
+    } else if (dto.paymentMethod) {
+      // 3. Provider-based: look up provider
+      const provider = await this.paymentService.getProviderByCode(dto.paymentMethod);
+      if (!provider) {
+        throw new BadRequestException(`Payment provider '${dto.paymentMethod}' not found or not enabled`);
+      }
+
+      if (provider.integrationEnabled && dto.paymentCode && dto.paymentPhone) {
+        // 3a. Integrated provider
+        paymentMode = PaymentMode.INTEGRATED_PROVIDER;
+        initialStatus = JobStatus.PAYMENT_PENDING;
+        paymentStatus = PaymentStatus.PROVIDER_PENDING;
+      } else if (!provider.integrationEnabled) {
+        // 3b. Manual provider
+        if (!dto.paymentRef) {
+          throw new BadRequestException('paymentRef is required for manual provider payments');
+        }
+        if (provider.manualProofRequired && !dto.paymentProofUrl) {
+          throw new BadRequestException('paymentProofUrl is required for this payment provider');
+        }
+        paymentMode = PaymentMode.MANUAL_PROVIDER;
+        initialStatus = JobStatus.PAYMENT_PENDING;
+        paymentStatus = PaymentStatus.AWAITING_ADMIN_VERIFICATION;
+      } else {
+        throw new BadRequestException('Invalid payment configuration: integrated provider requires paymentCode and paymentPhone');
+      }
+    }
 
     // Consume pickup if covered by subscription
     if (pricingQuote.isCoveredBySubscription) {
@@ -114,8 +144,11 @@ export class JobsService {
       locationLat: dto.locationLat ?? null,
       locationLng: dto.locationLng ?? null,
       notes: dto.notes ?? null,
+      paymentMode,
       paymentMethod: dto.paymentMethod ?? null,
       paymentRef: dto.paymentRef ?? null,
+      paymentProofUrl: dto.paymentProofUrl ?? null,
+      paymentPhone: dto.paymentPhone ?? null,
       paymentStatus,
       quotedPrice: pricingQuote.quotedPrice,
       pricingType: pricingQuote.pricingType,
@@ -123,10 +156,10 @@ export class JobsService {
     });
 
     const saved = await this.jobRepo.save(job);
-    this.logger.log(`Job created: ${saved.id} by household ${householdId}`);
+    this.logger.log(`Job created: ${saved.id} by household ${householdId} [mode=${paymentMode}]`);
 
-    // Initiate real payment if required and not covered by subscription
-    if (requiresRealPayment && !pricingQuote.isCoveredBySubscription && dto.paymentCode && dto.paymentPhone) {
+    // Initiate integrated provider payment (stub: sets PROVIDER_PENDING; no real gateway call required for now)
+    if (paymentMode === PaymentMode.INTEGRATED_PROVIDER && dto.paymentCode && dto.paymentPhone) {
       try {
         const paymentTx = await this.paymentService.initiatePayment(householdId, {
           type: TransactionType.CASHIN,
@@ -135,11 +168,9 @@ export class JobsService {
           phone: dto.paymentPhone,
           jobId: saved.id,
         });
-        this.logger.log(`Payment initiated for job ${saved.id}: tx ${paymentTx.id}`);
+        this.logger.log(`Integrated payment initiated for job ${saved.id}: tx ${paymentTx.id}`);
       } catch (error) {
-        this.logger.error(`Failed to initiate payment for job ${saved.id}: ${error.message}`);
-        // Job is already created - payment status is PENDING
-        // Admin can manually verify or user can retry
+        this.logger.error(`Failed to initiate integrated payment for job ${saved.id}: ${error.message}`);
       }
     }
 
@@ -317,6 +348,55 @@ export class JobsService {
 
     if (job.collectorId !== collectorId) {
       throw new ForbiddenException('This job is not assigned to you');
+    }
+
+    // Cash settlement: require confirmation and deduct platform share from float
+    if (job.paymentMode === PaymentMode.CASH) {
+      if (!dto.cashCollected) {
+        throw new BadRequestException('cashCollected must be true to complete a CASH job');
+      }
+      if (job.quotedPrice && job.quotedPrice > 0) {
+        await this.dataSource.transaction(async (em) => {
+          const collector = await em
+            .getRepository(User)
+            .createQueryBuilder('u')
+            .where('u.id = :id', { id: collectorId })
+            .setLock('pessimistic_write')
+            .getOne();
+          if (!collector) throw new NotFoundException('Collector not found');
+
+          const earningRate = 0.7; // collector keeps 70%; platform takes 30%
+          const platformShare = Math.max(Number(job.quotedPrice) * (1 - earningRate), 0);
+          const currentFloat = Number(collector.collectorFloatBalance);
+
+          if (currentFloat < platformShare) {
+            throw new BadRequestException(
+              `Insufficient float balance. Required: ${platformShare} XAF, Available: ${currentFloat} XAF`,
+            );
+          }
+
+          const newFloat = currentFloat - platformShare;
+          await em
+            .createQueryBuilder()
+            .update(User)
+            .set({ collectorFloatBalance: () => `collector_float_balance - ${platformShare}` })
+            .where('id = :id', { id: collectorId })
+            .execute();
+
+          const ledgerEntry = em.getRepository(CollectorFloatLedger).create({
+            collectorId,
+            jobId: job.id,
+            type: FloatLedgerType.CASH_SETTLEMENT_DEDUCTION,
+            amount: platformShare,
+            balanceBefore: currentFloat,
+            balanceAfter: newFloat,
+            createdBy: null,
+          });
+          await em.getRepository(CollectorFloatLedger).save(ledgerEntry);
+        });
+
+        job.paymentStatus = PaymentStatus.VERIFIED;
+      }
     }
 
     this.transition(job, JobStatus.COMPLETED);
@@ -641,8 +721,10 @@ export class JobsService {
       locationLat: job.locationLat,
       locationLng: job.locationLng,
       notes: job.notes,
+      paymentMode: job.paymentMode,
       paymentMethod: job.paymentMethod,
       paymentRef: job.paymentRef,
+      paymentProofUrl: job.paymentProofUrl,
       paymentStatus: job.paymentStatus,
       quotedPrice: job.quotedPrice,
       pricingType: job.pricingType,

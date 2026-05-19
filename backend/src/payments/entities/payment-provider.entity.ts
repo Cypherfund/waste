@@ -57,6 +57,18 @@ export class PaymentProviderEntity {
   @Column({ type: 'varchar', length: 100, nullable: true, name: 'manual_payment_account_name' })
   manualPaymentAccountName: string | null;
 
+  @Column({ type: 'text', nullable: true, name: 'manual_instructions' })
+  manualInstructions: string | null;
+
+  @Column({ type: 'boolean', default: false, name: 'integration_enabled' })
+  integrationEnabled: boolean;
+
+  @Column({ type: 'boolean', default: true, name: 'manual_instructions_enabled' })
+  manualInstructionsEnabled: boolean;
+
+  @Column({ type: 'boolean', default: false, name: 'manual_proof_required' })
+  manualProofRequired: boolean;
+
   @Column({ type: 'timestamptz', default: () => 'NOW()', name: 'synced_at' })
   syncedAt: Date;
 

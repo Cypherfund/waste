@@ -122,10 +122,9 @@ class _CollectorCompleteJobScreenState
 
   bool _requiresCashConfirmation() {
     final j = widget.job;
-    return j.isCoveredBySubscription != true &&
+    return j.paymentMode == 'CASH' &&
         j.quotedPrice != null &&
-        j.quotedPrice! > 0 &&
-        (j.paymentStatus == 'PENDING' || j.paymentStatus == null);
+        j.quotedPrice! > 0;
   }
 
   bool _canSubmit() {
@@ -350,6 +349,8 @@ class _CollectorCompleteJobScreenState
     final success = await provider.completeJob(
       widget.job.id,
       proofImage: _proofImage!,
+      cashCollected: _requiresCashConfirmation() ? _cashConfirmed : null,
+      collectedAmount: _requiresCashConfirmation() ? widget.job.quotedPrice : null,
     );
 
     if (success && mounted) {

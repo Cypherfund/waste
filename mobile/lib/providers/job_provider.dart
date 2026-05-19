@@ -164,8 +164,10 @@ class JobProvider extends ChangeNotifier {
     double? locationLat,
     double? locationLng,
     String? notes,
+    String? paymentMode,
     String? paymentMethod,
     String? paymentRef,
+    String? paymentProofUrl,
   }) async {
     _isLoading = true;
     _error = null;
@@ -179,8 +181,10 @@ class JobProvider extends ChangeNotifier {
         locationLat: locationLat,
         locationLng: locationLng,
         notes: notes,
+        paymentMode: paymentMode,
         paymentMethod: paymentMethod,
         paymentRef: paymentRef,
+        paymentProofUrl: paymentProofUrl,
       );
       
       // Add to local list

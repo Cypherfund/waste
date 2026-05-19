@@ -43,19 +43,25 @@ export interface UserDetail extends AdminUser {
 export interface Job {
   id: string;
   householdId: string;
+  householdName?: string | null;
   collectorId: string | null;
+  collectorName?: string | null;
   status: string;
-  wasteType: string;
-  estimatedWeight: number | null;
+  wasteType?: string;
+  estimatedWeight?: number | null;
   scheduledDate: string;
   scheduledTime: string;
   locationLat: number | null;
   locationLng: number | null;
-  address: string | null;
+  locationAddress?: string | null;
+  address?: string | null;
   notes: string | null;
+  paymentMode: string | null;
   paymentMethod: string | null;
   paymentRef: string | null;
+  paymentProofUrl: string | null;
   paymentStatus: string | null;
+  quotedPrice: number | null;
   assignedAt: string | null;
   startedAt: string | null;
   completedAt: string | null;
@@ -201,8 +207,39 @@ export interface PaymentProvider {
   isEnabled: boolean;
   manualPaymentPhone: string | null;
   manualPaymentAccountName: string | null;
+  manualInstructions: string | null;
+  integrationEnabled: boolean;
+  manualInstructionsEnabled: boolean;
+  manualProofRequired: boolean;
   syncedAt: string;
   updatedAt: string;
+}
+
+export interface PendingPayment {
+  jobId: string;
+  householdId: string;
+  householdName: string | null;
+  scheduledDate: string;
+  paymentMode: string;
+  paymentMethod: string | null;
+  paymentRef: string | null;
+  paymentProofUrl: string | null;
+  paymentStatus: string;
+  quotedPrice: number | null;
+  createdAt: string;
+}
+
+export interface CollectorFloat {
+  collectorId: string;
+  collectorName: string | null;
+  collectorPhone: string | null;
+  collectorFloatBalance: number;
+}
+
+export interface FloatTopUpDto {
+  collectorId: string;
+  amount: number;
+  note?: string;
 }
 
 // ─── Growth / Ambassadors ───────────────────────────────────────

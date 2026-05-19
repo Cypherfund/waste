@@ -2,6 +2,7 @@ import 'proof.dart';
 
 enum JobStatus {
   paymentPending,
+  paymentFailed,
   requested,
   assigned,
   inProgress,
@@ -13,10 +14,10 @@ enum JobStatus {
 
   static JobStatus fromString(String value) {
     final lowerValue = value.toLowerCase();
-    // Handle camelCase conversion from snake_case or uppercase if needed
     if (lowerValue == 'in_progress') return JobStatus.inProgress;
     if (lowerValue == 'payment_pending') return JobStatus.paymentPending;
-    
+    if (lowerValue == 'payment_failed') return JobStatus.paymentFailed;
+
     return JobStatus.values.firstWhere(
       (e) => e.name.toLowerCase() == lowerValue,
       orElse: () => JobStatus.requested,
@@ -25,6 +26,8 @@ enum JobStatus {
 
   String toBackendString() {
     if (this == JobStatus.paymentPending) return 'PAYMENT_PENDING';
+    if (this == JobStatus.paymentFailed) return 'PAYMENT_FAILED';
+    if (this == JobStatus.inProgress) return 'IN_PROGRESS';
     return name.toUpperCase();
   }
 }
@@ -46,8 +49,10 @@ class Job {
   final double? locationLat;
   final double? locationLng;
   final String? notes;
+  final String? paymentMode;
   final String? paymentMethod;
   final String? paymentRef;
+  final String? paymentProofUrl;
   final String? paymentStatus;
   final DateTime? assignedAt;
   final DateTime? startedAt;
@@ -80,8 +85,10 @@ class Job {
     this.locationLat,
     this.locationLng,
     this.notes,
+    this.paymentMode,
     this.paymentMethod,
     this.paymentRef,
+    this.paymentProofUrl,
     this.paymentStatus,
     this.assignedAt,
     this.startedAt,
@@ -120,8 +127,10 @@ class Job {
           ? double.tryParse(json['locationLng'].toString())
           : null,
       notes: json['notes'] as String?,
+      paymentMode: json['paymentMode'] as String?,
       paymentMethod: json['paymentMethod'] as String?,
       paymentRef: json['paymentRef'] as String?,
+      paymentProofUrl: json['paymentProofUrl'] as String?,
       paymentStatus: json['paymentStatus'] as String?,
       assignedAt: json['assignedAt'] != null
           ? DateTime.tryParse(json['assignedAt'] as String)

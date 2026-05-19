@@ -9,6 +9,7 @@ import { Repository, DataSource } from 'typeorm';
 import { OnEvent } from '@nestjs/event-emitter';
 import { User } from '../users/entities/user.entity';
 import { PayoutRequest, PayoutRequestStatus } from './entities/payout-request.entity';
+import { CollectorFloatLedger, FloatLedgerType } from './entities/collector-float-ledger.entity';
 import { SystemConfigService } from '../config/system-config.service';
 import { EarningsEvents, EarningsConfirmedPayload } from '../events/events.types';
 import { PaymentProviderEntity } from '../payments/entities/payment-provider.entity';
@@ -24,6 +25,8 @@ export class WalletService {
     private readonly payoutRepo: Repository<PayoutRequest>,
     @InjectRepository(PaymentProviderEntity)
     private readonly paymentProviderRepo: Repository<PaymentProviderEntity>,
+    @InjectRepository(CollectorFloatLedger)
+    private readonly floatLedgerRepo: Repository<CollectorFloatLedger>,
     private readonly systemConfigService: SystemConfigService,
     private readonly dataSource: DataSource,
   ) {}
@@ -53,7 +56,7 @@ export class WalletService {
 
   // ── GET app config (payment integration + support + providers) ───────────
   async getAppConfig(countryCode: string) {
-    const [paymentEnabled, manualInstructions, whatsapp, minAdvanceHoursStr] = await Promise.all([
+    const [paymentEnabled, manualInstructions, whatsapp, minAdvanceHoursStr, cashEnabledStr] = await Promise.all([
       this.systemConfigService.getBoolean('feature.payment_integration', false),
       this.systemConfigService.getString(
         'payment.manual_instructions',
@@ -61,6 +64,7 @@ export class WalletService {
       ),
       this.systemConfigService.getString('support.whatsapp_number', ''),
       this.systemConfigService.getString('booking.min_advance_hours', '24'),
+      this.systemConfigService.getString('payments.cash_enabled', 'false'),
     ]);
 
     // Get enabled payment providers for manual payment
@@ -68,6 +72,7 @@ export class WalletService {
 
     return {
       paymentIntegrationEnabled: paymentEnabled,
+      cashEnabled: cashEnabledStr === 'true',
       manualPaymentInstructions: manualInstructions,
       supportWhatsapp: whatsapp,
       paymentProviders: providers,
@@ -82,6 +87,10 @@ export class WalletService {
       providerName: string;
       manualPaymentPhone: string | null;
       manualPaymentAccountName: string | null;
+      manualInstructions: string | null;
+      integrationEnabled: boolean;
+      manualInstructionsEnabled: boolean;
+      manualProofRequired: boolean;
     }>
   > {
     const providers = await this.paymentProviderRepo.find({
@@ -97,17 +106,22 @@ export class WalletService {
       providerName: p.providerName,
       manualPaymentPhone: p.manualPaymentPhone,
       manualPaymentAccountName: p.manualPaymentAccountName,
+      manualInstructions: p.manualInstructions,
+      integrationEnabled: p.integrationEnabled,
+      manualInstructionsEnabled: p.manualInstructionsEnabled,
+      manualProofRequired: p.manualProofRequired,
     }));
   }
 
   // ── GET payout config ─────────────────────────────────────────
   async getPayoutConfig() {
-    const [minStr, maxStr, methodsStr, mmLabel, bankLabel] = await Promise.all([
+    const [minStr, maxStr, methodsStr, mmLabel, bankLabel, payoutMode] = await Promise.all([
       this.systemConfigService.getString('payout.min_withdrawal', '1000'),
       this.systemConfigService.getString('payout.max_withdrawal', '500000'),
       this.systemConfigService.getString('payout.methods_enabled', 'MOBILE_MONEY,BANK_TRANSFER'),
       this.systemConfigService.getString('payout.mobile_money_label', 'MTN Mobile Money / Orange Money'),
       this.systemConfigService.getString('payout.bank_transfer_label', 'Bank Transfer'),
+      this.systemConfigService.getString('marketer.payout_mode', 'MANUAL_APPROVAL'),
     ]);
 
     const methods = methodsStr
@@ -123,6 +137,7 @@ export class WalletService {
       minWithdrawal: Number(minStr),
       maxWithdrawal: Number(maxStr),
       methods,
+      payoutMode: payoutMode as 'MANUAL_APPROVAL' | 'AUTO_PROVIDER_PAYOUT',
     };
   }
 
@@ -289,6 +304,56 @@ export class WalletService {
     const saved = await this.payoutRepo.save(request);
     this.logger.log(`Payout ${payoutId} → ${saved.status} by admin ${adminId}`);
     return this.toAdminDto(saved);
+  }
+
+  // ── ADMIN: top-up collector float balance ──────────────────────
+  async adminFloatTopUp(
+    collectorId: string,
+    amount: number,
+    adminId: string,
+    note?: string,
+  ): Promise<{ collectorId: string; newFloatBalance: number }> {
+    if (amount <= 0) throw new BadRequestException('Top-up amount must be positive');
+
+    return this.dataSource.transaction(async (em) => {
+      const collector = await em
+        .getRepository(User)
+        .createQueryBuilder('u')
+        .where('u.id = :id', { id: collectorId })
+        .setLock('pessimistic_write')
+        .getOne();
+
+      if (!collector) throw new NotFoundException('Collector not found');
+
+      const before = Number(collector.collectorFloatBalance);
+      const after = before + amount;
+
+      await em
+        .createQueryBuilder()
+        .update(User)
+        .set({ collectorFloatBalance: () => `collector_float_balance + ${amount}` })
+        .where('id = :id', { id: collectorId })
+        .execute();
+
+      const ledger = em.getRepository(CollectorFloatLedger).create({
+        collectorId,
+        jobId: null,
+        type: FloatLedgerType.TOP_UP,
+        amount,
+        balanceBefore: before,
+        balanceAfter: after,
+        createdBy: adminId,
+      });
+      await em.getRepository(CollectorFloatLedger).save(ledger);
+
+      this.logger.log(
+        `Admin ${adminId} topped up float for collector ${collectorId}: +${amount} XAF (${before} → ${after})${
+          note ? ` [${note}]` : ''
+        }`,
+      );
+
+      return { collectorId, newFloatBalance: after };
+    });
   }
 
   private toAdminDto(r: PayoutRequest) {

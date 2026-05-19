@@ -12,13 +12,20 @@ class PayoutConfig {
   final double minWithdrawal;
   final double maxWithdrawal;
   final List<PayoutMethod> methods;
-  PayoutConfig({required this.minWithdrawal, required this.maxWithdrawal, required this.methods});
+  final String payoutMode;
+  PayoutConfig({
+    required this.minWithdrawal,
+    required this.maxWithdrawal,
+    required this.methods,
+    this.payoutMode = 'MANUAL_APPROVAL',
+  });
   factory PayoutConfig.fromJson(Map<String, dynamic> j) => PayoutConfig(
         minWithdrawal: (j['minWithdrawal'] as num).toDouble(),
         maxWithdrawal: (j['maxWithdrawal'] as num).toDouble(),
         methods: (j['methods'] as List)
             .map((m) => PayoutMethod.fromJson(m as Map<String, dynamic>))
             .toList(),
+        payoutMode: j['payoutMode'] as String? ?? 'MANUAL_APPROVAL',
       );
 }
 
@@ -63,12 +70,20 @@ class PaymentProvider {
   final String providerName;
   final String? manualPaymentPhone;
   final String? manualPaymentAccountName;
+  final String? manualInstructions;
+  final bool integrationEnabled;
+  final bool manualInstructionsEnabled;
+  final bool manualProofRequired;
 
   PaymentProvider({
     required this.paymentCode,
     required this.providerName,
     this.manualPaymentPhone,
     this.manualPaymentAccountName,
+    this.manualInstructions,
+    this.integrationEnabled = false,
+    this.manualInstructionsEnabled = true,
+    this.manualProofRequired = false,
   });
 
   factory PaymentProvider.fromJson(Map<String, dynamic> j) => PaymentProvider(
@@ -76,6 +91,10 @@ class PaymentProvider {
         providerName: j['providerName'] as String,
         manualPaymentPhone: j['manualPaymentPhone'] as String?,
         manualPaymentAccountName: j['manualPaymentAccountName'] as String?,
+        manualInstructions: j['manualInstructions'] as String?,
+        integrationEnabled: j['integrationEnabled'] as bool? ?? false,
+        manualInstructionsEnabled: j['manualInstructionsEnabled'] as bool? ?? true,
+        manualProofRequired: j['manualProofRequired'] as bool? ?? false,
       );
 
   bool get hasManualPaymentDetails =>
@@ -84,30 +103,36 @@ class PaymentProvider {
 
 class AppConfig {
   final bool paymentIntegrationEnabled;
+  final bool cashEnabled;
   final String manualPaymentInstructions;
   final String supportWhatsapp;
   final List<PaymentProvider> paymentProviders;
+  final int minAdvanceHours;
 
   AppConfig({
     required this.paymentIntegrationEnabled,
+    this.cashEnabled = false,
     required this.manualPaymentInstructions,
     required this.supportWhatsapp,
     required this.paymentProviders,
+    this.minAdvanceHours = 24,
   });
 
   factory AppConfig.fromJson(Map<String, dynamic> j) => AppConfig(
         paymentIntegrationEnabled: j['paymentIntegrationEnabled'] as bool? ?? false,
+        cashEnabled: j['cashEnabled'] as bool? ?? false,
         manualPaymentInstructions: j['manualPaymentInstructions'] as String? ?? '',
         supportWhatsapp: j['supportWhatsapp'] as String? ?? '',
         paymentProviders: (j['paymentProviders'] as List<dynamic>?)
                 ?.map((p) => PaymentProvider.fromJson(p as Map<String, dynamic>))
                 .toList() ??
             [],
+        minAdvanceHours: j['minAdvanceHours'] as int? ?? 24,
       );
 
-  /// Get providers that have manual payment details configured
+  /// Get providers that have manual instructions enabled or manual payment details configured
   List<PaymentProvider> get enabledManualPaymentProviders =>
-      paymentProviders.where((p) => p.hasManualPaymentDetails).toList();
+      paymentProviders.where((p) => p.manualInstructionsEnabled || p.hasManualPaymentDetails).toList();
 }
 
 class PaymentTransaction {

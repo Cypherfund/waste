@@ -8,10 +8,11 @@ export enum JobStatus {
   RATED = 'RATED',
   CANCELLED = 'CANCELLED',
   DISPUTED = 'DISPUTED',
+  PAYMENT_FAILED = 'PAYMENT_FAILED',
 }
 
 export const ALLOWED_TRANSITIONS: Record<JobStatus, JobStatus[]> = {
-  [JobStatus.PAYMENT_PENDING]: [JobStatus.REQUESTED, JobStatus.CANCELLED],
+  [JobStatus.PAYMENT_PENDING]: [JobStatus.REQUESTED, JobStatus.PAYMENT_FAILED, JobStatus.CANCELLED],
   [JobStatus.REQUESTED]: [JobStatus.ASSIGNED, JobStatus.CANCELLED],
   [JobStatus.ASSIGNED]: [JobStatus.IN_PROGRESS, JobStatus.REQUESTED, JobStatus.CANCELLED],
   [JobStatus.IN_PROGRESS]: [JobStatus.COMPLETED, JobStatus.CANCELLED],
@@ -20,9 +21,10 @@ export const ALLOWED_TRANSITIONS: Record<JobStatus, JobStatus[]> = {
   [JobStatus.DISPUTED]: [JobStatus.VALIDATED, JobStatus.CANCELLED],
   [JobStatus.RATED]: [],
   [JobStatus.CANCELLED]: [],
+  [JobStatus.PAYMENT_FAILED]: [JobStatus.PAYMENT_PENDING],
 };
 
-export const TERMINAL_STATUSES = [JobStatus.RATED, JobStatus.CANCELLED];
+export const TERMINAL_STATUSES = [JobStatus.RATED, JobStatus.CANCELLED, JobStatus.PAYMENT_FAILED];
 
 export function validateTransition(from: JobStatus, to: JobStatus): void {
   const allowed = ALLOWED_TRANSITIONS[from];
