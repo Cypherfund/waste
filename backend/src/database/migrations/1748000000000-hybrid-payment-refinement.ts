@@ -13,29 +13,43 @@ export class HybridPaymentRefinement1748000000000 implements MigrationInterface 
       return;
     }
 
-    // ─── 1. payment_status enum — add new values ─────────────────────────────
-    await queryRunner.query(`ALTER TYPE "jobs_payment_status_enum" ADD VALUE IF NOT EXISTS 'AWAITING_ADMIN_VERIFICATION'`);
-    await queryRunner.query(`ALTER TYPE "jobs_payment_status_enum" ADD VALUE IF NOT EXISTS 'PROVIDER_PENDING'`);
-    await queryRunner.query(`ALTER TYPE "jobs_payment_status_enum" ADD VALUE IF NOT EXISTS 'FAILED'`);
+    // ─── 1. payment_status enum — add new values (if enum exists; production uses varchar) ─────────────────────────────
+    const paymentStatusEnumExists = await queryRunner.query(
+      `SELECT 1 FROM pg_type WHERE typname = 'jobs_payment_status_enum'`
+    );
+    if (paymentStatusEnumExists.length > 0) {
+      await queryRunner.query(`ALTER TYPE "jobs_payment_status_enum" ADD VALUE IF NOT EXISTS 'AWAITING_ADMIN_VERIFICATION'`);
+      await queryRunner.query(`ALTER TYPE "jobs_payment_status_enum" ADD VALUE IF NOT EXISTS 'PROVIDER_PENDING'`);
+      await queryRunner.query(`ALTER TYPE "jobs_payment_status_enum" ADD VALUE IF NOT EXISTS 'FAILED'`);
+    }
 
-    // ─── 2. job_status enum — add PAYMENT_FAILED ─────────────────────────────
-    await queryRunner.query(`ALTER TYPE "jobs_status_enum" ADD VALUE IF NOT EXISTS 'PAYMENT_FAILED'`);
+    // ─── 2. job_status enum — add PAYMENT_FAILED (if enum exists) ─────────────────────────────
+    const jobStatusEnumExists = await queryRunner.query(
+      `SELECT 1 FROM pg_type WHERE typname = 'jobs_status_enum'`
+    );
+    if (jobStatusEnumExists.length > 0) {
+      await queryRunner.query(`ALTER TYPE "jobs_status_enum" ADD VALUE IF NOT EXISTS 'PAYMENT_FAILED'`);
+    }
 
-    // ─── 3. payment_mode enum (new) ───────────────────────────────────────────
-    await queryRunner.query(`
-      DO $$ BEGIN
+    // ─── 3. payment_mode enum (new) — only if not already created by sync ────────────────────────────────
+    const paymentModeEnumExists = await queryRunner.query(
+      `SELECT 1 FROM pg_type WHERE typname = 'jobs_payment_mode_enum'`
+    );
+    if (paymentModeEnumExists.length === 0) {
+      await queryRunner.query(`
         CREATE TYPE "jobs_payment_mode_enum" AS ENUM ('NONE', 'MANUAL_PROVIDER', 'INTEGRATED_PROVIDER', 'CASH');
-      EXCEPTION WHEN duplicate_object THEN NULL;
-      END $$
-    `);
+      `);
+    }
 
-    // ─── 4. float_ledger_type enum (new) ─────────────────────────────────────
-    await queryRunner.query(`
-      DO $$ BEGIN
+    // ─── 4. float_ledger_type enum (new) — only if not already created by sync ────────────────────────────────
+    const floatLedgerTypeEnumExists = await queryRunner.query(
+      `SELECT 1 FROM pg_type WHERE typname = 'collector_float_ledger_type_enum'`
+    );
+    if (floatLedgerTypeEnumExists.length === 0) {
+      await queryRunner.query(`
         CREATE TYPE "collector_float_ledger_type_enum" AS ENUM ('TOP_UP', 'CASH_SETTLEMENT_DEDUCTION', 'ADJUSTMENT');
-      EXCEPTION WHEN duplicate_object THEN NULL;
-      END $$
-    `);
+      `);
+    }
 
     // ─── 5. jobs — add new columns ────────────────────────────────────────────
     await queryRunner.query(`ALTER TABLE "jobs" ADD COLUMN IF NOT EXISTS "payment_mode" "jobs_payment_mode_enum" NULL`);
@@ -72,21 +86,21 @@ export class HybridPaymentRefinement1748000000000 implements MigrationInterface 
 
     // ─── 9. system_config seed rows ───────────────────────────────────────────
     await queryRunner.query(`
-      INSERT INTO "system_config" ("key", "value", "description")
+      INSERT INTO "system_config" ("key", "value", "category", "description")
       VALUES
-        ('payments.cash_enabled',        'true',            'Allow cash payment method (collector collects at pickup)')
+        ('payments.cash_enabled',        'true',            'payment', 'Allow cash payment method (collector collects at pickup)')
       ON CONFLICT ("key") DO NOTHING
     `);
     await queryRunner.query(`
-      INSERT INTO "system_config" ("key", "value", "description")
+      INSERT INTO "system_config" ("key", "value", "category", "description")
       VALUES
-        ('marketer.payout_mode',         'MANUAL_APPROVAL', 'Marketer commission payout mode: MANUAL_APPROVAL or AUTO_PROVIDER_PAYOUT')
+        ('marketer.payout_mode',         'MANUAL_APPROVAL', 'payout',   'Marketer commission payout mode: MANUAL_APPROVAL or AUTO_PROVIDER_PAYOUT')
       ON CONFLICT ("key") DO NOTHING
     `);
     await queryRunner.query(`
-      INSERT INTO "system_config" ("key", "value", "description")
+      INSERT INTO "system_config" ("key", "value", "category", "is_feature_flag", "description")
       VALUES
-        ('feature.marketer_auto_payout', 'false',           'Feature flag: enable automatic marketer payout via provider')
+        ('feature.marketer_auto_payout', 'false',           'feature', true, 'Feature flag: enable automatic marketer payout via provider')
       ON CONFLICT ("key") DO NOTHING
     `);
   }
