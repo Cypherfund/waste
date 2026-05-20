@@ -13,7 +13,6 @@ export enum FloatLedgerType {
 }
 
 @Entity('collector_float_ledger')
-@Index(['collectorId'])
 export class CollectorFloatLedger {
   @PrimaryGeneratedColumn('uuid')
   id: string;

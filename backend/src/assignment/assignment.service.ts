@@ -3,6 +3,8 @@ import {
   Logger,
   NotFoundException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -38,12 +40,14 @@ export class AssignmentService {
   private readonly logger = new Logger(AssignmentService.name);
 
   constructor(
+    @Inject(forwardRef(() => JobsService))
     private readonly jobsService: JobsService,
     private readonly timeslotsService: TimeslotsService,
     private readonly systemConfigService: SystemConfigService,
     private readonly featureFlagService: FeatureFlagService,
     private readonly eventEmitter: EventEmitter2,
     private readonly dataSource: DataSource,
+    @Inject(forwardRef(() => EarningsService))
     private readonly earningsService: EarningsService,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,

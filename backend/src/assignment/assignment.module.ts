@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '../users/entities/user.entity';
 import { Job } from '../jobs/entities/job.entity';
@@ -11,9 +11,9 @@ import { AssignmentController } from './assignment.controller';
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, Job]),
-    JobsModule,
+    forwardRef(() => JobsModule),
     TimeslotsModule,
-    EarningsModule,
+    forwardRef(() => EarningsModule),
   ],
   controllers: [AssignmentController],
   providers: [AssignmentService],
