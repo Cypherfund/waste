@@ -1325,3 +1325,26 @@ Do not release unless:
 ```
 
 ---
+
+# 16. PR #7 Verified Test Results — Hybrid Payment & Booking Config
+
+**PR:** `feat/hybrid-payment-refinement`
+**Date verified:** 2026-05-20
+**Verified by:** ngaielizabeth
+
+| # | Test | Result |
+|---|------|--------|
+| 1 | Backend build passes after final update | ✅ Pass |
+| 2 | Admin dashboard build passes | ✅ Pass |
+| 3 | Mobile (Flutter) build passes | ✅ Pass |
+| 4 | Migration runs cleanly on a fresh DB | ✅ Pass |
+| 5 | Existing jobs without `paymentMode` do not break | ✅ Pass |
+| 6 | CASH completion creates float ledger deduction correctly | ✅ Pass |
+| 7 | Manual provider payment approval moves job to `REQUESTED` | ✅ Pass |
+| 8 | Payment rejection moves job to `PAYMENT_FAILED` | ✅ Pass |
+| 9 | Subscription-covered booking creates `REQUESTED` without payment method | ✅ Pass |
+| 10 | Booking date limits respect `minAdvanceHours` / `maxAdvanceDays` from config | ✅ Pass |
+
+**Release gate status:** ✅ All PR #7 checks passed. Safe to merge.
+
+---
