@@ -25,6 +25,8 @@ It covers:
 * Growth / Ambassador / Marketer system
 * Payouts and commission flows
 * Security and role-based access
+* Hybrid payment system (CASH, manual provider, integrated provider)
+* Collector float management
 
 The goal is to verify that the platform works end-to-end before deployment, after major PRs, and before every production release.
 
@@ -120,7 +122,7 @@ Run this first after every deployment.
 **Steps**
 
 1. Go to Schedule Pickup.
-2. Select pickup date and time.
+2. Select pickup date and time (must be at least `booking.min_advance_hours` ahead — default 24h).
 3. Select pickup details.
 4. Continue to pricing screen.
 
@@ -131,7 +133,75 @@ Run this first after every deployment.
   * No active subscription
   * Pay-per-pickup price: 1000 XAF or configured value
   * Subscription offer: 3500 XAF/month or configured value
+  * Cash payment option if `payments.cash_enabled = true`
 * User can choose Pay per pickup or Subscribe.
+* Scheduling a pickup less than `booking.min_advance_hours` in the future is rejected with a clear error.
+* Calendar does not allow selection beyond `booking.max_advance_days` ahead (default 30 days).
+
+---
+
+## H-002b: Household pays via manual provider
+
+**Precondition**
+
+* `payment.integration_enabled = false` (manual provider mode).
+* At least one payment provider is configured.
+
+**Steps**
+
+1. Schedule pickup.
+2. Select payment method (e.g. MTN Mobile Money).
+3. Follow manual payment instructions shown by the app.
+4. Upload payment proof screenshot.
+5. Submit.
+
+**Expected**
+
+* Job is created with `paymentMode = MANUAL_PROVIDER` and `paymentStatus = AWAITING_ADMIN_VERIFICATION`.
+* Job status is `PAYMENT_PENDING` until admin verifies.
+* Assignment does not happen until payment is verified.
+
+---
+
+## H-002c: Household pays via integrated provider
+
+**Precondition**
+
+* `payment.integration_enabled = true`.
+* Payment gateway sandbox is active.
+
+**Steps**
+
+1. Schedule pickup.
+2. Select integrated provider (e.g. MTN MoMo with OTP).
+3. Enter phone number and OTP.
+4. Submit.
+
+**Expected**
+
+* Job `paymentStatus = PROVIDER_PENDING` while gateway processes.
+* On gateway confirmation: `paymentStatus = VERIFIED`, job proceeds to assignment.
+* On timeout/failure: `paymentStatus = FAILED`, `jobStatus = PAYMENT_FAILED`.
+
+---
+
+## H-002d: Household selects cash payment
+
+**Precondition**
+
+* `payments.cash_enabled = true`.
+
+**Steps**
+
+1. Schedule pickup.
+2. Select Cash as payment method.
+3. Submit.
+
+**Expected**
+
+* Job is created with `paymentMode = CASH`, `paymentStatus = PENDING`.
+* Job proceeds directly to assignment (no upfront payment required).
+* Only collectors with sufficient float balance are eligible for assignment.
 
 ---
 
@@ -201,13 +271,11 @@ Run this first after every deployment.
 
 **Expected**
 
-* Status timeline updates:
+* Status timeline updates correctly for the payment mode:
 
-  * Requested
-  * Assigned
-  * In progress
-  * Completed
-  * Validated
+  * (If payment required) Payment Pending → Payment Verified
+  * Requested → Assigned → In Progress → Completed → Validated
+* `PAYMENT_FAILED` is shown clearly if payment is rejected/timed out.
 * Collector info appears when assigned.
 * Live tracking appears when job is in progress.
 
@@ -397,6 +465,46 @@ Run this first after every deployment.
 
 ---
 
+## C-007b: Collector completes CASH job
+
+**Precondition**
+
+* Job has `paymentMode = CASH`.
+* Collector has sufficient `collectorFloatBalance`.
+
+**Steps**
+
+1. Click Complete Job.
+2. Toggle "Cash Collected" to true.
+3. Enter `collectedAmount` (must be >= `quotedPrice`).
+4. Upload proof image.
+5. Submit.
+
+**Expected**
+
+* Job moves to `COMPLETED`.
+* `paymentStatus` becomes `VERIFIED`.
+* `platformShare = max(quotedPrice - collectorEarning, 0)` is deducted from collector float atomically.
+* A ledger entry of type `CASH_SETTLEMENT_DEDUCTION` is recorded.
+* Collector earnings are calculated using the standard formula (not based on payment mode).
+* Submitting with `collectedAmount < quotedPrice` is rejected with a clear error.
+
+---
+
+## C-007c: Collector with insufficient float cannot be assigned CASH job
+
+**Precondition**
+
+* Job has `paymentMode = CASH`.
+* Collector's `collectorFloatBalance` is below the estimated `platformShare`.
+
+**Expected**
+
+* Collector does not appear in the assignment pool for this job.
+* Assignment engine skips the collector silently.
+
+---
+
 ## C-008: Collector earnings confirmed
 
 **Precondition**
@@ -517,12 +625,94 @@ Run this first after every deployment.
    * monthly subscription price
    * pickups per week
    * per-pickup price
+   * `booking.min_advance_hours`
+   * `booking.max_advance_days`
 3. Save.
 
 **Expected**
 
 * New values apply to future bookings.
 * Existing active subscriptions behave according to defined policy.
+* Mobile app respects new booking interval values after next `app-config` fetch.
+
+---
+
+## A-007: Admin verifies manual payment proof
+
+**Precondition**
+
+* A job has `paymentStatus = AWAITING_ADMIN_VERIFICATION`.
+
+**Steps**
+
+1. Open Pending Payments page.
+2. Find the job.
+3. View uploaded proof screenshot.
+4. Click Verify Payment.
+
+**Expected**
+
+* `paymentStatus` becomes `VERIFIED`.
+* `jobStatus` moves from `PAYMENT_PENDING` to `REQUESTED` (enters assignment queue).
+* Household receives a notification that payment was verified.
+
+---
+
+## A-008: Admin rejects manual payment proof
+
+**Precondition**
+
+* A job has `paymentStatus = AWAITING_ADMIN_VERIFICATION`.
+
+**Steps**
+
+1. Open Pending Payments page.
+2. Find the job.
+3. Click Reject Payment.
+4. Enter rejection reason.
+
+**Expected**
+
+* `paymentStatus` becomes `FAILED`.
+* `jobStatus` becomes `PAYMENT_FAILED` (terminal).
+* Household receives a notification that payment was rejected.
+
+---
+
+## A-009: Admin tops up collector float
+
+**Precondition**
+
+* A collector exists with `collectorFloatBalance = 0`.
+
+**Steps**
+
+1. Open collector profile in admin dashboard.
+2. Click Float Top-Up.
+3. Enter top-up amount.
+4. Confirm.
+
+**Expected**
+
+* `collectorFloatBalance` increases by the entered amount.
+* A ledger entry of type `TOP_UP` is recorded with `balanceBefore` and `balanceAfter`.
+* Collector is now eligible for CASH jobs up to that float value.
+
+---
+
+## A-010: Admin manages payment providers
+
+**Steps**
+
+1. Open Payment Providers page.
+2. Sync providers from gateway for `cmr`.
+3. Enable/disable a provider.
+
+**Expected**
+
+* Providers are upserted from the gateway.
+* Disabled provider does not appear in mobile payment method list.
+* Enabled provider appears correctly in mobile app.
 
 ---
 
@@ -1035,16 +1225,23 @@ Run this first after every deployment.
 
 Run after every major PR.
 
-| Area          | Regression Check                          |
-| ------------- | ----------------------------------------- |
-| Auth          | All roles login correctly                 |
-| Household     | Booking still works                       |
-| Collector     | Job acceptance/completion still works     |
-| Admin         | Existing admin pages still work           |
-| Pricing       | Subscription/per-pickup logic still works |
-| Files         | Proof upload still works                  |
-| Notifications | Job events still notify users             |
-| Growth        | Marketer routes do not break other roles  |
+| Area          | Regression Check                                                   |
+| ------------- | ------------------------------------------------------------------ |
+| Auth          | All roles login correctly                                          |
+| Household     | Booking still works                                                |
+| Household     | Booking advance-hours validation enforced (server + mobile)        |
+| Collector     | Job acceptance/completion still works                              |
+| Collector     | CASH job completion deducts float correctly                        |
+| Admin         | Existing admin pages still work                                    |
+| Admin         | Pending Payments page loads and verify/reject actions work         |
+| Admin         | Float top-up updates balance and creates ledger entry              |
+| Pricing       | Subscription/per-pickup logic still works                          |
+| Payments      | `paymentMode = NONE` (subscription) jobs skip payment flow         |
+| Payments      | `paymentMode = MANUAL_PROVIDER` jobs wait for admin verification   |
+| Payments      | `paymentMode = CASH` float guard prevents under-funded assignments |
+| Files         | Proof upload still works                                           |
+| Notifications | Job events still notify users                                      |
+| Growth        | Marketer routes do not break other roles                           |
 
 ---
 
@@ -1120,6 +1317,11 @@ Do not release unless:
 [ ] No duplicate commission bug found
 [ ] No negative wallet/balance possible
 [ ] Payout audit trail complete
+[ ] CASH job float deduction is atomic (no double-spend)
+[ ] Manual payment proof verify/reject both work
+[ ] PAYMENT_FAILED status is terminal and handled in mobile UI
+[ ] booking.min_advance_hours enforced server-side and mobile calendar
+[ ] Collector float ledger entries created for all float changes
 ```
 
 ---
