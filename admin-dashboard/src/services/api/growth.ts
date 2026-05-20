@@ -25,7 +25,7 @@ export const growthMarketersApi = {
 };
 
 export const growthLeadsApi = {
-  list: (params?: { marketerId?: string; status?: string }) =>
+  list: (params?: { marketerId?: string; status?: string; page?: number; limit?: number }) =>
     client.get<{ data: GrowthLead[]; total: number }>('/admin/growth/leads', { params }).then((r) => r.data),
 };
 

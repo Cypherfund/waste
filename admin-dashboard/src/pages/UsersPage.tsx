@@ -1,16 +1,21 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { usersApi } from '../services/api/admin';
 import { useAsync } from '../hooks/useAsync';
 import { useAuth } from '../features/auth/AuthContext';
 import Spinner from '../components/Spinner';
 import ErrorBox from '../components/ErrorBox';
 import ConfirmDialog from '../components/ConfirmDialog';
+import Pagination from '../components/Pagination';
+import { usePagination } from '../hooks/usePagination';
 import type { AdminUser, UserDetail } from '../types';
+
+const PAGE_SIZE = 20;
 
 export default function UsersPage() {
   const { user: adminUser } = useAuth();
   const [roleFilter, setRoleFilter] = useState('');
   const [activeFilter, setActiveFilter] = useState('');
+  const { page, setPage, resetPage } = usePagination();
   const [confirmAction, setConfirmAction] = useState<{
     user: AdminUser;
     action: 'activate' | 'deactivate';
@@ -29,6 +34,11 @@ export default function UsersPage() {
   }, [roleFilter, activeFilter]);
 
   const { data: users, loading, error, run } = useAsync<AdminUser[]>(fetchUsers);
+
+  useEffect(() => { resetPage(); }, [roleFilter, activeFilter]);
+
+  const pageData = users ? users.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) : [];
+  const totalPages = users ? Math.ceil(users.length / PAGE_SIZE) : 1;
 
   const handleStatusChange = async () => {
     if (!confirmAction) return;
@@ -107,6 +117,10 @@ export default function UsersPage() {
 
       {!loading && !error && users && (
         <div className="overflow-x-auto rounded-lg border bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b bg-gray-50 px-4 py-2 text-xs text-gray-500">
+            <span>{users.length} user{users.length !== 1 ? 's' : ''}</span>
+            <span>Page {page} of {totalPages}</span>
+          </div>
           <table className="w-full text-left text-sm">
             <thead className="border-b bg-gray-50 text-xs uppercase text-gray-500">
               <tr>
@@ -120,14 +134,14 @@ export default function UsersPage() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {users.length === 0 && (
+              {pageData.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
                     No users found.
                   </td>
                 </tr>
               )}
-              {users.map((u) => {
+              {pageData.map((u) => {
                 const isSelf = u.id === adminUser?.id;
                 return (
                   <tr key={u.id} className="hover:bg-gray-50">
@@ -193,6 +207,7 @@ export default function UsersPage() {
               })}
             </tbody>
           </table>
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </div>
       )}
 

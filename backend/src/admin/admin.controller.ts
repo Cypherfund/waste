@@ -78,6 +78,11 @@ export class AdminController {
     return this.adminService.listJobs(filters);
   }
 
+  @Get('jobs/pending-payment')
+  listPendingPaymentJobs() {
+    return this.adminService.listPendingPaymentJobs();
+  }
+
   @Get('jobs/:id')
   getJob(@Param('id', ParseUUIDPipe) id: string) {
     return this.adminService.getJob(id);
@@ -102,11 +107,6 @@ export class AdminController {
   }
 
   // ─── PAYMENT VERIFICATION ──────────────────────────────────────
-
-  @Get('jobs/pending-payment')
-  listPendingPaymentJobs() {
-    return this.adminService.listPendingPaymentJobs();
-  }
 
   @Patch('jobs/:id/verify-payment')
   verifyPayment(

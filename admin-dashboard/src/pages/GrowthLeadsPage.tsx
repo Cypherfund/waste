@@ -1,21 +1,28 @@
 import { useEffect, useState } from 'react';
 import { GrowthLead } from '../types';
 import { growthLeadsApi } from '../services/api/growth';
+import Pagination from '../components/Pagination';
+import { usePagination } from '../hooks/usePagination';
+
+const PAGE_SIZE = 20;
 
 export default function GrowthLeadsPage() {
   const [leads, setLeads] = useState<GrowthLead[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const { page, setPage, resetPage } = usePagination();
 
   const load = async () => {
     setLoading(true);
     setError(null);
     try {
-      const params: any = {};
+      const params: any = { page, limit: PAGE_SIZE };
       if (statusFilter) params.status = statusFilter;
       const res = await growthLeadsApi.list(params);
       setLeads(res.data);
+      setTotal(res.total);
     } catch (e: any) {
       console.error(e);
       setError(e.response?.data?.message || e.message || 'Failed to load leads');
@@ -24,7 +31,8 @@ export default function GrowthLeadsPage() {
     }
   };
 
-  useEffect(() => { load(); }, [statusFilter]);
+  useEffect(() => { resetPage(); }, [statusFilter]);
+  useEffect(() => { load(); }, [statusFilter, page]);
 
   const statusBadge = (status: string) => {
     const colors: Record<string, string> = {
@@ -91,6 +99,10 @@ export default function GrowthLeadsPage() {
         </div>
       ) : (
         <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b bg-gray-50 px-4 py-2 text-xs text-gray-500">
+            <span>{total} lead{total !== 1 ? 's' : ''}</span>
+            <span>Page {page} of {Math.ceil(total / PAGE_SIZE) || 1}</span>
+          </div>
           <table className="w-full text-left text-sm">
             <thead className="border-b bg-gray-50 text-xs uppercase text-gray-500">
               <tr>
@@ -127,6 +139,11 @@ export default function GrowthLeadsPage() {
               ))}
             </tbody>
           </table>
+          <Pagination
+            page={page}
+            totalPages={Math.ceil(total / PAGE_SIZE)}
+            onPageChange={setPage}
+          />
         </div>
       )}
     </div>

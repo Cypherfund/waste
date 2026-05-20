@@ -1,14 +1,19 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { disputesApi } from '../services/api/admin';
 import { useAsync } from '../hooks/useAsync';
 import Spinner from '../components/Spinner';
 import ErrorBox from '../components/ErrorBox';
+import Pagination from '../components/Pagination';
+import { usePagination } from '../hooks/usePagination';
 import type { Dispute } from '../types';
+
+const PAGE_SIZE = 20;
 
 const DISPUTE_STATUSES = ['OPEN', 'UNDER_REVIEW', 'RESOLVED_ACCEPTED', 'RESOLVED_REJECTED'];
 
 export default function DisputesPage() {
   const [statusFilter, setStatusFilter] = useState('');
+  const { page, setPage, resetPage } = usePagination();
   const [resolving, setResolving] = useState<Dispute | null>(null);
   const [resolution, setResolution] = useState('RESOLVED_ACCEPTED');
   const [adminNotes, setAdminNotes] = useState('');
@@ -20,6 +25,11 @@ export default function DisputesPage() {
     [statusFilter],
   );
   const { data: disputes, loading, error, run } = useAsync<Dispute[]>(fetchDisputes);
+
+  useEffect(() => { resetPage(); }, [statusFilter]);
+
+  const pageData = disputes ? disputes.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) : [];
+  const totalPages = disputes ? Math.ceil(disputes.length / PAGE_SIZE) : 1;
 
   const handleResolve = async () => {
     if (!resolving) return;
@@ -71,6 +81,10 @@ export default function DisputesPage() {
 
       {!loading && !error && disputes && (
         <div className="overflow-x-auto rounded-lg border bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b bg-gray-50 px-4 py-2 text-xs text-gray-500">
+            <span>{disputes.length} dispute{disputes.length !== 1 ? 's' : ''}</span>
+            <span>Page {page} of {totalPages}</span>
+          </div>
           <table className="w-full text-left text-sm">
             <thead className="border-b bg-gray-50 text-xs uppercase text-gray-500">
               <tr>
@@ -83,14 +97,14 @@ export default function DisputesPage() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {disputes.length === 0 && (
+              {pageData.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
                     No disputes found.
                   </td>
                 </tr>
               )}
-              {disputes.map((d) => (
+              {pageData.map((d) => (
                 <tr key={d.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-mono text-xs text-gray-600">
                     {d.id.slice(0, 8)}...
@@ -139,6 +153,7 @@ export default function DisputesPage() {
               ))}
             </tbody>
           </table>
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </div>
       )}
 
