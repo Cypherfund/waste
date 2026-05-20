@@ -408,6 +408,8 @@ class _BookingsListScreenState extends State<BookingsListScreen>
         return const Color(0xFFDC2626);
       case JobStatus.disputed:
         return const Color(0xFFDC2626);
+      case JobStatus.paymentFailed:
+        return const Color(0xFFDC2626);
     }
   }
 
@@ -431,6 +433,8 @@ class _BookingsListScreenState extends State<BookingsListScreen>
         return 'Cancelled';
       case JobStatus.disputed:
         return 'Disputed';
+      case JobStatus.paymentFailed:
+        return 'Payment Failed';
     }
   }
 }

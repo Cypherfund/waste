@@ -36,6 +36,7 @@ import { FilesService } from '../files/files.service';
 import { PricingService } from '../subscriptions/pricing.service';
 import { PaymentService } from '../payments/payment.service';
 import { TransactionType } from '../payments/entities/payment-transaction.entity';
+import { SystemConfigService } from '../config/system-config.service';
 
 @Injectable()
 export class JobsService {
@@ -51,6 +52,7 @@ export class JobsService {
     private readonly pricingService: PricingService,
     private readonly paymentService: PaymentService,
     private readonly dataSource: DataSource,
+    private readonly systemConfigService: SystemConfigService,
   ) {}
 
   // ─── CRUD ─────────────────────────────────────────────────────
@@ -355,6 +357,15 @@ export class JobsService {
       if (!dto.cashCollected) {
         throw new BadRequestException('cashCollected must be true to complete a CASH job');
       }
+      if (
+        dto.collectedAmount !== undefined &&
+        job.quotedPrice != null &&
+        dto.collectedAmount < Number(job.quotedPrice)
+      ) {
+        throw new BadRequestException(
+          `collectedAmount (${dto.collectedAmount}) is less than quotedPrice (${job.quotedPrice})`,
+        );
+      }
       if (job.quotedPrice && job.quotedPrice > 0) {
         await this.dataSource.transaction(async (em) => {
           const collector = await em
@@ -365,8 +376,8 @@ export class JobsService {
             .getOne();
           if (!collector) throw new NotFoundException('Collector not found');
 
-          const earningRate = 0.7; // collector keeps 70%; platform takes 30%
-          const platformShare = Math.max(Number(job.quotedPrice) * (1 - earningRate), 0);
+          const collectorRate = await this.systemConfigService.getNumber('earnings.collector_rate', 0.7);
+          const platformShare = Math.max(Number(job.quotedPrice) * (1 - collectorRate), 0);
           const currentFloat = Number(collector.collectorFloatBalance);
 
           if (currentFloat < platformShare) {

@@ -89,11 +89,17 @@ export class HybridPaymentRefinement1748000000000 implements MigrationInterface 
         ('feature.marketer_auto_payout', 'false',           'Feature flag: enable automatic marketer payout via provider')
       ON CONFLICT ("key") DO NOTHING
     `);
+    await queryRunner.query(`
+      INSERT INTO "system_config" ("key", "value", "description")
+      VALUES
+        ('earnings.collector_rate', '0.7', 'Collector share of quotedPrice for CASH jobs (remainder is platform share deducted from float)')
+      ON CONFLICT ("key") DO NOTHING
+    `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     // ─── seed rows ───────────────────────────────────────────────────────────
-    await queryRunner.query(`DELETE FROM "system_config" WHERE "key" IN ('payments.cash_enabled','marketer.payout_mode','feature.marketer_auto_payout')`);
+    await queryRunner.query(`DELETE FROM "system_config" WHERE "key" IN ('payments.cash_enabled','marketer.payout_mode','feature.marketer_auto_payout','earnings.collector_rate')`);
 
     // ─── collector_float_ledger ───────────────────────────────────────────────
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_float_ledger_job"`);

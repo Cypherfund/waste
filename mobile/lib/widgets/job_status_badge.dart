@@ -49,6 +49,8 @@ class JobStatusBadge extends StatelessWidget {
         return 'Cancelled';
       case JobStatus.disputed:
         return 'Disputed';
+      case JobStatus.paymentFailed:
+        return 'Payment Failed';
     }
   }
 
@@ -72,6 +74,8 @@ class JobStatusBadge extends StatelessWidget {
         return AppColors.badgeCancelled.withValues(alpha: 0.1);
       case JobStatus.disputed:
         return AppColors.badgeDisputed.withValues(alpha: 0.1);
+      case JobStatus.paymentFailed:
+        return Colors.red.withValues(alpha: 0.1);
     }
   }
 
@@ -95,6 +99,8 @@ class JobStatusBadge extends StatelessWidget {
         return AppColors.badgeCancelled;
       case JobStatus.disputed:
         return AppColors.badgeDisputed;
+      case JobStatus.paymentFailed:
+        return Colors.red;
     }
   }
 }

@@ -23,6 +23,7 @@ import {
   EarningsQuickSummaryDto,
 } from './dto/earnings-summary.dto';
 import { haversineDistance } from '../assignment/assignment.service';
+import { PaymentMode } from '../common/enums/payment-mode.enum';
 
 @Injectable()
 export class EarningsService {
@@ -64,7 +65,9 @@ export class EarningsService {
       return;
     }
 
-    const calculated = await this.calculateEarnings(job);
+    const calculated = job.paymentMode === PaymentMode.CASH && job.quotedPrice
+      ? await this.calculateCashEarnings(job)
+      : await this.calculateEarnings(job);
 
     const earning = this.earningRepo.create({
       jobId: job.id,
@@ -160,6 +163,26 @@ export class EarningsService {
       baseAmount: baseRate,
       distanceAmount: Math.round(distanceAmount * 100) / 100,
       surgeMultiplier,
+      totalAmount,
+    };
+  }
+
+  /**
+   * Calculate earnings for a CASH job: collector earns quotedPrice * collectorRate.
+   * Distance formula is not used — the collector physically collected cash.
+   */
+  async calculateCashEarnings(job: Job): Promise<{
+    baseAmount: number;
+    distanceAmount: number;
+    surgeMultiplier: number;
+    totalAmount: number;
+  }> {
+    const collectorRate = await this.systemConfigService.getNumber('earnings.collector_rate', 0.7);
+    const totalAmount = Math.round(Number(job.quotedPrice) * collectorRate * 100) / 100;
+    return {
+      baseAmount: totalAmount,
+      distanceAmount: 0,
+      surgeMultiplier: 1.0,
       totalAmount,
     };
   }

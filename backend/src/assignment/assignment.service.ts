@@ -390,8 +390,8 @@ export class AssignmentService {
 
       // Filter: float balance for CASH jobs
       if (job.paymentMode === PaymentMode.CASH && job.quotedPrice) {
-        const earningRate = 0.7;
-        const platformShare = Number(job.quotedPrice) * (1 - earningRate);
+        const collectorRate = await this.systemConfigService.getNumber('earnings.collector_rate', 0.7);
+        const platformShare = Number(job.quotedPrice) * (1 - collectorRate);
         const floatBalance = Number(raw.collectorFloatBalance ?? 0);
         if (floatBalance < platformShare) {
           this.logger.debug(
