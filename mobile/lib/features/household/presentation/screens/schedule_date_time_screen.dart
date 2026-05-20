@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../../../../config/app_theme.dart';
+import '../../../../providers/subscription_provider.dart';
 
 class TimeSlot {
   final String time;
@@ -45,10 +47,14 @@ class _ScheduleDateTimeScreenState extends State<ScheduleDateTimeScreen> {
   void initState() {
     super.initState();
 
+    final appConfig = context.read<SubscriptionProvider>().appConfig;
+    final minAdvanceHours = appConfig?.minAdvanceHours ?? 24;
+    final maxAdvanceDays = appConfig?.maxAdvanceDays ?? 30;
+
     final now = DateTime.now();
-    final tomorrow = now.add(const Duration(days: 1));
-    _minDate = DateTime(tomorrow.year, tomorrow.month, tomorrow.day);
-    _maxDate = _minDate.add(const Duration(days: 30));
+    final earliest = now.add(Duration(hours: minAdvanceHours));
+    _minDate = DateTime(earliest.year, earliest.month, earliest.day);
+    _maxDate = _minDate.add(Duration(days: maxAdvanceDays));
 
     _selectedDate = _firstAvailableDate(_minDate);
     _focusedMonth = DateTime(_selectedDate.year, _selectedDate.month);

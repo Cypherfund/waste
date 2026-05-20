@@ -15,6 +15,8 @@ import {
   PayoutListResponse,
   PayoutConfig,
   PaymentProvider,
+  PendingPayment,
+  CollectorFloat,
 } from '../../types';
 
 export const usersApi = {
@@ -138,6 +140,44 @@ export const subscriptionPlansApi = {
 
   update: (id: string, body: { name?: string; price?: number; pickupsPerWeek?: number; isActive?: boolean; description?: string }) =>
     client.patch<SubscriptionPlan>(`/subscriptions/admin/plans/${id}`, body).then((r) => r.data),
+};
+
+export const pendingPaymentsApi = {
+  list: () =>
+    client.get<PendingPayment[]>('/admin/jobs/pending-payment')
+      .then((r) => (r.data as unknown as { data: Job[] }).data.map((j): PendingPayment => ({
+        jobId: j.id,
+        householdId: j.householdId,
+        householdName: j.householdName ?? null,
+        scheduledDate: j.scheduledDate,
+        paymentMode: j.paymentMode ?? 'MANUAL_PROVIDER',
+        paymentMethod: j.paymentMethod,
+        paymentRef: j.paymentRef,
+        paymentProofUrl: j.paymentProofUrl,
+        paymentStatus: j.paymentStatus ?? 'PENDING',
+        quotedPrice: j.quotedPrice,
+        createdAt: j.createdAt,
+      }))),
+
+  verify: (jobId: string) =>
+    client.patch(`/admin/jobs/${jobId}/verify-payment`).then((r) => r.data),
+
+  reject: (jobId: string, reason: string) =>
+    client.patch(`/admin/jobs/${jobId}/reject-payment`, { reason }).then((r) => r.data),
+};
+
+export const collectorFloatApi = {
+  list: () =>
+    client.get<CollectorFloat[]>('/admin/users', { params: { role: 'COLLECTOR', isActive: 'true' } })
+      .then((r) => (r.data as unknown as AdminUser[]).map((u): CollectorFloat => ({
+        collectorId: u.id,
+        collectorName: u.name,
+        collectorPhone: u.phone,
+        collectorFloatBalance: (u as unknown as { collectorFloatBalance?: number }).collectorFloatBalance ?? 0,
+      }))),
+
+  topUp: (collectorId: string, amount: number, note?: string) =>
+    client.post(`/admin/users/${collectorId}/float-topup`, { amount, note }).then((r) => r.data),
 };
 
 export const paymentProvidersApi = {

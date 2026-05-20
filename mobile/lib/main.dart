@@ -210,6 +210,7 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
         ChangeNotifierProvider.value(value: _marketerProvider),
         ChangeNotifierProvider.value(value: _notificationsProvider),
         Provider.value(value: _walletApi),
+        Provider.value(value: _filesApi),
         Provider.value(value: widget.connectivityService),
         Provider.value(value: _locationService),
         Provider.value(value: _queueService),

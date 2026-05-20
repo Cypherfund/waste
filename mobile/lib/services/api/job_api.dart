@@ -37,8 +37,10 @@ class JobApi {
     double? locationLat,
     double? locationLng,
     String? notes,
+    String? paymentMode,
     String? paymentMethod,
     String? paymentRef,
+    String? paymentProofUrl,
   }) async {
     final response = await _client.dio.post('/jobs', data: {
       'scheduledDate': scheduledDate,
@@ -47,8 +49,10 @@ class JobApi {
       if (locationLat != null) 'locationLat': locationLat,
       if (locationLng != null) 'locationLng': locationLng,
       if (notes != null && notes.isNotEmpty) 'notes': notes,
+      if (paymentMode != null && paymentMode.isNotEmpty) 'paymentMode': paymentMode,
       if (paymentMethod != null && paymentMethod.isNotEmpty) 'paymentMethod': paymentMethod,
       if (paymentRef != null && paymentRef.isNotEmpty) 'paymentRef': paymentRef,
+      if (paymentProofUrl != null && paymentProofUrl.isNotEmpty) 'paymentProofUrl': paymentProofUrl,
     });
     return Job.fromJson(response.data as Map<String, dynamic>);
   }
@@ -124,11 +128,15 @@ class JobApi {
     required String proofImageUrl,
     double? collectorLat,
     double? collectorLng,
+    bool? cashCollected,
+    double? collectedAmount,
   }) async {
     final response = await _client.dio.post('/jobs/$id/complete', data: {
       'proofImageUrl': proofImageUrl,
       if (collectorLat != null) 'collectorLat': collectorLat,
       if (collectorLng != null) 'collectorLng': collectorLng,
+      if (cashCollected != null) 'cashCollected': cashCollected,
+      if (collectedAmount != null) 'collectedAmount': collectedAmount,
     });
     return Job.fromJson(response.data as Map<String, dynamic>);
   }

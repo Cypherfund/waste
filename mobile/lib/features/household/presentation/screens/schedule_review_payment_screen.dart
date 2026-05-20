@@ -1,14 +1,17 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../../config/app_theme.dart';
 import '../../../../providers/job_provider.dart';
 import '../../../../providers/subscription_provider.dart';
 import '../../../../models/subscription.dart';
 import '../../../../services/api/wallet_api.dart';
+import '../../../../services/api/files_api.dart';
 import 'schedule_pickup_type_screen.dart';
 
 class ScheduleReviewPaymentScreen extends StatefulWidget {
@@ -27,9 +30,13 @@ class ScheduleReviewPaymentScreen extends StatefulWidget {
 class _ScheduleReviewPaymentScreenState
     extends State<ScheduleReviewPaymentScreen> {
   bool _isCreatingJob = false;
-  String _selectedPaymentMethod = 'MOBILE_MONEY';
+  // 'CASH' | provider paymentCode | null (nothing selected)
+  String? _selectedPaymentMethod;
   PickupScheduleType _pickupType = PickupScheduleType.oneTime;
   final _paymentRefController = TextEditingController();
+  XFile? _paymentProofImage;
+  bool _isUploadingProof = false;
+  String? _uploadedProofUrl;
 
   @override
   void initState() {
@@ -44,6 +51,14 @@ class _ScheduleReviewPaymentScreenState
   void dispose() {
     _paymentRefController.dispose();
     super.dispose();
+  }
+
+  // Derive paymentMode string from selection
+  String _resolvePaymentMode(bool isFree) {
+    if (isFree) return 'NONE';
+    if (_selectedPaymentMethod == 'CASH') return 'CASH';
+    if (_selectedPaymentMethod != null) return 'MANUAL_PROVIDER';
+    return 'NONE';
   }
 
   String _getPickupTypeName(PickupScheduleType type) {
@@ -699,7 +714,7 @@ class _ScheduleReviewPaymentScreenState
     if (paymentEnabled) {
       return _buildOnlinePaymentMethod();
     }
-    return _buildManualPaymentFlow(subProvider, displayAmount, pickupType);
+    return _buildManualPaymentFlow(subProvider);
   }
 
   Widget _buildOnlinePaymentMethod() {
@@ -766,14 +781,10 @@ class _ScheduleReviewPaymentScreenState
     );
   }
 
-  Widget _buildManualPaymentFlow(SubscriptionProvider subProvider, double amount, PickupScheduleType pickupType) {
+  Widget _buildManualPaymentFlow(SubscriptionProvider subProvider) {
     final appConfig = subProvider.appConfig;
     final whatsapp = appConfig?.supportWhatsapp ?? '';
     final providers = appConfig?.enabledManualPaymentProviders ?? [];
-
-    final isMonthly = pickupType == PickupScheduleType.monthly;
-    final paymentLabel = isMonthly ? 'Monthly Subscription Payment' : 'One-time Pickup Payment';
-    final amountLabel = isMonthly ? 'Monthly fee' : 'Pickup cost';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -788,161 +799,118 @@ class _ScheduleReviewPaymentScreenState
           ),
         ),
         const SizedBox(height: 10),
-        Row(
+        // Dynamic chips: one per enabled manual provider + cash if enabled
+        Wrap(
+          spacing: 10,
+          runSpacing: 8,
           children: [
-            _buildMethodChip('MOBILE_MONEY', Icons.phone_android, 'Mobile Money'),
-            const SizedBox(width: 10),
-            _buildMethodChip('BANK_TRANSFER', Icons.account_balance, 'Bank Transfer'),
+            ...providers.map((p) =>
+                _buildMethodChip(p.paymentCode, Icons.phone_android, p.providerName)),
+            if (appConfig?.cashEnabled == true)
+              _buildMethodChip('CASH', Icons.payments_outlined, 'Cash'),
           ],
         ),
         const SizedBox(height: 16),
 
-        // Instructions box
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFFF8E1),
-            borderRadius: BorderRadius.circular(9),
-            border: Border.all(color: const Color(0xFFFFA000), width: 2),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFFFA000),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.priority_high_rounded,
-                        color: Colors.white, size: 14),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      paymentLabel.toUpperCase(),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFFE65100),
-                      ),
+        // Cash selected: pay-at-pickup note
+        if (_selectedPaymentMethod == 'CASH') ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEAF5EA),
+              borderRadius: BorderRadius.circular(9),
+              border: Border.all(color: AppColors.primary, width: 1.5),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline_rounded,
+                    color: AppColors.primary, size: 18),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'Your collector will collect cash payment at pickup time. No reference needed.',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF14532D),
+                      height: 1.4,
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: const Color(0xFFFFD54F)),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Step 1: Make Payment',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.grey[800],
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Send ${amount.toStringAsFixed(0)} XAF ($amountLabel) via one of the payment methods below:',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        height: 1.5,
-                        color: Color(0xFF374151),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    // Payment provider list with copy buttons
-                    ...providers.map((provider) => _buildProviderPaymentCard(provider)),
-                    if (providers.isEmpty)
-                      const Text(
-                        'No payment providers configured. Please contact support.',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF9CA3AF),
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Step 2: Admin Confirmation',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.grey[800],
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'After payment, an admin will verify and confirm your booking. This usually takes a few minutes during business hours.',
-                      style: TextStyle(
-                        fontSize: 11,
-                        height: 1.5,
-                        color: Color(0xFF374151),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-            ],
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 14),
+          const SizedBox(height: 14),
+        ],
 
-        // Payment reference field
-        const Text(
-          'Payment Reference / Transaction ID',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
-            color: Color(0xFF111827),
+        // Provider selected: show its instructions card
+        if (_selectedPaymentMethod != null && _selectedPaymentMethod != 'CASH') ...[
+          () {
+            final sel = providers.where((p) => p.paymentCode == _selectedPaymentMethod).toList();
+            if (sel.isEmpty) return const SizedBox.shrink();
+            return _buildProviderPaymentCard(sel.first);
+          }(),
+          const SizedBox(height: 14),
+
+          // Payment reference (required for manual providers)
+          const Text(
+            'Payment Reference / Transaction ID',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF111827),
+            ),
           ),
-        ),
-        const SizedBox(height: 6),
-        TextField(
-          controller: _paymentRefController,
-          style: const TextStyle(fontSize: 12),
-          decoration: InputDecoration(
-            hintText: 'e.g. 0012345678 or leave blank',
-            hintStyle: const TextStyle(
-                fontSize: 11, color: Color(0xFF9CA3AF)),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(9),
-              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _paymentRefController,
+            style: const TextStyle(fontSize: 12),
+            decoration: InputDecoration(
+              hintText: 'e.g. 0012345678',
+              hintStyle: const TextStyle(
+                  fontSize: 11, color: Color(0xFF9CA3AF)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(9),
+                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(9),
+                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(9),
+                borderSide: BorderSide(color: AppColors.primary, width: 1.3),
+              ),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(9),
-              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(9),
-              borderSide: BorderSide(color: AppColors.primary, width: 1.3),
-            ),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           ),
-        ),
-        const SizedBox(height: 6),
-        const Text(
-          'Optional — enter your MoMo transaction ID so the admin can verify quickly.',
-          style: TextStyle(
-              fontSize: 10, color: Color(0xFF9CA3AF), height: 1.4),
-        ),
-        const SizedBox(height: 16),
+          const SizedBox(height: 6),
+          const Text(
+            'Enter your MoMo transaction ID so the admin can verify quickly.',
+            style: TextStyle(
+                fontSize: 10, color: Color(0xFF9CA3AF), height: 1.4),
+          ),
+          const SizedBox(height: 14),
+
+          // Proof upload (shown if provider requires it)
+          if (() {
+            final sel = providers.where((p) => p.paymentCode == _selectedPaymentMethod).toList();
+            return sel.isNotEmpty && sel.first.manualProofRequired;
+          }()) ...[
+            const Text(
+              'Payment Screenshot (required)',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF111827),
+              ),
+            ),
+            const SizedBox(height: 6),
+            _buildProofUploadWidget(),
+            const SizedBox(height: 14),
+          ],
+        ],
 
         // WhatsApp support
         if (whatsapp.isNotEmpty)
@@ -995,10 +963,92 @@ class _ScheduleReviewPaymentScreenState
     );
   }
 
+  Widget _buildProofUploadWidget() {
+    return GestureDetector(
+      onTap: _isUploadingProof ? null : _pickPaymentProof,
+      child: Container(
+        width: double.infinity,
+        height: 100,
+        decoration: BoxDecoration(
+          color: _paymentProofImage != null ? Colors.transparent : const Color(0xFFF9FAFB),
+          borderRadius: BorderRadius.circular(9),
+          border: Border.all(
+            color: _uploadedProofUrl != null
+                ? AppColors.primary
+                : const Color(0xFFE5E7EB),
+            width: 1.5,
+          ),
+        ),
+        child: _isUploadingProof
+            ? const Center(child: CircularProgressIndicator())
+            : _paymentProofImage != null
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: FutureBuilder<Uint8List>(
+                      future: _paymentProofImage!.readAsBytes(),
+                      builder: (ctx, snap) => snap.hasData
+                          ? Image.memory(snap.data!, fit: BoxFit.cover)
+                          : const Center(child: CircularProgressIndicator()),
+                    ),
+                  )
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.upload_file_rounded,
+                          size: 28, color: AppColors.textSecondary),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'Tap to upload screenshot',
+                        style: TextStyle(fontSize: 11, color: Color(0xFF6B7280)),
+                      ),
+                    ],
+                  ),
+      ),
+    );
+  }
+
+  Future<void> _pickPaymentProof() async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1280,
+        maxHeight: 1280,
+        imageQuality: 80,
+      );
+      if (picked == null || !mounted) return;
+      setState(() {
+        _paymentProofImage = picked;
+        _isUploadingProof = true;
+        _uploadedProofUrl = null;
+      });
+      final filesApi = context.read<FilesApi>();
+      final result = await filesApi.uploadProofImage(picked);
+      if (mounted) {
+        setState(() {
+          _uploadedProofUrl = result.fileUrl;
+          _isUploadingProof = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isUploadingProof = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Upload failed: $e')),
+        );
+      }
+    }
+  }
+
   Widget _buildMethodChip(String key, IconData icon, String label) {
     final isSelected = _selectedPaymentMethod == key;
     return GestureDetector(
-      onTap: () => setState(() => _selectedPaymentMethod = key),
+      onTap: () => setState(() {
+        _selectedPaymentMethod = key;
+        _paymentRefController.clear();
+        _paymentProofImage = null;
+        _uploadedProofUrl = null;
+      }),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -1034,102 +1084,131 @@ class _ScheduleReviewPaymentScreenState
   }
 
   Widget _buildProviderPaymentCard(dynamic provider) {
-    final phone = provider.manualPaymentPhone ?? '';
-    final accountName = provider.manualPaymentAccountName;
+    final phone = (provider.manualPaymentPhone ?? '') as String;
+    final accountName = provider.manualPaymentAccountName as String?;
+    final instructions = provider.manualInstructions as String?;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF3E0),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: const Color(0xFFFFB74D)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFE0B2),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Icon(
-              provider.paymentCode.contains('BANK') 
-                  ? Icons.account_balance 
-                  : Icons.phone_android,
-              color: const Color(0xFFE65100),
-              size: 18,
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF3E0),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: const Color(0xFFFFB74D)),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  provider.providerName,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF111827),
-                  ),
+          child: Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFE0B2),
+                  borderRadius: BorderRadius.circular(6),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  phone,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF374151),
-                  ),
+                child: Icon(
+                  (provider.paymentCode as String).contains('BANK')
+                      ? Icons.account_balance
+                      : Icons.phone_android,
+                  color: const Color(0xFFE65100),
+                  size: 18,
                 ),
-                if (accountName != null && accountName.isNotEmpty)
-                  Text(
-                    accountName,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: Color(0xFF6B7280),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          GestureDetector(
-            onTap: () {
-              Clipboard.setData(ClipboardData(text: phone));
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${provider.providerName} number copied'),
-                  duration: const Duration(seconds: 2),
-                ),
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFA000),
-                borderRadius: BorderRadius.circular(6),
               ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.copy_rounded, size: 12, color: Colors.white),
-                  SizedBox(width: 4),
-                  Text(
-                    'Copy',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      provider.providerName as String,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF111827),
+                      ),
+                    ),
+                    if (phone.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        phone,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF374151),
+                        ),
+                      ),
+                    ],
+                    if (accountName != null && accountName.isNotEmpty)
+                      Text(
+                        accountName,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Color(0xFF6B7280),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (phone.isNotEmpty)
+                GestureDetector(
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: phone));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${provider.providerName} number copied'),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFA000),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.copy_rounded, size: 12, color: Colors.white),
+                        SizedBox(width: 4),
+                        Text(
+                          'Copy',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
+                ),
+            ],
+          ),
+        ),
+        if (instructions != null && instructions.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0FFF4),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: const Color(0xFFBBF7D0)),
+            ),
+            child: Text(
+              instructions,
+              style: const TextStyle(
+                fontSize: 11,
+                color: Color(0xFF14532D),
+                height: 1.5,
               ),
             ),
           ),
         ],
-      ),
+      ],
     );
   }
 
@@ -1263,10 +1342,22 @@ class _ScheduleReviewPaymentScreenState
       // Use the pickupType parameter from user selection instead of widget.arguments
 
       final paymentRef = _paymentRefController.text.trim();
-      final paymentNote = isFree
-          ? ''
-          : ' | Payment: $_selectedPaymentMethod'
-              '${paymentRef.isNotEmpty ? ' | Ref: $paymentRef' : ''}';
+      final resolvedMode = _resolvePaymentMode(isFree);
+
+      // Validate proof upload when required
+      if (!isFree &&
+          _selectedPaymentMethod != null &&
+          _selectedPaymentMethod != 'CASH' &&
+          _paymentProofImage != null &&
+          _uploadedProofUrl == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please wait for proof upload to complete')),
+          );
+        }
+        setState(() => _isCreatingJob = false);
+        return;
+      }
 
       final job = await jobProvider.createJob(
         scheduledDate: scheduledDate,
@@ -1274,9 +1365,11 @@ class _ScheduleReviewPaymentScreenState
         locationAddress: fullAddress,
         locationLat: locationLat,
         locationLng: locationLng,
-        notes: 'Pickup type: ${_getPickupTypeName(pickupType)}$paymentNote',
-        paymentMethod: isFree ? null : _selectedPaymentMethod,
+        notes: 'Pickup type: ${_getPickupTypeName(pickupType)}',
+        paymentMode: isFree ? null : resolvedMode,
+        paymentMethod: (isFree || _selectedPaymentMethod == 'CASH') ? null : _selectedPaymentMethod,
         paymentRef: paymentRef.isNotEmpty ? paymentRef : null,
+        paymentProofUrl: _uploadedProofUrl,
       );
 
       if (job != null && mounted) {

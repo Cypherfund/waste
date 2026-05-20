@@ -49,10 +49,16 @@ export class JobResponseDto {
   notes: string | null;
 
   @ApiPropertyOptional({ nullable: true })
+  paymentMode: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
   paymentMethod: string | null;
 
   @ApiPropertyOptional({ nullable: true })
   paymentRef: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  paymentProofUrl: string | null;
 
   @ApiPropertyOptional({ nullable: true })
   paymentStatus: string | null;

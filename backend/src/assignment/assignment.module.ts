@@ -4,6 +4,7 @@ import { User } from '../users/entities/user.entity';
 import { Job } from '../jobs/entities/job.entity';
 import { JobsModule } from '../jobs/jobs.module';
 import { TimeslotsModule } from '../timeslots/timeslots.module';
+import { EarningsModule } from '../earnings/earnings.module';
 import { AssignmentService } from './assignment.service';
 import { AssignmentController } from './assignment.controller';
 
@@ -12,6 +13,7 @@ import { AssignmentController } from './assignment.controller';
     TypeOrmModule.forFeature([User, Job]),
     JobsModule,
     TimeslotsModule,
+    EarningsModule,
   ],
   controllers: [AssignmentController],
   providers: [AssignmentService],

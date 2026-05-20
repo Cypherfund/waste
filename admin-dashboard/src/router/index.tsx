@@ -16,6 +16,8 @@ import MarketersPage from '../pages/MarketersPage';
 import GrowthLeadsPage from '../pages/GrowthLeadsPage';
 import CommissionsPage from '../pages/CommissionsPage';
 import MarketerPayoutsPage from '../pages/MarketerPayoutsPage';
+import PendingPaymentsPage from '../pages/PendingPaymentsPage';
+import CollectorFloatPage from '../pages/CollectorFloatPage';
 
 export const router = createBrowserRouter([
   {
@@ -44,6 +46,8 @@ export const router = createBrowserRouter([
       { path: 'growth-leads', element: <GrowthLeadsPage /> },
       { path: 'commissions', element: <CommissionsPage /> },
       { path: 'marketer-payouts', element: <MarketerPayoutsPage /> },
+      { path: 'pending-payments', element: <PendingPaymentsPage /> },
+      { path: 'collector-float', element: <CollectorFloatPage /> },
     ],
   },
 ]);

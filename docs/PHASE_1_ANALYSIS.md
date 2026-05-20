@@ -27,16 +27,21 @@ Mobile-first, designed for low-end Android devices and unstable internet.
 - Navigate to pickup location
 - Mark job as in-progress → completed
 - Upload proof image
+- Collect cash payment from household (CASH mode jobs)
 - Track earnings
 - View completed job history
+- Maintain float balance (required for CASH job eligibility)
 
 ### ADMIN
 - Login to web dashboard
 - Manage users (households & collectors)
 - Monitor all jobs in real-time
 - Manually assign/override job assignments
-- Configure system settings (earnings rates, assignment radius, etc.)
+- Configure system settings (earnings rates, assignment radius, booking intervals, etc.)
 - View analytics and reports
+- Review and verify/reject manual payment proofs
+- Manage payment providers (enable/disable, configure instructions)
+- Top up collector float balances
 
 ---
 
@@ -46,8 +51,8 @@ Mobile-first, designed for low-end Android devices and unstable internet.
 ```
 1. Register/Login
 2. Home Screen (upcoming pickups, quick stats)
-3. Schedule Pickup → date/time + location (GPS/manual) + notes
-4. Confirmation Screen → review & submit → status: REQUESTED
+3. Schedule Pickup → date/time + location (GPS/manual) + notes (must be ≥ `booking.min_advance_hours` ahead)
+4. Payment Selection → choose payment mode (subscription/manual provider/CASH); upload proof if required → status: REQUESTED or PAYMENT_PENDING
 5. Waiting for Assignment → system auto-assigns or admin assigns
 6. Assigned Collector View → see collector info, status: ASSIGNED
 7. In Progress → collector en route/working, status: IN_PROGRESS
@@ -83,45 +88,52 @@ Mobile-first, designed for low-end Android devices and unstable internet.
 
 ---
 
-## 4. Job Lifecycle State Machine
+### 4. Job Lifecycle State Machine
 
 ```
                               ┌─────────────┐
                               │  REQUESTED   │
                               └──────┬───────┘
                                      │
-                         ┌───────────┼───────────┐
-                         │ auto/manual assign     │ household cancels
-                         ▼                        ▼
-                  ┌─────────────┐          ┌─────────────┐
-                  │  ASSIGNED   │          │  CANCELLED   │
-                  └──────┬───────┘          └─────────────┘
-                         │
-              ┌──────────┼──────────┐
-              │ collector accepts   │ collector rejects
-              ▼                     ▼
-       ┌─────────────┐      Back to REQUESTED
-       │ IN_PROGRESS  │      (re-assignment)
-       └──────┬───────┘
-              │
-              │ collector completes + uploads proof
-              ▼
-       ┌─────────────┐
-       │  COMPLETED   │──── household validates (or auto after 24h)
-       └──────┬───────┘
-              │
-              │ household rates (optional)
-              ▼
-       ┌─────────────┐
-       │    RATED     │
-       └─────────────┘
+              ┌──────────────────────┼──────────────────┐
+              │ payment required     │ no payment / sub  │ household cancels
+              ▼                      │                   ▼
+   ┌──────────────────┐              │          ┌─────────────┐
+   │ PAYMENT_PENDING  │              │          │  CANCELLED  │
+   └────────┬─────────┘              │          └─────────────┘
+            │ verified               │
+            │ (or admin approval)    │
+            └──────────┬─────────────┘
+                       │ auto/manual assign
+                       ▼
+                ┌─────────────┐
+                │  ASSIGNED   │
+                └──────┬───────┘
+                       │
+            ┌──────────┼──────────┐
+            │ accepts             │ rejects
+            ▼                     ▼
+     ┌─────────────┐      Back to REQUESTED
+     │ IN_PROGRESS  │      (re-assignment)
+     └──────┬───────┘
+            │ collector completes + uploads proof
+            ▼
+     ┌─────────────┐
+     │  COMPLETED   │──── household validates (or auto after 24h)
+     └──────┬───────┘
+            │
+            │ household rates (optional)
+            ▼
+     ┌─────────────┐     ┌─────────────────┐
+     │    RATED     │     │ PAYMENT_FAILED  │ (terminal — payment rejected/timed out)
+     └─────────────┘     └─────────────────┘
 ```
 
 ### Cancellation Rules
-- **REQUESTED:** Household can cancel freely
+- **REQUESTED / PAYMENT_PENDING:** Household can cancel freely
 - **ASSIGNED:** Household can cancel (collector notified)
 - **IN_PROGRESS:** Only admin can cancel (dispute resolution)
-- **COMPLETED/RATED:** Cannot cancel
+- **COMPLETED/RATED/PAYMENT_FAILED:** Cannot cancel
 
 ### Rejection Rules
 - Collector rejects ASSIGNED job → job returns to REQUESTED
@@ -208,8 +220,12 @@ All weights are admin-configurable.
 ### 6.1 Earnings Calculation
 
 ```
-job_earnings = base_rate + (distance_km × per_km_rate) + surge_multiplier
+collectorEarning = (base_rate + distance_km × per_km_rate) × surge_multiplier
 ```
+
+> **Payment mode independence:** This formula applies to **all jobs** regardless of whether the household paid by subscription, manual provider, integrated provider, or CASH. Collector pay is never influenced by how the household paid.
+>
+> **CASH settlement only:** For CASH jobs, `platformShare = max(quotedPrice − collectorEarning, 0)` is deducted from the collector's float balance after completion.
 
 | Parameter | Default | Admin Configurable |
 |-----------|---------|-------------------|
@@ -272,6 +288,9 @@ assignment.weight_workload = 0.30
 assignment.weight_rating = 0.15
 assignment.weight_recency = 0.15
 proof.auto_validate_hours = 24
+booking.min_advance_hours = 24
+booking.max_advance_days = 30
+payments.cash_enabled = false
 ```
 
 ---
@@ -680,17 +699,22 @@ SystemConfig (standalone)
 - GET `/jobs/earnings`
 - GET `/jobs/earnings/summary`
 
-### Admin (10 endpoints)
+### Admin (15 endpoints)
 - GET `/admin/users`
 - GET `/admin/users/:id`
 - PATCH `/admin/users/:id`
+- POST `/admin/users/:id/float-topup`
 - GET `/admin/jobs`
+- GET `/admin/jobs/pending-payments`
 - POST `/admin/jobs/:id/assign`
+- POST `/admin/payments/:jobId/verify`
+- POST `/admin/payments/:jobId/reject`
 - GET `/admin/stats`
 - GET `/admin/collectors/performance`
 - GET `/admin/fraud-flags`
 - PATCH `/admin/fraud-flags/:id`
 - GET/PUT `/admin/config`
+- GET/POST/PATCH `/admin/payments/providers`
 
 ### Notifications (3 endpoints)
 - GET `/notifications` (my notifications)
@@ -706,7 +730,7 @@ SystemConfig (standalone)
 ### Health (1 endpoint)
 - GET `/health`
 
-**Total: 33 REST endpoints + 1 WebSocket namespace**
+**Total: ~38 REST endpoints + 1 WebSocket namespace**
 
 ---
 
@@ -728,11 +752,11 @@ SystemConfig (standalone)
 
 1. Tech stack: NestJS + PostgreSQL + React/MUI + Flutter/Riverpod
 2. 3 roles: HOUSEHOLD, COLLECTOR, ADMIN
-3. No payments in this build (earnings tracked, payouts manual)
+3. ~~No payments in this build~~ Hybrid payment system implemented: NONE (subscription), MANUAL_PROVIDER (proof upload), INTEGRATED_PROVIDER (gateway), CASH (collector collects at door); collector payouts still manual
 4. Rating is optional — job lifecycle does not require it
-5. Cancellation allowed in REQUESTED/ASSIGNED; admin-only for IN_PROGRESS
+5. Cancellation allowed in REQUESTED/ASSIGNED/PAYMENT_PENDING; admin-only for IN_PROGRESS
 6. Collector assignment uses weighted scoring (distance + workload + rating + recency)
-7. Earnings = base_rate + (distance × per_km_rate) × surge_multiplier
+7. Earnings = `(base_rate + distance_km × per_km_rate) × surge_multiplier` — same formula for all payment modes; CASH jobs additionally deduct `platformShare` from collector float
 8. Push notifications via FCM with SMS fallback via Twilio
 9. Real-time via WebSocket (Socket.IO) with HTTP polling fallback
 10. Proof auto-validates after 24 hours if household does not respond

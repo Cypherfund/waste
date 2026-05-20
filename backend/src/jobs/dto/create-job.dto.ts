@@ -52,17 +52,27 @@ export class CreateJobDto {
   @MaxLength(1000)
   notes?: string;
 
-  @ApiPropertyOptional({ example: 'MOBILE_MONEY', description: 'Payment method (for manual payments)' })
+  @ApiPropertyOptional({ enum: ['NONE', 'MANUAL_PROVIDER', 'INTEGRATED_PROVIDER', 'CASH'], description: 'Payment mode' })
+  @IsOptional()
+  @IsString()
+  paymentMode?: string;
+
+  @ApiPropertyOptional({ example: 'MOBILE_MONEY', description: 'Payment provider code (for manual/integrated provider payments)' })
   @IsOptional()
   @IsString()
   @MaxLength(50)
   paymentMethod?: string;
 
-  @ApiPropertyOptional({ example: 'TX123456789', description: 'Payment reference/transaction ID (for manual verification)' })
+  @ApiPropertyOptional({ example: 'TX123456789', description: 'Payment reference/transaction ID (required for manual provider payments)' })
   @IsOptional()
   @IsString()
   @MaxLength(100)
   paymentRef?: string;
+
+  @ApiPropertyOptional({ example: 'https://cdn.example.com/proof/abc123.jpg', description: 'Payment proof screenshot URL (required when provider.manualProofRequired=true)' })
+  @IsOptional()
+  @IsString()
+  paymentProofUrl?: string;
 
   @ApiPropertyOptional({ example: '105', description: 'Payment provider code (e.g. 105 for MTN, 106 for Orange) for real payments' })
   @IsOptional()

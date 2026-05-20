@@ -1118,6 +1118,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         return Colors.red;
       case JobStatus.disputed:
         return Colors.red;
+      case JobStatus.paymentFailed:
+        return Colors.red;
     }
   }
   
@@ -1141,6 +1143,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         return Icons.cancel;
       case JobStatus.disputed:
         return Icons.warning;
+      case JobStatus.paymentFailed:
+        return Icons.payment_outlined;
     }
   }
   
@@ -1164,6 +1168,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         return 'Cancelled';
       case JobStatus.disputed:
         return 'Disputed';
+      case JobStatus.paymentFailed:
+        return 'Payment Failed';
     }
   }
   
@@ -1187,6 +1193,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         return 'This pickup was cancelled';
       case JobStatus.disputed:
         return 'There is a dispute with this pickup';
+      case JobStatus.paymentFailed:
+        return 'Payment verification failed. Please contact support.';
     }
   }
 }

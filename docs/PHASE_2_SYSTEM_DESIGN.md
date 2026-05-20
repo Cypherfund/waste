@@ -23,7 +23,9 @@ backend/src/
 │   │   └── pagination.dto.ts              # Shared page/limit DTO
 │   ├── enums/
 │   │   ├── role.enum.ts                   # HOUSEHOLD, COLLECTOR, ADMIN
-│   │   ├── job-status.enum.ts             # REQUESTED..RATED, CANCELLED, DISPUTED
+│   │   ├── job-status.enum.ts             # REQUESTED..RATED, CANCELLED, DISPUTED, PAYMENT_FAILED
+│   │   ├── payment-mode.enum.ts           # NONE, MANUAL_PROVIDER, INTEGRATED_PROVIDER, CASH
+│   │   ├── payment-status.enum.ts         # NOT_REQUIRED, PENDING, AWAITING_ADMIN_VERIFICATION, VERIFIED, PROVIDER_PENDING, FAILED
 │   │   ├── earning-status.enum.ts         # PENDING, CONFIRMED, PAID
 │   │   ├── notification-type.enum.ts      # JOB_ASSIGNED, JOB_COMPLETED, etc.
 │   │   ├── notification-channel.enum.ts   # PUSH, SMS, IN_APP
@@ -87,15 +89,15 @@ backend/src/
 ├── jobs/                              # Core job module
 │   ├── jobs.module.ts
 │   ├── jobs.controller.ts            # All job endpoints (household + collector)
-│   ├── jobs.service.ts               # Job CRUD, state transitions
+│   ├── jobs.service.ts               # Job CRUD, state transitions, payment mode routing
 │   ├── entities/
-│   │   ├── job.entity.ts
+│   │   ├── job.entity.ts             # + paymentMode, paymentStatus, quotedPrice, paymentRef, paymentProofUrl
 │   │   ├── proof.entity.ts
 │   │   └── location-update.entity.ts
 │   └── dto/
-│       ├── create-job.dto.ts
-│       ├── complete-job.dto.ts
-│       ├── job-response.dto.ts
+│       ├── create-job.dto.ts         # + paymentMode, paymentMethod, paymentRef, paymentPhone, paymentCode
+│       ├── complete-job.dto.ts       # + cashCollected, collectedAmount
+│       ├── job-response.dto.ts       # + paymentMode, paymentStatus, quotedPrice, paymentProofUrl
 │       ├── job-filter.dto.ts
 │       └── validate-proof.dto.ts
 │
@@ -116,7 +118,7 @@ backend/src/
 │
 ├── earnings/                          # Earnings module
 │   ├── earnings.module.ts
-│   ├── earnings.service.ts            # Calculate, confirm, track
+│   ├── earnings.service.ts            # Calculate (unified formula), confirm, track
 │   ├── entities/
 │   │   └── earning.entity.ts
 │   └── dto/
@@ -164,11 +166,12 @@ backend/src/
 │
 ├── admin/                             # Admin-specific endpoints
 │   ├── admin.module.ts
-│   ├── admin.controller.ts            # Stats, config, manual assign
+│   ├── admin.controller.ts            # Stats, config, manual assign, float top-up
 │   ├── admin.service.ts
 │   └── dto/
 │       ├── stats-response.dto.ts
 │       ├── update-config.dto.ts
+│       ├── float-topup.dto.ts
 │       └── collector-performance.dto.ts
 │
 ├── files/                             # File upload module
@@ -203,6 +206,8 @@ backend/src/
 ```
 
 **Total: 17 feature modules + 1 common module**
+
+> **Phase 5 additions:** `payment_providers` table (admin-managed), `collector_float_ledger` table (auditable float changes), `collectorFloatBalance` on `User`, hybrid payment enums (`PaymentMode`, `PaymentStatus`), `PAYMENT_FAILED` job status, `CollectorFloatPage` and `PendingPaymentsPage` in admin dashboard.
 
 ### 1.2 Service Boundaries
 
@@ -254,6 +259,7 @@ Jobs        → Users (to validate household/collector)
 Assignment  → Users (to query collectors)
              → Jobs (to update job status)
              → Timeslots (to check availability)
+             → Earnings (to estimate platformShare for CASH float guard)
              → Events (to emit JOB_ASSIGNED)
 Ratings     → Jobs (to validate job status)
              → Users (to update collector avg rating)
@@ -332,8 +338,17 @@ CREATE TYPE user_role AS ENUM ('HOUSEHOLD', 'COLLECTOR', 'ADMIN');
 
 CREATE TYPE job_status AS ENUM (
   'REQUESTED', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED',
-  'VALIDATED', 'RATED', 'CANCELLED', 'DISPUTED'
+  'VALIDATED', 'RATED', 'CANCELLED', 'DISPUTED', 'PAYMENT_PENDING', 'PAYMENT_FAILED'
 );
+
+CREATE TYPE payment_mode AS ENUM ('NONE', 'MANUAL_PROVIDER', 'INTEGRATED_PROVIDER', 'CASH');
+
+CREATE TYPE payment_status AS ENUM (
+  'NOT_REQUIRED', 'PENDING', 'AWAITING_ADMIN_VERIFICATION',
+  'VERIFIED', 'PROVIDER_PENDING', 'FAILED'
+);
+
+CREATE TYPE float_ledger_type AS ENUM ('TOP_UP', 'CASH_SETTLEMENT_DEDUCTION', 'ADJUSTMENT');
 
 CREATE TYPE earning_status AS ENUM ('PENDING', 'CONFIRMED', 'PAID');
 
@@ -379,6 +394,7 @@ CREATE TABLE users (
   refresh_token_hash VARCHAR(255),         -- hashed refresh token
   avg_rating      DECIMAL(3,2)    DEFAULT 0.00,
   total_completed INTEGER         DEFAULT 0,
+  collector_float_balance DECIMAL(12,2) NOT NULL DEFAULT 0, -- COLLECTOR only: float for CASH job settlement
   created_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
   updated_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW()
 );
@@ -400,6 +416,11 @@ CREATE TABLE jobs (
   household_id      UUID            NOT NULL REFERENCES users(id),
   collector_id      UUID            REFERENCES users(id),
   status            job_status      NOT NULL DEFAULT 'REQUESTED',
+  payment_mode      payment_mode    NOT NULL DEFAULT 'NONE',
+  payment_status    payment_status  NOT NULL DEFAULT 'NOT_REQUIRED',
+  quoted_price      DECIMAL(12,2),              -- server-side pricing quote at booking time
+  payment_ref       VARCHAR(255),               -- provider payment reference / transaction ID
+  payment_proof_url VARCHAR(500),               -- uploaded proof screenshot (manual providers)
   scheduled_date    DATE            NOT NULL,
   scheduled_time    VARCHAR(20)     NOT NULL,  -- e.g. '08:00-10:00'
   location_address  VARCHAR(500)    NOT NULL,
@@ -622,6 +643,26 @@ CREATE INDEX idx_config_category ON system_config(category);
 CREATE INDEX idx_config_feature_flags ON system_config(key) WHERE is_feature_flag = true;
 
 -- ============================================================
+-- TABLE: collector_float_ledger
+-- Auditable log of all collector float balance changes.
+-- ============================================================
+
+CREATE TABLE collector_float_ledger (
+  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  collector_id    UUID            NOT NULL REFERENCES users(id),
+  job_id          UUID            REFERENCES jobs(id),
+  type            float_ledger_type NOT NULL,
+  amount          DECIMAL(12,2)   NOT NULL,
+  balance_before  DECIMAL(12,2)   NOT NULL,
+  balance_after   DECIMAL(12,2)   NOT NULL,
+  created_by      UUID            REFERENCES users(id),  -- admin for TOP_UP/ADJUSTMENT
+  created_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_float_ledger_collector ON collector_float_ledger(collector_id);
+CREATE INDEX idx_float_ledger_job ON collector_float_ledger(job_id);
+
+-- ============================================================
 -- TABLE: idempotency_cache
 -- ============================================================
 
@@ -656,6 +697,9 @@ INSERT INTO system_config (key, value, data_type, category, description, is_feat
   ('assignment.weight_workload', '0.30', 'number', 'assignment', 'Weight for workload in scoring', false),
   ('assignment.weight_rating', '0.15', 'number', 'assignment', 'Weight for rating in scoring', false),
   ('assignment.weight_recency', '0.15', 'number', 'assignment', 'Weight for recency in scoring', false),
+  -- Booking
+  ('booking.min_advance_hours', '24', 'number', 'booking', 'Minimum hours in advance that a pickup must be booked', false),
+  ('booking.max_advance_days',  '30', 'number', 'booking', 'Maximum days ahead a pickup can be scheduled', false),
   -- Proof
   ('proof.auto_validate_hours', '24', 'number', 'proof', 'Hours before auto-validating proof', false),
   -- Feature Flags
@@ -881,15 +925,20 @@ POST /jobs
   Access:   HOUSEHOLD
   Headers:  X-Idempotency-Key (required)
   Body:     CreateJobDto {
-              scheduledDate: string (YYYY-MM-DD),
+              scheduledDate: string (YYYY-MM-DD),   -- must be >= booking.min_advance_hours from now
               scheduledTime: string ('08:00-10:00'),
               locationAddress: string,
               locationLat?: number,
               locationLng?: number,
-              notes?: string
+              notes?: string,
+              paymentMode?: 'CASH',                 -- omit for subscription/provider-based
+              paymentMethod?: string,               -- provider paymentCode (e.g. 'MTN_MOMO')
+              paymentPhone?: string,                -- payer phone (integrated providers)
+              paymentCode?: string,                 -- OTP/code (integrated providers)
+              paymentRef?: string                   -- manual reference
             }
   Response: 201 → JobResponseDto
-  Errors:   409 (duplicate active job on same date), 429 (rate limited)
+  Errors:   400 (booking too soon, invalid payment config), 409 (duplicate active job on same date), 429 (rate limited)
 
 GET /jobs/mine
   Access:   HOUSEHOLD
@@ -950,10 +999,16 @@ POST /jobs/:id/start
 
 POST /jobs/:id/complete
   Access:   COLLECTOR
-  Body:     CompleteJobDto { proofImageUrl: string, collectorLat?: number, collectorLng?: number }
+  Body:     CompleteJobDto {
+              proofImageUrl: string,
+              collectorLat?: number,
+              collectorLng?: number,
+              cashCollected?: boolean,    -- required true for CASH jobs
+              collectedAmount?: number    -- must be >= quotedPrice for CASH jobs
+            }
   Headers:  X-Idempotency-Key
   Response: 200 → JobResponseDto { status: 'COMPLETED' }
-  Errors:   400 (wrong state, missing proof)
+  Errors:   400 (wrong state, missing proof, collectedAmount < quotedPrice, insufficient float)
 
 POST /jobs/:id/validate
   Access:   HOUSEHOLD (job owner)
@@ -1177,6 +1232,12 @@ class CompleteJobDto {
 
   @IsOptional() @IsNumber()
   collectorLng?: number;
+
+  @IsOptional() @IsBoolean()
+  cashCollected?: boolean;    // required true for CASH jobs
+
+  @IsOptional() @IsNumber() @Min(0)
+  collectedAmount?: number;   // must be >= quotedPrice for CASH jobs
 }
 
 class JobResponseDto {
@@ -1186,6 +1247,10 @@ class JobResponseDto {
   collectorId?: string;
   collectorName?: string;
   status: JobStatus;
+  paymentMode: PaymentMode;
+  paymentStatus: PaymentStatus;
+  quotedPrice?: number;
+  paymentProofUrl?: string;
   scheduledDate: string;
   scheduledTime: string;
   locationAddress: string;
@@ -1315,14 +1380,16 @@ Every state change is validated against the allowed transition map:
 
 ```typescript
 const ALLOWED_TRANSITIONS: Record<JobStatus, JobStatus[]> = {
-  [JobStatus.REQUESTED]:   [JobStatus.ASSIGNED, JobStatus.CANCELLED],
-  [JobStatus.ASSIGNED]:    [JobStatus.IN_PROGRESS, JobStatus.REQUESTED, JobStatus.CANCELLED],
-  [JobStatus.IN_PROGRESS]: [JobStatus.COMPLETED, JobStatus.CANCELLED],
-  [JobStatus.COMPLETED]:   [JobStatus.VALIDATED, JobStatus.DISPUTED],
-  [JobStatus.VALIDATED]:   [JobStatus.RATED],
-  [JobStatus.DISPUTED]:    [JobStatus.VALIDATED, JobStatus.CANCELLED],
-  [JobStatus.RATED]:       [],  // Terminal
-  [JobStatus.CANCELLED]:   [],  // Terminal
+  [JobStatus.REQUESTED]:       [JobStatus.ASSIGNED, JobStatus.PAYMENT_PENDING, JobStatus.CANCELLED],
+  [JobStatus.PAYMENT_PENDING]: [JobStatus.REQUESTED, JobStatus.PAYMENT_FAILED, JobStatus.CANCELLED],
+  [JobStatus.ASSIGNED]:        [JobStatus.IN_PROGRESS, JobStatus.REQUESTED, JobStatus.CANCELLED],
+  [JobStatus.IN_PROGRESS]:     [JobStatus.COMPLETED, JobStatus.CANCELLED],
+  [JobStatus.COMPLETED]:       [JobStatus.VALIDATED, JobStatus.DISPUTED],
+  [JobStatus.VALIDATED]:       [JobStatus.RATED],
+  [JobStatus.DISPUTED]:        [JobStatus.VALIDATED, JobStatus.CANCELLED],
+  [JobStatus.RATED]:           [],  // Terminal
+  [JobStatus.CANCELLED]:       [],  // Terminal
+  [JobStatus.PAYMENT_FAILED]:  [],  // Terminal
 };
 
 function validateTransition(from: JobStatus, to: JobStatus): void {
@@ -1343,6 +1410,7 @@ function validateTransition(from: JobStatus, to: JobStatus): void {
 | Duplicate job creation | `X-Idempotency-Key` + unique partial index on `(household_id, scheduled_date)` |
 | Concurrent status updates | Optimistic locking via `version` column → stale update gets 409 |
 | Cron auto-validate + household validate | DB transaction + status check → first wins, second no-ops |
+| CASH float deduction race | `SELECT FOR UPDATE` on collector row within transaction → atomic balance update |
 
 ---
 
@@ -1470,11 +1538,113 @@ Late:       16:00 - 18:00
 
 Custom time windows are not allowed — this simplifies scheduling and matching.
 
+### 5.6 Booking Window Validation
+
+Booking windows are controlled by two system config keys so the admin can adjust them without a deploy:
+
+| Config Key | Default | Description |
+|---|---|---|
+| `booking.min_advance_hours` | `24` | Bookings must be at least this many hours in the future |
+| `booking.max_advance_days` | `30` | Bookings cannot be scheduled further out than this many days |
+
+**Server-side enforcement** (`JobsService.create`):
+```
+earliestDate = floor(now + minAdvanceHours) to day boundary
+if scheduledDate < earliestDate → 400 "Booking must be scheduled at least N hours in advance"
+```
+
+**Mobile enforcement** (`schedule_date_time_screen.dart`):
+- Reads `minAdvanceHours` and `maxAdvanceDays` from `AppConfig` (fetched via `GET /wallet/app-config`)
+- Calendar `_minDate` and `_maxDate` are computed from these values at screen init
+- Falls back to 24h / 30d if `appConfig` is null (e.g. network error)
+
 ---
 
-## 6. Feature Flag Strategy
+## 6. Payment & Earnings Model
 
-### 6.1 Design
+### 6.1 Payment Modes
+
+Every job has a `paymentMode` set at booking time based on pricing and user choice:
+
+| Mode | When | Description |
+|---|---|---|
+| `NONE` | Subscription covers the job | No payment required |
+| `MANUAL_PROVIDER` | Provider exists, integration off OR manual proof flow | Household pays via mobile money and uploads screenshot |
+| `INTEGRATED_PROVIDER` | Provider has `integrationEnabled = true` | Platform initiates payment; polls for confirmation |
+| `CASH` | `payments.cash_enabled = true` and household selects cash | Collector physically collects from household |
+
+### 6.2 Payment Status Flow
+
+```
+NOT_REQUIRED   → (subscription job, no further transitions)
+
+PENDING        → AWAITING_ADMIN_VERIFICATION  (manual proof uploaded)
+               → PROVIDER_PENDING             (integrated payment initiated)
+               → VERIFIED                     (CASH job completed)
+
+AWAITING_ADMIN_VERIFICATION → VERIFIED / FAILED  (admin reviews proof)
+
+PROVIDER_PENDING            → VERIFIED / FAILED  (gateway callback / timeout)
+
+FAILED         → (terminal)
+VERIFIED       → (terminal)
+```
+
+### 6.3 Earnings Formula
+
+Collector earnings use **one formula for all jobs** regardless of payment mode:
+
+```
+collectorEarning = (base_rate + distance_km × per_km_rate) × surge_multiplier
+```
+
+| Config Key | Default | Description |
+|---|---|---|
+| `earnings.base_rate` | `500` | Base earning per job (XAF) |
+| `earnings.per_km_rate` | `100` | Extra per km from collector home to job location |
+| `earnings.surge_multiplier` | `1.25` | Multiplier when `feature.surge_pricing` is enabled |
+
+If collector has no GPS coordinates, `distance_km = 0` and only `base_rate` applies.
+
+> **Rule:** Collector pay must not depend on how the household paid. Using the same formula prevents collectors from gaming payment method selection.
+
+### 6.4 CASH Job Settlement
+
+When a collector completes a CASH job:
+
+```
+1. Household paid cash at door: collectedAmount >= quotedPrice  (validated)
+2. collectorEarning = calculateEarnings(job)                   (standard formula)
+3. collectorEarning = min(collectorEarning, quotedPrice)        (cap — avoids platform paying extra)
+4. platformShare    = max(quotedPrice - collectorEarning, 0)    (what the platform is owed)
+5. collector.collectorFloatBalance -= platformShare             (atomic, SELECT FOR UPDATE)
+6. ledger entry: type=CASH_SETTLEMENT_DEDUCTION saved           (auditable)
+7. job.paymentStatus = VERIFIED
+```
+
+Collectors must maintain sufficient `collectorFloatBalance` before accepting CASH jobs (enforced in `AssignmentService` float guard).
+
+### 6.5 Collector Float
+
+`collectorFloatBalance` is the collector's pre-funded balance used to guarantee platform share on CASH jobs.
+
+| Operation | Who | Ledger type |
+|---|---|---|
+| Admin tops up balance | Admin via `POST /admin/users/:id/float-topup` | `TOP_UP` |
+| Job completed (CASH) | System | `CASH_SETTLEMENT_DEDUCTION` |
+| Manual admin adjustment | Admin | `ADJUSTMENT` |
+
+Float guard in `AssignmentService`: a collector is only eligible for a CASH job if:
+```
+collector.collectorFloatBalance >= platformShare
+where platformShare = max(quotedPrice - estimatedCollectorEarning, 0)
+```
+
+---
+
+## 7. Feature Flag Strategy
+
+### 7.1 Design
 
 Feature flags are stored in the `system_config` table with `is_feature_flag = true`. They are:
 
@@ -1482,7 +1652,7 @@ Feature flags are stored in the `system_config` table with `is_feature_flag = tr
 - **Hot-reloadable** — admin changes take effect within 60 seconds
 - **Type-safe** — accessed via a `FeatureFlagService`
 
-### 6.2 Feature Flag Registry
+### 7.2 Feature Flag Registry
 
 | Flag Key | Default | Description | Impact |
 |----------|---------|-------------|--------|
@@ -1497,8 +1667,10 @@ Feature flags are stored in the `system_config` table with `is_feature_flag = tr
 | `feature.manual_gps_input` | `true` | Allow manual address when GPS unavailable | Jobs module |
 | `feature.collector_earnings_visible` | `true` | Show earnings to collectors | Jobs/Earnings modules |
 | `feature.dispute_flow` | `true` | Enable dispute workflow | Disputes module |
+| `feature.payment_integration` | `true` | Enable integrated payment providers | Payments module |
+| `payments.cash_enabled` | `false` | Show cash payment option on mobile booking screen | Jobs + Mobile |
 
-### 6.3 Service Implementation
+### 7.3 Service Implementation
 
 ```typescript
 @Injectable()
@@ -1551,7 +1723,7 @@ export class FeatureFlagService {
 }
 ```
 
-### 6.4 Usage Pattern
+### 7.4 Usage Pattern
 
 ```typescript
 // In a service
@@ -1568,7 +1740,7 @@ export class AuthService {
 }
 ```
 
-### 6.5 Admin UI Integration
+### 7.5 Admin UI Integration
 
 The admin dashboard has a **Feature Flags** tab under Settings:
 - Lists all flags with toggle switches
@@ -1577,9 +1749,9 @@ The admin dashboard has a **Feature Flags** tab under Settings:
 
 ---
 
-## 7. Backup & Recovery
+## 8. Backup & Recovery
 
-### 7.1 Backup Strategy
+### 8.1 Backup Strategy
 
 | Backup Type | Frequency | Retention | Method |
 |------------|-----------|-----------|--------|
@@ -1590,7 +1762,7 @@ The admin dashboard has a **Feature Flags** tab under Settings:
 | **Redis** | Every 15 min (RDB) | 24 hours | Redis RDB snapshots → S3 |
 | **System config export** | Daily | 30 days | JSON dump → S3 |
 
-### 7.2 Automated Backup Script
+### 8.2 Automated Backup Script
 
 ```bash
 #!/bin/bash
@@ -1634,7 +1806,7 @@ rm -f "$BACKUP_DIR/config_${TIMESTAMP}.csv"
 echo "Backup completed: ${TIMESTAMP}"
 ```
 
-### 7.3 WAL Archiving (Continuous)
+### 8.3 WAL Archiving (Continuous)
 
 ```
 # postgresql.conf
@@ -1644,7 +1816,7 @@ archive_command = 'aws s3 cp %p s3://waste-backups/wal/%f'
 archive_timeout = 300   # archive every 5 minutes at minimum
 ```
 
-### 7.4 Restore Procedures
+### 8.4 Restore Procedures
 
 #### Scenario A: Restore from Full Dump (Complete DB loss)
 

@@ -473,4 +473,9 @@ export class PaymentService {
   async isPaymentIntegrationEnabled(): Promise<boolean> {
     return this.featureFlagService.isEnabled(FEATURE_FLAGS.PAYMENT_INTEGRATION, false);
   }
+
+  // ── Look up a provider by payment code ───────────────────────────
+  async getProviderByCode(paymentCode: string): Promise<PaymentProviderEntity | null> {
+    return this.providerRepo.findOne({ where: { paymentCode, isEnabled: true } });
+  }
 }

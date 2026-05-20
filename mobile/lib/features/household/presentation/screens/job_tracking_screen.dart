@@ -84,6 +84,7 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
       case JobStatus.rated:
       case JobStatus.cancelled:
       case JobStatus.disputed:
+      case JobStatus.paymentFailed:
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(

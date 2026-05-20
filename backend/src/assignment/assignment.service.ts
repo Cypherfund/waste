@@ -10,6 +10,7 @@ import { Repository, DataSource } from 'typeorm';
 import { User } from '../users/entities/user.entity';
 import { Job } from '../jobs/entities/job.entity';
 import { JobsService } from '../jobs/jobs.service';
+import { EarningsService } from '../earnings/earnings.service';
 import { TimeslotsService } from '../timeslots/timeslots.service';
 import {
   SystemConfigService,
@@ -24,6 +25,7 @@ import {
   JobAssignmentTimeoutPayload,
 } from '../events/events.types';
 import { JobStatus } from '../common/enums/job-status.enum';
+import { PaymentMode } from '../common/enums/payment-mode.enum';
 import { UserRole } from '../common/enums/role.enum';
 import {
   CollectorCandidate,
@@ -42,6 +44,7 @@ export class AssignmentService {
     private readonly featureFlagService: FeatureFlagService,
     private readonly eventEmitter: EventEmitter2,
     private readonly dataSource: DataSource,
+    private readonly earningsService: EarningsService,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
     @InjectRepository(Job)
@@ -336,6 +339,7 @@ export class AssignmentService {
         u.latitude,
         u.longitude,
         u.avg_rating as "avgRating",
+        u.collector_float_balance as "collectorFloatBalance",
         (
           SELECT COUNT(*) FROM jobs j
           WHERE j.collector_id = u.id
@@ -385,6 +389,20 @@ export class AssignmentService {
         if (distanceKm > config.maxRadiusKm) continue;
       }
       // If no coordinates on collector → include (manual fallback per spec)
+
+      // Filter: float balance for CASH jobs
+      if (job.paymentMode === PaymentMode.CASH && job.quotedPrice) {
+        const earningsCalc = await this.earningsService.calculateEarnings(job);
+        const collectorEarning = Math.min(earningsCalc.totalAmount, Number(job.quotedPrice));
+        const platformShare = Math.max(Number(job.quotedPrice) - collectorEarning, 0);
+        const floatBalance = Number(raw.collectorFloatBalance ?? 0);
+        if (floatBalance < platformShare) {
+          this.logger.debug(
+            `Skipping collector ${raw.id} for CASH job ${job.id}: insufficient float (${floatBalance} < ${platformShare} XAF)`,
+          );
+          continue;
+        }
+      }
 
       // Filter: timeslot availability
       const available = await this.timeslotsService.isCollectorAvailable(

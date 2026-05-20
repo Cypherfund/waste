@@ -12,6 +12,7 @@ import { User } from '../../users/entities/user.entity';
 import { JobStatus } from '../../common/enums/job-status.enum';
 import { PricingType } from '../../common/enums/pricing-type.enum';
 import { PaymentStatus } from '../../common/enums/payment-status.enum';
+import { PaymentMode } from '../../common/enums/payment-mode.enum';
 
 @Entity('jobs')
 export class Job {
@@ -103,6 +104,18 @@ export class Job {
 
   @Column({ type: 'text', nullable: true, name: 'payment_rejection_reason' })
   paymentRejectionReason: string | null;
+
+  @Column({ type: 'enum', enum: PaymentMode, nullable: true, name: 'payment_mode' })
+  paymentMode: PaymentMode | null;
+
+  @Column({ type: 'text', nullable: true, name: 'payment_proof_url' })
+  paymentProofUrl: string | null;
+
+  @Column({ type: 'varchar', length: 20, nullable: true, name: 'payment_phone' })
+  paymentPhone: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true, name: 'provider_transaction_id' })
+  providerTransactionId: string | null;
 
   @Column({ type: 'int', default: 1 })
   version: number;
