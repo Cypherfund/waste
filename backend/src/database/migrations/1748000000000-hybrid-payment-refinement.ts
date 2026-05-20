@@ -14,17 +14,17 @@ export class HybridPaymentRefinement1748000000000 implements MigrationInterface 
     }
 
     // ─── 1. payment_status enum — add new values ─────────────────────────────
-    await queryRunner.query(`ALTER TYPE "payment_status_enum" ADD VALUE IF NOT EXISTS 'AWAITING_ADMIN_VERIFICATION'`);
-    await queryRunner.query(`ALTER TYPE "payment_status_enum" ADD VALUE IF NOT EXISTS 'PROVIDER_PENDING'`);
-    await queryRunner.query(`ALTER TYPE "payment_status_enum" ADD VALUE IF NOT EXISTS 'FAILED'`);
+    await queryRunner.query(`ALTER TYPE "jobs_payment_status_enum" ADD VALUE IF NOT EXISTS 'AWAITING_ADMIN_VERIFICATION'`);
+    await queryRunner.query(`ALTER TYPE "jobs_payment_status_enum" ADD VALUE IF NOT EXISTS 'PROVIDER_PENDING'`);
+    await queryRunner.query(`ALTER TYPE "jobs_payment_status_enum" ADD VALUE IF NOT EXISTS 'FAILED'`);
 
     // ─── 2. job_status enum — add PAYMENT_FAILED ─────────────────────────────
-    await queryRunner.query(`ALTER TYPE "job_status_enum" ADD VALUE IF NOT EXISTS 'PAYMENT_FAILED'`);
+    await queryRunner.query(`ALTER TYPE "jobs_status_enum" ADD VALUE IF NOT EXISTS 'PAYMENT_FAILED'`);
 
     // ─── 3. payment_mode enum (new) ───────────────────────────────────────────
     await queryRunner.query(`
       DO $$ BEGIN
-        CREATE TYPE "payment_mode_enum" AS ENUM ('NONE', 'MANUAL_PROVIDER', 'INTEGRATED_PROVIDER', 'CASH');
+        CREATE TYPE "jobs_payment_mode_enum" AS ENUM ('NONE', 'MANUAL_PROVIDER', 'INTEGRATED_PROVIDER', 'CASH');
       EXCEPTION WHEN duplicate_object THEN NULL;
       END $$
     `);
@@ -32,13 +32,13 @@ export class HybridPaymentRefinement1748000000000 implements MigrationInterface 
     // ─── 4. float_ledger_type enum (new) ─────────────────────────────────────
     await queryRunner.query(`
       DO $$ BEGIN
-        CREATE TYPE "float_ledger_type_enum" AS ENUM ('TOP_UP', 'CASH_SETTLEMENT_DEDUCTION', 'ADJUSTMENT');
+        CREATE TYPE "collector_float_ledger_type_enum" AS ENUM ('TOP_UP', 'CASH_SETTLEMENT_DEDUCTION', 'ADJUSTMENT');
       EXCEPTION WHEN duplicate_object THEN NULL;
       END $$
     `);
 
     // ─── 5. jobs — add new columns ────────────────────────────────────────────
-    await queryRunner.query(`ALTER TABLE "jobs" ADD COLUMN IF NOT EXISTS "payment_mode" "payment_mode_enum" NULL`);
+    await queryRunner.query(`ALTER TABLE "jobs" ADD COLUMN IF NOT EXISTS "payment_mode" "jobs_payment_mode_enum" NULL`);
     await queryRunner.query(`ALTER TABLE "jobs" ADD COLUMN IF NOT EXISTS "payment_proof_url" TEXT NULL`);
     await queryRunner.query(`ALTER TABLE "jobs" ADD COLUMN IF NOT EXISTS "payment_phone" VARCHAR(20) NULL`);
     await queryRunner.query(`ALTER TABLE "jobs" ADD COLUMN IF NOT EXISTS "provider_transaction_id" VARCHAR(100) NULL`);
@@ -58,7 +58,7 @@ export class HybridPaymentRefinement1748000000000 implements MigrationInterface 
         "id"             UUID NOT NULL DEFAULT gen_random_uuid(),
         "collector_id"   UUID NOT NULL,
         "job_id"         UUID NULL,
-        "type"           "float_ledger_type_enum" NOT NULL,
+        "type"           "collector_float_ledger_type_enum" NOT NULL,
         "amount"         DECIMAL(12,2) NOT NULL,
         "balance_before" DECIMAL(12,2) NOT NULL,
         "balance_after"  DECIMAL(12,2) NOT NULL,
@@ -116,7 +116,7 @@ export class HybridPaymentRefinement1748000000000 implements MigrationInterface 
     await queryRunner.query(`ALTER TABLE "jobs" DROP COLUMN IF EXISTS "payment_mode"`);
 
     // Note: PostgreSQL does not support removing enum values; enum changes require manual intervention on rollback.
-    await queryRunner.query(`DROP TYPE IF EXISTS "float_ledger_type_enum"`);
-    await queryRunner.query(`DROP TYPE IF EXISTS "payment_mode_enum"`);
+    await queryRunner.query(`DROP TYPE IF EXISTS "collector_float_ledger_type_enum"`);
+    await queryRunner.query(`DROP TYPE IF EXISTS "jobs_payment_mode_enum"`);
   }
 }
