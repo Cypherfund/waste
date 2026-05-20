@@ -1,9 +1,13 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { fraudApi } from '../services/api/admin';
 import { useAsync } from '../hooks/useAsync';
 import Spinner from '../components/Spinner';
 import ErrorBox from '../components/ErrorBox';
+import Pagination from '../components/Pagination';
+import { usePagination } from '../hooks/usePagination';
 import type { FraudFlag } from '../types';
+
+const PAGE_SIZE = 20;
 
 const FLAG_STATUSES = ['OPEN', 'CONFIRMED', 'DISMISSED'];
 const SEVERITIES = ['LOW', 'MEDIUM', 'HIGH'];
@@ -11,6 +15,7 @@ const SEVERITIES = ['LOW', 'MEDIUM', 'HIGH'];
 export default function FraudFlagsPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [severityFilter, setSeverityFilter] = useState('');
+  const { page, setPage, resetPage } = usePagination();
   const [reviewing, setReviewing] = useState<FraudFlag | null>(null);
   const [resolution, setResolution] = useState('CONFIRMED');
   const [reviewNotes, setReviewNotes] = useState('');
@@ -25,6 +30,11 @@ export default function FraudFlagsPage() {
   }, [statusFilter, severityFilter]);
 
   const { data: flags, loading, error, run } = useAsync<FraudFlag[]>(fetchFlags);
+
+  useEffect(() => { resetPage(); }, [statusFilter, severityFilter]);
+
+  const pageData = flags ? flags.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) : [];
+  const totalPages = flags ? Math.ceil(flags.length / PAGE_SIZE) : 1;
 
   const handleReview = async () => {
     if (!reviewing) return;
@@ -99,6 +109,10 @@ export default function FraudFlagsPage() {
 
       {!loading && !error && flags && (
         <div className="overflow-x-auto rounded-lg border bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b bg-gray-50 px-4 py-2 text-xs text-gray-500">
+            <span>{flags.length} flag{flags.length !== 1 ? 's' : ''}</span>
+            <span>Page {page} of {totalPages}</span>
+          </div>
           <table className="w-full text-left text-sm">
             <thead className="border-b bg-gray-50 text-xs uppercase text-gray-500">
               <tr>
@@ -112,14 +126,14 @@ export default function FraudFlagsPage() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {flags.length === 0 && (
+              {pageData.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
                     No fraud flags found.
                   </td>
                 </tr>
               )}
-              {flags.map((f) => (
+              {pageData.map((f) => (
                 <tr key={f.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium text-gray-900">
                     {f.type.replace(/_/g, ' ')}
@@ -175,6 +189,7 @@ export default function FraudFlagsPage() {
               ))}
             </tbody>
           </table>
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </div>
       )}
 

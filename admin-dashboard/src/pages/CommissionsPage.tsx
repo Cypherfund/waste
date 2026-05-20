@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react';
 import { CheckCircle, XCircle, Plus, Pencil, Power } from 'lucide-react';
 import { CommissionScheme, CommissionTransaction } from '../types';
 import { growthSchemesApi, growthCommissionsApi } from '../services/api/growth';
+import Pagination from '../components/Pagination';
+import { usePagination } from '../hooks/usePagination';
+
+const PAGE_SIZE = 20;
 
 export default function CommissionsPage() {
   const [tab, setTab] = useState<'transactions' | 'schemes'>('transactions');
@@ -10,6 +14,7 @@ export default function CommissionsPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('PENDING');
+  const { page, setPage, resetPage } = usePagination();
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [showCreateScheme, setShowCreateScheme] = useState(false);
@@ -24,7 +29,7 @@ export default function CommissionsPage() {
   const loadTransactions = async () => {
     setLoading(true);
     try {
-      const params: any = {};
+      const params: any = { page, limit: PAGE_SIZE };
       if (statusFilter) params.status = statusFilter;
       const res = await growthCommissionsApi.list(params);
       setTransactions(res.data);
@@ -37,7 +42,8 @@ export default function CommissionsPage() {
   };
 
   useEffect(() => { loadSchemes(); }, []);
-  useEffect(() => { loadTransactions(); }, [statusFilter]);
+  useEffect(() => { resetPage(); }, [statusFilter]);
+  useEffect(() => { loadTransactions(); }, [statusFilter, page]);
 
   const handleApprove = async (id: string) => {
     try {
@@ -202,6 +208,10 @@ export default function CommissionsPage() {
             </div>
           ) : (
             <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+              <div className="flex items-center justify-between border-b bg-gray-50 px-4 py-2 text-xs text-gray-500">
+                <span>{total} transaction{total !== 1 ? 's' : ''}</span>
+                <span>Page {page} of {Math.ceil(total / PAGE_SIZE) || 1}</span>
+              </div>
               <table className="w-full text-left text-sm">
                 <thead className="border-b bg-gray-50 text-xs uppercase text-gray-500">
                   <tr>
@@ -250,6 +260,11 @@ export default function CommissionsPage() {
                   ))}
                 </tbody>
               </table>
+              <Pagination
+                page={page}
+                totalPages={Math.ceil(total / PAGE_SIZE)}
+                onPageChange={setPage}
+              />
             </div>
           )}
         </>
