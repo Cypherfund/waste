@@ -56,7 +56,7 @@ export class WalletService {
 
   // ── GET app config (payment integration + support + providers) ───────────
   async getAppConfig(countryCode: string) {
-    const [paymentEnabled, manualInstructions, whatsapp, minAdvanceHoursStr, cashEnabledStr] = await Promise.all([
+    const [paymentEnabled, manualInstructions, whatsapp, minAdvanceHoursStr, cashEnabledStr, maxAdvanceDays] = await Promise.all([
       this.systemConfigService.getBoolean('feature.payment_integration', false),
       this.systemConfigService.getString(
         'payment.manual_instructions',
@@ -65,6 +65,7 @@ export class WalletService {
       this.systemConfigService.getString('support.whatsapp_number', ''),
       this.systemConfigService.getString('booking.min_advance_hours', '24'),
       this.systemConfigService.getString('payments.cash_enabled', 'false'),
+      this.systemConfigService.getNumber('booking.max_advance_days', 30),
     ]);
 
     // Get enabled payment providers for manual payment
@@ -77,6 +78,7 @@ export class WalletService {
       supportWhatsapp: whatsapp,
       paymentProviders: providers,
       minAdvanceHours: parseInt(minAdvanceHoursStr, 10) || 24,
+      maxAdvanceDays,
     };
   }
 

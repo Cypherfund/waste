@@ -37,6 +37,7 @@ import { PricingService } from '../subscriptions/pricing.service';
 import { PaymentService } from '../payments/payment.service';
 import { TransactionType } from '../payments/entities/payment-transaction.entity';
 import { SystemConfigService } from '../config/system-config.service';
+import { EarningsService } from '../earnings/earnings.service';
 
 @Injectable()
 export class JobsService {
@@ -53,18 +54,22 @@ export class JobsService {
     private readonly paymentService: PaymentService,
     private readonly dataSource: DataSource,
     private readonly systemConfigService: SystemConfigService,
+    private readonly earningsService: EarningsService,
   ) {}
 
   // ─── CRUD ─────────────────────────────────────────────────────
 
   async create(householdId: string, dto: CreateJobDto): Promise<JobResponseDto> {
-    // Validate scheduled date is in the future
+    // Validate scheduled date is at least booking.min_advance_hours from now
     const scheduledDate = new Date(dto.scheduledDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const minAdvanceHours = await this.systemConfigService.getNumber('booking.min_advance_hours', 24);
+    const earliest = new Date(Date.now() + minAdvanceHours * 60 * 60 * 1000);
+    earliest.setHours(0, 0, 0, 0);
 
-    if (scheduledDate < today) {
-      throw new BadRequestException('Scheduled date must be today or in the future');
+    if (scheduledDate < earliest) {
+      throw new BadRequestException(
+        `Booking must be scheduled at least ${minAdvanceHours} hours in advance`,
+      );
     }
 
     // Duplicate check: mirrors DDL unique partial index idx_jobs_no_duplicate
@@ -376,8 +381,9 @@ export class JobsService {
             .getOne();
           if (!collector) throw new NotFoundException('Collector not found');
 
-          const collectorRate = await this.systemConfigService.getNumber('earnings.collector_rate', 0.7);
-          const platformShare = Math.max(Number(job.quotedPrice) * (1 - collectorRate), 0);
+          const earningsCalc = await this.earningsService.calculateEarnings(job);
+          const collectorEarning = Math.min(earningsCalc.totalAmount, Number(job.quotedPrice));
+          const platformShare = Math.max(Number(job.quotedPrice) - collectorEarning, 0);
           const currentFloat = Number(collector.collectorFloatBalance);
 
           if (currentFloat < platformShare) {

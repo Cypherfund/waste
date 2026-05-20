@@ -108,6 +108,7 @@ class AppConfig {
   final String supportWhatsapp;
   final List<PaymentProvider> paymentProviders;
   final int minAdvanceHours;
+  final int maxAdvanceDays;
 
   AppConfig({
     required this.paymentIntegrationEnabled,
@@ -116,6 +117,7 @@ class AppConfig {
     required this.supportWhatsapp,
     required this.paymentProviders,
     this.minAdvanceHours = 24,
+    this.maxAdvanceDays = 30,
   });
 
   factory AppConfig.fromJson(Map<String, dynamic> j) => AppConfig(
@@ -128,6 +130,7 @@ class AppConfig {
                 .toList() ??
             [],
         minAdvanceHours: j['minAdvanceHours'] as int? ?? 24,
+        maxAdvanceDays: j['maxAdvanceDays'] as int? ?? 30,
       );
 
   /// Get providers that have manual instructions enabled or manual payment details configured

@@ -10,6 +10,7 @@ import { Repository, DataSource } from 'typeorm';
 import { User } from '../users/entities/user.entity';
 import { Job } from '../jobs/entities/job.entity';
 import { JobsService } from '../jobs/jobs.service';
+import { EarningsService } from '../earnings/earnings.service';
 import { TimeslotsService } from '../timeslots/timeslots.service';
 import {
   SystemConfigService,
@@ -43,6 +44,7 @@ export class AssignmentService {
     private readonly featureFlagService: FeatureFlagService,
     private readonly eventEmitter: EventEmitter2,
     private readonly dataSource: DataSource,
+    private readonly earningsService: EarningsService,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
     @InjectRepository(Job)
@@ -390,8 +392,9 @@ export class AssignmentService {
 
       // Filter: float balance for CASH jobs
       if (job.paymentMode === PaymentMode.CASH && job.quotedPrice) {
-        const collectorRate = await this.systemConfigService.getNumber('earnings.collector_rate', 0.7);
-        const platformShare = Number(job.quotedPrice) * (1 - collectorRate);
+        const earningsCalc = await this.earningsService.calculateEarnings(job);
+        const collectorEarning = Math.min(earningsCalc.totalAmount, Number(job.quotedPrice));
+        const platformShare = Math.max(Number(job.quotedPrice) - collectorEarning, 0);
         const floatBalance = Number(raw.collectorFloatBalance ?? 0);
         if (floatBalance < platformShare) {
           this.logger.debug(

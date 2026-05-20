@@ -52,6 +52,17 @@ export class AddUserAddressesAndBookingConfig1778900000000 implements MigrationI
         ),
         (
           uuid_generate_v4(),
+          'booking.max_advance_days',
+          '30',
+          'number',
+          'booking',
+          'Maximum days ahead a pickup can be scheduled',
+          false,
+          NULL,
+          NOW()
+        ),
+        (
+          uuid_generate_v4(),
           'pricing.weeks_per_month',
           '4',
           'number',
@@ -69,7 +80,7 @@ export class AddUserAddressesAndBookingConfig1778900000000 implements MigrationI
     // Remove system_config seed rows
     await queryRunner.query(`
       DELETE FROM "system_config"
-      WHERE key IN ('booking.min_advance_hours', 'pricing.weeks_per_month')
+      WHERE key IN ('booking.min_advance_hours', 'booking.max_advance_days', 'pricing.weeks_per_month')
     `);
 
     // Drop user_addresses table

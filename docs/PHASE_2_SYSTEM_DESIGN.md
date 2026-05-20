@@ -656,6 +656,9 @@ INSERT INTO system_config (key, value, data_type, category, description, is_feat
   ('assignment.weight_workload', '0.30', 'number', 'assignment', 'Weight for workload in scoring', false),
   ('assignment.weight_rating', '0.15', 'number', 'assignment', 'Weight for rating in scoring', false),
   ('assignment.weight_recency', '0.15', 'number', 'assignment', 'Weight for recency in scoring', false),
+  -- Booking
+  ('booking.min_advance_hours', '24', 'number', 'booking', 'Minimum hours in advance that a pickup must be booked', false),
+  ('booking.max_advance_days',  '30', 'number', 'booking', 'Maximum days ahead a pickup can be scheduled', false),
   -- Proof
   ('proof.auto_validate_hours', '24', 'number', 'proof', 'Hours before auto-validating proof', false),
   -- Feature Flags
