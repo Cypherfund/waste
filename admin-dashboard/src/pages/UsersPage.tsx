@@ -6,6 +6,7 @@ import Spinner from '../components/Spinner';
 import ErrorBox from '../components/ErrorBox';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Pagination from '../components/Pagination';
+import HelpGuide from '../components/HelpGuide';
 import { usePagination } from '../hooks/usePagination';
 import type { AdminUser, UserDetail } from '../types';
 
@@ -76,6 +77,23 @@ export default function UsersPage() {
   return (
     <div>
       <h1 className="mb-4 text-2xl font-bold text-gray-900">Users</h1>
+
+      <HelpGuide
+        title="How to Manage Users"
+        description="View and manage all users in the system including households, collectors, and admins."
+        steps={[
+          "Filter users by role (Household, Collector, Admin)",
+          "Filter by active/inactive status",
+          "View user details by clicking 'Details'",
+          "Activate or deactivate users as needed",
+          "View user ratings and join dates",
+        ]}
+        tips={[
+          "Deactivated users cannot access the system",
+          "You cannot deactivate yourself",
+          "View details to see complete user information",
+        ]}
+      />
 
       {/* Filters */}
       <div className="mb-4 flex flex-wrap gap-3">

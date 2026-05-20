@@ -2,12 +2,18 @@ import { useEffect, useState } from 'react';
 import { CheckCircle, XCircle, Banknote } from 'lucide-react';
 import { MarketerPayoutRequest, MarketerPayoutsResponse } from '../types';
 import { growthPayoutsApi } from '../services/api/growth';
+import Pagination from '../components/Pagination';
+import HelpGuide from '../components/HelpGuide';
+import { usePagination } from '../hooks/usePagination';
+
+const PAGE_SIZE = 20;
 
 export default function MarketerPayoutsPage() {
   const [payouts, setPayouts] = useState<MarketerPayoutRequest[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('PENDING');
+  const { page, setPage, resetPage } = usePagination();
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [payId, setPayId] = useState<string | null>(null);
@@ -16,7 +22,7 @@ export default function MarketerPayoutsPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const params: any = {};
+      const params: any = { page, limit: PAGE_SIZE };
       if (statusFilter) params.status = statusFilter;
       const res = await growthPayoutsApi.list(params);
       setPayouts(res.data);
@@ -28,7 +34,8 @@ export default function MarketerPayoutsPage() {
     }
   };
 
-  useEffect(() => { load(); }, [statusFilter]);
+  useEffect(() => { resetPage(); }, [statusFilter]);
+  useEffect(() => { load(); }, [statusFilter, page]);
 
   const handleApprove = async (id: string) => {
     try {
@@ -83,6 +90,23 @@ export default function MarketerPayoutsPage() {
         <h1 className="text-2xl font-bold text-gray-900">Marketer Payouts</h1>
         <p className="text-sm text-gray-500">Review and process marketer payout requests</p>
       </div>
+
+      <HelpGuide
+        title="How to Process Marketer Payouts"
+        description="Review and approve payout requests from marketers for their earned commissions."
+        steps={[
+          "Filter payouts by status (Pending, Approved, Rejected, Paid)",
+          "Review payout details: amount, method, and account information",
+          "Approve pending payout requests",
+          "Mark approved payouts as Paid with payment reference",
+          "Reject invalid payout requests with a reason",
+        ]}
+        tips={[
+          "Always verify account details before approving",
+          "Enter payment reference/transaction ID when marking as Paid",
+          "Rejected payouts notify the marketer with the reason",
+        ]}
+      />
 
       {/* Status Filter */}
       <div className="mb-4 flex gap-2">
@@ -159,6 +183,7 @@ export default function MarketerPayoutsPage() {
               ))}
             </tbody>
           </table>
+          <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} onPageChange={setPage} />
         </div>
       )}
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { GrowthLead } from '../types';
 import { growthLeadsApi } from '../services/api/growth';
 import Pagination from '../components/Pagination';
+import HelpGuide from '../components/HelpGuide';
 import { usePagination } from '../hooks/usePagination';
 
 const PAGE_SIZE = 20;
@@ -68,6 +69,22 @@ export default function GrowthLeadsPage() {
         <h1 className="text-2xl font-bold text-gray-900">Growth Leads</h1>
         <p className="text-sm text-gray-500">Leads submitted by marketers</p>
       </div>
+
+      <HelpGuide
+        title="How to Manage Growth Leads"
+        description="Review and manage leads submitted by marketers through their referral programs."
+        steps={[
+          "Filter leads by status (Invited, Registered, Qualified, Expired)",
+          "Review lead details including marketer, type, and source",
+          "Manually expire leads if they're no longer valid",
+          "Track SMS delivery status for invitation messages",
+        ]}
+        tips={[
+          "Qualified leads generate commissions for marketers",
+          "Expired leads do not generate commissions",
+          "Resend SMS for leads with failed delivery status",
+        ]}
+      />
 
       {/* Filters */}
       <div className="mb-4 flex gap-2">

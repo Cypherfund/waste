@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { UserPlus, Ban, CheckCircle, Copy } from 'lucide-react';
 import { Marketer } from '../types';
 import { growthMarketersApi } from '../services/api/growth';
+import HelpGuide from '../components/HelpGuide';
 
 export default function MarketersPage() {
   const [marketers, setMarketers] = useState<Marketer[]>([]);
@@ -75,6 +76,23 @@ export default function MarketersPage() {
           <UserPlus size={16} /> Add Marketer
         </button>
       </div>
+
+      <HelpGuide
+        title="How to Manage Marketers"
+        description="Create and manage marketer/ambassador accounts who generate leads and earn commissions."
+        steps={[
+          "Click 'Add Marketer' to create a new marketer account",
+          "Enter name, phone, email, and territory for the marketer",
+          "View marketer stats: leads, registrations, qualifications, earnings",
+          "Suspend or activate marketers as needed",
+          "Copy referral codes for sharing with marketers",
+        ]}
+        tips={[
+          "Marketers earn commissions when leads convert to registered users",
+          "Suspended marketers cannot submit new leads",
+          "Each marketer has a unique referral code for tracking",
+        ]}
+      />
 
       {/* Create Modal */}
       {showCreate && (

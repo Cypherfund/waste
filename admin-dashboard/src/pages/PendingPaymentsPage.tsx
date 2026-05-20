@@ -3,6 +3,7 @@ import { pendingPaymentsApi } from '../services/api/admin';
 import { useAsync } from '../hooks/useAsync';
 import Spinner from '../components/Spinner';
 import ErrorBox from '../components/ErrorBox';
+import HelpGuide from '../components/HelpGuide';
 import type { PendingPayment } from '../types';
 import { CheckCircle, XCircle, ExternalLink, RefreshCw } from 'lucide-react';
 
@@ -73,6 +74,22 @@ export default function PendingPaymentsPage() {
           <RefreshCw size={14} /> Refresh
         </button>
       </div>
+
+      <HelpGuide
+        title="How to Review Pending Payments"
+        description="Review manual payment submissions from collectors and households before processing payouts."
+        steps={[
+          "Review the payment mode (Cash, Manual Provider, or Integrated)",
+          "Check the payment proof image for validity",
+          "Verify the payment amount matches the job amount",
+          "Click Verify to approve or Reject to decline with a reason",
+        ]}
+        tips={[
+          "Cash payments require photo proof of the transaction",
+          "Manual Provider payments need confirmation from the payment provider",
+          "Always verify the proof image before approving",
+        ]}
+      />
 
       {feedback && (
         <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-700">

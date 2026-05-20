@@ -3,8 +3,10 @@ import { payoutsApi } from '../services/api/admin';
 import { useAsync } from '../hooks/useAsync';
 import Spinner from '../components/Spinner';
 import ErrorBox from '../components/ErrorBox';
+import Pagination from '../components/Pagination';
+import HelpGuide from '../components/HelpGuide';
 import type { PayoutRequest, PayoutListResponse } from '../types';
-import { CheckCircle, XCircle, DollarSign, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CheckCircle, XCircle, DollarSign } from 'lucide-react';
 
 const STATUSES = ['PENDING', 'APPROVED', 'REJECTED', 'PAID'];
 
@@ -76,6 +78,24 @@ export default function PayoutsPage() {
           </span>
         )}
       </div>
+
+      <HelpGuide
+        title="How to Manage Payout Requests"
+        description="Review and process collector payout requests for their earnings."
+        steps={[
+          "Filter payouts by status (Pending, Approved, Rejected, Paid)",
+          "Filter by collector ID to view specific collector requests",
+          "Approve pending payout requests after verification",
+          "Reject invalid payout requests with a reason",
+          "Mark approved payouts as Paid after processing payment",
+          "Add optional notes for each action",
+        ]}
+        tips={[
+          "Payout limits and methods are configured in the Config page",
+          "Always verify withdrawal details before approving",
+          "Mark as Paid only after actual payment is processed",
+        ]}
+      />
 
       {feedback && (
         <div className="mb-4 rounded bg-blue-50 p-3 text-sm text-blue-700">
@@ -203,28 +223,7 @@ export default function PayoutsPage() {
               </tbody>
             </table>
           </div>
-
-          {totalPages > 1 && (
-            <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
-              <span>Page {page} of {totalPages} ({data.meta.total} total)</span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="inline-flex items-center gap-1 rounded border px-3 py-1 hover:bg-gray-50 disabled:opacity-40"
-                >
-                  <ChevronLeft size={14} /> Prev
-                </button>
-                <button
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                  className="inline-flex items-center gap-1 rounded border px-3 py-1 hover:bg-gray-50 disabled:opacity-40"
-                >
-                  Next <ChevronRight size={14} />
-                </button>
-              </div>
-            </div>
-          )}
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </>
       )}
 

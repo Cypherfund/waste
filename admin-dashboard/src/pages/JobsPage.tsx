@@ -3,6 +3,8 @@ import { jobsApi, usersApi } from '../services/api/admin';
 import { useAsync } from '../hooks/useAsync';
 import Spinner from '../components/Spinner';
 import ErrorBox from '../components/ErrorBox';
+import Pagination from '../components/Pagination';
+import HelpGuide from '../components/HelpGuide';
 import type { Job, JobListResponse, AdminUser } from '../types';
 
 const JOB_STATUSES = [
@@ -49,7 +51,7 @@ export default function JobsPage() {
   const [paymentError, setPaymentError] = useState('');
 
   const fetchJobs = useCallback(() => {
-    const params: Record<string, string> = { page: String(page), limit: '20' };
+    const params: Record<string, string> = { page: String(page || 1), limit: '20' };
     if (statusFilter) params.status = statusFilter;
     if (paymentStatusFilter) params.paymentStatus = paymentStatusFilter;
     if (dateFrom) params.dateFrom = dateFrom;
@@ -168,6 +170,24 @@ export default function JobsPage() {
   return (
     <div>
       <h1 className="mb-4 text-2xl font-bold text-gray-900">Jobs</h1>
+
+      <HelpGuide
+        title="How to Manage Jobs"
+        description="View and manage waste collection jobs including assignment, cancellation, and payment verification."
+        steps={[
+          "Filter jobs by status (Payment Pending, Requested, Assigned, In Progress, etc.)",
+          "Filter by payment status (Pending, Verified, Rejected, Not Required)",
+          "Filter by date range to find jobs within a specific period",
+          "Click 'Details' to view job information and assign collectors",
+          "Manually assign collectors to unassigned jobs",
+          "Cancel jobs if needed with a reason",
+        ]}
+        tips={[
+          "Payment Pending jobs require verification before payout",
+          "Manually assign collectors when auto-assignment fails",
+          "Verify payment proof images before approving",
+        ]}
+      />
 
       {/* Filters */}
       <div className="mb-4 flex flex-wrap items-end gap-3">
@@ -297,32 +317,7 @@ export default function JobsPage() {
               </tbody>
             </table>
           </div>
-
-          {/* Pagination */}
-          {data.meta.pages > 1 && (
-            <div className="mt-4 flex items-center justify-between text-sm">
-              <span className="text-gray-500">
-                Page {data.meta.page} of {data.meta.pages} ({data.meta.total}{' '}
-                total)
-              </span>
-              <div className="flex gap-2">
-                <button
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => p - 1)}
-                  className="rounded border px-3 py-1 text-sm disabled:opacity-40"
-                >
-                  Previous
-                </button>
-                <button
-                  disabled={page >= data.meta.pages}
-                  onClick={() => setPage((p) => p + 1)}
-                  className="rounded border px-3 py-1 text-sm disabled:opacity-40"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          )}
+          <Pagination page={page} totalPages={data.meta.pages} onPageChange={setPage} />
         </>
       )}
 

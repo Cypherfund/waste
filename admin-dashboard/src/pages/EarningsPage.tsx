@@ -3,6 +3,8 @@ import { earningsApi, statsApi } from '../services/api/admin';
 import { useAsync } from '../hooks/useAsync';
 import Spinner from '../components/Spinner';
 import ErrorBox from '../components/ErrorBox';
+import Pagination from '../components/Pagination';
+import HelpGuide from '../components/HelpGuide';
 import type { Earning, EarningsListResponse } from '../types';
 import { DollarSign, Download, CheckCircle, Zap, Info } from 'lucide-react';
 
@@ -112,6 +114,24 @@ export default function EarningsPage() {
           <Download size={15} /> Export CSV
         </button>
       </div>
+
+      <HelpGuide
+        title="How to Manage Earnings & Payouts"
+        description="Track collector earnings from completed jobs and manage payout requests."
+        steps={[
+          "Filter earnings by status (Pending, Confirmed, Paid)",
+          "Filter by collector ID to view specific collector earnings",
+          "Filter by date range to find earnings within a period",
+          "View summary cards for on-page totals and confirmed amounts",
+          "Mark Confirmed earnings as Paid after processing",
+          "Export earnings data to CSV for accounting",
+        ]}
+        tips={[
+          "Pending earnings need to be Confirmed before they can be Paid",
+          "Use Export CSV for external accounting and reporting",
+          "Payment integration mode processes payouts automatically",
+        ]}
+      />
 
       {/* Summary Cards */}
       <div className="mb-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -268,31 +288,7 @@ export default function EarningsPage() {
               </tbody>
             </table>
           </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
-              <span>
-                Page {page} of {totalPages} ({data.meta.total} records)
-              </span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="rounded border px-3 py-1 hover:bg-gray-50 disabled:opacity-40"
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                  className="rounded border px-3 py-1 hover:bg-gray-50 disabled:opacity-40"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          )}
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </>
       )}
     </div>
