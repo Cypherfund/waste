@@ -51,12 +51,12 @@ export default function JobsPage() {
   const [paymentError, setPaymentError] = useState('');
 
   const fetchJobs = useCallback(() => {
-    const params: Record<string, string> = { page: String(page || 1), limit: '20' };
+    const params: Record<string, string | number> = { page: page || 1, limit: 20 };
     if (statusFilter) params.status = statusFilter;
     if (paymentStatusFilter) params.paymentStatus = paymentStatusFilter;
     if (dateFrom) params.dateFrom = dateFrom;
     if (dateTo) params.dateTo = dateTo;
-    return jobsApi.list(params);
+    return jobsApi.list(params as any);
   }, [statusFilter, paymentStatusFilter, dateFrom, dateTo, page]);
 
   const { data, loading, error, run } = useAsync<JobListResponse>(fetchJobs);
