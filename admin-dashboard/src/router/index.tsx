@@ -18,6 +18,8 @@ import CommissionsPage from '../pages/CommissionsPage';
 import MarketerPayoutsPage from '../pages/MarketerPayoutsPage';
 import PendingPaymentsPage from '../pages/PendingPaymentsPage';
 import CollectorFloatPage from '../pages/CollectorFloatPage';
+import MarketingBudgetsPage from '../pages/MarketingBudgetsPage';
+import MarketingCampaignsPage from '../pages/MarketingCampaignsPage';
 
 export const router = createBrowserRouter([
   {
@@ -48,6 +50,8 @@ export const router = createBrowserRouter([
       { path: 'marketer-payouts', element: <MarketerPayoutsPage /> },
       { path: 'pending-payments', element: <PendingPaymentsPage /> },
       { path: 'collector-float', element: <CollectorFloatPage /> },
+      { path: 'marketing-budgets', element: <MarketingBudgetsPage /> },
+      { path: 'marketing-campaigns', element: <MarketingCampaignsPage /> },
     ],
   },
 ]);

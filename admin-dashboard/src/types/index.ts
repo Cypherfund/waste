@@ -346,6 +346,67 @@ export interface MarketerPayoutsResponse {
   total: number;
 }
 
+// ─── Marketing Budget & Campaigns ───────────────────────────────
+export interface MarketingBudgetPeriod {
+  id: string;
+  name: string;
+  totalBudget: number;
+  committedAmount: number;
+  spentAmount: number;
+  startDate: string;
+  endDate: string;
+  status: 'ACTIVE' | 'CLOSED' | 'CANCELLED';
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MarketingCampaign {
+  id: string;
+  budgetPeriodId: string;
+  budgetPeriod?: MarketingBudgetPeriod;
+  name: string;
+  description: string | null;
+  territory: string | null;
+  startDate: string;
+  endDate: string;
+  budgetAmount: number;
+  committedAmount: number;
+  spentAmount: number;
+  status: 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'ENDED' | 'CANCELLED';
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  marketerAssignments?: CampaignMarketerAssignment[];
+}
+
+export interface CampaignMarketerAssignment {
+  id: string;
+  campaignId: string;
+  marketerProfileId: string;
+  marketerProfile?: { id: string; user?: { name: string; phone: string } };
+  isActive: boolean;
+  assignedBy: string;
+  assignedAt: string;
+}
+
+export interface BudgetTransaction {
+  id: string;
+  budgetPeriodId: string;
+  campaignId: string;
+  campaign?: MarketingCampaign;
+  commissionTransactionId: string | null;
+  marketerProfileId: string | null;
+  marketerProfile?: { id: string; user?: { name: string } };
+  type: 'COMMITTED' | 'RELEASED' | 'SPENT' | 'ADJUSTMENT';
+  amount: number;
+  balanceBefore: number;
+  balanceAfter: number;
+  description: string | null;
+  createdBy: string | null;
+  createdAt: string;
+}
+
 // ─── Stats ───────────────────────────────────────────────────────
 export interface DashboardStats {
   totalUsers: number;
