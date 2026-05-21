@@ -37,7 +37,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm rounded-lg bg-white p-8 shadow-md">
         <div className="mb-6 flex items-center justify-center gap-2 text-green-700">
           <Trash2 size={28} />
-          <h1 className="text-xl font-bold">WasteWise Admin</h1>
+          <h1 className="text-xl font-bold">KmerTrash Admin</h1>
         </div>
 
         {error && (

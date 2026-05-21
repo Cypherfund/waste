@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { UserPlus, Ban, CheckCircle, Copy } from 'lucide-react';
+import { UserPlus, Ban, CheckCircle, Copy, Check, Smartphone, Mail, MessageCircle } from 'lucide-react';
 import { Marketer } from '../types';
 import { growthMarketersApi } from '../services/api/growth';
 import HelpGuide from '../components/HelpGuide';
@@ -9,6 +9,7 @@ export default function MarketersPage() {
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ name: '', phone: '', email: '', territory: '' });
+  const [newMarketer, setNewMarketer] = useState<Marketer | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -27,9 +28,10 @@ export default function MarketersPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await growthMarketersApi.create(form);
+      const created = await growthMarketersApi.create(form);
       setShowCreate(false);
       setForm({ name: '', phone: '', email: '', territory: '' });
+      setNewMarketer(created);
       load();
     } catch (err: any) {
       alert(err.response?.data?.message || 'Error creating marketer');
@@ -132,6 +134,94 @@ export default function MarketersPage() {
               <button type="submit" className="rounded bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">Create</button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Success Modal with Temp Password */}
+      {newMarketer?.tempPassword && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center gap-2">
+              <div className="rounded-full bg-green-100 p-2">
+                <Check size={20} className="text-green-600" />
+              </div>
+              <h2 className="text-lg font-semibold">Marketer Created!</h2>
+            </div>
+            <div className="mb-4 space-y-3">
+              <p className="text-sm text-gray-600">
+                <strong>{newMarketer.name}</strong> has been registered successfully.
+              </p>
+              
+              {/* Delivery Status */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 rounded-lg bg-blue-50 p-3">
+                  <Smartphone size={18} className="text-blue-600" />
+                  <span className="text-sm text-blue-700">Welcome SMS sent to {newMarketer.phone}</span>
+                </div>
+                {newMarketer.email && (
+                  <div className="flex items-center gap-2 rounded-lg bg-purple-50 p-3">
+                    <Mail size={18} className="text-purple-600" />
+                    <span className="text-sm text-purple-700">Welcome email sent to {newMarketer.email}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Temporary Password */}
+              <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3">
+                <p className="mb-2 text-xs font-medium text-yellow-800 uppercase">Temporary Password</p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 rounded bg-white px-3 py-2 text-sm font-mono text-gray-800">
+                    {newMarketer.tempPassword}
+                  </code>
+                  <button
+                    onClick={() => navigator.clipboard.writeText(newMarketer.tempPassword!)}
+                    className="rounded bg-yellow-200 p-2 text-yellow-800 hover:bg-yellow-300"
+                    title="Copy password"
+                  >
+                    <Copy size={16} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Share Options */}
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                <p className="mb-2 text-xs font-medium text-gray-700 uppercase">Share Welcome Message</p>
+                
+                {/* WhatsApp Share */}
+                <a
+                  href={`https://wa.me/${newMarketer.phone.replace(/\D/g, '')}?text=${encodeURIComponent(
+                    `Welcome to KmerTrash ${newMarketer.name}! You've been registered as a Growth Marketer.\n\nYour temporary password: ${newMarketer.tempPassword}\n\nDownload the app and login with your phone number.`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mb-2 flex items-center justify-center gap-2 rounded bg-green-500 px-4 py-2 text-sm font-medium text-white hover:bg-green-600"
+                >
+                  <MessageCircle size={18} />
+                  Share via WhatsApp
+                </a>
+
+                {/* Copy Full Message */}
+                <button
+                  onClick={() => {
+                    const message = `Welcome to KmerTrash ${newMarketer.name}! You've been registered as a Growth Marketer.\n\nYour temporary password: ${newMarketer.tempPassword}\n\nDownload the app and login with your phone number.`;
+                    navigator.clipboard.writeText(message);
+                  }}
+                  className="flex w-full items-center justify-center gap-2 rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                >
+                  <Copy size={16} />
+                  Copy Full Welcome Message
+                </button>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setNewMarketer(null)}
+                className="rounded bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

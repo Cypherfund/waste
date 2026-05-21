@@ -5,15 +5,13 @@ import Spinner from '../components/Spinner';
 import ErrorBox from '../components/ErrorBox';
 import Pagination from '../components/Pagination';
 import HelpGuide from '../components/HelpGuide';
-import type { Earning, EarningsListResponse } from '../types';
-import { DollarSign, Download, CheckCircle, Zap, Info } from 'lucide-react';
+import type { EarningsListResponse } from '../types';
+import { Download, CheckCircle, Zap, Info, DollarSign } from 'lucide-react';
 
-const STATUSES = ['PENDING', 'CONFIRMED', 'PAID'];
+const STATUSES = ['PENDING', 'CONFIRMED'];
 
 function statusBadge(status: string) {
   switch (status) {
-    case 'PAID':
-      return 'bg-green-100 text-green-700';
     case 'CONFIRMED':
       return 'bg-blue-100 text-blue-700';
     default:
@@ -30,7 +28,6 @@ export default function EarningsPage() {
 
   const { data: stats } = useAsync(statsApi.get);
 
-  const [payingId, setPayingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState('');
 
   const fetchEarnings = useCallback(
@@ -48,22 +45,6 @@ export default function EarningsPage() {
 
   const { data, loading, error, run } = useAsync<EarningsListResponse>(fetchEarnings);
 
-  const handleMarkPaid = async (earning: Earning) => {
-    setPayingId(earning.id);
-    try {
-      await earningsApi.markAsPaid(earning.id);
-      setFeedback(`Earning for job ${earning.jobId.slice(0, 8)}... marked as PAID.`);
-      run();
-    } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message || 'Failed to mark as paid';
-      setFeedback(`Error: ${typeof msg === 'string' ? msg : JSON.stringify(msg)}`);
-    } finally {
-      setPayingId(null);
-    }
-  };
-
   const handleExport = () => {
     const url = earningsApi.exportCsvUrl({
       ...(statusFilter ? { status: statusFilter } : {}),
@@ -78,7 +59,7 @@ export default function EarningsPage() {
 
   const totalAmount = data?.data.reduce((sum, e) => sum + e.totalAmount, 0) ?? 0;
   const confirmedAmount = data?.data
-    .filter((e) => e.status === 'CONFIRMED' || e.status === 'PAID')
+    .filter((e) => e.status === 'CONFIRMED')
     .reduce((sum, e) => sum + e.totalAmount, 0) ?? 0;
 
   return (
@@ -100,13 +81,13 @@ export default function EarningsPage() {
             <strong>Payout mode:</strong>{' '}
             {stats.paymentIntegrationEnabled
               ? 'Payment integration active — payouts are processed automatically.'
-              : 'Manual payouts — mark CONFIRMED earnings as PAID after processing via mobile money or bank transfer.'}
+              : 'Manual payouts — collectors request withdrawal via Payout Requests page.'}
           </span>
         </div>
       )}
 
       <div className="mb-5 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Earnings & Payouts</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Earnings</h1>
         <button
           onClick={handleExport}
           className="inline-flex items-center gap-1.5 rounded bg-green-700 px-3 py-2 text-sm font-medium text-white hover:bg-green-800"
@@ -151,7 +132,7 @@ export default function EarningsPage() {
             <CheckCircle size={20} className="text-blue-600" />
           </div>
           <div>
-            <p className="text-xs text-gray-500">Confirmed/Paid</p>
+            <p className="text-xs text-gray-500">Confirmed</p>
             <p className="text-lg font-bold text-gray-900">
               {confirmedAmount.toLocaleString()} XAF
             </p>
@@ -227,14 +208,13 @@ export default function EarningsPage() {
                   <th className="px-4 py-3">Total (XAF)</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Confirmed</th>
-                  <th className="px-4 py-3">Paid</th>
-                  <th className="px-4 py-3">Actions</th>
+                  <th className="px-4 py-3">Status Note</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {data.data.length === 0 && (
                   <tr>
-                    <td colSpan={10} className="px-4 py-8 text-center text-gray-400">
+                    <td colSpan={9} className="px-4 py-8 text-center text-gray-400">
                       No earnings found.
                     </td>
                   </tr>
@@ -265,23 +245,8 @@ export default function EarningsPage() {
                       {e.confirmedAt ? new Date(e.confirmedAt).toLocaleDateString() : '—'}
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500">
-                      {e.paidAt ? new Date(e.paidAt).toLocaleDateString() : '—'}
-                    </td>
-                    <td className="px-4 py-3">
-                      {e.status === 'CONFIRMED' ? (
-                        <button
-                          onClick={() => handleMarkPaid(e)}
-                          disabled={payingId === e.id}
-                          className="inline-flex items-center gap-1 rounded bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700 hover:bg-green-100 disabled:opacity-50"
-                        >
-                          <DollarSign size={12} />
-                          {payingId === e.id ? 'Processing...' : 'Mark Paid'}
-                        </button>
-                      ) : (
-                        <span className="text-xs text-gray-400">
-                          {e.status === 'PAID' ? 'Paid ✓' : 'Awaiting confirmation'}
-                        </span>
-                      )}
+                      {e.status === 'CONFIRMED' && <span className="text-blue-600">Use Payout Requests →</span>}
+                      {e.status === 'PENDING' && <span className="text-gray-400">—</span>}
                     </td>
                   </tr>
                 ))}

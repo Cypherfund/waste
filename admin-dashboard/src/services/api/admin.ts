@@ -8,7 +8,6 @@ import {
   FraudFlag,
   SystemConfig,
   DashboardStats,
-  Earning,
   EarningsListResponse,
   SubscriptionPlan,
   PayoutRequest,
@@ -104,9 +103,6 @@ export const earningsApi = {
     client
       .get<EarningsListResponse>('/admin/earnings', { params })
       .then((r) => r.data),
-
-  markAsPaid: (id: string) =>
-    client.post<Earning>(`/admin/earnings/${id}/pay`).then((r) => r.data),
 
   exportCsvUrl: (params?: { status?: string; collectorId?: string; from?: string; to?: string }) => {
     const token = localStorage.getItem('access_token') ?? '';

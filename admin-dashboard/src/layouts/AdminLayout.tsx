@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../features/auth/AuthContext';
+import { useState } from 'react';
 import {
   LayoutDashboard,
   Users,
@@ -18,6 +19,8 @@ import {
   Banknote,
   ClipboardCheck,
   Coins,
+  Menu,
+  X,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -43,22 +46,59 @@ const NAV_ITEMS = [
 
 export default function AdminLayout() {
   const { user, logout } = useAuth();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const closeSidebar = () => setIsSidebarOpen(false);
 
   return (
     <div className="flex h-screen bg-gray-100">
-      {/* Sidebar */}
-      <aside className="flex w-56 flex-col bg-gray-900 text-gray-300">
-        <div className="flex items-center gap-2 border-b border-gray-800 px-4 py-4">
+      {/* Mobile Header */}
+      <div className="fixed left-0 right-0 top-0 z-40 flex items-center justify-between bg-gray-900 px-4 py-3 lg:hidden">
+        <div className="flex items-center gap-2">
           <Trash2 size={22} className="text-green-400" />
-          <span className="text-sm font-bold text-white">WasteWise Admin</span>
+          <span className="text-sm font-bold text-white">KmerTrash Admin</span>
+        </div>
+        <button
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="rounded p-2 text-gray-300 hover:bg-gray-800"
+        >
+          {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+      </div>
+
+      {/* Sidebar - Desktop: always visible, Mobile: overlay */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-30 flex w-64 flex-col bg-gray-900 text-gray-300 transition-transform duration-200 lg:static lg:translate-x-0 ${
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        {/* Desktop Logo */}
+        <div className="hidden items-center gap-2 border-b border-gray-800 px-4 py-4 lg:flex">
+          <Trash2 size={22} className="text-green-400" />
+          <span className="text-sm font-bold text-white">KmerTrash Admin</span>
         </div>
 
-        <nav className="flex-1 space-y-0.5 px-2 py-3">
+        {/* Mobile close button */}
+        <div className="flex items-center justify-between border-b border-gray-800 px-4 py-3 lg:hidden">
+          <div className="flex items-center gap-2">
+            <Trash2 size={22} className="text-green-400" />
+            <span className="text-sm font-bold text-white">KmerTrash Admin</span>
+          </div>
+          <button
+            onClick={closeSidebar}
+            className="rounded p-2 text-gray-400 hover:bg-gray-800"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-3">
           {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
               end={to === '/'}
+              onClick={closeSidebar}
               className={({ isActive }) =>
                 `flex items-center gap-2.5 rounded px-3 py-2 text-sm transition-colors ${
                   isActive
@@ -86,9 +126,17 @@ export default function AdminLayout() {
         </div>
       </aside>
 
+      {/* Overlay for mobile sidebar */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 z-20 bg-black/50 lg:hidden"
+          onClick={closeSidebar}
+        />
+      )}
+
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
-        <div className="mx-auto max-w-7xl p-6">
+      <main className="flex-1 overflow-auto pt-16 lg:pt-0">
+        <div className="mx-auto max-w-7xl p-4 lg:p-6">
           <Outlet />
         </div>
       </main>

@@ -64,4 +64,7 @@ export class MarketerResponseDto {
 
   @ApiProperty()
   updatedAt: Date;
+
+  @ApiProperty({ nullable: true, description: 'Temporary password (only shown when auto-generated)' })
+  tempPassword?: string | null;
 }

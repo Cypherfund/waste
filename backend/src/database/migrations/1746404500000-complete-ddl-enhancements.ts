@@ -164,7 +164,7 @@ export class CompleteDdlEnhancements1746404500000 implements MigrationInterface 
                 (uuid_generate_v4(), 'feature.location_tracking', 'true', 'boolean', 'feature', 'Enable real-time location tracking', true, NOW()),
                 (uuid_generate_v4(), 'feature.payment_integration', 'true', 'boolean', 'feature', 'Enable payment integration', true, NOW()),
                 (uuid_generate_v4(), 'support.whatsapp_number', '+237677777777', 'string', 'support', 'WhatsApp support number', false, NOW()),
-                (uuid_generate_v4(), 'payment.manual_instructions', 'Send your payment of {amount} XAF to MTN MoMo: 6XX XXX XXX (WasteWise) or Orange Money: 6XX XXX XXX. Use your phone number as reference.', 'string', 'payment', 'Instructions shown to users when payment integration is disabled', false, NOW()),
+                (uuid_generate_v4(), 'payment.manual_instructions', 'Send your payment of {amount} XAF to MTN MoMo: 6XX XXX XXX (KmerTrash) or Orange Money: 6XX XXX XXX. Use your phone number as reference.', 'string', 'payment', 'Instructions shown to users when payment integration is disabled', false, NOW()),
                 (uuid_generate_v4(), 'feature.wallet_system', 'true', 'boolean', 'feature', 'Enable wallet system', true, NOW()),
                 (uuid_generate_v4(), 'feature.offline_queue', 'true', 'boolean', 'feature', 'Enable offline action queue', true, NOW())
             ON CONFLICT (key) DO NOTHING

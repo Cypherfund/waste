@@ -197,14 +197,6 @@ export class AdminController {
     return this.adminService.listEarnings({ status, collectorId, from, to, page, limit });
   }
 
-  @Post('earnings/:id/pay')
-  markAsPaid(
-    @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser('sub') adminId: string,
-  ) {
-    return this.adminService.markAsPaid(id, adminId);
-  }
-
   @Get('earnings/export')
   async exportEarnings(
     @Query('status') status?: EarningStatus,
