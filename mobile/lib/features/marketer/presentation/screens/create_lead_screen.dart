@@ -18,6 +18,34 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
   final _notesCtrl = TextEditingController();
   String _type = 'HOUSEHOLD';
   bool _submitting = false;
+  String? _selectedCampaignId;
+  List<MarketingCampaign> _campaigns = [];
+  bool _loadingCampaigns = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCampaigns();
+  }
+
+  Future<void> _loadCampaigns() async {
+    try {
+      final campaigns = await context.read<MarketerProvider>().activeCampaigns;
+      if (campaigns.isEmpty) {
+        await context.read<MarketerProvider>().loadActiveCampaigns();
+      }
+      setState(() {
+        _campaigns = context.read<MarketerProvider>().activeCampaigns;
+        _loadingCampaigns = false;
+        // Auto-select if only one campaign
+        if (_campaigns.length == 1) {
+          _selectedCampaignId = _campaigns[0].id;
+        }
+      });
+    } catch (e) {
+      setState(() => _loadingCampaigns = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -40,6 +68,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
           type: _type,
           area: _areaCtrl.text.trim().isEmpty ? null : _areaCtrl.text.trim(),
           notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+          campaignId: _selectedCampaignId,
         ),
       );
       if (mounted) {
@@ -81,6 +110,97 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                 selected: {_type},
                 onSelectionChanged: (s) => setState(() => _type = s.first),
               ),
+              const SizedBox(height: 20),
+
+              // Campaign selector
+              if (_loadingCampaigns)
+                const Center(child: CircularProgressIndicator())
+              else if (_campaigns.isEmpty)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'No active campaigns assigned. Please contact your administrator.',
+                          style: TextStyle(color: Colors.orange.shade900, fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else if (_campaigns.length > 1)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text('Campaign', style: Theme.of(context).textTheme.labelLarge),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      value: _selectedCampaignId,
+                      decoration: const InputDecoration(
+                        labelText: 'Select Campaign *',
+                        prefixIcon: Icon(Icons.campaign),
+                        border: OutlineInputBorder(),
+                      ),
+                      items: _campaigns.map((campaign) {
+                        return DropdownMenuItem<String>(
+                          value: campaign.id,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(campaign.name, style: const TextStyle(fontWeight: FontWeight.w500)),
+                              Text(
+                                '${campaign.territory ?? 'All territories'} • ${campaign.budgetAmount.toInt()} XAF',
+                                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (value) => setState(() => _selectedCampaignId = value),
+                      validator: (v) => v == null || v.isEmpty ? 'Please select a campaign' : null,
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                )
+              else
+                // Auto-selected campaign - show info
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.green.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.green.shade700, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Campaign: ${_campaigns[0].name}',
+                              style: TextStyle(color: Colors.green.shade900, fontWeight: FontWeight.w500),
+                            ),
+                            Text(
+                              '${_campaigns[0].territory ?? 'All territories'} • ${_campaigns[0].budgetAmount.toInt()} XAF',
+                              style: TextStyle(color: Colors.green.shade700, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               const SizedBox(height: 20),
 
               TextFormField(
