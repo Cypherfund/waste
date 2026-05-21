@@ -137,8 +137,8 @@ export default function MarketersPage() {
         </div>
       )}
 
-      {/* Success Modal with Temp Password */}
-      {newMarketer?.tempPassword && (
+      {/* Success Modal */}
+      {newMarketer && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
             <div className="mb-4 flex items-center gap-2">
@@ -166,22 +166,24 @@ export default function MarketersPage() {
                 )}
               </div>
 
-              {/* Temporary Password */}
-              <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3">
-                <p className="mb-2 text-xs font-medium text-yellow-800 uppercase">Temporary Password</p>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 rounded bg-white px-3 py-2 text-sm font-mono text-gray-800">
-                    {newMarketer.tempPassword}
-                  </code>
-                  <button
-                    onClick={() => navigator.clipboard.writeText(newMarketer.tempPassword!)}
-                    className="rounded bg-yellow-200 p-2 text-yellow-800 hover:bg-yellow-300"
-                    title="Copy password"
-                  >
-                    <Copy size={16} />
-                  </button>
+              {/* Temporary Password - only show if returned by API */}
+              {newMarketer.tempPassword && (
+                <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3">
+                  <p className="mb-2 text-xs font-medium text-yellow-800 uppercase">Temporary Password</p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 rounded bg-white px-3 py-2 text-sm font-mono text-gray-800">
+                      {newMarketer.tempPassword}
+                    </code>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(newMarketer.tempPassword!)}
+                      className="rounded bg-yellow-200 p-2 text-yellow-800 hover:bg-yellow-300"
+                      title="Copy password"
+                    >
+                      <Copy size={16} />
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Share Options */}
               <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
@@ -190,7 +192,9 @@ export default function MarketersPage() {
                 {/* WhatsApp Share */}
                 <a
                   href={`https://wa.me/${newMarketer.phone.replace(/\D/g, '')}?text=${encodeURIComponent(
-                    `Welcome to KmerTrash ${newMarketer.name}! You've been registered as a Growth Marketer.\n\nYour temporary password: ${newMarketer.tempPassword}\n\nDownload the app and login with your phone number.`
+                    newMarketer.tempPassword
+                      ? `Welcome to KmerTrash ${newMarketer.name}! You've been registered as a Growth Marketer.\n\nYour temporary password: ${newMarketer.tempPassword}\n\nDownload the app and login with your phone number.`
+                      : `Welcome to KmerTrash ${newMarketer.name}! You've been registered as a Growth Marketer.\n\nDownload the app and login with your phone number. Your password has been sent via SMS/email.`
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -203,7 +207,9 @@ export default function MarketersPage() {
                 {/* Copy Full Message */}
                 <button
                   onClick={() => {
-                    const message = `Welcome to KmerTrash ${newMarketer.name}! You've been registered as a Growth Marketer.\n\nYour temporary password: ${newMarketer.tempPassword}\n\nDownload the app and login with your phone number.`;
+                    const message = newMarketer.tempPassword
+                      ? `Welcome to KmerTrash ${newMarketer.name}! You've been registered as a Growth Marketer.\n\nYour temporary password: ${newMarketer.tempPassword}\n\nDownload the app and login with your phone number.`
+                      : `Welcome to KmerTrash ${newMarketer.name}! You've been registered as a Growth Marketer.\n\nDownload the app and login with your phone number. Your password has been sent via SMS/email.`;
                     navigator.clipboard.writeText(message);
                   }}
                   className="flex w-full items-center justify-center gap-2 rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
