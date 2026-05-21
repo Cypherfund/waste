@@ -50,7 +50,7 @@ export default function AdminLayout() {
       <aside className="flex w-56 flex-col bg-gray-900 text-gray-300">
         <div className="flex items-center gap-2 border-b border-gray-800 px-4 py-4">
           <Trash2 size={22} className="text-green-400" />
-          <span className="text-sm font-bold text-white">WasteWise Admin</span>
+          <span className="text-sm font-bold text-white">KmerTrash Admin</span>
         </div>
 
         <nav className="flex-1 space-y-0.5 px-2 py-3">

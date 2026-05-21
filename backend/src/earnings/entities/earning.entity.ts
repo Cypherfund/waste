@@ -51,9 +51,6 @@ export class Earning {
   @Column({ type: 'timestamptz', nullable: true, name: 'confirmed_at' })
   confirmedAt: Date | null;
 
-  @Column({ type: 'timestamptz', nullable: true, name: 'paid_at' })
-  paidAt: Date | null;
-
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt: Date;
 }

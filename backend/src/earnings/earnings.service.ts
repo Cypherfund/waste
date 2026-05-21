@@ -234,7 +234,7 @@ export class EarningsService {
       const amount = Number(e.totalAmount);
       totalEarnings += amount;
       if (e.status === EarningStatus.PENDING) pendingEarnings += amount;
-      if (e.status === EarningStatus.CONFIRMED || e.status === EarningStatus.PAID) {
+      if (e.status === EarningStatus.CONFIRMED) {
         confirmedEarnings += amount;
       }
     }
@@ -268,7 +268,7 @@ export class EarningsService {
     // Start of this month
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const confirmedStatuses = [EarningStatus.CONFIRMED, EarningStatus.PAID];
+    const confirmedStatuses = [EarningStatus.CONFIRMED];
 
     const [today, thisWeek, thisMonth, allTime] = await Promise.all([
       this.sumEarnings(collectorId, confirmedStatuses, todayStart),

@@ -173,9 +173,8 @@ export interface Earning {
   distanceAmount: number;
   surgeMultiplier: number;
   totalAmount: number;
-  status: 'PENDING' | 'CONFIRMED' | 'PAID';
+  status: 'PENDING' | 'CONFIRMED';
   confirmedAt: string | null;
-  paidAt: string | null;
   createdAt: string;
 }
 
@@ -265,6 +264,7 @@ export interface Marketer {
   dailyLeadsCreated: number;
   createdAt: string;
   updatedAt: string;
+  tempPassword?: string | null;
 }
 
 export interface GrowthLead {

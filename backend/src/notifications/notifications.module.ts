@@ -5,6 +5,7 @@ import { NotificationsService } from './notifications.service';
 import { NotificationsController } from './notifications.controller';
 import { FcmProvider } from './providers/fcm.provider';
 import { SmsProvider } from './providers/sms.provider';
+import { EmailProvider } from './providers/email.provider';
 import { UsersModule } from '../users/users.module';
 
 @Module({
@@ -13,7 +14,7 @@ import { UsersModule } from '../users/users.module';
     UsersModule,
   ],
   controllers: [NotificationsController],
-  providers: [NotificationsService, FcmProvider, SmsProvider],
-  exports: [NotificationsService],
+  providers: [NotificationsService, FcmProvider, SmsProvider, EmailProvider],
+  exports: [NotificationsService, SmsProvider, EmailProvider],
 })
 export class NotificationsModule {}

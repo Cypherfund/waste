@@ -477,7 +477,6 @@ export class AdminService {
         totalAmount: Number(e.totalAmount),
         status: e.status,
         confirmedAt: e.confirmedAt,
-        paidAt: e.paidAt,
         createdAt: e.createdAt,
       })),
       meta: {
@@ -486,31 +485,6 @@ export class AdminService {
         limit,
         pages: Math.ceil(total / limit),
       },
-    };
-  }
-
-  async markAsPaid(earningId: string, adminId: string) {
-    const earning = await this.earningRepo.findOne({ where: { id: earningId } });
-    if (!earning) throw new NotFoundException('Earning record not found');
-    if (earning.status === EarningStatus.PAID) {
-      throw new BadRequestException('Earning is already marked as paid');
-    }
-    if (earning.status !== EarningStatus.CONFIRMED) {
-      throw new BadRequestException(
-        `Only CONFIRMED earnings can be marked as paid (current: ${earning.status})`,
-      );
-    }
-    earning.status = EarningStatus.PAID;
-    earning.paidAt = new Date();
-    const saved = await this.earningRepo.save(earning);
-    this.logger.log(`Earning ${earningId} marked as PAID by admin ${adminId}`);
-    return {
-      id: saved.id,
-      jobId: saved.jobId,
-      collectorId: saved.collectorId,
-      totalAmount: Number(saved.totalAmount),
-      status: saved.status,
-      paidAt: saved.paidAt,
     };
   }
 
@@ -541,7 +515,7 @@ export class AdminService {
 
     const earnings = await qb.getMany();
 
-    const header = 'id,jobId,collectorId,collectorName,collectorPhone,baseAmount,distanceAmount,surgeMultiplier,totalAmount,status,confirmedAt,paidAt,createdAt';
+    const header = 'id,jobId,collectorId,collectorName,collectorPhone,baseAmount,distanceAmount,surgeMultiplier,totalAmount,status,confirmedAt,createdAt';
     const rows = earnings.map((e) => [
       e.id,
       e.jobId,
@@ -554,7 +528,6 @@ export class AdminService {
       e.totalAmount,
       e.status,
       e.confirmedAt?.toISOString() ?? '',
-      e.paidAt?.toISOString() ?? '',
       e.createdAt.toISOString(),
     ].join(','));
 
