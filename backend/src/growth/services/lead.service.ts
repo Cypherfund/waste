@@ -2,10 +2,11 @@ import { Injectable, NotFoundException, BadRequestException, ForbiddenException 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, LessThan, MoreThan, In } from 'typeorm';
 import { randomBytes } from 'crypto';
-import { Lead, LeadStatus, LeadType, SMSSStatus, MarketerProfile, NotificationType } from '../entities';
+import { Lead, LeadStatus, LeadType, SMSSStatus, MarketerProfile, NotificationType, MarketingCampaign, CampaignMarketerAssignment, CampaignStatus } from '../entities';
 import { CreateLeadDto } from '../dto';
 import { SMSService } from './sms.service';
 import { MarketerNotificationService } from './marketer-notification.service';
+import { CampaignService } from './campaign.service';
 
 const DAILY_LEAD_LIMIT = 20;
 
@@ -16,8 +17,13 @@ export class LeadService {
     private readonly leadRepo: Repository<Lead>,
     @InjectRepository(MarketerProfile)
     private readonly profileRepo: Repository<MarketerProfile>,
+    @InjectRepository(MarketingCampaign)
+    private readonly campaignRepo: Repository<MarketingCampaign>,
+    @InjectRepository(CampaignMarketerAssignment)
+    private readonly assignmentRepo: Repository<CampaignMarketerAssignment>,
     private readonly smsService: SMSService,
     private readonly notificationService: MarketerNotificationService,
+    private readonly campaignService: CampaignService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -85,6 +91,38 @@ export class LeadService {
       throw new NotFoundException('Marketer profile not found');
     }
 
+    // Validate campaign assignment
+    let campaignId = dto.campaignId;
+    if (!campaignId) {
+      // Auto-select if only one active campaign
+      const activeCampaigns = await this.campaignService.getActiveCampaignsForMarketer(profile.id);
+      if (activeCampaigns.length === 0) {
+        throw new BadRequestException('No active campaign assigned. Please contact your administrator.');
+      } else if (activeCampaigns.length === 1) {
+        campaignId = activeCampaigns[0].id;
+      } else {
+        throw new BadRequestException('Multiple active campaigns. Please select a campaign.');
+      }
+    } else {
+      // Validate that the marketer is assigned to the specified campaign
+      const campaign = await this.campaignRepo.findOne({
+        where: { id: campaignId },
+      });
+      if (!campaign) {
+        throw new BadRequestException('Campaign not found');
+      }
+      if (campaign.status !== CampaignStatus.ACTIVE) {
+        throw new BadRequestException('Campaign is not active');
+      }
+
+      const assignment = await this.assignmentRepo.findOne({
+        where: { campaignId, marketerProfileId: profile.id, isActive: true },
+      });
+      if (!assignment) {
+        throw new BadRequestException('You are not assigned to this campaign');
+      }
+    }
+
     // Atomically increment daily counter + totalLeads, only if under limit
     const result = await this.dataSource
       .createQueryBuilder()
@@ -123,6 +161,7 @@ export class LeadService {
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       smsStatus: SMSSStatus.PENDING,
       smsRetryCount: 0,
+      campaignId,
     });
 
     const savedLead = await this.leadRepo.save(lead);

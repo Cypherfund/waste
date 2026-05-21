@@ -6,3 +6,5 @@ export { MarketerPayoutService } from './marketer-payout.service';
 export { SMSService, SMSSendResult } from './sms.service';
 export { MarketerNotificationService } from './marketer-notification.service';
 export { LeadCleanupService } from './lead-cleanup.service';
+export { BudgetService } from './budget.service';
+export { CampaignService } from './campaign.service';

@@ -1,8 +1,9 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
-import { CommissionScheme, CommissionTransaction, CommissionStatus, MarketerProfile, MarketerSchemeAssignment } from '../entities';
+import { CommissionScheme, CommissionTransaction, CommissionStatus, MarketerProfile, MarketerSchemeAssignment, MarketingCampaign, BudgetPeriodStatus, BudgetStatus } from '../entities';
 import { CreateSchemeDto, ApproveCommissionDto, RejectCommissionDto } from '../dto';
+import { BudgetService } from './budget.service';
 
 @Injectable()
 export class CommissionService {
@@ -15,7 +16,65 @@ export class CommissionService {
     private readonly profileRepo: Repository<MarketerProfile>,
     @InjectRepository(MarketerSchemeAssignment)
     private readonly assignmentRepo: Repository<MarketerSchemeAssignment>,
+    @InjectRepository(MarketingCampaign)
+    private readonly campaignRepo: Repository<MarketingCampaign>,
+    private readonly budgetService: BudgetService,
   ) {}
+
+  async markTransactionAsPaid(transactionId: string, adminId: string, paidReference: string): Promise<CommissionTransaction> {
+    const transaction = await this.transactionRepo.findOne({
+      where: { id: transactionId },
+      relations: ['marketerProfile', 'campaign'],
+    });
+
+    if (!transaction) {
+      throw new NotFoundException('Transaction not found');
+    }
+
+    if (transaction.status !== CommissionStatus.APPROVED) {
+      throw new BadRequestException('Transaction must be approved before marking as paid');
+    }
+
+    const amount = parseFloat(transaction.amount.toString());
+
+    // Convert reserved budget to spent if campaign exists
+    if (transaction.campaignId && transaction.budgetStatus === BudgetStatus.RESERVED) {
+      const campaign = await this.campaignRepo.findOne({
+        where: { id: transaction.campaignId },
+        relations: ['budgetPeriod'],
+      });
+
+      if (campaign) {
+        await this.budgetService.spendBudget(
+          campaign.budgetPeriodId,
+          campaign.id,
+          amount,
+          transaction.id,
+          transaction.marketerProfileId,
+        );
+
+        campaign.committedAmount -= amount;
+        campaign.spentAmount += amount;
+        await this.campaignRepo.save(campaign);
+
+        transaction.budgetStatus = BudgetStatus.SPENT;
+      }
+    }
+
+    transaction.status = CommissionStatus.PAID;
+    transaction.paidAt = new Date();
+    transaction.paidReference = paidReference;
+
+    const saved = await this.transactionRepo.save(transaction);
+
+    // Update marketer stats
+    const profile = transaction.marketerProfile;
+    profile.approvedAmount -= amount;
+    profile.totalPaid += amount;
+    await this.profileRepo.save(profile);
+
+    return saved;
+  }
 
   // Scheme Management
   async createScheme(dto: CreateSchemeDto): Promise<CommissionScheme> {
@@ -79,7 +138,7 @@ export class CommissionService {
   ): Promise<CommissionTransaction> {
     const transaction = await this.transactionRepo.findOne({
       where: { id: transactionId },
-      relations: ['marketerProfile'],
+      relations: ['marketerProfile', 'campaign'],
     });
 
     if (!transaction) {
@@ -88,6 +147,54 @@ export class CommissionService {
 
     if (transaction.status !== CommissionStatus.PENDING) {
       throw new BadRequestException('Transaction is not pending');
+    }
+
+    // Budget enforcement: Check if commission has campaign and budget is sufficient
+    if (transaction.campaignId) {
+      const campaign = await this.campaignRepo.findOne({
+        where: { id: transaction.campaignId },
+        relations: ['budgetPeriod'],
+      });
+
+      if (!campaign) {
+        throw new BadRequestException('Campaign not found for this commission');
+      }
+
+      if (campaign.status !== 'ACTIVE') {
+        throw new BadRequestException('Campaign is not active');
+      }
+
+      if (campaign.budgetPeriod.status !== BudgetPeriodStatus.ACTIVE) {
+        throw new BadRequestException('Budget period is not active');
+      }
+
+      const amount = parseFloat(transaction.amount.toString());
+      const campaignRemaining = campaign.budgetAmount - campaign.committedAmount - campaign.spentAmount;
+      const budgetPeriodRemaining = campaign.budgetPeriod.totalBudget - campaign.budgetPeriod.committedAmount - campaign.budgetPeriod.spentAmount;
+
+      if (campaignRemaining < amount) {
+        throw new BadRequestException('Insufficient campaign budget');
+      }
+
+      if (budgetPeriodRemaining < amount) {
+        throw new BadRequestException('Insufficient overall marketing budget');
+      }
+
+      // Reserve budget
+      await this.budgetService.reserveBudget(
+        campaign.budgetPeriodId,
+        campaign.id,
+        amount,
+        transaction.id,
+        transaction.marketerProfileId,
+      );
+
+      // Update campaign committed amount
+      campaign.committedAmount += amount;
+      await this.campaignRepo.save(campaign);
+
+      // Update commission budget status
+      transaction.budgetStatus = BudgetStatus.RESERVED;
     }
 
     transaction.status = CommissionStatus.APPROVED;

@@ -1,4 +1,4 @@
-import { IsString, IsEnum, IsOptional, IsPhoneNumber, MaxLength, MinLength } from 'class-validator';
+import { IsString, IsEnum, IsOptional, IsPhoneNumber, MaxLength, MinLength, IsUUID } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { LeadType, LeadSource } from '../entities';
 
@@ -33,4 +33,9 @@ export class CreateLeadDto {
   @IsOptional()
   @IsEnum(LeadSource)
   source?: LeadSource;
+
+  @ApiPropertyOptional({ example: 'uuid-of-campaign', description: 'Campaign ID for attribution' })
+  @IsOptional()
+  @IsUUID()
+  campaignId?: string;
 }

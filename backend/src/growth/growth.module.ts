@@ -9,6 +9,11 @@ import {
   MarketerSchemeAssignment,
   MarketerPayoutRequest,
   MarketerNotification,
+  MarketingBudgetPeriod,
+  MarketingCampaign,
+  CampaignMarketerAssignment,
+  CampaignCommissionScheme,
+  BudgetTransaction,
 } from './entities';
 import { User } from '../users/entities/user.entity';
 import {
@@ -20,11 +25,15 @@ import {
   SMSService,
   MarketerNotificationService,
   LeadCleanupService,
+  BudgetService,
+  CampaignService,
 } from './services';
 import {
   GrowthAdminController,
   GrowthMobileController,
   WebhookController,
+  BudgetAdminController,
+  CampaignAdminController,
 } from './controllers';
 
 @Module({
@@ -37,6 +46,11 @@ import {
       MarketerSchemeAssignment,
       MarketerPayoutRequest,
       MarketerNotification,
+      MarketingBudgetPeriod,
+      MarketingCampaign,
+      CampaignMarketerAssignment,
+      CampaignCommissionScheme,
+      BudgetTransaction,
       User,
     ]),
     ScheduleModule.forRoot(),
@@ -45,6 +59,8 @@ import {
     GrowthAdminController,
     GrowthMobileController,
     WebhookController,
+    BudgetAdminController,
+    CampaignAdminController,
   ],
   providers: [
     LeadService,
@@ -55,6 +71,8 @@ import {
     SMSService,
     MarketerNotificationService,
     LeadCleanupService,
+    BudgetService,
+    CampaignService,
   ],
   exports: [
     LeadService,
@@ -64,6 +82,8 @@ import {
     MarketerPayoutService,
     SMSService,
     MarketerNotificationService,
+    BudgetService,
+    CampaignService,
   ],
 })
 export class GrowthModule {}
