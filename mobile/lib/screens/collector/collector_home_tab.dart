@@ -25,8 +25,10 @@ class _CollectorHomeTabState extends State<CollectorHomeTab>
     WidgetsBinding.instance.addObserver(this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<CollectorJobsProvider>().loadJobs(refresh: true);
-      context.read<CollectorEarningsProvider>().loadQuickSummary();
+      final jobs = context.read<CollectorJobsProvider>();
+      final earnings = context.read<CollectorEarningsProvider>();
+      if (jobs.isStale) jobs.loadJobs(refresh: true);
+      if (earnings.isStale) earnings.loadQuickSummary();
     });
   }
 
@@ -41,6 +43,7 @@ class _CollectorHomeTabState extends State<CollectorHomeTab>
     if (state == AppLifecycleState.resumed) {
       context.read<CollectorJobsProvider>().loadJobs(refresh: true);
       context.read<CollectorEarningsProvider>().loadQuickSummary();
+      context.read<CollectorEarningsProvider>().loadWallet();
     }
   }
 

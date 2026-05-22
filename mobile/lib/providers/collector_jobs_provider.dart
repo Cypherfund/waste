@@ -20,6 +20,8 @@ class CollectorJobsProvider extends ChangeNotifier {
   bool _isActioning = false;
   StreamSubscription? _statusSub;
   StreamSubscription? _assignedSub;
+  DateTime? _lastFetched;
+  bool _refreshFailed = false;
 
   CollectorJobsProvider({
     required JobApi jobApi,
@@ -39,6 +41,10 @@ class CollectorJobsProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get isActioning => _isActioning;
+  bool get hasData => _jobs.isNotEmpty;
+  bool get refreshFailed => _refreshFailed;
+  bool get isStale => _lastFetched == null ||
+      DateTime.now().difference(_lastFetched!) > const Duration(minutes: 2);
 
   List<Job> get assignedJobs =>
       _jobs.where((j) => j.status == JobStatus.assigned).toList();
@@ -78,11 +84,17 @@ class CollectorJobsProvider extends ChangeNotifier {
     try {
       final result = await _jobApi.getAssignedJobs();
       _jobs = result.data;
+      _lastFetched = DateTime.now();
+      _refreshFailed = false;
       for (final job in _jobs) {
         _wsService.subscribeToJob(job.id);
       }
     } catch (e) {
-      _error = ApiClient.extractErrorMessage(e);
+      if (_jobs.isNotEmpty) {
+        _refreshFailed = true;
+      } else {
+        _error = ApiClient.extractErrorMessage(e);
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -259,6 +271,7 @@ class CollectorJobsProvider extends ChangeNotifier {
 
   void clearError() {
     _error = null;
+    _refreshFailed = false;
     notifyListeners();
   }
 
@@ -267,6 +280,8 @@ class CollectorJobsProvider extends ChangeNotifier {
     _isLoading = false;
     _isActioning = false;
     _error = null;
+    _lastFetched = null;
+    _refreshFailed = false;
     notifyListeners();
   }
 

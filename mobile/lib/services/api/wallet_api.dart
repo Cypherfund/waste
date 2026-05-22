@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'api_client.dart';
 
 class PayoutMethod {
@@ -54,7 +55,7 @@ class PayoutRequest {
 
   factory PayoutRequest.fromJson(Map<String, dynamic> j) => PayoutRequest(
         id: j['id'] as String,
-        amount: (j['amount'] as num).toDouble(),
+        amount: double.parse(j['amount'].toString()),
         method: j['method'] as String,
         accountNumber: j['accountNumber'] as String?,
         accountName: j['accountName'] as String?,
@@ -213,7 +214,17 @@ class WalletApi {
 
   Future<List<PayoutRequest>> getMyPayouts() async {
     final response = await _client.dio.get('/wallet/payouts');
-    return (response.data as List)
+    final data = response.data;
+    debugPrint('[WalletApi] getMyPayouts raw: $data');
+    final List list;
+    if (data is List) {
+      list = data;
+    } else if (data is Map) {
+      list = (data['data'] ?? data['payouts'] ?? data['items'] ?? []) as List;
+    } else {
+      list = [];
+    }
+    return list
         .map((p) => PayoutRequest.fromJson(p as Map<String, dynamic>))
         .toList();
   }

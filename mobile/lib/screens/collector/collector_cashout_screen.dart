@@ -5,6 +5,7 @@ import '../../providers/collector_earnings_provider.dart';
 import '../../services/api/wallet_api.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/loading_button.dart';
+import '../../widgets/skeleton_loader.dart';
 
 class CollectorCashoutScreen extends StatefulWidget {
   const CollectorCashoutScreen({super.key});
@@ -142,7 +143,10 @@ class _CollectorCashoutScreenState extends State<CollectorCashoutScreen>
             style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
         if (config == null)
-          const Center(child: CircularProgressIndicator())
+          ...List.generate(2, (_) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: SkeletonLoader(width: double.infinity, height: 64, borderRadius: BorderRadius.circular(12)),
+          ))
         else
           ...config.methods.map((m) => Padding(
                 padding: const EdgeInsets.only(bottom: 8),
@@ -234,45 +238,65 @@ class _CollectorCashoutScreenState extends State<CollectorCashoutScreen>
 
   Widget _buildHistoryTab(CollectorEarningsProvider provider) {
     final history = provider.payoutHistory;
+
+    if (provider.isLoading && history.isEmpty) {
+      return const PayoutHistorySkeleton();
+    }
+
     if (history.isEmpty) {
-      return Center(
-        child: Text('No payout requests yet.',
-            style: AppTypography.body.copyWith(color: AppColors.textSecondary)),
+      return RefreshIndicator(
+        color: AppColors.primary,
+        onRefresh: () => provider.loadPayoutHistory(),
+        child: ListView(
+          children: [
+            SizedBox(height: MediaQuery.of(context).size.height * 0.3),
+            Center(
+              child: Text('No payout requests yet.',
+                  style: AppTypography.body
+                      .copyWith(color: AppColors.textSecondary)),
+            ),
+          ],
+        ),
       );
     }
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: history.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (_, i) {
-        final p = history[i];
-        return AppCard(
-          shadow: const [],
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('${p.amount.toStringAsFixed(0)} XAF',
-                        style: AppTypography.bodyMedium
-                            .copyWith(fontWeight: FontWeight.w700)),
-                    Text(
-                      '${p.method.replaceAll('_', ' ')} · ${_formatDate(p.createdAt)}',
-                      style: AppTypography.caption,
-                    ),
-                    if (p.adminNote != null)
-                      Text(p.adminNote!,
-                          style: AppTypography.caption
-                              .copyWith(color: AppColors.textSecondary)),
-                  ],
+
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: () => provider.loadPayoutHistory(),
+      child: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: history.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 8),
+        itemBuilder: (_, i) {
+          final p = history[i];
+          return AppCard(
+            shadow: const [],
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('${p.amount.toStringAsFixed(0)} XAF',
+                          style: AppTypography.bodyMedium
+                              .copyWith(fontWeight: FontWeight.w700)),
+                      Text(
+                        '${p.method.replaceAll('_', ' ')} · ${_formatDate(p.createdAt)}',
+                        style: AppTypography.caption,
+                      ),
+                      if (p.adminNote != null)
+                        Text(p.adminNote!,
+                            style: AppTypography.caption
+                                .copyWith(color: AppColors.textSecondary)),
+                    ],
+                  ),
                 ),
-              ),
-              _statusBadge(p.status),
-            ],
-          ),
-        );
-      },
+                _statusBadge(p.status),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 

@@ -9,6 +9,7 @@ import '../../widgets/app_card.dart';
 import '../../widgets/section_header.dart';
 import '../../widgets/job_status_badge.dart';
 import '../../widgets/sync_status_banner.dart';
+import '../../widgets/skeleton_loader.dart';
 
 class CollectorHomeScreen extends StatefulWidget {
   const CollectorHomeScreen({super.key});
@@ -78,10 +79,7 @@ class _CollectorHomeScreenState extends State<CollectorHomeScreen> {
                   const SizedBox(height: AppSpacing.sm),
 
                   if (jobs.isLoading && jobs.jobs.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.all(32),
-                      child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
-                    )
+                    const SkeletonList(itemCount: 3)
                   else if (jobs.activeJobs.isEmpty)
                     _buildEmptyJobs()
                   else
