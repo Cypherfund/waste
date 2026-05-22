@@ -4,8 +4,8 @@ import '../../config/app_theme.dart';
 import '../../models/earning.dart';
 import '../../providers/collector_earnings_provider.dart';
 import '../../widgets/app_card.dart';
-import '../../widgets/stale_data_banner.dart';
 import '../../widgets/skeleton_loader.dart';
+import '../../widgets/connectivity_dot.dart';
 
 class CollectorEarningsTab extends StatefulWidget {
   const CollectorEarningsTab({super.key});
@@ -110,7 +110,13 @@ class CollectorEarningsTabState extends State<CollectorEarningsTab>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Earnings', style: AppTypography.heading2),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text('Earnings', style: AppTypography.heading2),
+                      ConnectivityDot(refreshFailed: provider.refreshFailed),
+                    ],
+                  ),
                   const SizedBox(height: 14),
 
                   // Period tab selector
@@ -236,17 +242,6 @@ class CollectorEarningsTabState extends State<CollectorEarningsTab>
                   _PendingPayoutNotice(provider: provider),
                 ],
               ),
-            ),
-
-            // ── Stale data banner ──────────────────────────────────
-            StaleDataBanner(
-              show: provider.refreshFailed,
-              onRetry: () {
-                provider.clearError();
-                provider.loadQuickSummary();
-                provider.loadDetailedEarnings();
-                provider.loadWallet();
-              },
             ),
 
             // ── Scrollable body ────────────────────────────────────

@@ -5,6 +5,7 @@ import '../../providers/collector_jobs_provider.dart';
 import '../../models/job.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/job_status_badge.dart';
+import '../../widgets/skeleton_loader.dart';
 
 class CollectorJobsListScreen extends StatefulWidget {
   const CollectorJobsListScreen({super.key});
@@ -155,7 +156,7 @@ class _JobTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isLoading && jobs.isEmpty) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+      return const JobListSkeleton();
     }
 
     if (jobs.isEmpty) {

@@ -92,12 +92,20 @@ class _CollectorCashoutScreenState extends State<CollectorCashoutScreen>
             children: [
               Text('Wallet Balance',
                   style: AppTypography.caption.copyWith(color: Colors.white70)),
-              const SizedBox(height: 4),
-              Text(
-                '${balance.toStringAsFixed(0)} XAF',
-                style: AppTypography.heading1
-                    .copyWith(color: Colors.white, fontSize: 32),
-              ),
+              const SizedBox(height: 6),
+              provider.isLoading && balance == 0
+                  ? SkeletonLoader(
+                      width: 160,
+                      height: 36,
+                      borderRadius: BorderRadius.circular(6),
+                      baseColor: Colors.white24,
+                      highlightColor: Colors.white38,
+                    )
+                  : Text(
+                      '${balance.toStringAsFixed(0)} XAF',
+                      style: AppTypography.heading1
+                          .copyWith(color: Colors.white, fontSize: 32),
+                    ),
               const SizedBox(height: 4),
               Text(
                 'Min: ${min.toStringAsFixed(0)} XAF  ·  Max: ${max.toStringAsFixed(0)} XAF',

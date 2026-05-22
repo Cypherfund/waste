@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'api_client.dart';
 
 class PayoutMethod {
@@ -215,7 +214,6 @@ class WalletApi {
   Future<List<PayoutRequest>> getMyPayouts() async {
     final response = await _client.dio.get('/wallet/payouts');
     final data = response.data;
-    debugPrint('[WalletApi] getMyPayouts raw: $data');
     final List list;
     if (data is List) {
       list = data;

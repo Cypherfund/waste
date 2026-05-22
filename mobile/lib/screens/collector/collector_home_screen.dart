@@ -45,9 +45,12 @@ class _CollectorHomeScreenState extends State<CollectorHomeScreen> {
             child: RefreshIndicator(
               color: AppColors.primary,
               onRefresh: () async {
+                jobs.clearError();
+                earnings.clearError();
                 await Future.wait([
                   jobs.loadJobs(refresh: true),
                   earnings.loadQuickSummary(),
+                  earnings.loadWallet(),
                 ]);
               },
               child: ListView(

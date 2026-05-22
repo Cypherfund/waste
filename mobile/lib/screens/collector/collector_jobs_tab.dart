@@ -4,8 +4,8 @@ import '../../config/app_theme.dart';
 import '../../providers/collector_jobs_provider.dart';
 import '../../models/job.dart';
 import '../../widgets/app_card.dart';
-import '../../widgets/stale_data_banner.dart';
 import '../../widgets/skeleton_loader.dart';
+import '../../widgets/connectivity_dot.dart';
 
 class CollectorJobsTab extends StatefulWidget {
   const CollectorJobsTab({super.key});
@@ -47,19 +47,15 @@ class _CollectorJobsTabState extends State<CollectorJobsTab>
             // Header
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: Text('Jobs / Queue', style: AppTypography.heading2),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text('Jobs / Queue', style: AppTypography.heading2),
+                  ConnectivityDot(refreshFailed: provider.refreshFailed),
+                ],
+              ),
             ),
-            const SizedBox(height: 8),
-
-            // Stale data banner
-            StaleDataBanner(
-              show: provider.refreshFailed,
-              onRetry: () {
-                provider.clearError();
-                provider.loadJobs(refresh: true);
-              },
-            ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
 
             // Tab bar
             Padding(

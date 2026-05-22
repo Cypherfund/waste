@@ -18,7 +18,8 @@ class _CollectorProfileTabState extends State<CollectorProfileTab> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<CollectorEarningsProvider>().loadQuickSummary();
+      final earnings = context.read<CollectorEarningsProvider>();
+      if (earnings.isStale) earnings.loadQuickSummary();
     });
   }
 

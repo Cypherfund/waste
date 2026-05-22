@@ -99,9 +99,7 @@ class CollectorEarningsProvider extends ChangeNotifier {
   Future<void> loadPayoutHistory() async {
     try {
       _payoutHistory = await _walletApi.getMyPayouts();
-      debugPrint('[EarningsProvider] payoutHistory count: ${_payoutHistory.length}');
     } catch (e) {
-      debugPrint('[EarningsProvider] loadPayoutHistory error: $e');
       _error = ApiClient.extractErrorMessage(e);
     }
     notifyListeners();
