@@ -68,17 +68,26 @@ export class CampaignService {
     status?: CampaignStatus;
     territory?: string;
     budgetPeriodId?: string;
-  }): Promise<MarketingCampaign[]> {
+    page?: number;
+    limit?: number;
+  }): Promise<{ data: MarketingCampaign[]; total: number }> {
     const where: any = {};
     if (filters?.status) where.status = filters.status;
     if (filters?.territory) where.territory = filters.territory;
     if (filters?.budgetPeriodId) where.budgetPeriodId = filters.budgetPeriodId;
 
-    return this.campaignRepo.find({
+    const page = filters?.page || 1;
+    const limit = filters?.limit || 20;
+
+    const [data, total] = await this.campaignRepo.findAndCount({
       where,
       relations: ['budgetPeriod'],
       order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
     });
+
+    return { data, total };
   }
 
   async findCampaignById(id: string): Promise<MarketingCampaign> {

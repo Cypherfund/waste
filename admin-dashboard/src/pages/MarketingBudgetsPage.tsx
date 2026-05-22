@@ -12,6 +12,9 @@ export default function MarketingBudgetsPage() {
   const [showTransactions, setShowTransactions] = useState(false);
   const [transactions, setTransactions] = useState<BudgetTransaction[]>([]);
   const [marketers, setMarketers] = useState<Marketer[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const limit = 20;
   
   const [form, setForm] = useState({
     name: '',
@@ -30,8 +33,9 @@ export default function MarketingBudgetsPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const data = await growthBudgetsApi.list();
-      setBudgets(data);
+      const response = await growthBudgetsApi.list({ page, limit });
+      setBudgets(response.data);
+      setTotal(response.total);
       const marketerData = await growthMarketersApi.list();
       setMarketers(marketerData);
     } catch (e) {
@@ -50,7 +54,7 @@ export default function MarketingBudgetsPage() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [page]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -324,85 +328,113 @@ export default function MarketingBudgetsPage() {
           <p className="text-gray-500">No budget periods yet. Create your first budget period!</p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b bg-gray-50 text-xs uppercase text-gray-500">
-              <tr>
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Period</th>
-                <th className="px-4 py-3 text-right">Total Budget</th>
-                <th className="px-4 py-3 text-right">Committed</th>
-                <th className="px-4 py-3 text-right">Spent</th>
-                <th className="px-4 py-3 text-right">Remaining</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Alert</th>
-                <th className="px-4 py-3">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {budgets.map((b) => {
-                const remaining = b.totalBudget - b.committedAmount - b.spentAmount;
-                const alert = getBudgetAlert(b);
-                return (
-                  <tr key={b.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-900">{b.name}</td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {new Date(b.startDate).toLocaleDateString()} - {new Date(b.endDate).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-3 text-right font-medium">
-                      {b.totalBudget.toLocaleString()} XAF
-                    </td>
-                    <td className="px-4 py-3 text-right text-blue-600">
-                      {b.committedAmount.toLocaleString()} XAF
-                    </td>
-                    <td className="px-4 py-3 text-right text-green-600">
-                      {b.spentAmount.toLocaleString()} XAF
-                    </td>
-                    <td className="px-4 py-3 text-right font-medium">
-                      {remaining.toLocaleString()} XAF
-                    </td>
-                    <td className="px-4 py-3">{statusBadge(b.status)}</td>
-                    <td className="px-4 py-3">
-                      <div className={`flex items-center gap-1 ${alert.color}`}>
-                        {alert.icon}
-                        <span className="text-xs">{alert.message}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => handleViewTransactions(b)}
-                          className="rounded p-1.5 text-gray-500 hover:bg-gray-100"
-                          title="View Transactions"
-                        >
-                          <TrendingUp size={16} />
-                        </button>
-                        {b.status === 'ACTIVE' && (
-                          <>
-                            <button
-                              onClick={() => { setSelectedBudget(b); setShowUpdate(true); setUpdateForm({ totalBudget: b.totalBudget.toString(), adjustmentReason: '' }); }}
-                              className="rounded p-1.5 text-blue-500 hover:bg-blue-50"
-                              title="Update Budget"
-                            >
-                              <Wallet size={16} />
-                            </button>
-                            <button
-                              onClick={() => handleClose(b)}
-                              className="rounded p-1.5 text-gray-500 hover:bg-gray-100"
-                              title="Close Budget"
-                            >
-                              <X size={16} />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b bg-gray-50 text-xs uppercase text-gray-500">
+                <tr>
+                  <th className="px-4 py-3">Name</th>
+                  <th className="px-4 py-3">Period</th>
+                  <th className="px-4 py-3 text-right">Total Budget</th>
+                  <th className="px-4 py-3 text-right">Committed</th>
+                  <th className="px-4 py-3 text-right">Spent</th>
+                  <th className="px-4 py-3 text-right">Remaining</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Alert</th>
+                  <th className="px-4 py-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {budgets.map((b) => {
+                  const remaining = b.totalBudget - b.committedAmount - b.spentAmount;
+                  const alert = getBudgetAlert(b);
+                  return (
+                    <tr key={b.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium text-gray-900">{b.name}</td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {new Date(b.startDate).toLocaleDateString()} - {new Date(b.endDate).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-3 text-right font-medium">
+                        {b.totalBudget.toLocaleString()} XAF
+                      </td>
+                      <td className="px-4 py-3 text-right text-blue-600">
+                        {b.committedAmount.toLocaleString()} XAF
+                      </td>
+                      <td className="px-4 py-3 text-right text-green-600">
+                        {b.spentAmount.toLocaleString()} XAF
+                      </td>
+                      <td className="px-4 py-3 text-right font-medium">
+                        {remaining.toLocaleString()} XAF
+                      </td>
+                      <td className="px-4 py-3">{statusBadge(b.status)}</td>
+                      <td className="px-4 py-3">
+                        <div className={`flex items-center gap-1 ${alert.color}`}>
+                          {alert.icon}
+                          <span className="text-xs">{alert.message}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleViewTransactions(b)}
+                            className="rounded p-1.5 text-gray-500 hover:bg-gray-100"
+                            title="View Transactions"
+                          >
+                            <TrendingUp size={16} />
+                          </button>
+                          {b.status === 'ACTIVE' && (
+                            <>
+                              <button
+                                onClick={() => { setSelectedBudget(b); setShowUpdate(true); setUpdateForm({ totalBudget: b.totalBudget.toString(), adjustmentReason: '' }); }}
+                                className="rounded p-1.5 text-blue-500 hover:bg-blue-50"
+                                title="Update Budget"
+                              >
+                                <Wallet size={16} />
+                              </button>
+                              <button
+                                onClick={() => handleClose(b)}
+                                className="rounded p-1.5 text-gray-500 hover:bg-gray-100"
+                                title="Close Budget"
+                              >
+                                <X size={16} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {total > limit && (
+            <div className="mt-4 flex items-center justify-between">
+              <p className="text-sm text-gray-500">
+                Showing {((page - 1) * limit) + 1} to {Math.min(page * limit, total)} of {total} budget periods
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="rounded px-3 py-1 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                >
+                  Previous
+                </button>
+                <span className="px-3 py-1 text-sm text-gray-600">
+                  Page {page} of {Math.ceil(total / limit)}
+                </span>
+                <button
+                  onClick={() => setPage(p => Math.min(Math.ceil(total / limit), p + 1))}
+                  disabled={page >= Math.ceil(total / limit)}
+                  className="rounded px-3 py-1 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

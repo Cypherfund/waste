@@ -11,7 +11,10 @@ export default function MarketingCampaignsPage() {
   const [showAssignMarketers, setShowAssignMarketers] = useState(false);
   const [showAssignSchemes, setShowAssignSchemes] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<MarketingCampaign | null>(null);
-  
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const limit = 20;
+
   const [budgetPeriods, setBudgetPeriods] = useState<MarketingBudgetPeriod[]>([]);
   const [marketers, setMarketers] = useState<Marketer[]>([]);
   const [schemes, setSchemes] = useState<CommissionScheme[]>([]);
@@ -37,14 +40,15 @@ export default function MarketingCampaignsPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const [campaignsData, budgetPeriodsData, marketersData, schemesData] = await Promise.all([
-        growthCampaignsApi.list(),
-        growthBudgetsApi.list(),
+      const [campaignsResponse, budgetPeriodsResponse, marketersData, schemesData] = await Promise.all([
+        growthCampaignsApi.list({ page, limit }),
+        growthBudgetsApi.list({ page: 1, limit: 100 }),
         growthMarketersApi.list(),
         growthSchemesApi.list(),
       ]);
-      setCampaigns(campaignsData);
-      setBudgetPeriods(budgetPeriodsData);
+      setCampaigns(campaignsResponse.data);
+      setTotal(campaignsResponse.total);
+      setBudgetPeriods(budgetPeriodsResponse.data);
       setMarketers(marketersData);
       setSchemes(schemesData);
     } catch (e) {
@@ -54,7 +58,7 @@ export default function MarketingCampaignsPage() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [page]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -367,102 +371,130 @@ export default function MarketingCampaignsPage() {
           <p className="text-gray-500">No campaigns yet. Create your first campaign!</p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b bg-gray-50 text-xs uppercase text-gray-500">
-              <tr>
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Budget Period</th>
-                <th className="px-4 py-3">Period</th>
-                <th className="px-4 py-3">Territory</th>
-                <th className="px-4 py-3 text-right">Budget</th>
-                <th className="px-4 py-3 text-right">Committed</th>
-                <th className="px-4 py-3 text-right">Spent</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {campaigns.map((c) => {
-                const remaining = c.budgetAmount - c.committedAmount - c.spentAmount;
-                return (
-                  <tr key={c.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-900">{c.name}</td>
-                    <td className="px-4 py-3 text-gray-600">{c.budgetPeriod?.name || '—'}</td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {new Date(c.startDate).toLocaleDateString()} - {new Date(c.endDate).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{c.territory || '—'}</td>
-                    <td className="px-4 py-3 text-right font-medium">
-                      {c.budgetAmount.toLocaleString()} XAF
-                    </td>
-                    <td className="px-4 py-3 text-right text-blue-600">
-                      {c.committedAmount.toLocaleString()} XAF
-                    </td>
-                    <td className="px-4 py-3 text-right text-green-600">
-                      {c.spentAmount.toLocaleString()} XAF
-                    </td>
-                    <td className="px-4 py-3">{statusBadge(c.status)}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => { setSelectedCampaign(c); setShowAssignMarketers(true); setAssignMarketersForm({ marketerProfileIds: c.marketerAssignments?.filter((a) => a.isActive).map((a) => a.marketerProfileId) || [] }); }}
-                          className="rounded p-1.5 text-blue-500 hover:bg-blue-50"
-                          title="Assign Marketers"
-                        >
-                          <Users size={16} />
-                        </button>
-                        <button
-                          onClick={() => { setSelectedCampaign(c); setShowAssignSchemes(true); setAssignSchemesForm({ schemeIds: [] }); }}
-                          className="rounded p-1.5 text-purple-500 hover:bg-purple-50"
-                          title="Assign Schemes"
-                        >
-                          <Target size={16} />
-                        </button>
-                        {c.status === 'DRAFT' && (
+        <>
+          <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b bg-gray-50 text-xs uppercase text-gray-500">
+                <tr>
+                  <th className="px-4 py-3">Name</th>
+                  <th className="px-4 py-3">Budget Period</th>
+                  <th className="px-4 py-3">Period</th>
+                  <th className="px-4 py-3">Territory</th>
+                  <th className="px-4 py-3 text-right">Budget</th>
+                  <th className="px-4 py-3 text-right">Committed</th>
+                  <th className="px-4 py-3 text-right">Spent</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {campaigns.map((c) => {
+                  const remaining = c.budgetAmount - c.committedAmount - c.spentAmount;
+                  return (
+                    <tr key={c.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium text-gray-900">{c.name}</td>
+                      <td className="px-4 py-3 text-gray-600">{c.budgetPeriod?.name || '—'}</td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {new Date(c.startDate).toLocaleDateString()} - {new Date(c.endDate).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">{c.territory || '—'}</td>
+                      <td className="px-4 py-3 text-right font-medium">
+                        {c.budgetAmount.toLocaleString()} XAF
+                      </td>
+                      <td className="px-4 py-3 text-right text-blue-600">
+                        {c.committedAmount.toLocaleString()} XAF
+                      </td>
+                      <td className="px-4 py-3 text-right text-green-600">
+                        {c.spentAmount.toLocaleString()} XAF
+                      </td>
+                      <td className="px-4 py-3">{statusBadge(c.status)}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1">
                           <button
-                            onClick={() => handleActivate(c)}
-                            className="rounded p-1.5 text-green-500 hover:bg-green-50"
-                            title="Activate"
-                          >
-                            <Play size={16} />
-                          </button>
-                        )}
-                        {c.status === 'ACTIVE' && (
-                          <button
-                            onClick={() => handlePause(c)}
-                            className="rounded p-1.5 text-yellow-500 hover:bg-yellow-50"
-                            title="Pause"
-                          >
-                            <Pause size={16} />
-                          </button>
-                        )}
-                        {(c.status === 'ACTIVE' || c.status === 'PAUSED') && (
-                          <button
-                            onClick={() => handleEnd(c)}
+                            onClick={() => { setSelectedCampaign(c); setShowAssignMarketers(true); setAssignMarketersForm({ marketerProfileIds: c.marketerAssignments?.filter((a) => a.isActive).map((a) => a.marketerProfileId) || [] }); }}
                             className="rounded p-1.5 text-blue-500 hover:bg-blue-50"
-                            title="End"
+                            title="Assign Marketers"
                           >
-                            <Square size={16} />
+                            <Users size={16} />
                           </button>
-                        )}
-                        {c.status !== 'ENDED' && c.status !== 'CANCELLED' && (
                           <button
-                            onClick={() => handleCancel(c)}
-                            className="rounded p-1.5 text-red-500 hover:bg-red-50"
-                            title="Cancel"
+                            onClick={() => { setSelectedCampaign(c); setShowAssignSchemes(true); setAssignSchemesForm({ schemeIds: [] }); }}
+                            className="rounded p-1.5 text-purple-500 hover:bg-purple-50"
+                            title="Assign Schemes"
                           >
-                            <Ban size={16} />
+                            <Target size={16} />
                           </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                          {c.status === 'DRAFT' && (
+                            <button
+                              onClick={() => handleActivate(c)}
+                              className="rounded p-1.5 text-green-500 hover:bg-green-50"
+                              title="Activate"
+                            >
+                              <Play size={16} />
+                            </button>
+                          )}
+                          {c.status === 'ACTIVE' && (
+                            <button
+                              onClick={() => handlePause(c)}
+                              className="rounded p-1.5 text-yellow-500 hover:bg-yellow-50"
+                              title="Pause"
+                            >
+                              <Pause size={16} />
+                            </button>
+                          )}
+                          {(c.status === 'ACTIVE' || c.status === 'PAUSED') && (
+                            <button
+                              onClick={() => handleEnd(c)}
+                              className="rounded p-1.5 text-blue-500 hover:bg-blue-50"
+                              title="End"
+                            >
+                              <Square size={16} />
+                            </button>
+                          )}
+                          {c.status !== 'ENDED' && c.status !== 'CANCELLED' && (
+                            <button
+                              onClick={() => handleCancel(c)}
+                              className="rounded p-1.5 text-red-500 hover:bg-red-50"
+                              title="Cancel"
+                            >
+                              <Ban size={16} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {total > limit && (
+            <div className="mt-4 flex items-center justify-between">
+              <p className="text-sm text-gray-500">
+                Showing {((page - 1) * limit) + 1} to {Math.min(page * limit, total)} of {total} campaigns
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="rounded px-3 py-1 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                >
+                  Previous
+                </button>
+                <span className="px-3 py-1 text-sm text-gray-600">
+                  Page {page} of {Math.ceil(total / limit)}
+                </span>
+                <button
+                  onClick={() => setPage(p => Math.min(Math.ceil(total / limit), p + 1))}
+                  disabled={page >= Math.ceil(total / limit)}
+                  className="rounded px-3 py-1 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

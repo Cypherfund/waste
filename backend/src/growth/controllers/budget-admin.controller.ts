@@ -8,6 +8,7 @@ import {
   UseGuards,
   Request,
   ParseUUIDPipe,
+  Query,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -33,8 +34,8 @@ export class BudgetAdminController {
 
   @Get()
   @ApiOperation({ summary: 'List all budget periods' })
-  async findAll() {
-    return this.budgetService.findAllBudgetPeriods();
+  async findAll(@Query('page') page: string = '1', @Query('limit') limit: string = '20') {
+    return this.budgetService.findAllBudgetPeriods(Number(page), Number(limit));
   }
 
   @Get(':id')

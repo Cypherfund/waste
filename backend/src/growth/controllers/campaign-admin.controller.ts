@@ -40,8 +40,16 @@ export class CampaignAdminController {
     @Query('status') status?: CampaignStatus,
     @Query('territory') territory?: string,
     @Query('budgetPeriodId') budgetPeriodId?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
-    return this.campaignService.findAllCampaigns({ status, territory, budgetPeriodId });
+    return this.campaignService.findAllCampaigns({ 
+      status, 
+      territory, 
+      budgetPeriodId,
+      page: page ? Number(page) : 1,
+      limit: limit ? Number(limit) : 20,
+    });
   }
 
   @Get(':id')
