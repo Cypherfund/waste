@@ -15,7 +15,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums/role.enum';
-import { LeadService, MarketerService, CommissionService, MarketerPayoutService, MarketerNotificationService } from '../services';
+import { LeadService, MarketerService, CommissionService, MarketerPayoutService, MarketerNotificationService, CampaignService } from '../services';
 import { CreateLeadDto, CreatePayoutRequestDto } from '../dto';
 import { LeadStatus } from '../entities';
 
@@ -31,6 +31,7 @@ export class GrowthMobileController {
     private readonly commissionService: CommissionService,
     private readonly payoutService: MarketerPayoutService,
     private readonly notificationService: MarketerNotificationService,
+    private readonly campaignService: CampaignService,
   ) {}
 
   @Get('dashboard')
@@ -80,6 +81,13 @@ export class GrowthMobileController {
   async getProfile(@Request() req: any) {
     const profile = await this.marketerService.findByUserId(req.user.sub);
     return this.marketerService.findById(profile.id);
+  }
+
+  @Get('campaigns/active')
+  @ApiOperation({ summary: 'Get active campaigns for marketer' })
+  async getActiveCampaigns(@Request() req: any) {
+    const profile = await this.marketerService.findByUserId(req.user.sub);
+    return this.campaignService.getActiveCampaignsForMarketer(profile.id);
   }
 
   // Leads

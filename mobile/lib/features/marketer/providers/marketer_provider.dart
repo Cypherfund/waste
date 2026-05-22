@@ -27,6 +27,9 @@ class MarketerProvider extends ChangeNotifier {
   List<NotificationItem> _notifications = [];
   List<NotificationItem> get notifications => _notifications;
 
+  List<MarketingCampaign> _activeCampaigns = [];
+  List<MarketingCampaign> get activeCampaigns => _activeCampaigns;
+
   int _unreadCount = 0;
   int get unreadCount => _unreadCount;
 
@@ -150,5 +153,18 @@ class MarketerProvider extends ChangeNotifier {
       _unreadCount = await _api.getUnreadCount();
       notifyListeners();
     } catch (_) {}
+  }
+
+  Future<void> loadActiveCampaigns() async {
+    _loading = true;
+    notifyListeners();
+    try {
+      _activeCampaigns = await _api.getActiveCampaigns();
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
   }
 }

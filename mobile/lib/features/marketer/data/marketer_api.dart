@@ -81,4 +81,9 @@ class MarketerApi {
     final res = await _client.dio.get('/marketer/notifications/unread-count');
     return (res.data['count'] as num).toInt();
   }
+
+  Future<List<MarketingCampaign>> getActiveCampaigns() async {
+    final res = await _client.dio.get('/marketer/campaigns/active');
+    return (res.data as List).map((e) => MarketingCampaign.fromJson(e)).toList();
+  }
 }

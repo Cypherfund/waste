@@ -5,6 +5,9 @@ import {
   CommissionScheme,
   CommissionTransactionsResponse,
   MarketerPayoutsResponse,
+  MarketingBudgetPeriod,
+  MarketingCampaign,
+  BudgetTransaction,
 } from '../../types';
 
 export const growthMarketersApi = {
@@ -67,3 +70,80 @@ export const growthPayoutsApi = {
   markPaid: (id: string, paidReference: string) =>
     client.post(`/admin/growth/marketer-payouts/${id}/mark-paid`, { paidReference }).then((r) => r.data),
 };
+
+export const growthBudgetsApi = {
+  list: () =>
+    client.get<MarketingBudgetPeriod[]>('/admin/marketing-budget-periods').then((r) => r.data),
+
+  getById: (id: string) =>
+    client.get<MarketingBudgetPeriod>(`/admin/marketing-budget-periods/${id}`).then((r) => r.data),
+
+  create: (body: { name: string; totalBudget: number; startDate: string; endDate: string }) =>
+    client.post<MarketingBudgetPeriod>('/admin/marketing-budget-periods', body).then((r) => r.data),
+
+  update: (id: string, body: { totalBudget?: number; adjustmentReason?: string }) =>
+    client.patch<MarketingBudgetPeriod>(`/admin/marketing-budget-periods/${id}`, body).then((r) => r.data),
+
+  close: (id: string) =>
+    client.post(`/admin/marketing-budget-periods/${id}/close`).then((r) => r.data),
+
+  getTransactions: (id: string) =>
+    client.get<BudgetTransaction[]>(`/admin/marketing-budget-periods/${id}/transactions`).then((r) => r.data),
+};
+
+export const growthCampaignsApi = {
+  list: (params?: { status?: string; territory?: string; budgetPeriodId?: string }) =>
+    client.get<MarketingCampaign[]>('/admin/marketing-campaigns', { params }).then((r) => r.data),
+
+  getById: (id: string) =>
+    client.get<MarketingCampaign>(`/admin/marketing-campaigns/${id}`).then((r) => r.data),
+
+  create: (body: {
+    budgetPeriodId: string;
+    name: string;
+    description?: string;
+    territory?: string;
+    startDate: string;
+    endDate: string;
+    budgetAmount: number;
+  }) =>
+    client.post<MarketingCampaign>('/admin/marketing-campaigns', body).then((r) => r.data),
+
+  update: (id: string, body: Partial<{
+    name: string;
+    description: string;
+    territory: string;
+    startDate: string;
+    endDate: string;
+    budgetAmount: number;
+  }>) =>
+    client.patch<MarketingCampaign>(`/admin/marketing-campaigns/${id}`, body).then((r) => r.data),
+
+  activate: (id: string) =>
+    client.post(`/admin/marketing-campaigns/${id}/activate`).then((r) => r.data),
+
+  pause: (id: string) =>
+    client.post(`/admin/marketing-campaigns/${id}/pause`).then((r) => r.data),
+
+  end: (id: string) =>
+    client.post(`/admin/marketing-campaigns/${id}/end`).then((r) => r.data),
+
+  cancel: (id: string) =>
+    client.post(`/admin/marketing-campaigns/${id}/cancel`).then((r) => r.data),
+
+  assignMarketers: (id: string, body: { marketerProfileIds: string[] }) =>
+    client.post(`/admin/marketing-campaigns/${id}/assign-marketers`, body).then((r) => r.data),
+
+  removeMarketer: (id: string, marketerProfileId: string) =>
+    client.delete(`/admin/marketing-campaigns/${id}/assign-marketers/${marketerProfileId}`).then((r) => r.data),
+
+  assignSchemes: (id: string, body: { schemeIds: string[] }) =>
+    client.post(`/admin/marketing-campaigns/${id}/assign-schemes`, body).then((r) => r.data),
+
+  removeScheme: (id: string, schemeId: string) =>
+    client.delete(`/admin/marketing-campaigns/${id}/assign-schemes/${schemeId}`).then((r) => r.data),
+
+  getPerformance: (id: string) =>
+    client.get(`/admin/marketing-campaigns/${id}/performance`).then((r) => r.data),
+};
+

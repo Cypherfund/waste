@@ -9,6 +9,7 @@ import {
   Index,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
+import { MarketingCampaign } from './marketing-campaign.entity';
 
 export enum LeadType {
   HOUSEHOLD = 'HOUSEHOLD',
@@ -114,6 +115,14 @@ export class Lead {
   @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'registered_user_id' })
   registeredUser: User | null;
+
+  @Index()
+  @Column({ type: 'uuid', nullable: true, name: 'campaign_id' })
+  campaignId: string | null;
+
+  @ManyToOne(() => MarketingCampaign, { nullable: true })
+  @JoinColumn({ name: 'campaign_id' })
+  campaign: MarketingCampaign | null;
 
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt: Date;

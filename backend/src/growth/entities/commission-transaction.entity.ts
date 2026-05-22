@@ -11,6 +11,7 @@ import {
 import { MarketerProfile } from './marketer-profile.entity';
 import { CommissionScheme } from './commission-scheme.entity';
 import { Lead } from './lead.entity';
+import { MarketingCampaign } from './marketing-campaign.entity';
 import { User } from '../../users/entities/user.entity';
 
 export enum TriggerType {
@@ -24,6 +25,13 @@ export enum CommissionStatus {
   APPROVED = 'APPROVED',
   REJECTED = 'REJECTED',
   PAID = 'PAID',
+}
+
+export enum BudgetStatus {
+  NOT_RESERVED = 'NOT_RESERVED',
+  RESERVED = 'RESERVED',
+  RELEASED = 'RELEASED',
+  SPENT = 'SPENT',
 }
 
 @Entity('commission_transactions')
@@ -68,6 +76,18 @@ export class CommissionTransaction {
 
   @Column({ type: 'varchar', length: 20, default: CommissionStatus.PENDING })
   status: CommissionStatus;
+
+  @Index()
+  @Column({ type: 'uuid', nullable: true, name: 'campaign_id' })
+  campaignId: string | null;
+
+  @ManyToOne(() => MarketingCampaign, { nullable: true })
+  @JoinColumn({ name: 'campaign_id' })
+  campaign: MarketingCampaign | null;
+
+  @Index()
+  @Column({ type: 'varchar', length: 20, default: BudgetStatus.NOT_RESERVED, name: 'budget_status' })
+  budgetStatus: BudgetStatus;
 
   @Column({ type: 'text', nullable: true })
   description: string | null;

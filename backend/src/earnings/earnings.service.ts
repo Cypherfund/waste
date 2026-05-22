@@ -249,7 +249,7 @@ export class EarningsService {
   }
 
   /**
-   * Quick summary: today, thisWeek, thisMonth, allTime (confirmed + paid).
+   * Quick summary: today, thisWeek, thisMonth, allTime (confirmed earnings).
    */
   async getEarningsSummary(collectorId: string): Promise<EarningsQuickSummaryDto> {
     const now = new Date();

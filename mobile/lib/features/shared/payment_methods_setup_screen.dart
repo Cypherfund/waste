@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../config/app_theme.dart';
 import '../../../providers/user_payment_methods_provider.dart';
 import '../../../providers/subscription_provider.dart';
+import '../../../providers/collector_earnings_provider.dart';
 import '../../../services/api/wallet_api.dart';
 
 enum PaymentMethodMode { cashin, cashout }
@@ -33,20 +34,24 @@ class _PaymentMethodsSetupScreenState extends State<PaymentMethodsSetupScreen> {
     await context.read<UserPaymentMethodsProvider>().loadMethods(usage: usage);
     if (_mode == PaymentMethodMode.cashin) {
       await context.read<SubscriptionProvider>().loadPricingQuote();
+    } else {
+      // Load payout config for cashout providers
+      await context.read<CollectorEarningsProvider>().loadWallet();
     }
   }
 
   List<PaymentProvider> _getProviders() {
-    final sub = context.read<SubscriptionProvider>();
-    final appConfig = sub.appConfig;
-    if (appConfig == null) return [];
-
     if (_mode == PaymentMethodMode.cashin) {
+      final sub = context.read<SubscriptionProvider>();
+      final appConfig = sub.appConfig;
+      if (appConfig == null) return [];
       return appConfig.cashinProviders;
     } else {
-      // For cashout, we need to get from payout config
-      // For now, return empty - will be loaded via separate call
-      return [];
+      // For cashout, get from payout config cashoutProviders (from payment_provider table)
+      final earningsProvider = context.read<CollectorEarningsProvider>();
+      final payoutConfig = earningsProvider.payoutConfig;
+      if (payoutConfig == null) return [];
+      return payoutConfig.cashoutProviders;
     }
   }
 
@@ -134,6 +139,17 @@ class _PaymentMethodsSetupScreenState extends State<PaymentMethodsSetupScreen> {
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey.shade500,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () => _showEditBottomSheet(null),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add Payment Method'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                     ),
                   ),
                 ],
@@ -261,6 +277,9 @@ class _PaymentMethodsSetupScreenState extends State<PaymentMethodsSetupScreen> {
     final accountNumberController = TextEditingController(text: method?.accountNumber ?? '');
     final accountNameController = TextEditingController(text: method?.accountName ?? '');
     bool isDefault = method?.isDefault ?? false;
+    String? selectedPaymentCode = method?.paymentCode;
+    
+    final providers = _getProviders();
 
     showModalBottomSheet(
       context: context,
@@ -284,6 +303,25 @@ class _PaymentMethodsSetupScreenState extends State<PaymentMethodsSetupScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
+                if (method == null && providers.isNotEmpty) ...[
+                  DropdownButtonFormField<String>(
+                    value: selectedPaymentCode,
+                    decoration: const InputDecoration(
+                      labelText: 'Payment Provider',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: providers.map((provider) {
+                      return DropdownMenuItem<String>(
+                        value: provider.paymentCode,
+                        child: Text(provider.providerName),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setSheetState(() => selectedPaymentCode = value);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 TextField(
                   controller: accountNumberController,
                   decoration: const InputDecoration(
@@ -323,14 +361,21 @@ class _PaymentMethodsSetupScreenState extends State<PaymentMethodsSetupScreen> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () async {
+                          if (method == null && selectedPaymentCode == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Please select a payment provider')),
+                            );
+                            return;
+                          }
+                          final scaffoldMessenger = ScaffoldMessenger.of(context);
                           Navigator.pop(context);
                           try {
                             if (method == null) {
                               // Add new method
                               await context.read<UserPaymentMethodsProvider>().addMethod(
-                                paymentCode: 'MTN_MOMO', // TODO: allow provider selection
+                                paymentCode: selectedPaymentCode!,
                                 accountNumber: accountNumberController.text,
-                                accountName: accountNameController.text.isEmpty ? null : accountNameController.text,
+                                accountName: accountNumberController.text.isEmpty ? null : accountNameController.text,
                                 isDefault: isDefault,
                               );
                             } else {
@@ -338,7 +383,7 @@ class _PaymentMethodsSetupScreenState extends State<PaymentMethodsSetupScreen> {
                               await context.read<UserPaymentMethodsProvider>().updateMethod(
                                 method.id,
                                 accountNumber: accountNumberController.text.isEmpty ? null : accountNumberController.text,
-                                accountName: accountNameController.text.isEmpty ? null : accountNameController.text,
+                                accountName: accountNumberController.text.isEmpty ? null : accountNumberController.text,
                               );
                               if (isDefault) {
                                 await context.read<UserPaymentMethodsProvider>().setDefault(
@@ -348,13 +393,13 @@ class _PaymentMethodsSetupScreenState extends State<PaymentMethodsSetupScreen> {
                               }
                             }
                             if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              scaffoldMessenger.showSnackBar(
                                 const SnackBar(content: Text('Payment method saved')),
                               );
                             }
                           } catch (e) {
                             if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              scaffoldMessenger.showSnackBar(
                                 SnackBar(content: Text('Error: $e')),
                               );
                             }

@@ -247,8 +247,9 @@ class CreateLeadRequest {
   final String type;
   final String? area;
   final String? notes;
+  final String? campaignId;
 
-  CreateLeadRequest({required this.name, required this.phone, required this.type, this.area, this.notes});
+  CreateLeadRequest({required this.name, required this.phone, required this.type, this.area, this.notes, this.campaignId});
 
   Map<String, dynamic> toJson() => {
     'name': name,
@@ -256,7 +257,46 @@ class CreateLeadRequest {
     'type': type,
     if (area != null) 'area': area,
     if (notes != null) 'notes': notes,
+    if (campaignId != null) 'campaignId': campaignId,
   };
+}
+
+class MarketingCampaign {
+  final String id;
+  final String budgetPeriodId;
+  final String name;
+  final String? description;
+  final String? territory;
+  final String startDate;
+  final String endDate;
+  final double budgetAmount;
+  final String status;
+
+  MarketingCampaign({
+    required this.id,
+    required this.budgetPeriodId,
+    required this.name,
+    this.description,
+    this.territory,
+    required this.startDate,
+    required this.endDate,
+    required this.budgetAmount,
+    required this.status,
+  });
+
+  factory MarketingCampaign.fromJson(Map<String, dynamic> json) {
+    return MarketingCampaign(
+      id: json['id'] ?? '',
+      budgetPeriodId: json['budgetPeriodId'] ?? '',
+      name: json['name'] ?? '',
+      description: json['description'],
+      territory: json['territory'],
+      startDate: json['startDate'] ?? '',
+      endDate: json['endDate'] ?? '',
+      budgetAmount: _toDouble(json['budgetAmount']),
+      status: json['status'] ?? '',
+    );
+  }
 }
 
 class CommissionItem {
