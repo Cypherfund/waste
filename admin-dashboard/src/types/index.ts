@@ -356,6 +356,7 @@ export interface MarketingBudgetPeriod {
   startDate: string;
   endDate: string;
   status: 'ACTIVE' | 'CLOSED' | 'CANCELLED';
+  alertThresholdPct: number;
   createdBy: string;
   createdAt: string;
   updatedAt: string;

@@ -54,8 +54,13 @@ export class BudgetService {
         );
       }
 
+      // Require adjustment reason when budget changes
+      if (newBudget !== period.totalBudget && !dto.adjustmentReason) {
+        throw new BadRequestException('Adjustment reason is required when changing the budget amount');
+      }
+
       // Create adjustment transaction if budget changed
-      if (newBudget !== period.totalBudget && dto.adjustmentReason) {
+      if (newBudget !== period.totalBudget) {
         const difference = newBudget - period.totalBudget;
         await this.createBudgetTransaction({
           budgetPeriodId: period.id,

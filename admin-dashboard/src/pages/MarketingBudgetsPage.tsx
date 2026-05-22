@@ -132,9 +132,10 @@ export default function MarketingBudgetsPage() {
   const getBudgetAlert = (budget: MarketingBudgetPeriod) => {
     const remaining = budget.totalBudget - budget.committedAmount - budget.spentAmount;
     const usagePct = ((budget.committedAmount + budget.spentAmount) / budget.totalBudget) * 100;
+    const threshold = budget.alertThresholdPct || 80;
     
     if (usagePct >= 100) return { color: 'text-red-600', icon: <XCircle size={16} />, message: 'Exhausted' };
-    if (usagePct >= 80) return { color: 'text-orange-600', icon: <AlertTriangle size={16} />, message: 'Low' };
+    if (usagePct >= threshold) return { color: 'text-orange-600', icon: <AlertTriangle size={16} />, message: 'Low' };
     if (usagePct >= 50) return { color: 'text-yellow-600', icon: <AlertTriangle size={16} />, message: 'Warning' };
     return { color: 'text-green-600', icon: <CheckCircle size={16} />, message: 'Healthy' };
   };

@@ -150,52 +150,54 @@ export class CommissionService {
     }
 
     // Budget enforcement: Check if commission has campaign and budget is sufficient
-    if (transaction.campaignId) {
-      const campaign = await this.campaignRepo.findOne({
-        where: { id: transaction.campaignId },
-        relations: ['budgetPeriod'],
-      });
-
-      if (!campaign) {
-        throw new BadRequestException('Campaign not found for this commission');
-      }
-
-      if (campaign.status !== 'ACTIVE') {
-        throw new BadRequestException('Campaign is not active');
-      }
-
-      if (campaign.budgetPeriod.status !== BudgetPeriodStatus.ACTIVE) {
-        throw new BadRequestException('Budget period is not active');
-      }
-
-      const amount = parseFloat(transaction.amount.toString());
-      const campaignRemaining = campaign.budgetAmount - campaign.committedAmount - campaign.spentAmount;
-      const budgetPeriodRemaining = campaign.budgetPeriod.totalBudget - campaign.budgetPeriod.committedAmount - campaign.budgetPeriod.spentAmount;
-
-      if (campaignRemaining < amount) {
-        throw new BadRequestException('Insufficient campaign budget');
-      }
-
-      if (budgetPeriodRemaining < amount) {
-        throw new BadRequestException('Insufficient overall marketing budget');
-      }
-
-      // Reserve budget
-      await this.budgetService.reserveBudget(
-        campaign.budgetPeriodId,
-        campaign.id,
-        amount,
-        transaction.id,
-        transaction.marketerProfileId,
-      );
-
-      // Update campaign committed amount
-      campaign.committedAmount += amount;
-      await this.campaignRepo.save(campaign);
-
-      // Update commission budget status
-      transaction.budgetStatus = BudgetStatus.RESERVED;
+    if (!transaction.campaignId) {
+      throw new BadRequestException('Commission must be associated with a campaign for approval');
     }
+
+    const campaign = await this.campaignRepo.findOne({
+      where: { id: transaction.campaignId },
+      relations: ['budgetPeriod'],
+    });
+
+    if (!campaign) {
+      throw new BadRequestException('Campaign not found for this commission');
+    }
+
+    if (campaign.status !== 'ACTIVE') {
+      throw new BadRequestException('Campaign is not active');
+    }
+
+    if (campaign.budgetPeriod.status !== BudgetPeriodStatus.ACTIVE) {
+      throw new BadRequestException('Budget period is not active');
+    }
+
+    const amount = parseFloat(transaction.amount.toString());
+    const campaignRemaining = campaign.budgetAmount - campaign.committedAmount - campaign.spentAmount;
+    const budgetPeriodRemaining = campaign.budgetPeriod.totalBudget - campaign.budgetPeriod.committedAmount - campaign.budgetPeriod.spentAmount;
+
+    if (campaignRemaining < amount) {
+      throw new BadRequestException(`Insufficient campaign budget. Campaign has ${campaignRemaining} XAF remaining, but commission requires ${amount} XAF`);
+    }
+
+    if (budgetPeriodRemaining < amount) {
+      throw new BadRequestException(`Insufficient overall marketing budget. Budget period has ${budgetPeriodRemaining} XAF remaining, but commission requires ${amount} XAF`);
+    }
+
+    // Reserve budget
+    await this.budgetService.reserveBudget(
+      campaign.budgetPeriodId,
+      campaign.id,
+      amount,
+      transaction.id,
+      transaction.marketerProfileId,
+    );
+
+    // Update campaign committed amount
+    campaign.committedAmount += amount;
+    await this.campaignRepo.save(campaign);
+
+    // Update commission budget status
+    transaction.budgetStatus = BudgetStatus.RESERVED;
 
     transaction.status = CommissionStatus.APPROVED;
     transaction.reviewedAt = new Date();
