@@ -157,6 +157,85 @@ class SkeletonList extends StatelessWidget {
   }
 }
 
+/// Skeleton for the earnings tab (header card + summary + transactions)
+class EarningsSkeleton extends StatelessWidget {
+  const EarningsSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+      physics: const NeverScrollableScrollPhysics(),
+      children: [
+        // Goal card
+        SkeletonLoader(width: double.infinity, height: 90, borderRadius: BorderRadius.circular(16)),
+        const SizedBox(height: 16),
+        // Summary card
+        SkeletonLoader(width: double.infinity, height: 120, borderRadius: BorderRadius.circular(16)),
+        const SizedBox(height: 20),
+        // Section label
+        SkeletonLoader(width: 140, height: 16, borderRadius: BorderRadius.circular(4)),
+        const SizedBox(height: 12),
+        // Transaction rows
+        ...List.generate(4, (_) => Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: SkeletonLoader(width: double.infinity, height: 68, borderRadius: BorderRadius.circular(14)),
+        )),
+      ],
+    );
+  }
+}
+
+/// Skeleton for a jobs list (upcoming / completed tabs)
+class JobListSkeleton extends StatelessWidget {
+  final int itemCount;
+  const JobListSkeleton({super.key, this.itemCount = 4});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      physics: const NeverScrollableScrollPhysics(),
+      children: List.generate(itemCount, (_) => Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: SkeletonLoader(width: double.infinity, height: 88, borderRadius: BorderRadius.circular(14)),
+      )),
+    );
+  }
+}
+
+/// Skeleton for payout history list
+class PayoutHistorySkeleton extends StatelessWidget {
+  final int itemCount;
+  const PayoutHistorySkeleton({super.key, this.itemCount = 4});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      physics: const NeverScrollableScrollPhysics(),
+      children: List.generate(itemCount, (_) => Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SkeletonLoader(width: 120, height: 16, borderRadius: BorderRadius.circular(4)),
+                  const SizedBox(height: 6),
+                  SkeletonLoader(width: 180, height: 13, borderRadius: BorderRadius.circular(4)),
+                ],
+              ),
+            ),
+            SkeletonLoader(width: 70, height: 26, borderRadius: BorderRadius.circular(20)),
+          ],
+        ),
+      )),
+    );
+  }
+}
+
 /// Dashboard skeleton for home screen
 class DashboardSkeleton extends StatelessWidget {
   const DashboardSkeleton({super.key});

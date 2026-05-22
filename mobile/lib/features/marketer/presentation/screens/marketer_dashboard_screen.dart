@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/marketer_provider.dart';
+import '../../../../widgets/connectivity_dot.dart';
 
 class MarketerDashboardScreen extends StatelessWidget {
   const MarketerDashboardScreen({super.key});
@@ -12,6 +13,10 @@ class MarketerDashboardScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Dashboard'),
         actions: [
+          const Padding(
+            padding: EdgeInsets.only(right: 4),
+            child: Center(child: ConnectivityDot()),
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () => context.read<MarketerProvider>().loadDashboard(),

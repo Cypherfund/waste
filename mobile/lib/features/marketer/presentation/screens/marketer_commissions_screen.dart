@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/marketer_models.dart';
 import '../../providers/marketer_provider.dart';
+import '../../../../providers/user_payment_methods_provider.dart';
 import '../../../../services/api/wallet_api.dart';
+import '../../../../widgets/connectivity_dot.dart';
 
 class MarketerCommissionsScreen extends StatefulWidget {
   const MarketerCommissionsScreen({super.key});
@@ -21,6 +23,7 @@ class _MarketerCommissionsScreenState extends State<MarketerCommissionsScreen> w
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<MarketerProvider>().loadCommissions();
       context.read<MarketerProvider>().loadPayouts();
+      context.read<UserPaymentMethodsProvider>().loadMethods(usage: 'CASHOUT');
     });
   }
 
@@ -35,6 +38,12 @@ class _MarketerCommissionsScreenState extends State<MarketerCommissionsScreen> w
     return Scaffold(
       appBar: AppBar(
         title: const Text('Earnings'),
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 8),
+            child: Center(child: ConnectivityDot()),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabCtrl,
           tabs: const [
@@ -180,6 +189,7 @@ class _PayoutsTab extends StatelessWidget {
 
   Future<void> _showPayoutDialog(BuildContext context) async {
     final provider = context.read<MarketerProvider>();
+    final paymentMethodsProvider = context.read<UserPaymentMethodsProvider>();
     if (provider.payoutConfig == null) {
       await provider.loadPayoutConfig();
     }
@@ -187,15 +197,12 @@ class _PayoutsTab extends StatelessWidget {
     if (!context.mounted) return;
 
     final amountCtrl = TextEditingController();
-    final accountCtrl = TextEditingController();
+    UserPaymentMethod? selectedMethod;
 
-    final List<PayoutMethod> methods = provider.payoutConfig?.methods.isNotEmpty == true
-        ? provider.payoutConfig!.methods
-        : [
-            PayoutMethod(key: 'MTN_MOMO', label: 'MTN MoMo'),
-            PayoutMethod(key: 'ORANGE_MONEY', label: 'Orange Money'),
-          ];
-    String method = methods.first.key;
+    final cashoutMethods = paymentMethodsProvider.cashoutMethods;
+    if (cashoutMethods.isNotEmpty) {
+      selectedMethod = paymentMethodsProvider.defaultCashoutMethod ?? cashoutMethods.first;
+    }
 
     showDialog(
       context: context,
@@ -211,20 +218,41 @@ class _PayoutsTab extends StatelessWidget {
                 keyboardType: TextInputType.number,
               ),
               const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: method,
-                decoration: const InputDecoration(labelText: 'Method', border: OutlineInputBorder()),
-                items: methods
-                    .map((m) => DropdownMenuItem(value: m.key, child: Text(m.label)))
-                    .toList(),
-                onChanged: (v) => setDialogState(() => method = v!),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: accountCtrl,
-                decoration: const InputDecoration(labelText: 'Account Number', border: OutlineInputBorder()),
-                keyboardType: TextInputType.phone,
-              ),
+              if (cashoutMethods.isEmpty)
+                Column(
+                  children: [
+                    const Text('No payout methods saved.'),
+                    const SizedBox(height: 8),
+                    TextButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        Navigator.pushNamed(
+                          context,
+                          '/payment-methods-setup',
+                          arguments: {'mode': 'cashout'},
+                        );
+                      },
+                      icon: const Icon(Icons.add, size: 16),
+                      label: const Text('Add payout method'),
+                    ),
+                  ],
+                )
+              else
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Payout Method', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 8),
+                    ...cashoutMethods.map((m) => RadioListTile<UserPaymentMethod>(
+                      title: Text(m.providerName),
+                      subtitle: Text(m.maskedAccountNumber),
+                      value: m,
+                      groupValue: selectedMethod,
+                      onChanged: (v) => setDialogState(() => selectedMethod = v),
+                      contentPadding: EdgeInsets.zero,
+                    )),
+                  ],
+                ),
             ],
           ),
           actions: [
@@ -232,11 +260,15 @@ class _PayoutsTab extends StatelessWidget {
             FilledButton(
               onPressed: () async {
                 final amount = double.tryParse(amountCtrl.text);
-                if (amount == null || amount <= 0 || accountCtrl.text.isEmpty) return;
+                if (amount == null || amount <= 0 || selectedMethod == null) return;
                 Navigator.pop(ctx);
                 try {
                   await context.read<MarketerProvider>().requestPayout(
-                    CreatePayoutRequest(amount: amount, method: method, accountNumber: accountCtrl.text),
+                    CreatePayoutRequest(
+                      amount: amount,
+                      method: selectedMethod!.paymentCode,
+                      accountNumber: selectedMethod!.accountNumber,
+                    ),
                   );
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(

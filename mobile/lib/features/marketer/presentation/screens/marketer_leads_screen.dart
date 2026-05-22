@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../models/marketer_models.dart';
 import '../../providers/marketer_provider.dart';
 import 'create_lead_screen.dart';
+import '../../../../widgets/connectivity_dot.dart';
 
 class MarketerLeadsScreen extends StatefulWidget {
   const MarketerLeadsScreen({super.key});
@@ -33,6 +34,10 @@ class _MarketerLeadsScreenState extends State<MarketerLeadsScreen> {
       appBar: AppBar(
         title: const Text('My Leads'),
         actions: [
+          const Padding(
+            padding: EdgeInsets.only(right: 4),
+            child: Center(child: ConnectivityDot()),
+          ),
           PopupMenuButton<String?>(
             icon: const Icon(Icons.filter_list),
             onSelected: _applyFilter,

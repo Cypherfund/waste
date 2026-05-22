@@ -4,6 +4,8 @@ import '../../config/app_theme.dart';
 import '../../providers/collector_jobs_provider.dart';
 import '../../models/job.dart';
 import '../../widgets/app_card.dart';
+import '../../widgets/skeleton_loader.dart';
+import '../../widgets/connectivity_dot.dart';
 
 class CollectorJobsTab extends StatefulWidget {
   const CollectorJobsTab({super.key});
@@ -21,7 +23,8 @@ class _CollectorJobsTabState extends State<CollectorJobsTab>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<CollectorJobsProvider>().loadJobs(refresh: true);
+      final jobs = context.read<CollectorJobsProvider>();
+      if (jobs.isStale) jobs.loadJobs(refresh: true);
     });
   }
 
@@ -44,7 +47,13 @@ class _CollectorJobsTabState extends State<CollectorJobsTab>
             // Header
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: Text('Jobs / Queue', style: AppTypography.heading2),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text('Jobs / Queue', style: AppTypography.heading2),
+                  ConnectivityDot(refreshFailed: provider.refreshFailed),
+                ],
+              ),
             ),
             const SizedBox(height: 16),
 
@@ -107,9 +116,7 @@ class _UpcomingTab extends StatelessWidget {
     final nextJobs = provider.assignedJobs;
 
     if (provider.isLoading && provider.jobs.isEmpty) {
-      return const Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
-      );
+      return const JobListSkeleton();
     }
 
     if (currentJob == null && nextJobs.isEmpty) {
@@ -118,7 +125,10 @@ class _UpcomingTab extends StatelessWidget {
 
     return RefreshIndicator(
       color: AppColors.primary,
-      onRefresh: () => provider.loadJobs(refresh: true),
+      onRefresh: () async {
+        provider.clearError();
+        await provider.loadJobs(refresh: true);
+      },
       child: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         children: [
@@ -292,9 +302,7 @@ class _CompletedTab extends StatelessWidget {
     final completedJobs = provider.completedJobs;
 
     if (provider.isLoading && provider.jobs.isEmpty) {
-      return const Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
-      );
+      return const JobListSkeleton();
     }
 
     if (completedJobs.isEmpty) {
@@ -326,7 +334,10 @@ class _CompletedTab extends StatelessWidget {
 
     return RefreshIndicator(
       color: AppColors.primary,
-      onRefresh: () => provider.loadJobs(refresh: true),
+      onRefresh: () async {
+        provider.clearError();
+        await provider.loadJobs(refresh: true);
+      },
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         itemCount: completedJobs.length,

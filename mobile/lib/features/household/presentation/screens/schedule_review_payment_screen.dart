@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../providers/job_provider.dart';
 import '../../../../providers/subscription_provider.dart';
+import '../../../../providers/user_payment_methods_provider.dart';
 import '../../../../models/subscription.dart';
 import '../../../../services/api/wallet_api.dart';
 import '../../../../services/api/files_api.dart';
@@ -44,6 +45,7 @@ class _ScheduleReviewPaymentScreenState
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<SubscriptionProvider>().loadPricingQuote();
       context.read<SubscriptionProvider>().loadPlans();
+      context.read<UserPaymentMethodsProvider>().loadMethods(usage: 'CASHIN');
     });
   }
 
@@ -784,182 +786,232 @@ class _ScheduleReviewPaymentScreenState
   Widget _buildManualPaymentFlow(SubscriptionProvider subProvider) {
     final appConfig = subProvider.appConfig;
     final whatsapp = appConfig?.supportWhatsapp ?? '';
-    final providers = appConfig?.enabledManualPaymentProviders ?? [];
+    final cashEnabled = appConfig?.cashEnabled ?? false;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Payment method selector
-        const Text(
-          'Payment Method',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
-            color: Color(0xFF111827),
-          ),
-        ),
-        const SizedBox(height: 10),
-        // Dynamic chips: one per enabled manual provider + cash if enabled
-        Wrap(
-          spacing: 10,
-          runSpacing: 8,
+    return Consumer<UserPaymentMethodsProvider>(
+      builder: (context, paymentMethodsProvider, _) {
+        final cashinMethods = paymentMethodsProvider.cashinMethods;
+
+        // Auto-select default method if none selected yet
+        if (_selectedPaymentMethod == null && cashinMethods.isNotEmpty) {
+          _selectedPaymentMethod = paymentMethodsProvider.defaultCashinMethod?.id ?? cashinMethods.first.id;
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ...providers.map((p) =>
-                _buildMethodChip(p.paymentCode, Icons.phone_android, p.providerName)),
-            if (appConfig?.cashEnabled == true)
-              _buildMethodChip('CASH', Icons.payments_outlined, 'Cash'),
-          ],
-        ),
-        const SizedBox(height: 16),
-
-        // Cash selected: pay-at-pickup note
-        if (_selectedPaymentMethod == 'CASH') ...[
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEAF5EA),
-              borderRadius: BorderRadius.circular(9),
-              border: Border.all(color: AppColors.primary, width: 1.5),
-            ),
-            child: Row(
+            // Payment method selector
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Icon(Icons.info_outline_rounded,
-                    color: AppColors.primary, size: 18),
-                const SizedBox(width: 10),
-                const Expanded(
-                  child: Text(
-                    'Your collector will collect cash payment at pickup time. No reference needed.',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Color(0xFF14532D),
-                      height: 1.4,
-                    ),
+                const Text(
+                  'Payment Method',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF111827),
                   ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pushNamed(
+                      context,
+                      '/payment-methods-setup',
+                      arguments: {'mode': 'cashin'},
+                    );
+                  },
+                  child: const Text('Manage methods'),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 14),
-        ],
-
-        // Provider selected: show its instructions card
-        if (_selectedPaymentMethod != null && _selectedPaymentMethod != 'CASH') ...[
-          () {
-            final sel = providers.where((p) => p.paymentCode == _selectedPaymentMethod).toList();
-            if (sel.isEmpty) return const SizedBox.shrink();
-            return _buildProviderPaymentCard(sel.first);
-          }(),
-          const SizedBox(height: 14),
-
-          // Payment reference (required for manual providers)
-          const Text(
-            'Payment Reference / Transaction ID',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF111827),
-            ),
-          ),
-          const SizedBox(height: 6),
-          TextField(
-            controller: _paymentRefController,
-            style: const TextStyle(fontSize: 12),
-            decoration: InputDecoration(
-              hintText: 'e.g. 0012345678',
-              hintStyle: const TextStyle(
-                  fontSize: 11, color: Color(0xFF9CA3AF)),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(9),
-                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(9),
-                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(9),
-                borderSide: BorderSide(color: AppColors.primary, width: 1.3),
-              ),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Enter your MoMo transaction ID so the admin can verify quickly.',
-            style: TextStyle(
-                fontSize: 10, color: Color(0xFF9CA3AF), height: 1.4),
-          ),
-          const SizedBox(height: 14),
-
-          // Proof upload (shown if provider requires it)
-          if (() {
-            final sel = providers.where((p) => p.paymentCode == _selectedPaymentMethod).toList();
-            return sel.isNotEmpty && sel.first.manualProofRequired;
-          }()) ...[
-            const Text(
-              'Payment Screenshot (required)',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF111827),
-              ),
-            ),
-            const SizedBox(height: 6),
-            _buildProofUploadWidget(),
-            const SizedBox(height: 14),
-          ],
-        ],
-
-        // WhatsApp support
-        if (whatsapp.isNotEmpty)
-          GestureDetector(
-            onTap: () => _openWhatsApp(whatsapp),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFDCFCE7),
-                borderRadius: BorderRadius.circular(9),
-                border: Border.all(color: const Color(0xFF16A34A)),
-              ),
-              child: const Row(
+            const SizedBox(height: 10),
+            // Empty state: no payment methods saved
+            if (paymentMethodsProvider.loading)
+              const Center(child: CircularProgressIndicator())
+            else if (cashinMethods.isEmpty && !cashEnabled)
+              Column(
                 children: [
-                  Icon(Icons.chat_rounded,
-                      color: Color(0xFF16A34A), size: 18),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Need help? Chat with us on WhatsApp',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF14532D),
-                          ),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          'Tap to open WhatsApp for complaints or payment issues',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Color(0xFF166534),
-                            height: 1.3,
-                          ),
-                        ),
-                      ],
-                    ),
+                  Text(
+                    'No payment methods saved.',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                   ),
-                  Icon(Icons.arrow_forward_ios_rounded,
-                      size: 12, color: Color(0xFF16A34A)),
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    onPressed: () {
+                      Navigator.pushNamed(
+                        context,
+                        '/payment-methods-setup',
+                        arguments: {'mode': 'cashin'},
+                      );
+                    },
+                    icon: const Icon(Icons.add, size: 14),
+                    label: const Text('Add payment method'),
+                  ),
+                ],
+              )
+            else
+              Wrap(
+                spacing: 10,
+                runSpacing: 8,
+                children: [
+                  ...cashinMethods.map((m) =>
+                      _buildMethodChip(m.id, Icons.phone_android, m.providerName)),
+                  if (cashEnabled)
+                    _buildMethodChip('CASH', Icons.payments_outlined, 'Cash'),
                 ],
               ),
-            ),
-          ),
-      ],
+            const SizedBox(height: 16),
+
+            // Cash selected: pay-at-pickup note
+            if (_selectedPaymentMethod == 'CASH') ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEAF5EA),
+                  borderRadius: BorderRadius.circular(9),
+                  border: Border.all(color: AppColors.primary, width: 1.5),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline_rounded,
+                        color: AppColors.primary, size: 18),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Text(
+                        'Your collector will collect cash payment at pickup time. No reference needed.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF14532D),
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+            ],
+
+            // Saved method selected: show its details card
+            if (_selectedPaymentMethod != null && _selectedPaymentMethod != 'CASH') ...[
+              () {
+                final sel = cashinMethods.where((m) => m.id == _selectedPaymentMethod).toList();
+                if (sel.isEmpty) return const SizedBox.shrink();
+                return _buildSavedMethodCard(sel.first);
+              }(),
+              const SizedBox(height: 14),
+
+              // Payment reference (required for manual providers)
+              const Text(
+                'Payment Reference / Transaction ID',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF111827),
+                ),
+              ),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _paymentRefController,
+                style: const TextStyle(fontSize: 12),
+                decoration: InputDecoration(
+                  hintText: 'e.g. 0012345678',
+                  hintStyle: const TextStyle(
+                      fontSize: 11, color: Color(0xFF9CA3AF)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(9),
+                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(9),
+                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(9),
+                    borderSide: BorderSide(color: AppColors.primary, width: 1.3),
+                  ),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Enter your MoMo transaction ID so the admin can verify quickly.',
+                style: TextStyle(
+                    fontSize: 10, color: Color(0xFF9CA3AF), height: 1.4),
+              ),
+              const SizedBox(height: 14),
+
+              // Proof upload (shown if provider requires it)
+              if (() {
+                final sel = cashinMethods.where((m) => m.id == _selectedPaymentMethod).toList();
+                return sel.isNotEmpty && sel.first.supportsCashin;
+              }()) ...[
+                const Text(
+                  'Payment Screenshot (required)',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF111827),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                _buildProofUploadWidget(),
+                const SizedBox(height: 14),
+              ],
+            ],
+
+            // WhatsApp support
+            if (whatsapp.isNotEmpty)
+              GestureDetector(
+                onTap: () => _openWhatsApp(whatsapp),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDCFCE7),
+                    borderRadius: BorderRadius.circular(9),
+                    border: Border.all(color: const Color(0xFF16A34A)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.chat_rounded,
+                          color: Color(0xFF16A34A), size: 18),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Need help? Chat with us on WhatsApp',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF14532D),
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'Tap to open WhatsApp for complaints or payment issues',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Color(0xFF166534),
+                                height: 1.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.arrow_forward_ios_rounded,
+                          size: 12, color: Color(0xFF16A34A)),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 
@@ -1083,11 +1135,7 @@ class _ScheduleReviewPaymentScreenState
     );
   }
 
-  Widget _buildProviderPaymentCard(dynamic provider) {
-    final phone = (provider.manualPaymentPhone ?? '') as String;
-    final accountName = provider.manualPaymentAccountName as String?;
-    final instructions = provider.manualInstructions as String?;
-
+  Widget _buildSavedMethodCard(UserPaymentMethod method) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1109,7 +1157,7 @@ class _ScheduleReviewPaymentScreenState
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Icon(
-                  (provider.paymentCode as String).contains('BANK')
+                  method.paymentCode.contains('BANK')
                       ? Icons.account_balance
                       : Icons.phone_android,
                   color: const Color(0xFFE65100),
@@ -1122,27 +1170,25 @@ class _ScheduleReviewPaymentScreenState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      provider.providerName as String,
+                      method.providerName,
                       style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w800,
                         color: Color(0xFF111827),
                       ),
                     ),
-                    if (phone.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        phone,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF374151),
-                        ),
+                    const SizedBox(height: 2),
+                    Text(
+                      method.maskedAccountNumber,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF374151),
                       ),
-                    ],
-                    if (accountName != null && accountName.isNotEmpty)
+                    ),
+                    if (method.accountName != null && method.accountName!.isNotEmpty)
                       Text(
-                        accountName,
+                        method.accountName!,
                         style: const TextStyle(
                           fontSize: 10,
                           color: Color(0xFF6B7280),
@@ -1151,63 +1197,9 @@ class _ScheduleReviewPaymentScreenState
                   ],
                 ),
               ),
-              if (phone.isNotEmpty)
-                GestureDetector(
-                  onTap: () {
-                    Clipboard.setData(ClipboardData(text: phone));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('${provider.providerName} number copied'),
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFA000),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.copy_rounded, size: 12, color: Colors.white),
-                        SizedBox(width: 4),
-                        Text(
-                          'Copy',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
             ],
           ),
         ),
-        if (instructions != null && instructions.isNotEmpty) ...[
-          const SizedBox(height: 6),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF0FFF4),
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: const Color(0xFFBBF7D0)),
-            ),
-            child: Text(
-              instructions,
-              style: const TextStyle(
-                fontSize: 11,
-                color: Color(0xFF14532D),
-                height: 1.5,
-              ),
-            ),
-          ),
-        ],
       ],
     );
   }

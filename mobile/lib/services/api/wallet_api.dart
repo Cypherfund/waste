@@ -13,11 +13,13 @@ class PayoutConfig {
   final double maxWithdrawal;
   final List<PayoutMethod> methods;
   final String payoutMode;
+  final List<PaymentProvider> cashoutProviders;
   PayoutConfig({
     required this.minWithdrawal,
     required this.maxWithdrawal,
     required this.methods,
     this.payoutMode = 'MANUAL_APPROVAL',
+    this.cashoutProviders = const [],
   });
   factory PayoutConfig.fromJson(Map<String, dynamic> j) => PayoutConfig(
         minWithdrawal: (j['minWithdrawal'] as num).toDouble(),
@@ -26,6 +28,10 @@ class PayoutConfig {
             .map((m) => PayoutMethod.fromJson(m as Map<String, dynamic>))
             .toList(),
         payoutMode: j['payoutMode'] as String? ?? 'MANUAL_APPROVAL',
+        cashoutProviders: (j['cashoutProviders'] as List<dynamic>?)
+                ?.map((p) => PaymentProvider.fromJson(p as Map<String, dynamic>))
+                .toList() ??
+            [],
       );
 }
 
@@ -54,7 +60,7 @@ class PayoutRequest {
 
   factory PayoutRequest.fromJson(Map<String, dynamic> j) => PayoutRequest(
         id: j['id'] as String,
-        amount: (j['amount'] as num).toDouble(),
+        amount: double.parse(j['amount'].toString()),
         method: j['method'] as String,
         accountNumber: j['accountNumber'] as String?,
         accountName: j['accountName'] as String?,
@@ -74,6 +80,8 @@ class PaymentProvider {
   final bool integrationEnabled;
   final bool manualInstructionsEnabled;
   final bool manualProofRequired;
+  final bool supportsCashin;
+  final bool supportsCashout;
 
   PaymentProvider({
     required this.paymentCode,
@@ -84,6 +92,8 @@ class PaymentProvider {
     this.integrationEnabled = false,
     this.manualInstructionsEnabled = true,
     this.manualProofRequired = false,
+    this.supportsCashin = false,
+    this.supportsCashout = false,
   });
 
   factory PaymentProvider.fromJson(Map<String, dynamic> j) => PaymentProvider(
@@ -95,10 +105,51 @@ class PaymentProvider {
         integrationEnabled: j['integrationEnabled'] as bool? ?? false,
         manualInstructionsEnabled: j['manualInstructionsEnabled'] as bool? ?? true,
         manualProofRequired: j['manualProofRequired'] as bool? ?? false,
+        supportsCashin: j['supportsCashin'] as bool? ?? false,
+        supportsCashout: j['supportsCashout'] as bool? ?? false,
       );
 
   bool get hasManualPaymentDetails =>
       manualPaymentPhone != null && manualPaymentPhone!.isNotEmpty;
+}
+
+class UserPaymentMethod {
+  final String id;
+  final String paymentCode;
+  final String providerName;
+  final String accountNumber;       // use only when submitting payment/payout
+  final String maskedAccountNumber; // display always
+  final String? accountName;
+  final String usageType;           // 'CASHIN' | 'CASHOUT' | 'BOTH'
+  final bool isDefault;
+  final bool supportsCashin;
+  final bool supportsCashout;
+
+  UserPaymentMethod({
+    required this.id,
+    required this.paymentCode,
+    required this.providerName,
+    required this.accountNumber,
+    required this.maskedAccountNumber,
+    this.accountName,
+    required this.usageType,
+    required this.isDefault,
+    required this.supportsCashin,
+    required this.supportsCashout,
+  });
+
+  factory UserPaymentMethod.fromJson(Map<String, dynamic> j) => UserPaymentMethod(
+        id: j['id'] as String,
+        paymentCode: j['paymentCode'] as String,
+        providerName: j['providerName'] as String,
+        accountNumber: j['accountNumber'] as String,
+        maskedAccountNumber: j['maskedAccountNumber'] as String,
+        accountName: j['accountName'] as String?,
+        usageType: j['usageType'] as String,
+        isDefault: j['isDefault'] as bool,
+        supportsCashin: j['supportsCashin'] as bool,
+        supportsCashout: j['supportsCashout'] as bool,
+      );
 }
 
 class AppConfig {
@@ -107,6 +158,7 @@ class AppConfig {
   final String manualPaymentInstructions;
   final String supportWhatsapp;
   final List<PaymentProvider> paymentProviders;
+  final List<PaymentProvider> cashinProviders;
   final int minAdvanceHours;
   final int maxAdvanceDays;
 
@@ -116,6 +168,7 @@ class AppConfig {
     required this.manualPaymentInstructions,
     required this.supportWhatsapp,
     required this.paymentProviders,
+    this.cashinProviders = const [],
     this.minAdvanceHours = 24,
     this.maxAdvanceDays = 30,
   });
@@ -126,6 +179,10 @@ class AppConfig {
         manualPaymentInstructions: j['manualPaymentInstructions'] as String? ?? '',
         supportWhatsapp: j['supportWhatsapp'] as String? ?? '',
         paymentProviders: (j['paymentProviders'] as List<dynamic>?)
+                ?.map((p) => PaymentProvider.fromJson(p as Map<String, dynamic>))
+                .toList() ??
+            [],
+        cashinProviders: (j['cashinProviders'] as List<dynamic>?)
                 ?.map((p) => PaymentProvider.fromJson(p as Map<String, dynamic>))
                 .toList() ??
             [],
@@ -213,7 +270,16 @@ class WalletApi {
 
   Future<List<PayoutRequest>> getMyPayouts() async {
     final response = await _client.dio.get('/wallet/payouts');
-    return (response.data as List)
+    final data = response.data;
+    final List list;
+    if (data is List) {
+      list = data;
+    } else if (data is Map) {
+      list = (data['data'] ?? data['payouts'] ?? data['items'] ?? []) as List;
+    } else {
+      list = [];
+    }
+    return list
         .map((p) => PayoutRequest.fromJson(p as Map<String, dynamic>))
         .toList();
   }
@@ -223,5 +289,60 @@ class WalletApi {
     return (response.data as List)
         .map((t) => PaymentTransaction.fromJson(t as Map<String, dynamic>))
         .toList();
+  }
+
+  // ── USER PAYMENT METHODS ────────────────────────────────────────
+
+  Future<List<UserPaymentMethod>> getMyPaymentMethods({String? usage}) async {
+    final response = await _client.dio.get(
+      '/wallet/payment-methods',
+      queryParameters: usage != null ? {'usage': usage} : null,
+    );
+    final data = response.data;
+    final List list = data is List ? data : (data['data'] ?? data['methods'] ?? []) as List;
+    return list
+        .map((m) => UserPaymentMethod.fromJson(m as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<UserPaymentMethod> addPaymentMethod({
+    required String paymentCode,
+    required String accountNumber,
+    String? accountName,
+    String? usageType,
+    bool? isDefault,
+  }) async {
+    final response = await _client.dio.post('/wallet/payment-methods', data: {
+      'paymentCode': paymentCode,
+      'accountNumber': accountNumber,
+      if (accountName != null) 'accountName': accountName,
+      if (usageType != null) 'usageType': usageType,
+      if (isDefault != null) 'isDefault': isDefault,
+    });
+    return UserPaymentMethod.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<UserPaymentMethod> updatePaymentMethod(
+    String id, {
+    String? accountNumber,
+    String? accountName,
+  }) async {
+    final response = await _client.dio.patch('/wallet/payment-methods/$id', data: {
+      if (accountNumber != null) 'accountNumber': accountNumber,
+      if (accountName != null) 'accountName': accountName,
+    });
+    return UserPaymentMethod.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<void> deletePaymentMethod(String id) async {
+    await _client.dio.delete('/wallet/payment-methods/$id');
+  }
+
+  Future<UserPaymentMethod> setDefaultPaymentMethod(String id, String usage) async {
+    final response = await _client.dio.patch(
+      '/wallet/payment-methods/$id/default',
+      queryParameters: {'usage': usage},
+    );
+    return UserPaymentMethod.fromJson(response.data as Map<String, dynamic>);
   }
 }

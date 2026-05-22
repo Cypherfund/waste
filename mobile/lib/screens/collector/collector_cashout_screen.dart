@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../config/app_theme.dart';
 import '../../providers/collector_earnings_provider.dart';
+import '../../providers/user_payment_methods_provider.dart';
 import '../../services/api/wallet_api.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/loading_button.dart';
+import '../../widgets/skeleton_loader.dart';
 
 class CollectorCashoutScreen extends StatefulWidget {
   const CollectorCashoutScreen({super.key});
@@ -16,10 +18,22 @@ class CollectorCashoutScreen extends StatefulWidget {
 class _CollectorCashoutScreenState extends State<CollectorCashoutScreen>
     with SingleTickerProviderStateMixin {
   final _amountController = TextEditingController();
-  final _accountNumberController = TextEditingController();
-  final _accountNameController = TextEditingController();
-  String? _selectedMethodKey;
+  UserPaymentMethod? _selectedPaymentMethod;
   late TabController _tabController;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_tabInitialized) {
+      _tabInitialized = true;
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is Map && args['tab'] == 1) {
+        _tabController.index = 1;
+      }
+    }
+  }
+
+  bool _tabInitialized = false;
 
   @override
   void initState() {
@@ -27,14 +41,13 @@ class _CollectorCashoutScreenState extends State<CollectorCashoutScreen>
     _tabController = TabController(length: 2, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<CollectorEarningsProvider>().loadWallet();
+      context.read<UserPaymentMethodsProvider>().loadMethods(usage: 'CASHOUT');
     });
   }
 
   @override
   void dispose() {
     _amountController.dispose();
-    _accountNumberController.dispose();
-    _accountNameController.dispose();
     _tabController.dispose();
     super.dispose();
   }
@@ -42,11 +55,14 @@ class _CollectorCashoutScreenState extends State<CollectorCashoutScreen>
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<CollectorEarningsProvider>();
+    final paymentMethodsProvider = context.watch<UserPaymentMethodsProvider>();
     final config = provider.payoutConfig;
     final balance = provider.walletBalance;
+    final cashoutMethods = paymentMethodsProvider.cashoutMethods;
 
-    if (_selectedMethodKey == null && config != null && config.methods.isNotEmpty) {
-      _selectedMethodKey = config.methods.first.key;
+    // Auto-select default method if none selected
+    if (_selectedPaymentMethod == null && cashoutMethods.isNotEmpty) {
+      _selectedPaymentMethod = paymentMethodsProvider.defaultCashoutMethod ?? cashoutMethods.first;
     }
 
     return Scaffold(
@@ -62,7 +78,7 @@ class _CollectorCashoutScreenState extends State<CollectorCashoutScreen>
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildWithdrawTab(context, provider, config, balance),
+          _buildWithdrawTab(context, provider, config, balance, cashoutMethods),
           _buildHistoryTab(provider),
         ],
       ),
@@ -74,9 +90,64 @@ class _CollectorCashoutScreenState extends State<CollectorCashoutScreen>
     CollectorEarningsProvider provider,
     PayoutConfig? config,
     double balance,
+    List<UserPaymentMethod> cashoutMethods,
   ) {
     final min = config?.minWithdrawal ?? 1000;
     final max = config?.maxWithdrawal ?? 500000;
+
+    // Empty state: no payment methods configured
+    if (cashoutMethods.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.account_balance_wallet_outlined,
+                size: 64,
+                color: Colors.grey.shade400,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'No payout method configured',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Add a payment method to withdraw your earnings.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pushNamed(
+                    context,
+                    '/payment-methods-setup',
+                    arguments: {'mode': 'cashout'},
+                  );
+                },
+                icon: const Icon(Icons.add),
+                label: const Text('Add Payout Method'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return ListView(
       padding: const EdgeInsets.all(20),
@@ -91,12 +162,20 @@ class _CollectorCashoutScreenState extends State<CollectorCashoutScreen>
             children: [
               Text('Wallet Balance',
                   style: AppTypography.caption.copyWith(color: Colors.white70)),
-              const SizedBox(height: 4),
-              Text(
-                '${balance.toStringAsFixed(0)} XAF',
-                style: AppTypography.heading1
-                    .copyWith(color: Colors.white, fontSize: 32),
-              ),
+              const SizedBox(height: 6),
+              provider.isLoading && balance == 0
+                  ? SkeletonLoader(
+                      width: 160,
+                      height: 36,
+                      borderRadius: BorderRadius.circular(6),
+                      baseColor: Colors.white24,
+                      highlightColor: Colors.white38,
+                    )
+                  : Text(
+                      '${balance.toStringAsFixed(0)} XAF',
+                      style: AppTypography.heading1
+                          .copyWith(color: Colors.white, fontSize: 32),
+                    ),
               const SizedBox(height: 4),
               Text(
                 'Min: ${min.toStringAsFixed(0)} XAF  ·  Max: ${max.toStringAsFixed(0)} XAF',
@@ -137,26 +216,29 @@ class _CollectorCashoutScreenState extends State<CollectorCashoutScreen>
         ),
         const SizedBox(height: 24),
 
-        // Payment method
-        Text('Payment Method',
-            style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
+        // Saved payment methods
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Payout Method',
+                style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
+            TextButton(
+              onPressed: () {
+                Navigator.pushNamed(
+                  context,
+                  '/payment-methods-setup',
+                  arguments: {'mode': 'cashout'},
+                );
+              },
+              child: const Text('Manage methods'),
+            ),
+          ],
+        ),
         const SizedBox(height: 8),
-        if (config == null)
-          const Center(child: CircularProgressIndicator())
-        else
-          ...config.methods.map((m) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: _buildMethodTile(m),
-              )),
-        const SizedBox(height: 24),
-
-        // Account details
-        Text('Account Details',
-            style: AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
-        const SizedBox(height: 8),
-        _buildTextField(_accountNumberController, 'Account / Phone Number'),
-        const SizedBox(height: 10),
-        _buildTextField(_accountNameController, 'Account Holder Name'),
+        ...cashoutMethods.map((m) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _buildPaymentMethodTile(m),
+            )),
         const SizedBox(height: 32),
 
         if (provider.error != null)
@@ -176,13 +258,10 @@ class _CollectorCashoutScreenState extends State<CollectorCashoutScreen>
     );
   }
 
-  Widget _buildMethodTile(PayoutMethod method) {
-    final isSelected = _selectedMethodKey == method.key;
-    final icon = method.key == 'MOBILE_MONEY'
-        ? Icons.phone_android
-        : Icons.account_balance;
+  Widget _buildPaymentMethodTile(UserPaymentMethod method) {
+    final isSelected = _selectedPaymentMethod?.id == method.id;
     return AppCard(
-      onTap: () => setState(() => _selectedMethodKey = method.key),
+      onTap: () => setState(() => _selectedPaymentMethod = method),
       border: Border.all(
         color: isSelected ? AppColors.primary : AppColors.border,
         width: isSelected ? 1.5 : 1,
@@ -197,11 +276,36 @@ class _CollectorCashoutScreenState extends State<CollectorCashoutScreen>
               color: isSelected ? AppColors.primarySurface : AppColors.inputFill,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, size: 20,
+            child: Icon(Icons.phone_android, size: 20,
                 color: isSelected ? AppColors.primary : AppColors.textSecondary),
           ),
           const SizedBox(width: 12),
-          Expanded(child: Text(method.label, style: AppTypography.bodyMedium)),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(method.providerName, style: AppTypography.bodyMedium),
+                Text(method.maskedAccountNumber, style: AppTypography.caption),
+              ],
+            ),
+          ),
+          if (method.isDefault)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                'Default',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          const SizedBox(width: 8),
           isSelected
               ? const Icon(Icons.check_circle, color: AppColors.primary, size: 22)
               : const Icon(Icons.radio_button_unchecked,
@@ -211,68 +315,67 @@ class _CollectorCashoutScreenState extends State<CollectorCashoutScreen>
     );
   }
 
-  Widget _buildTextField(TextEditingController ctrl, String hint) {
-    return TextField(
-      controller: ctrl,
-      style: AppTypography.body,
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: AppTypography.body.copyWith(color: AppColors.textHint),
-        border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.border)),
-        enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.border)),
-        focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      ),
-    );
-  }
-
   Widget _buildHistoryTab(CollectorEarningsProvider provider) {
     final history = provider.payoutHistory;
+
+    if (provider.isLoading && history.isEmpty) {
+      return const PayoutHistorySkeleton();
+    }
+
     if (history.isEmpty) {
-      return Center(
-        child: Text('No payout requests yet.',
-            style: AppTypography.body.copyWith(color: AppColors.textSecondary)),
+      return RefreshIndicator(
+        color: AppColors.primary,
+        onRefresh: () => provider.loadPayoutHistory(),
+        child: ListView(
+          children: [
+            SizedBox(height: MediaQuery.of(context).size.height * 0.3),
+            Center(
+              child: Text('No payout requests yet.',
+                  style: AppTypography.body
+                      .copyWith(color: AppColors.textSecondary)),
+            ),
+          ],
+        ),
       );
     }
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: history.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (_, i) {
-        final p = history[i];
-        return AppCard(
-          shadow: const [],
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('${p.amount.toStringAsFixed(0)} XAF',
-                        style: AppTypography.bodyMedium
-                            .copyWith(fontWeight: FontWeight.w700)),
-                    Text(
-                      '${p.method.replaceAll('_', ' ')} · ${_formatDate(p.createdAt)}',
-                      style: AppTypography.caption,
-                    ),
-                    if (p.adminNote != null)
-                      Text(p.adminNote!,
-                          style: AppTypography.caption
-                              .copyWith(color: AppColors.textSecondary)),
-                  ],
+
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: () => provider.loadPayoutHistory(),
+      child: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: history.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 8),
+        itemBuilder: (_, i) {
+          final p = history[i];
+          return AppCard(
+            shadow: const [],
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('${p.amount.toStringAsFixed(0)} XAF',
+                          style: AppTypography.bodyMedium
+                              .copyWith(fontWeight: FontWeight.w700)),
+                      Text(
+                        '${p.method.replaceAll('_', ' ')} · ${_formatDate(p.createdAt)}',
+                        style: AppTypography.caption,
+                      ),
+                      if (p.adminNote != null)
+                        Text(p.adminNote!,
+                            style: AppTypography.caption
+                                .copyWith(color: AppColors.textSecondary)),
+                    ],
+                  ),
                 ),
-              ),
-              _statusBadge(p.status),
-            ],
-          ),
-        );
-      },
+                _statusBadge(p.status),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -328,30 +431,22 @@ class _CollectorCashoutScreenState extends State<CollectorCashoutScreen>
       _snack(context, 'Insufficient wallet balance');
       return;
     }
-    if (_selectedMethodKey == null) {
+    if (_selectedPaymentMethod == null) {
       _snack(context, 'Please select a payment method');
-      return;
-    }
-    if (_accountNumberController.text.trim().isEmpty) {
-      _snack(context, 'Please enter your account / phone number');
       return;
     }
 
     final ok = await provider.requestWithdrawal(
       amount: amount,
-      method: _selectedMethodKey!,
-      accountNumber: _accountNumberController.text.trim(),
-      accountName: _accountNameController.text.trim().isNotEmpty
-          ? _accountNameController.text.trim()
-          : null,
+      method: _selectedPaymentMethod!.paymentCode,
+      accountNumber: _selectedPaymentMethod!.accountNumber,
+      accountName: _selectedPaymentMethod!.accountName,
     );
 
     if (!mounted) return;
 
     if (ok) {
       _amountController.clear();
-      _accountNumberController.clear();
-      _accountNameController.clear();
       _tabController.animateTo(1);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

@@ -17,6 +17,7 @@ import 'services/api/subscription_api.dart';
 import 'services/api/wallet_api.dart';
 import 'services/api/notifications_api.dart';
 import 'providers/notifications_provider.dart';
+import 'providers/user_payment_methods_provider.dart';
 import 'services/api/countries_api.dart';
 import 'providers/subscription_provider.dart';
 import 'providers/countries_provider.dart';
@@ -28,6 +29,7 @@ import 'services/offline/sync_service.dart';
 import 'services/offline/connectivity_service.dart';
 import 'screens/collector/collector_shell.dart';
 import 'screens/collector/collector_cashout_screen.dart';
+import 'features/shared/payment_methods_setup_screen.dart';
 import 'screens/collector/collector_cashout_success_screen.dart';
 import 'screens/collector/collector_start_job_screen.dart';
 import 'screens/collector/collector_complete_job_screen.dart';
@@ -59,6 +61,8 @@ import 'screens/household/manage_subscription_screen.dart';
 import 'features/marketer/data/marketer_api.dart';
 import 'features/marketer/providers/marketer_provider.dart';
 import 'features/marketer/presentation/marketer_shell.dart';
+
+final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -113,6 +117,7 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
   late final MarketerProvider _marketerProvider;
   late final NotificationsApi _notificationsApi;
   late final NotificationsProvider _notificationsProvider;
+  late final UserPaymentMethodsProvider _userPaymentMethodsProvider;
 
   @override
   void initState() {
@@ -133,6 +138,7 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
     _marketerProvider = MarketerProvider(api: _marketerApi, walletApi: _walletApi);
     _notificationsApi = NotificationsApi(_apiClient);
     _notificationsProvider = NotificationsProvider(api: _notificationsApi);
+    _userPaymentMethodsProvider = UserPaymentMethodsProvider(walletApi: _walletApi);
     _wsService = WebSocketService();
     _locationService = LocationTrackingService(wsService: _wsService);
     _queueService = OfflineQueueService();
@@ -209,6 +215,7 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
         ChangeNotifierProvider.value(value: _countriesProvider),
         ChangeNotifierProvider.value(value: _marketerProvider),
         ChangeNotifierProvider.value(value: _notificationsProvider),
+        ChangeNotifierProvider.value(value: _userPaymentMethodsProvider),
         Provider.value(value: _walletApi),
         Provider.value(value: _filesApi),
         Provider.value(value: widget.connectivityService),
@@ -218,6 +225,7 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
       ],
       child: MaterialApp(
         title: 'KmerTrash',
+        navigatorKey: appNavigatorKey,
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         routes: {
@@ -256,8 +264,11 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
           '/notifications': (context) => const NotificationsScreen(),
           '/support': (context) => const SupportScreen(),
           '/payment-methods': (context) => const PaymentMethodsScreen(),
+          '/payment-methods-setup': (context) => const PaymentMethodsSetupScreen(),
           '/addresses': (context) => const AddressesScreen(),
           '/top-up': (context) => const TopUpWalletScreen(),
+          // Marketer routes
+          '/marketer-home': (context) => const MarketerShell(),
           // Collector routes
           '/collector-home': (context) => const CollectorShell(),
           '/collector-jobs': (context) => const CollectorShell(),

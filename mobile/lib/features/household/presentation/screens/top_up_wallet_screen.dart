@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../providers/subscription_provider.dart';
+import '../../../../providers/user_payment_methods_provider.dart';
+import '../../../../services/api/wallet_api.dart';
 
 class TopUpWalletScreen extends StatefulWidget {
   const TopUpWalletScreen({super.key});
@@ -24,6 +26,7 @@ class _TopUpWalletScreenState extends State<TopUpWalletScreen> {
       final sub = context.read<SubscriptionProvider>();
       if (sub.walletBalance == null) sub.loadWalletBalance();
       if (sub.appConfig == null) sub.loadPricingQuote();
+      context.read<UserPaymentMethodsProvider>().loadMethods(usage: 'CASHIN');
     });
   }
 
@@ -266,13 +269,13 @@ class _TopUpWalletScreenState extends State<TopUpWalletScreen> {
   }
   
   Widget _buildPaymentMethod() {
-    return Consumer<SubscriptionProvider>(
-      builder: (context, sub, _) {
-        final providers = sub.appConfig?.enabledManualPaymentProviders ?? [];
+    return Consumer2<SubscriptionProvider, UserPaymentMethodsProvider>(
+      builder: (context, sub, paymentMethodsProvider, _) {
+        final cashinMethods = paymentMethodsProvider.cashinMethods;
 
-        // Auto-select first provider if none selected yet
-        if (_selectedMethod == null && providers.isNotEmpty) {
-          _selectedMethod = providers.first.paymentCode;
+        // Auto-select default method if none selected yet
+        if (_selectedMethod == null && cashinMethods.isNotEmpty) {
+          _selectedMethod = paymentMethodsProvider.defaultCashinMethod?.id ?? cashinMethods.first.id;
         }
 
         final config = sub.appConfig;
@@ -281,13 +284,28 @@ class _TopUpWalletScreenState extends State<TopUpWalletScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Payment Method',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Payment Method',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pushNamed(
+                      context,
+                      '/payment-methods-setup',
+                      arguments: {'mode': 'cashin'},
+                    );
+                  },
+                  child: const Text('Manage methods'),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             if (config != null && !config.paymentIntegrationEnabled && instructions.isNotEmpty) ...[
@@ -315,40 +333,51 @@ class _TopUpWalletScreenState extends State<TopUpWalletScreen> {
               ),
               const SizedBox(height: 14),
             ],
-            if (sub.isLoading && providers.isEmpty)
+            if (paymentMethodsProvider.loading)
               const Center(child: CircularProgressIndicator())
-            else if (providers.isEmpty && !sub.isLoading)
+            else if (cashinMethods.isEmpty)
               Column(
                 children: [
                   Text(
-                    'No payment methods available.',
+                    'No payment methods saved.',
                     style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
                   ),
-                  if (sub.error != null) ...[
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    onPressed: () {
+                      Navigator.pushNamed(
+                        context,
+                        '/payment-methods-setup',
+                        arguments: {'mode': 'cashin'},
+                      );
+                    },
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text('Add payment method'),
+                  ),
+                  if (paymentMethodsProvider.error != null) ...[
                     const SizedBox(height: 8),
-                    TextButton.icon(
-                      onPressed: () => sub.loadPricingQuote(),
-                      icon: const Icon(Icons.refresh_rounded, size: 16),
-                      label: const Text('Retry'),
+                    Text(
+                      paymentMethodsProvider.error!,
+                      style: const TextStyle(fontSize: 12, color: Colors.red),
                     ),
                   ],
                 ],
               )
             else
-              ...providers.asMap().entries.map((entry) {
+              ...cashinMethods.asMap().entries.map((entry) {
                 final i = entry.key;
-                final p = entry.value;
+                final m = entry.value;
                 return Padding(
                   padding: EdgeInsets.only(top: i == 0 ? 0 : 12),
                   child: _buildPaymentMethodOption(
-                    id: p.paymentCode,
-                    title: p.providerName,
-                    subtitle: p.manualPaymentPhone ?? '',
+                    id: m.id,
+                    title: m.providerName,
+                    subtitle: m.maskedAccountNumber,
                     icon: Icons.phone_android,
-                    isSelected: _selectedMethod == p.paymentCode,
+                    isSelected: _selectedMethod == m.id,
                     onTap: () {
                       setState(() {
-                        _selectedMethod = p.paymentCode;
+                        _selectedMethod = m.id;
                       });
                     },
                   ),

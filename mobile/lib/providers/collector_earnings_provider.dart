@@ -16,6 +16,8 @@ class CollectorEarningsProvider extends ChangeNotifier {
   bool _isLoading = false;
   bool _isWithdrawing = false;
   String? _error;
+  DateTime? _lastFetched;
+  bool _refreshFailed = false;
 
   CollectorEarningsProvider({
     required EarningsApi earningsApi,
@@ -31,6 +33,10 @@ class CollectorEarningsProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isWithdrawing => _isWithdrawing;
   String? get error => _error;
+  bool get hasData => _quickSummary != null;
+  bool get refreshFailed => _refreshFailed;
+  bool get isStale => _lastFetched == null ||
+      DateTime.now().difference(_lastFetched!) > const Duration(minutes: 2);
 
   Future<void> loadQuickSummary() async {
     _isLoading = true;
@@ -39,8 +45,14 @@ class CollectorEarningsProvider extends ChangeNotifier {
 
     try {
       _quickSummary = await _earningsApi.getEarningsSummary();
+      _lastFetched = DateTime.now();
+      _refreshFailed = false;
     } catch (e) {
-      _error = ApiClient.extractErrorMessage(e);
+      if (_quickSummary != null) {
+        _refreshFailed = true;
+      } else {
+        _error = ApiClient.extractErrorMessage(e);
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -63,15 +75,30 @@ class CollectorEarningsProvider extends ChangeNotifier {
   }
 
   Future<void> loadWallet() async {
+    await Future.wait([
+      _loadBalance(),
+      _loadPayoutConfig(),
+      loadPayoutHistory(),
+    ]);
+  }
+
+  Future<void> _loadBalance() async {
     try {
-      final results = await Future.wait([
-        _walletApi.getBalance(),
-        _walletApi.getPayoutConfig(),
-        _walletApi.getMyPayouts(),
-      ]);
-      _walletBalance = results[0] as double;
-      _payoutConfig = results[1] as PayoutConfig;
-      _payoutHistory = results[2] as List<PayoutRequest>;
+      _walletBalance = await _walletApi.getBalance();
+    } catch (_) {}
+    notifyListeners();
+  }
+
+  Future<void> _loadPayoutConfig() async {
+    try {
+      _payoutConfig = await _walletApi.getPayoutConfig();
+    } catch (_) {}
+    notifyListeners();
+  }
+
+  Future<void> loadPayoutHistory() async {
+    try {
+      _payoutHistory = await _walletApi.getMyPayouts();
     } catch (e) {
       _error = ApiClient.extractErrorMessage(e);
     }
@@ -94,7 +121,10 @@ class CollectorEarningsProvider extends ChangeNotifier {
         accountNumber: accountNumber,
         accountName: accountName,
       );
-      await loadWallet();
+      await Future.wait([
+        _loadBalance(),
+        loadPayoutHistory(),
+      ]);
       return true;
     } catch (e) {
       _error = ApiClient.extractErrorMessage(e);
@@ -108,6 +138,7 @@ class CollectorEarningsProvider extends ChangeNotifier {
 
   void clearError() {
     _error = null;
+    _refreshFailed = false;
     notifyListeners();
   }
 
@@ -121,6 +152,8 @@ class CollectorEarningsProvider extends ChangeNotifier {
     _isLoading = false;
     _isWithdrawing = false;
     _error = null;
+    _lastFetched = null;
+    _refreshFailed = false;
     notifyListeners();
   }
 }

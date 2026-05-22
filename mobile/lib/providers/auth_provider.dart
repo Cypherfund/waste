@@ -23,7 +23,7 @@ class AuthProvider extends ChangeNotifier {
   String? _error;
   String? _sessionExpiredMessage;
   bool _isLoading = false;
-  bool _isSwitching = false;
+  String? _switchingAccountId;
   List<SavedAccount> _savedAccounts = [];
 
   AuthProvider({
@@ -48,7 +48,8 @@ class AuthProvider extends ChangeNotifier {
   String? get error => _error;
   String? get sessionExpiredMessage => _sessionExpiredMessage;
   bool get isLoading => _isLoading;
-  bool get isSwitching => _isSwitching;
+  String? get switchingAccountId => _switchingAccountId;
+  bool get isSwitching => _switchingAccountId != null;
   bool get isAuthenticated => _status == AuthStatus.authenticated;
   List<SavedAccount> get savedAccounts => List.unmodifiable(_savedAccounts);
 
@@ -63,7 +64,7 @@ class AuthProvider extends ChangeNotifier {
       final refreshToken = await _storage.getRefreshToken();
 
       if (user == null || refreshToken == null || (!user.isHousehold && !user.isCollector && !user.isMarketer)) {
-        await _storage.clearAll();
+        await _clearSessionPreservingAccounts();
         _status = AuthStatus.unauthenticated;
         notifyListeners();
         return;
@@ -81,7 +82,7 @@ class AuthProvider extends ChangeNotifier {
 
         if (!refreshed) {
           debugPrint('[AuthProvider] Stored session invalid — clearing and redirecting to login');
-          await _storage.clearAll();
+          await _clearSessionPreservingAccounts();
           _sessionExpiredMessage = 'Your session expired. Please log in again.';
           _status = AuthStatus.unauthenticated;
           notifyListeners();
@@ -106,7 +107,7 @@ class AuthProvider extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint('[AuthProvider] Session restore error: $e');
-      await _storage.clearAll();
+      await _clearSessionPreservingAccounts();
       _status = AuthStatus.unauthenticated;
     }
     notifyListeners();
@@ -288,9 +289,9 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> switchAccount(SavedAccount account) async {
-    if (_isSwitching || account.id == _user?.id) return;
+    if (_switchingAccountId != null || account.id == _user?.id) return;
 
-    _isSwitching = true;
+    _switchingAccountId = account.id;
     notifyListeners();
 
     try {
@@ -302,7 +303,7 @@ class AuthProvider extends ChangeNotifier {
         await _storage.removeAccount(account.id);
         await _syncService.clearJobsForUser(account.id);
         await _loadSavedAccounts();
-        _isSwitching = false;
+        _switchingAccountId = null;
         notifyListeners();
         return;
       }
@@ -343,7 +344,7 @@ class AuthProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('[AuthProvider] switchAccount error: $e');
     } finally {
-      _isSwitching = false;
+      _switchingAccountId = null;
       notifyListeners();
     }
   }
@@ -373,6 +374,16 @@ class AuthProvider extends ChangeNotifier {
     await _syncService.clearJobsForUser(userId);
     await _loadSavedAccounts();
     notifyListeners();
+  }
+
+  Future<void> _clearSessionPreservingAccounts() async {
+    final savedAccountsData = await _storage.getSavedAccounts();
+    final activeId = await _storage.getActiveAccountId();
+    await _storage.clearAll();
+    for (final acc in savedAccountsData) {
+      await _storage.saveAccount(acc);
+    }
+    if (activeId != null) await _storage.setActiveAccountId(activeId);
   }
 
   void clearError() {

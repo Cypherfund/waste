@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../services/api/countries_api.dart';
+import '../services/api/api_client.dart';
 
 class CountriesProvider extends ChangeNotifier {
   final CountriesApi _countriesApi;
@@ -24,7 +25,7 @@ class CountriesProvider extends ChangeNotifier {
     try {
       _countries = await _countriesApi.getActiveCountries();
     } catch (e) {
-      _error = e.toString();
+      _error = ApiClient.extractErrorMessage(e);
       // Fallback to Cameroon so onboarding never breaks
       _countries = [
         const SupportedCountry(

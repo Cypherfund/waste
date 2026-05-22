@@ -5,6 +5,8 @@ import '../../providers/collector_jobs_provider.dart';
 import '../../models/job.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/job_status_badge.dart';
+import '../../widgets/skeleton_loader.dart';
+import '../../widgets/connectivity_dot.dart';
 
 class CollectorJobsListScreen extends StatefulWidget {
   const CollectorJobsListScreen({super.key});
@@ -42,6 +44,14 @@ class _CollectorJobsListScreenState extends State<CollectorJobsListScreen>
       appBar: AppBar(
         backgroundColor: AppColors.surface,
         title: Text('My Jobs', style: AppTypography.heading3),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Center(
+              child: ConnectivityDot(refreshFailed: provider.refreshFailed),
+            ),
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(48),
           child: Container(
@@ -155,7 +165,7 @@ class _JobTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isLoading && jobs.isEmpty) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+      return const JobListSkeleton();
     }
 
     if (jobs.isEmpty) {
