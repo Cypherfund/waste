@@ -97,8 +97,24 @@ class ApiClient {
       if (error.type == DioExceptionType.connectionError) {
         return 'Unable to connect to server. Check your internet connection.';
       }
-      return error.message ?? 'An unexpected error occurred';
+      if (error.type == DioExceptionType.cancel) {
+        return 'Request was cancelled. Please try again.';
+      }
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 401) return 'Session expired. Please log in again.';
+      if (statusCode == 403) return 'You do not have permission to perform this action.';
+      if (statusCode == 404) return 'The requested resource was not found.';
+      if (statusCode != null && statusCode >= 500) return 'Server error. Please try again later.';
+      return 'An unexpected error occurred. Please try again.';
     }
-    return error.toString();
+    if (error is Exception) {
+      final msg = error.toString().replaceFirst('Exception: ', '');
+      // Don't leak internal exception class names to the user
+      if (msg.contains('DioException') || msg.contains('SocketException') || msg.contains('HandshakeException')) {
+        return 'Unable to connect to server. Check your internet connection.';
+      }
+      return msg;
+    }
+    return 'An unexpected error occurred. Please try again.';
   }
 }

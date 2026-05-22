@@ -195,7 +195,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  'HOUSEHOLD',
+                  user.role,
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,

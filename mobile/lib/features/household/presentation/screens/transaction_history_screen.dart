@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../../../config/app_theme.dart';
+import '../../../../services/api/api_client.dart';
 import '../../../../services/api/wallet_api.dart';
 import '../../../../widgets/skeleton_loader.dart';
 
@@ -41,7 +42,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _error = e.toString().replaceFirst('Exception: ', '');
+          _error = ApiClient.extractErrorMessage(e);
         });
       }
     }

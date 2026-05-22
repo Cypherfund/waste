@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import '../data/marketer_api.dart';
 import '../models/marketer_models.dart';
 import '../../../services/api/wallet_api.dart';
+import '../../../services/api/api_client.dart';
 
 class MarketerProvider extends ChangeNotifier {
   final MarketerApi _api;
@@ -45,7 +46,7 @@ class MarketerProvider extends ChangeNotifier {
     try {
       _dashboard = await _api.getDashboard();
     } catch (e) {
-      _error = e.toString();
+      _error = ApiClient.extractErrorMessage(e);
     } finally {
       _loading = false;
       notifyListeners();
@@ -58,7 +59,7 @@ class MarketerProvider extends ChangeNotifier {
     try {
       _leads = await _api.getLeads(status: status);
     } catch (e) {
-      _error = e.toString();
+      _error = ApiClient.extractErrorMessage(e);
     } finally {
       _loading = false;
       notifyListeners();
@@ -82,7 +83,7 @@ class MarketerProvider extends ChangeNotifier {
     try {
       _commissions = await _api.getCommissions();
     } catch (e) {
-      _error = e.toString();
+      _error = ApiClient.extractErrorMessage(e);
     } finally {
       _loading = false;
       notifyListeners();
@@ -101,7 +102,7 @@ class MarketerProvider extends ChangeNotifier {
     try {
       _payouts = await _api.getPayouts();
     } catch (e) {
-      _error = e.toString();
+      _error = ApiClient.extractErrorMessage(e);
     } finally {
       _loading = false;
       notifyListeners();

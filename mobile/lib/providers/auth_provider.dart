@@ -63,7 +63,7 @@ class AuthProvider extends ChangeNotifier {
       final refreshToken = await _storage.getRefreshToken();
 
       if (user == null || refreshToken == null || (!user.isHousehold && !user.isCollector && !user.isMarketer)) {
-        await _storage.clearAll();
+        await _clearSessionPreservingAccounts();
         _status = AuthStatus.unauthenticated;
         notifyListeners();
         return;
@@ -81,7 +81,7 @@ class AuthProvider extends ChangeNotifier {
 
         if (!refreshed) {
           debugPrint('[AuthProvider] Stored session invalid — clearing and redirecting to login');
-          await _storage.clearAll();
+          await _clearSessionPreservingAccounts();
           _sessionExpiredMessage = 'Your session expired. Please log in again.';
           _status = AuthStatus.unauthenticated;
           notifyListeners();
@@ -106,7 +106,7 @@ class AuthProvider extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint('[AuthProvider] Session restore error: $e');
-      await _storage.clearAll();
+      await _clearSessionPreservingAccounts();
       _status = AuthStatus.unauthenticated;
     }
     notifyListeners();
@@ -373,6 +373,16 @@ class AuthProvider extends ChangeNotifier {
     await _syncService.clearJobsForUser(userId);
     await _loadSavedAccounts();
     notifyListeners();
+  }
+
+  Future<void> _clearSessionPreservingAccounts() async {
+    final savedAccountsData = await _storage.getSavedAccounts();
+    final activeId = await _storage.getActiveAccountId();
+    await _storage.clearAll();
+    for (final acc in savedAccountsData) {
+      await _storage.saveAccount(acc);
+    }
+    if (activeId != null) await _storage.setActiveAccountId(activeId);
   }
 
   void clearError() {
