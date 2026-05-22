@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
+import { NotificationsModule } from '../notifications/notifications.module';
 import {
   Lead,
   MarketerProfile,
@@ -40,6 +41,7 @@ import {
       User,
     ]),
     ScheduleModule.forRoot(),
+    NotificationsModule,
   ],
   controllers: [
     GrowthAdminController,
