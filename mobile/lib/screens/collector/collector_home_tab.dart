@@ -7,6 +7,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/collector_jobs_provider.dart';
 import '../../providers/collector_earnings_provider.dart';
 import '../../models/job.dart';
+import '../../services/offline/connectivity_service.dart';
 
 class CollectorHomeTab extends StatefulWidget {
   const CollectorHomeTab({super.key});
@@ -17,7 +18,6 @@ class CollectorHomeTab extends StatefulWidget {
 
 class _CollectorHomeTabState extends State<CollectorHomeTab>
     with WidgetsBindingObserver {
-  bool _isOnline = true;
 
   @override
   void initState() {
@@ -159,48 +159,42 @@ class _CollectorHomeTabState extends State<CollectorHomeTab>
   }
 
   Widget _buildOnlineChip() {
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _isOnline = !_isOnline;
-        });
-      },
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-          decoration: BoxDecoration(
-            color: _isOnline
-                ? const Color(0xFFEAF7EA)
-                : const Color(0xFFF3F4F6),
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 7,
-                height: 7,
-                decoration: BoxDecoration(
-                  color: _isOnline
-                      ? AppColors.primary
-                      : const Color(0xFF9CA3AF),
-                  shape: BoxShape.circle,
-                ),
+    final isOnline = context.watch<ConnectivityService>().isOnline;
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+        decoration: BoxDecoration(
+          color: isOnline
+              ? const Color(0xFFEAF7EA)
+              : const Color(0xFFF3F4F6),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(
+                color: isOnline
+                    ? AppColors.primary
+                    : const Color(0xFF9CA3AF),
+                shape: BoxShape.circle,
               ),
-              const SizedBox(width: 6),
-              Text(
-                _isOnline ? 'Online' : 'Offline',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  color: _isOnline
-                      ? AppColors.primary
-                      : const Color(0xFF9CA3AF),
-                ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              isOnline ? 'Online' : 'Offline',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                color: isOnline
+                    ? AppColors.primary
+                    : const Color(0xFF9CA3AF),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

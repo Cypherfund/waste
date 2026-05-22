@@ -11,6 +11,7 @@ import '../../../../providers/job_provider.dart';
 import '../../../../providers/subscription_provider.dart';
 import '../../../../models/job.dart';
 import '../../../../widgets/bottom_navigation.dart';
+import '../../../../widgets/connectivity_dot.dart';
 
 class HomeDashboardScreen extends StatefulWidget {
   const HomeDashboardScreen({super.key});
@@ -213,19 +214,26 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
             ],
           ),
         ),
-        Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-            border: Border.all(color: const Color(0xFFE5E7EB)),
-          ),
-          child: const Icon(
-            Icons.notifications_none_rounded,
-            size: 23,
-            color: Color(0xFF111827),
-          ),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const ConnectivityDot(),
+            const SizedBox(width: 8),
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFFE5E7EB)),
+              ),
+              child: const Icon(
+                Icons.notifications_none_rounded,
+                size: 23,
+                color: Color(0xFF111827),
+              ),
+            ),
+          ],
         ),
       ],
     );

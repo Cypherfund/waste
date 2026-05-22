@@ -10,6 +10,8 @@ import '../../widgets/section_header.dart';
 import '../../widgets/job_status_badge.dart';
 import '../../widgets/sync_status_banner.dart';
 import '../../widgets/skeleton_loader.dart';
+import '../../widgets/connectivity_dot.dart';
+import '../../services/offline/connectivity_service.dart';
 
 class CollectorHomeScreen extends StatefulWidget {
   const CollectorHomeScreen({super.key});
@@ -116,18 +118,18 @@ class _CollectorHomeScreenState extends State<CollectorHomeScreen> {
               const SizedBox(height: 4),
               Row(
                 children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: AppColors.primaryLight,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
+                  const ConnectivityDot(),
                   const SizedBox(width: 6),
-                  Text(
-                    'Online',
-                    style: AppTypography.caption.copyWith(color: AppColors.primaryLight),
+                  Builder(
+                    builder: (ctx) {
+                      final online = ctx.watch<ConnectivityService>().isOnline;
+                      return Text(
+                        online ? 'Online' : 'Offline',
+                        style: AppTypography.caption.copyWith(
+                          color: online ? AppColors.primaryLight : const Color(0xFFEF4444),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),

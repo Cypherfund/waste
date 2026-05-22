@@ -23,7 +23,7 @@ class AuthProvider extends ChangeNotifier {
   String? _error;
   String? _sessionExpiredMessage;
   bool _isLoading = false;
-  bool _isSwitching = false;
+  String? _switchingAccountId;
   List<SavedAccount> _savedAccounts = [];
 
   AuthProvider({
@@ -48,7 +48,8 @@ class AuthProvider extends ChangeNotifier {
   String? get error => _error;
   String? get sessionExpiredMessage => _sessionExpiredMessage;
   bool get isLoading => _isLoading;
-  bool get isSwitching => _isSwitching;
+  String? get switchingAccountId => _switchingAccountId;
+  bool get isSwitching => _switchingAccountId != null;
   bool get isAuthenticated => _status == AuthStatus.authenticated;
   List<SavedAccount> get savedAccounts => List.unmodifiable(_savedAccounts);
 
@@ -288,9 +289,9 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> switchAccount(SavedAccount account) async {
-    if (_isSwitching || account.id == _user?.id) return;
+    if (_switchingAccountId != null || account.id == _user?.id) return;
 
-    _isSwitching = true;
+    _switchingAccountId = account.id;
     notifyListeners();
 
     try {
@@ -302,7 +303,7 @@ class AuthProvider extends ChangeNotifier {
         await _storage.removeAccount(account.id);
         await _syncService.clearJobsForUser(account.id);
         await _loadSavedAccounts();
-        _isSwitching = false;
+        _switchingAccountId = null;
         notifyListeners();
         return;
       }
@@ -343,7 +344,7 @@ class AuthProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('[AuthProvider] switchAccount error: $e');
     } finally {
-      _isSwitching = false;
+      _switchingAccountId = null;
       notifyListeners();
     }
   }

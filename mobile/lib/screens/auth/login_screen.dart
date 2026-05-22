@@ -258,7 +258,8 @@ class _LoginScreenState extends State<LoginScreen> {
       const SizedBox(height: 16),
       ...auth.savedAccounts.map((account) => _SavedAccountTile(
         account: account,
-        isSwitching: auth.isSwitching,
+        isThisSwitching: auth.switchingAccountId == account.id,
+        isSwitchingAny: auth.isSwitching,
         onTap: () async {
           await auth.switchAccount(account);
           if (auth.status == AuthStatus.authenticated) {
@@ -311,12 +312,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
 class _SavedAccountTile extends StatelessWidget {
   final SavedAccount account;
-  final bool isSwitching;
+  final bool isThisSwitching;
+  final bool isSwitchingAny;
   final VoidCallback onTap;
 
   const _SavedAccountTile({
     required this.account,
-    required this.isSwitching,
+    required this.isThisSwitching,
+    required this.isSwitchingAny,
     required this.onTap,
   });
 
@@ -325,7 +328,7 @@ class _SavedAccountTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: InkWell(
-        onTap: isSwitching ? null : onTap,
+        onTap: isSwitchingAny ? null : onTap,
         borderRadius: BorderRadius.circular(12),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -375,7 +378,7 @@ class _SavedAccountTile extends StatelessWidget {
                   ],
                 ),
               ),
-              if (isSwitching)
+              if (isThisSwitching)
                 const SizedBox(
                   width: 18,
                   height: 18,
@@ -383,7 +386,8 @@ class _SavedAccountTile extends StatelessWidget {
                 )
               else
                 Icon(Icons.arrow_forward_ios_rounded,
-                    size: 14, color: Colors.grey.shade400),
+                    size: 14,
+                    color: isSwitchingAny ? Colors.grey.shade200 : Colors.grey.shade400),
             ],
           ),
         ),

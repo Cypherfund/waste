@@ -536,7 +536,7 @@ class _PendingPayoutNotice extends StatelessWidget {
         : '${pending.length} payout requests pending';
 
     return GestureDetector(
-      onTap: () => Navigator.pushNamed(context, '/collector-cashout'),
+      onTap: () => Navigator.pushNamed(context, '/collector-cashout', arguments: {'tab': 1}),
       child: Container(
         margin: const EdgeInsets.only(top: 10),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),

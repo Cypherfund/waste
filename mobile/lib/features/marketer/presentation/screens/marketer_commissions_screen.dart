@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../models/marketer_models.dart';
 import '../../providers/marketer_provider.dart';
 import '../../../../services/api/wallet_api.dart';
+import '../../../../widgets/connectivity_dot.dart';
 
 class MarketerCommissionsScreen extends StatefulWidget {
   const MarketerCommissionsScreen({super.key});
@@ -35,6 +36,12 @@ class _MarketerCommissionsScreenState extends State<MarketerCommissionsScreen> w
     return Scaffold(
       appBar: AppBar(
         title: const Text('Earnings'),
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 8),
+            child: Center(child: ConnectivityDot()),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabCtrl,
           tabs: const [

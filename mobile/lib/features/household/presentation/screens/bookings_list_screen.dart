@@ -7,6 +7,7 @@ import '../../../../models/job.dart';
 import '../../../../providers/job_provider.dart';
 import '../../../../widgets/bottom_navigation.dart';
 import '../../../../widgets/skeleton_loader.dart';
+import '../../../../widgets/connectivity_dot.dart';
 
 class BookingsListScreen extends StatefulWidget {
   const BookingsListScreen({super.key});
@@ -67,6 +68,10 @@ class _BookingsListScreenState extends State<BookingsListScreen>
         ),
         centerTitle: true,
         actions: [
+          const Padding(
+            padding: EdgeInsets.only(right: 4),
+            child: Center(child: ConnectivityDot()),
+          ),
           IconButton(
             icon: const Icon(
               Icons.more_vert_rounded,

@@ -7,6 +7,7 @@ import '../../../../services/api/api_client.dart';
 import '../../../../services/api/wallet_api.dart';
 import '../../../../widgets/bottom_navigation.dart';
 import '../../../../widgets/skeleton_loader.dart';
+import '../../../../widgets/connectivity_dot.dart';
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -70,6 +71,10 @@ class _WalletScreenState extends State<WalletScreen> {
         ),
         centerTitle: true,
         actions: [
+          const Padding(
+            padding: EdgeInsets.only(right: 4),
+            child: Center(child: ConnectivityDot()),
+          ),
           IconButton(
             icon: const Icon(Icons.history, color: Colors.black),
             onPressed: () {

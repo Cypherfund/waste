@@ -23,6 +23,20 @@ class _CollectorCashoutScreenState extends State<CollectorCashoutScreen>
   late TabController _tabController;
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_tabInitialized) {
+      _tabInitialized = true;
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is Map && args['tab'] == 1) {
+        _tabController.index = 1;
+      }
+    }
+  }
+
+  bool _tabInitialized = false;
+
+  @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
