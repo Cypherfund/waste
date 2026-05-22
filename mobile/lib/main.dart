@@ -60,6 +60,8 @@ import 'features/marketer/data/marketer_api.dart';
 import 'features/marketer/providers/marketer_provider.dart';
 import 'features/marketer/presentation/marketer_shell.dart';
 
+final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -218,6 +220,7 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
       ],
       child: MaterialApp(
         title: 'KmerTrash',
+        navigatorKey: appNavigatorKey,
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         routes: {
@@ -258,6 +261,8 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
           '/payment-methods': (context) => const PaymentMethodsScreen(),
           '/addresses': (context) => const AddressesScreen(),
           '/top-up': (context) => const TopUpWalletScreen(),
+          // Marketer routes
+          '/marketer-home': (context) => const MarketerShell(),
           // Collector routes
           '/collector-home': (context) => const CollectorShell(),
           '/collector-jobs': (context) => const CollectorShell(),

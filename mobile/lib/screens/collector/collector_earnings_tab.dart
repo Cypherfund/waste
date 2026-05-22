@@ -24,6 +24,7 @@ class _CollectorEarningsTabState extends State<CollectorEarningsTab>
       final provider = context.read<CollectorEarningsProvider>();
       provider.loadQuickSummary();
       provider.loadDetailedEarnings();
+      provider.loadWallet();
     });
   }
 
@@ -37,6 +38,7 @@ class _CollectorEarningsTabState extends State<CollectorEarningsTab>
   Widget build(BuildContext context) {
     final provider = context.watch<CollectorEarningsProvider>();
     final summary = provider.quickSummary;
+    final walletBalance = provider.walletBalance;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -47,6 +49,7 @@ class _CollectorEarningsTabState extends State<CollectorEarningsTab>
             await Future.wait([
               provider.loadQuickSummary(),
               provider.loadDetailedEarnings(),
+              provider.loadWallet(),
             ]);
           },
           child: ListView(
@@ -83,24 +86,51 @@ class _CollectorEarningsTabState extends State<CollectorEarningsTab>
               ),
               const SizedBox(height: 20),
 
-              // Earnings amount card
+              // Earnings + balance card
               AppCard(
                 color: AppColors.primary,
                 shadow: AppShadows.elevated,
                 padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
-                    Text(
-                      "Today's Earnings",
-                      style: AppTypography.caption.copyWith(color: Colors.white70),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Today's Earnings",
+                            style: AppTypography.caption.copyWith(color: Colors.white70),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${(summary?.today ?? 0).toStringAsFixed(0)} XAF',
+                            style: AppTypography.heading1.copyWith(
+                              color: Colors.white,
+                              fontSize: 26,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${(summary?.today ?? 0).toStringAsFixed(0)} XAF',
-                      style: AppTypography.heading1.copyWith(
-                        color: Colors.white,
-                        fontSize: 32,
+                    Container(width: 1, height: 48, color: Colors.white24),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Wallet Balance',
+                            style: AppTypography.caption.copyWith(color: Colors.white70),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${walletBalance.toStringAsFixed(0)} XAF',
+                            style: AppTypography.heading1.copyWith(
+                              color: Colors.white,
+                              fontSize: 26,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],

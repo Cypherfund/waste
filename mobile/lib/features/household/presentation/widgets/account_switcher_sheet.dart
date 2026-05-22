@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../config/app_theme.dart';
+import '../../../../main.dart' show appNavigatorKey;
 import '../../../../models/saved_account.dart';
 import '../../../../providers/auth_provider.dart';
 
@@ -143,17 +144,15 @@ class _AccountSwitcherSheetState extends State<AccountSwitcherSheet> {
                                     setState(() => _switchingId = null);
                                     Navigator.pop(context);
                                   }
-                                  if (context.mounted) {
-                                    final isCollector = auth.user?.isCollector == true;
-                                    final route = isCollector
-                                        ? '/collector-home'
-                                        : '/home';
-                                    Navigator.pushNamedAndRemoveUntil(
-                                      context,
-                                      route,
-                                      (r) => false,
-                                    );
-                                  }
+                                  final isCollector = auth.user?.isCollector == true;
+                                  final isMarketer = auth.user?.isMarketer == true;
+                                  final route = isCollector
+                                      ? '/collector-home'
+                                      : isMarketer
+                                          ? '/marketer-home'
+                                          : '/home';
+                                  appNavigatorKey.currentState
+                                      ?.pushNamedAndRemoveUntil(route, (r) => false);
                                 },
                         ),
                       );

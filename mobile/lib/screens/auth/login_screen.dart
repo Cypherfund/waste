@@ -7,6 +7,7 @@ import '../../widgets/app_text_field.dart';
 import '../../widgets/loading_button.dart';
 import '../../widgets/error_banner.dart';
 import '../../features/onboarding/onboarding_flow.dart';
+import '../../main.dart' show appNavigatorKey;
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback? onSignUp;
@@ -260,11 +261,17 @@ class _LoginScreenState extends State<LoginScreen> {
         isSwitching: auth.isSwitching,
         onTap: () async {
           await auth.switchAccount(account);
-          if (!mounted) return;
           if (auth.status == AuthStatus.authenticated) {
             await markOnboardingCompleted();
-            final route = account.isCollector ? '/collector-home' : '/home';
-            Navigator.pushNamedAndRemoveUntil(context, route, (r) => false);
+            final isCollector = auth.user?.isCollector == true;
+            final isMarketer = auth.user?.isMarketer == true;
+            final route = isCollector
+                ? '/collector-home'
+                : isMarketer
+                    ? '/marketer-home'
+                    : '/home';
+            appNavigatorKey.currentState
+                ?.pushNamedAndRemoveUntil(route, (r) => false);
           }
         },
       )),
