@@ -72,8 +72,8 @@ export const growthPayoutsApi = {
 };
 
 export const growthBudgetsApi = {
-  list: () =>
-    client.get<MarketingBudgetPeriod[]>('/admin/marketing-budget-periods').then((r) => r.data),
+  list: (params?: { page?: number; limit?: number }) =>
+    client.get<{ data: MarketingBudgetPeriod[]; total: number }>('/admin/marketing-budget-periods', { params }).then((r) => r.data),
 
   getById: (id: string) =>
     client.get<MarketingBudgetPeriod>(`/admin/marketing-budget-periods/${id}`).then((r) => r.data),
@@ -92,8 +92,8 @@ export const growthBudgetsApi = {
 };
 
 export const growthCampaignsApi = {
-  list: (params?: { status?: string; territory?: string; budgetPeriodId?: string }) =>
-    client.get<MarketingCampaign[]>('/admin/marketing-campaigns', { params }).then((r) => r.data),
+  list: (params?: { status?: string; territory?: string; budgetPeriodId?: string; page?: number; limit?: number }) =>
+    client.get<{ data: MarketingCampaign[]; total: number }>('/admin/marketing-campaigns', { params }).then((r) => r.data),
 
   getById: (id: string) =>
     client.get<MarketingCampaign>(`/admin/marketing-campaigns/${id}`).then((r) => r.data),
