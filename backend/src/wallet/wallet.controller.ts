@@ -4,12 +4,17 @@ import {
   Post,
   Body,
   ForbiddenException,
+  Patch,
+  Param,
+  Query,
+  Delete,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { IsNumber, IsString, IsOptional, Min } from 'class-validator';
+import { IsNumber, IsString, IsOptional, Min, IsEnum } from 'class-validator';
 import { WalletService } from './wallet.service';
 import { CurrentUser, JwtPayload } from '../common/decorators/current-user.decorator';
 import { UserRole } from '../common/enums/role.enum';
+import { UserPaymentMethodUsageType } from './entities/user-payment-method.entity';
 
 class RequestWithdrawalDto {
   @IsNumber()
@@ -19,6 +24,35 @@ class RequestWithdrawalDto {
   @IsString()
   method: string;
 
+  @IsOptional()
+  @IsString()
+  accountNumber?: string;
+
+  @IsOptional()
+  @IsString()
+  accountName?: string;
+}
+
+class AddPaymentMethodDto {
+  @IsString()
+  paymentCode: string;
+
+  @IsString()
+  accountNumber: string;
+
+  @IsOptional()
+  @IsString()
+  accountName?: string;
+
+  @IsOptional()
+  @IsEnum(UserPaymentMethodUsageType)
+  usageType?: UserPaymentMethodUsageType;
+
+  @IsOptional()
+  isDefault?: boolean;
+}
+
+class UpdatePaymentMethodDto {
   @IsOptional()
   @IsString()
   accountNumber?: string;
@@ -67,5 +101,50 @@ export class WalletController {
       throw new ForbiddenException('Only collectors can view their payouts');
     }
     return this.walletService.getMyPayoutRequests(user.sub);
+  }
+
+  // ── USER PAYMENT METHODS ────────────────────────────────────────
+
+  @Get('payment-methods')
+  async getPaymentMethods(
+    @CurrentUser() user: JwtPayload,
+    @Query('usage') usage?: 'CASHIN' | 'CASHOUT',
+  ) {
+    return this.walletService.listPaymentMethods(user.sub, usage);
+  }
+
+  @Post('payment-methods')
+  async addPaymentMethod(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: AddPaymentMethodDto,
+  ) {
+    return this.walletService.addPaymentMethod(user.sub, dto);
+  }
+
+  @Patch('payment-methods/:id')
+  async updatePaymentMethod(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+    @Body() dto: UpdatePaymentMethodDto,
+  ) {
+    return this.walletService.updatePaymentMethod(user.sub, id, dto);
+  }
+
+  @Patch('payment-methods/:id/default')
+  async setDefaultPaymentMethod(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+    @Query('usage') usage: 'CASHIN' | 'CASHOUT',
+  ) {
+    return this.walletService.setDefaultPaymentMethod(user.sub, id, usage);
+  }
+
+  @Delete('payment-methods/:id')
+  async deletePaymentMethod(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+  ) {
+    await this.walletService.deletePaymentMethod(user.sub, id);
+    return { success: true };
   }
 }

@@ -5,11 +5,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, In, IsNull } from 'typeorm';
 import { OnEvent } from '@nestjs/event-emitter';
 import { User } from '../users/entities/user.entity';
 import { PayoutRequest, PayoutRequestStatus } from './entities/payout-request.entity';
 import { CollectorFloatLedger, FloatLedgerType } from './entities/collector-float-ledger.entity';
+import { UserPaymentMethod, UserPaymentMethodUsageType } from './entities/user-payment-method.entity';
 import { SystemConfigService } from '../config/system-config.service';
 import { EarningsEvents, EarningsConfirmedPayload } from '../events/events.types';
 import { PaymentProviderEntity } from '../payments/entities/payment-provider.entity';
@@ -27,6 +28,8 @@ export class WalletService {
     private readonly paymentProviderRepo: Repository<PaymentProviderEntity>,
     @InjectRepository(CollectorFloatLedger)
     private readonly floatLedgerRepo: Repository<CollectorFloatLedger>,
+    @InjectRepository(UserPaymentMethod)
+    private readonly userPaymentMethodRepo: Repository<UserPaymentMethod>,
     private readonly systemConfigService: SystemConfigService,
     private readonly dataSource: DataSource,
   ) {}
@@ -71,12 +74,34 @@ export class WalletService {
     // Get enabled payment providers for manual payment
     const providers = await this.getEnabledPaymentProviders(countryCode);
 
+    // Get cashin providers (supportsCashin=true)
+    const cashinProviders = await this.paymentProviderRepo.find({
+      where: {
+        countryCode,
+        isEnabled: true,
+        supportsCashin: true,
+      },
+      order: { providerName: 'ASC' },
+    });
+
     return {
       paymentIntegrationEnabled: paymentEnabled,
       cashEnabled: cashEnabledStr === 'true',
       manualPaymentInstructions: manualInstructions,
       supportWhatsapp: whatsapp,
       paymentProviders: providers,
+      cashinProviders: cashinProviders.map((p) => ({
+        paymentCode: p.paymentCode,
+        providerName: p.providerName,
+        manualPaymentPhone: p.manualPaymentPhone,
+        manualPaymentAccountName: p.manualPaymentAccountName,
+        manualInstructions: p.manualInstructions,
+        integrationEnabled: p.integrationEnabled,
+        manualInstructionsEnabled: p.manualInstructionsEnabled,
+        manualProofRequired: p.manualProofRequired,
+        supportsCashin: p.supportsCashin,
+        supportsCashout: p.supportsCashout,
+      })),
       minAdvanceHours: parseInt(minAdvanceHoursStr, 10) || 24,
       maxAdvanceDays,
     };
@@ -135,11 +160,32 @@ export class WalletService {
         label: key === 'MOBILE_MONEY' ? mmLabel : key === 'BANK_TRANSFER' ? bankLabel : key,
       }));
 
+    // Get cashout providers (supportsCashout=true)
+    const cashoutProviders = await this.paymentProviderRepo.find({
+      where: {
+        isEnabled: true,
+        supportsCashout: true,
+      },
+      order: { providerName: 'ASC' },
+    });
+
     return {
       minWithdrawal: Number(minStr),
       maxWithdrawal: Number(maxStr),
       methods,
       payoutMode: payoutMode as 'MANUAL_APPROVAL' | 'AUTO_PROVIDER_PAYOUT',
+      cashoutProviders: cashoutProviders.map((p) => ({
+        paymentCode: p.paymentCode,
+        providerName: p.providerName,
+        manualPaymentPhone: p.manualPaymentPhone,
+        manualPaymentAccountName: p.manualPaymentAccountName,
+        manualInstructions: p.manualInstructions,
+        integrationEnabled: p.integrationEnabled,
+        manualInstructionsEnabled: p.manualInstructionsEnabled,
+        manualProofRequired: p.manualProofRequired,
+        supportsCashin: p.supportsCashin,
+        supportsCashout: p.supportsCashout,
+      })),
     };
   }
 
@@ -356,6 +402,223 @@ export class WalletService {
 
       return { collectorId, newFloatBalance: after };
     });
+  }
+
+  // ── USER PAYMENT METHODS ────────────────────────────────────────
+
+  async listPaymentMethods(userId: string, usage?: 'CASHIN' | 'CASHOUT') {
+    const qb = this.userPaymentMethodRepo
+      .createQueryBuilder('upm')
+      .leftJoinAndSelect('upm.user', 'user')
+      .where('upm.userId = :userId', { userId })
+      .andWhere('upm.deletedAt IS NULL')
+      .orderBy('upm.isDefault', 'DESC')
+      .addOrderBy('upm.createdAt', 'DESC');
+
+    if (usage === 'CASHIN') {
+      qb.andWhere('upm.usageType IN (:...types)', { types: [UserPaymentMethodUsageType.CASHIN, UserPaymentMethodUsageType.BOTH] });
+    } else if (usage === 'CASHOUT') {
+      qb.andWhere('upm.usageType IN (:...types)', { types: [UserPaymentMethodUsageType.CASHOUT, UserPaymentMethodUsageType.BOTH] });
+    }
+
+    const methods = await qb.getMany();
+
+    // Fetch provider details for each method
+    const paymentCodes = [...new Set(methods.map((m) => m.paymentCode))];
+    const providers = await this.paymentProviderRepo.find({
+      where: { paymentCode: In(paymentCodes) },
+    });
+
+    const providerMap = new Map(providers.map((p) => [p.paymentCode, p]));
+
+    return methods.map((m) => {
+      const provider = providerMap.get(m.paymentCode);
+      return {
+        id: m.id,
+        paymentCode: m.paymentCode,
+        providerName: provider?.providerName ?? m.paymentCode,
+        accountNumber: m.accountNumber,
+        maskedAccountNumber: this.maskAccountNumber(m.accountNumber),
+        accountName: m.accountName,
+        usageType: m.usageType,
+        isDefault: m.isDefault,
+        supportsCashin: provider?.supportsCashin ?? false,
+        supportsCashout: provider?.supportsCashout ?? false,
+      };
+    });
+  }
+
+  async addPaymentMethod(
+    userId: string,
+    dto: {
+      paymentCode: string;
+      accountNumber: string;
+      accountName?: string;
+      usageType?: UserPaymentMethodUsageType;
+      isDefault?: boolean;
+    },
+  ) {
+    // Validate paymentCode exists and is enabled
+    const provider = await this.paymentProviderRepo.findOne({
+      where: { paymentCode: dto.paymentCode, isEnabled: true },
+    });
+    if (!provider) {
+      throw new BadRequestException(`Payment provider ${dto.paymentCode} not found or disabled`);
+    }
+
+    // Validate usageType matches provider capabilities
+    const usageType = dto.usageType ?? UserPaymentMethodUsageType.BOTH;
+    if (usageType === UserPaymentMethodUsageType.CASHIN && !provider.supportsCashin) {
+      throw new BadRequestException(`Provider ${dto.paymentCode} does not support cash-in`);
+    }
+    if (usageType === UserPaymentMethodUsageType.CASHOUT && !provider.supportsCashout) {
+      throw new BadRequestException(`Provider ${dto.paymentCode} does not support cash-out`);
+    }
+
+    // Check for duplicate active method
+    const existing = await this.userPaymentMethodRepo.findOne({
+      where: {
+        userId,
+        paymentCode: dto.paymentCode,
+        accountNumber: dto.accountNumber,
+        deletedAt: IsNull(),
+      },
+    });
+    if (existing) {
+      throw new BadRequestException('You already have this payment method saved');
+    }
+
+    const isFirst = await this.userPaymentMethodRepo.count({
+      where: { userId, deletedAt: IsNull() },
+    }) === 0;
+
+    const method = this.userPaymentMethodRepo.create({
+      userId,
+      paymentCode: dto.paymentCode,
+      accountNumber: dto.accountNumber,
+      accountName: dto.accountName ?? null,
+      usageType,
+      isDefault: dto.isDefault ?? isFirst,
+    });
+
+    const saved = await this.userPaymentMethodRepo.save(method);
+
+    // If set as default, unset other defaults for this direction
+    if (saved.isDefault) {
+      await this.clearOtherDefaults(userId, saved.id, usageType);
+    }
+
+    return this.toPaymentMethodDto(saved, provider);
+  }
+
+  async updatePaymentMethod(
+    userId: string,
+    id: string,
+    dto: { accountNumber?: string; accountName?: string },
+  ) {
+    const method = await this.userPaymentMethodRepo.findOne({
+      where: { id, userId, deletedAt: IsNull() },
+    });
+    if (!method) {
+      throw new NotFoundException('Payment method not found');
+    }
+
+    if (dto.accountNumber) {
+      method.accountNumber = dto.accountNumber;
+    }
+    if (dto.accountName !== undefined) {
+      method.accountName = dto.accountName;
+    }
+
+    const saved = await this.userPaymentMethodRepo.save(method);
+    const provider = await this.paymentProviderRepo.findOne({
+      where: { paymentCode: saved.paymentCode },
+    });
+
+    return this.toPaymentMethodDto(saved, provider);
+  }
+
+  async deletePaymentMethod(userId: string, id: string) {
+    const method = await this.userPaymentMethodRepo.findOne({
+      where: { id, userId, deletedAt: IsNull() },
+    });
+    if (!method) {
+      throw new NotFoundException('Payment method not found');
+    }
+
+    // Soft delete
+    method.deletedAt = new Date();
+    method.isActive = false;
+    await this.userPaymentMethodRepo.save(method);
+  }
+
+  async setDefaultPaymentMethod(userId: string, id: string, usage: 'CASHIN' | 'CASHOUT') {
+    const method = await this.userPaymentMethodRepo.findOne({
+      where: { id, userId, deletedAt: IsNull() },
+    });
+    if (!method) {
+      throw new NotFoundException('Payment method not found');
+    }
+
+    // Validate method supports the requested direction
+    if (usage === 'CASHIN' && method.usageType === UserPaymentMethodUsageType.CASHOUT) {
+      throw new BadRequestException('This method cannot be used for cash-in');
+    }
+    if (usage === 'CASHOUT' && method.usageType === UserPaymentMethodUsageType.CASHIN) {
+      throw new BadRequestException('This method cannot be used for cash-out');
+    }
+
+    // Set as default and clear others for this direction
+    method.isDefault = true;
+    await this.userPaymentMethodRepo.save(method);
+    await this.clearOtherDefaults(userId, id, method.usageType);
+
+    const provider = await this.paymentProviderRepo.findOne({
+      where: { paymentCode: method.paymentCode },
+    });
+
+    return this.toPaymentMethodDto(method, provider);
+  }
+
+  private async clearOtherDefaults(userId: string, excludeId: string, usageType: UserPaymentMethodUsageType) {
+    const relevantTypes =
+      usageType === UserPaymentMethodUsageType.BOTH
+        ? [UserPaymentMethodUsageType.CASHIN, UserPaymentMethodUsageType.CASHOUT, UserPaymentMethodUsageType.BOTH]
+        : usageType === UserPaymentMethodUsageType.CASHIN
+          ? [UserPaymentMethodUsageType.CASHIN, UserPaymentMethodUsageType.BOTH]
+          : [UserPaymentMethodUsageType.CASHOUT, UserPaymentMethodUsageType.BOTH];
+
+    await this.userPaymentMethodRepo
+      .createQueryBuilder()
+      .update(UserPaymentMethod)
+      .set({ isDefault: false })
+      .where('userId = :userId', { userId })
+      .andWhere('id != :id', { id: excludeId })
+      .andWhere('usageType IN (:...types)', { types: relevantTypes })
+      .andWhere('deletedAt IS NULL')
+      .execute();
+  }
+
+  private maskAccountNumber(accountNumber: string): string {
+    if (accountNumber.length <= 6) return accountNumber;
+    const start = accountNumber.substring(0, accountNumber.length - 4);
+    const end = accountNumber.substring(accountNumber.length - 4);
+    return `${start.substring(0, start.length - 3)} *** ${end}`;
+  }
+
+  private toPaymentMethodDto(method: UserPaymentMethod, provider: PaymentProviderEntity | null) {
+    return {
+      id: method.id,
+      paymentCode: method.paymentCode,
+      providerName: provider?.providerName ?? method.paymentCode,
+      accountNumber: method.accountNumber,
+      maskedAccountNumber: this.maskAccountNumber(method.accountNumber),
+      accountName: method.accountName,
+      usageType: method.usageType,
+      isDefault: method.isDefault,
+      supportsCashin: provider?.supportsCashin ?? false,
+      supportsCashout: provider?.supportsCashout ?? false,
+    };
   }
 
   private toAdminDto(r: PayoutRequest) {
