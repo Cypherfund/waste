@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../providers/auth_provider.dart';
+import '../../../../services/deep_link/deep_link_service.dart';
 import '../../onboarding_flow.dart';
 
 /// Screen 5 — Complete Profile
@@ -32,6 +34,37 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   final _nameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  String? _referralToken;
+
+  @override
+  void initState() {
+    super.initState();
+    _extractReferralToken();
+  }
+
+  void _extractReferralToken() {
+    // Try to get from DeepLinkService first
+    final deepLinkService = context.read<DeepLinkService>();
+    _referralToken = deepLinkService.pendingReferralToken;
+    
+    // On web, also check URL directly as fallback
+    if (kIsWeb) {
+      try {
+        final uri = Uri.base;
+        final urlToken = uri.queryParameters['token'];
+        if (urlToken != null && urlToken.isNotEmpty) {
+          _referralToken = urlToken;
+          debugPrint('[CompleteProfileScreen] Extracted token from URL: $urlToken');
+        }
+      } catch (e) {
+        debugPrint('[CompleteProfileScreen] Error extracting token from URL: $e');
+      }
+    }
+    
+    if (_referralToken != null) {
+      debugPrint('[CompleteProfileScreen] Referral token found: $_referralToken');
+    }
+  }
 
   @override
   void dispose() {
@@ -44,9 +77,11 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final auth = context.read<AuthProvider>();
+    final deepLinkService = context.read<DeepLinkService>();
     final roleString = widget.role == UserRole.collector ? 'COLLECTOR' : 'HOUSEHOLD';
 
     debugPrint('CompleteProfileScreen: Submitting registration for ${widget.phone} with role $roleString');
+    debugPrint('CompleteProfileScreen: Referral token being sent: $_referralToken');
     
     await auth.register(
       name: _nameController.text.trim(),
@@ -54,7 +89,11 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       password: _passwordController.text,
       role: roleString,
       countryCode: widget.countryCode,
+      referralToken: _referralToken,
     );
+
+    // Clear the referral token after successful registration
+    deepLinkService.clearPendingToken();
 
     if (!mounted) return;
 

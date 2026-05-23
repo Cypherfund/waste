@@ -43,6 +43,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _referralCodeController.text = widget.initialReferralToken!;
       debugPrint('[RegisterScreen] Pre-filled referral token from widget parameter: ${widget.initialReferralToken}');
     }
+    // On web, also check URL directly as fallback
+    if (kIsWeb) {
+      _extractTokenFromUrl();
+    }
+  }
+
+  void _extractTokenFromUrl() {
+    try {
+      final uri = Uri.base;
+      final token = uri.queryParameters['token'];
+      if (token != null && token.isNotEmpty && _referralCodeController.text.isEmpty) {
+        _referralCodeController.text = token;
+        debugPrint('[RegisterScreen] Extracted token from URL: $token');
+      }
+    } catch (e) {
+      debugPrint('[RegisterScreen] Error extracting token from URL: $e');
+    }
   }
 
   @override
@@ -66,6 +83,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final referralToken = _referralCodeController.text.trim().isNotEmpty
         ? _referralCodeController.text.trim()
         : deepLinkService.pendingReferralToken;
+    
+    debugPrint('[RegisterScreen] Sending registration with referralToken: $referralToken');
+    debugPrint('[RegisterScreen] Referral code controller value: ${_referralCodeController.text.trim()}');
+    debugPrint('[RegisterScreen] Deep link pending token: ${deepLinkService.pendingReferralToken}');
     
     await auth.register(
       name: _nameController.text.trim(),

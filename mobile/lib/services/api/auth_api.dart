@@ -28,7 +28,7 @@ class AuthApi {
     String? countryCode,
     String? referralToken,
   }) async {
-    final response = await _client.dio.post('/auth/register', data: {
+    final requestData = {
       'name': name,
       'phone': phone,
       'password': password,
@@ -36,7 +36,10 @@ class AuthApi {
       if (email != null && email.isNotEmpty) 'email': email,
       if (countryCode != null && countryCode.isNotEmpty) 'countryCode': countryCode,
       if (referralToken != null && referralToken.isNotEmpty) 'referralToken': referralToken,
-    });
+    };
+    debugPrint('[AuthApi] Register request data: $requestData');
+    debugPrint('[AuthApi] ReferralToken in request: $referralToken');
+    final response = await _client.dio.post('/auth/register', data: requestData);
     return AuthResponse.fromJson(response.data as Map<String, dynamic>);
   }
 

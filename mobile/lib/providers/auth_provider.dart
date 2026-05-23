@@ -200,6 +200,8 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       debugPrint('AuthProvider: Starting register for phone: $phone, referralToken: $referralToken');
+      debugPrint('AuthProvider: referralToken is null: ${referralToken == null}');
+      debugPrint('AuthProvider: referralToken is empty: ${referralToken?.isEmpty ?? true}');
       final response = await _authApi.register(
         name: name,
         phone: phone,
