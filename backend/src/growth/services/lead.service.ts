@@ -336,7 +336,7 @@ export class LeadService {
     marketerId?: string;
     page?: number;
     limit?: number;
-  }): Promise<{ data: Lead[]; total: number }> {
+  }): Promise<{ data: Lead[]; total: number; totalPages: number }> {
     const where: any = {};
     if (filters?.status) where.status = filters.status;
     if (filters?.marketerId) where.marketerId = filters.marketerId;
@@ -351,7 +351,7 @@ export class LeadService {
       take: limit,
     });
 
-    return { data, total };
+    return { data, total, totalPages: Math.ceil(total / limit) };
   }
 
   async expireLead(leadId: string): Promise<Lead> {

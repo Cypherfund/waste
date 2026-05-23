@@ -11,6 +11,7 @@ const PAGE_SIZE = 20;
 export default function MarketerPayoutsPage() {
   const [payouts, setPayouts] = useState<MarketerPayoutRequest[]>([]);
   const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('PENDING');
   const { page, setPage, resetPage } = usePagination();
@@ -27,6 +28,7 @@ export default function MarketerPayoutsPage() {
       const res = await growthPayoutsApi.list(params);
       setPayouts(res.data);
       setTotal(res.total);
+      setTotalPages(res.totalPages);
     } catch (e) {
       console.error(e);
     } finally {
@@ -183,7 +185,7 @@ export default function MarketerPayoutsPage() {
               ))}
             </tbody>
           </table>
-          <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} onPageChange={setPage} />
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </div>
       )}
 

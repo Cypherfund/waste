@@ -2,6 +2,7 @@ import client from './client';
 import {
   AdminUser,
   UserDetail,
+  UserListResponse,
   Job,
   JobListResponse,
   Dispute,
@@ -19,8 +20,8 @@ import {
 } from '../../types';
 
 export const usersApi = {
-  list: (params?: { role?: string; isActive?: string }) =>
-    client.get<AdminUser[]>('/admin/users', { params }).then((r) => r.data),
+  list: (params?: { role?: string; isActive?: string; page?: number; limit?: number }) =>
+    client.get<UserListResponse>('/admin/users', { params }).then((r) => r.data),
 
   getDetail: (id: string) =>
     client.get<UserDetail>(`/admin/users/${id}`).then((r) => r.data),
@@ -164,8 +165,8 @@ export const pendingPaymentsApi = {
 
 export const collectorFloatApi = {
   list: () =>
-    client.get<CollectorFloat[]>('/admin/users', { params: { role: 'COLLECTOR', isActive: 'true' } })
-      .then((r) => (r.data as unknown as AdminUser[]).map((u): CollectorFloat => ({
+    client.get<UserListResponse>('/admin/users', { params: { role: 'COLLECTOR', isActive: 'true', limit: 100 } })
+      .then((r) => r.data.data.map((u): CollectorFloat => ({
         collectorId: u.id,
         collectorName: u.name,
         collectorPhone: u.phone,

@@ -28,18 +28,18 @@ export default function UsersPage() {
   const [detailError, setDetailError] = useState('');
 
   const fetchUsers = useCallback(() => {
-    const params: Record<string, string> = {};
+    const params: Record<string, string | number> = { page, limit: PAGE_SIZE };
     if (roleFilter) params.role = roleFilter;
     if (activeFilter) params.isActive = activeFilter;
     return usersApi.list(params);
-  }, [roleFilter, activeFilter]);
+  }, [roleFilter, activeFilter, page]);
 
-  const { data: users, loading, error, run } = useAsync<AdminUser[]>(fetchUsers);
+  const { data: response, loading, error, run } = useAsync(fetchUsers);
 
   useEffect(() => { resetPage(); }, [roleFilter, activeFilter]);
 
-  const pageData = users ? users.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) : [];
-  const totalPages = users ? Math.ceil(users.length / PAGE_SIZE) : 1;
+  const users = response?.data || [];
+  const totalPages = response?.meta.totalPages || 1;
 
   const handleStatusChange = async () => {
     if (!confirmAction) return;
@@ -152,14 +152,14 @@ export default function UsersPage() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {pageData.length === 0 && (
+              {users.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
                     No users found.
                   </td>
                 </tr>
               )}
-              {pageData.map((u) => {
+              {users.map((u) => {
                 const isSelf = u.id === adminUser?.id;
                 return (
                   <tr key={u.id} className="hover:bg-gray-50">

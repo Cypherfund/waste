@@ -3,19 +3,28 @@ import { UserPlus, Ban, CheckCircle, Copy, Check, Smartphone, Mail, MessageCircl
 import { Marketer } from '../types';
 import { growthMarketersApi } from '../services/api/growth';
 import HelpGuide from '../components/HelpGuide';
+import Pagination from '../components/Pagination';
+import { usePagination } from '../hooks/usePagination';
+
+const PAGE_SIZE = 20;
 
 export default function MarketersPage() {
   const [marketers, setMarketers] = useState<Marketer[]>([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ name: '', phone: '', email: '', territory: '' });
   const [newMarketer, setNewMarketer] = useState<Marketer | null>(null);
+  const { page, setPage } = usePagination();
 
   const load = async () => {
     setLoading(true);
     try {
-      const data = await growthMarketersApi.list();
-      setMarketers(data);
+      const response = await growthMarketersApi.list({ page, limit: PAGE_SIZE });
+      setMarketers(response.data);
+      setTotal(response.total);
+      setTotalPages(response.totalPages);
     } catch (e) {
       console.error(e);
     } finally {
@@ -23,7 +32,7 @@ export default function MarketersPage() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [page]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -293,6 +302,7 @@ export default function MarketersPage() {
               ))}
             </tbody>
           </table>
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </div>
       )}
     </div>

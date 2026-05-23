@@ -23,13 +23,13 @@ export class BudgetService {
     return this.budgetPeriodRepo.save(period);
   }
 
-  async findAllBudgetPeriods(page: number = 1, limit: number = 20): Promise<{ data: MarketingBudgetPeriod[]; total: number }> {
+  async findAllBudgetPeriods(page: number = 1, limit: number = 20): Promise<{ data: MarketingBudgetPeriod[]; total: number; totalPages: number }> {
     const [data, total] = await this.budgetPeriodRepo.findAndCount({
       order: { createdAt: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
     });
-    return { data, total };
+    return { data, total, totalPages: Math.ceil(total / limit) };
   }
 
   async findBudgetPeriodById(id: string): Promise<MarketingBudgetPeriod> {

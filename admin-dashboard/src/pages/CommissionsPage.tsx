@@ -12,6 +12,7 @@ export default function CommissionsPage() {
   const [schemes, setSchemes] = useState<CommissionScheme[]>([]);
   const [transactions, setTransactions] = useState<CommissionTransaction[]>([]);
   const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('PENDING');
   const { page, setPage, resetPage } = usePagination();
@@ -34,6 +35,7 @@ export default function CommissionsPage() {
       const res = await growthCommissionsApi.list(params);
       setTransactions(res.data);
       setTotal(res.total);
+      setTotalPages(res.totalPages);
     } catch (e) {
       console.error(e);
     } finally {
@@ -262,7 +264,7 @@ export default function CommissionsPage() {
               </table>
               <Pagination
                 page={page}
-                totalPages={Math.ceil(total / PAGE_SIZE)}
+                totalPages={totalPages}
                 onPageChange={setPage}
               />
             </div>

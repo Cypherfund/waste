@@ -63,10 +63,11 @@ export default function JobsPage() {
 
   // Fetch collectors for assignment
   const fetchCollectors = useCallback(
-    () => usersApi.list({ role: 'COLLECTOR', isActive: 'true' }),
+    () => usersApi.list({ role: 'COLLECTOR', isActive: 'true', page: 1, limit: 100 }),
     [],
   );
-  const { data: collectors } = useAsync<AdminUser[]>(fetchCollectors);
+  const { data: collectorsResponse } = useAsync(fetchCollectors);
+  const collectors = collectorsResponse?.data || [];
 
   const handleAssign = async () => {
     if (!selectedJob || !assignCollectorId) return;
@@ -317,7 +318,7 @@ export default function JobsPage() {
               </tbody>
             </table>
           </div>
-          <Pagination page={page} totalPages={data.meta.pages} onPageChange={setPage} />
+          <Pagination page={page} totalPages={data.meta.totalPages} onPageChange={setPage} />
         </>
       )}
 

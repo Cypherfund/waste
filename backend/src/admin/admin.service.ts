@@ -58,8 +58,9 @@ export class AdminService {
 
   // ─── USERS ────────────────────────────────────────────────────
 
-  async listUsers(filters?: { role?: string; isActive?: boolean }) {
-    return this.usersService.listUsers(filters);
+  async listUsers(filters?: { role?: string; isActive?: boolean; page?: number; limit?: number }) {
+    const { page, limit, ...userFilters } = filters || {};
+    return this.usersService.listUsers({ ...userFilters, page, limit });
   }
 
   async getUserDetail(userId: string) {
@@ -483,7 +484,7 @@ export class AdminService {
         total,
         page,
         limit,
-        pages: Math.ceil(total / limit),
+        totalPages: Math.ceil(total / limit),
       },
     };
   }

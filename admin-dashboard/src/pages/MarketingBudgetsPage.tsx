@@ -14,6 +14,7 @@ export default function MarketingBudgetsPage() {
   const [marketers, setMarketers] = useState<Marketer[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const limit = 20;
   
   const [form, setForm] = useState({
@@ -36,8 +37,9 @@ export default function MarketingBudgetsPage() {
       const response = await growthBudgetsApi.list({ page, limit });
       setBudgets(response.data);
       setTotal(response.total);
-      const marketerData = await growthMarketersApi.list();
-      setMarketers(marketerData);
+      setTotalPages(response.totalPages);
+      const marketerData = await growthMarketersApi.list({ page: 1, limit: 100 });
+      setMarketers(marketerData.data);
     } catch (e) {
       console.error(e);
     } finally {
@@ -422,11 +424,11 @@ export default function MarketingBudgetsPage() {
                   Previous
                 </button>
                 <span className="px-3 py-1 text-sm text-gray-600">
-                  Page {page} of {Math.ceil(total / limit)}
+                  Page {page} of {totalPages}
                 </span>
                 <button
-                  onClick={() => setPage(p => Math.min(Math.ceil(total / limit), p + 1))}
-                  disabled={page >= Math.ceil(total / limit)}
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages}
                   className="rounded px-3 py-1 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
                 >
                   Next

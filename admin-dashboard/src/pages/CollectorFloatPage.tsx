@@ -3,6 +3,7 @@ import { collectorFloatApi } from '../services/api/admin';
 import { useAsync } from '../hooks/useAsync';
 import Spinner from '../components/Spinner';
 import ErrorBox from '../components/ErrorBox';
+import HelpGuide from '../components/HelpGuide';
 import type { CollectorFloat } from '../types';
 import { RefreshCw, PlusCircle, X, Check } from 'lucide-react';
 
@@ -53,6 +54,23 @@ export default function CollectorFloatPage() {
           <RefreshCw size={14} /> Refresh
         </button>
       </div>
+
+      <HelpGuide
+        title="How to Manage Collector Float Balances"
+        description="Top up and monitor float balances for cash-payment collectors."
+        steps={[
+          "View all collectors and their current float balances",
+          "Low balance (< 500 XAF) is highlighted in red",
+          "Click 'Top Up' to add funds to a collector's float",
+          "Enter the amount and optional note for the top-up",
+          "Top-ups are recorded in the collector's transaction history",
+        ]}
+        tips={[
+          "Float balances are used for cash payments at households",
+          "Keep collector floats above 500 XAF to avoid payment issues",
+          "Regular top-ups ensure smooth cash payment operations",
+        ]}
+      />
 
       {feedback && (
         <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-700">

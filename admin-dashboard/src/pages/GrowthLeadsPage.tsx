@@ -10,6 +10,7 @@ const PAGE_SIZE = 20;
 export default function GrowthLeadsPage() {
   const [leads, setLeads] = useState<GrowthLead[]>([]);
   const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('');
@@ -24,6 +25,7 @@ export default function GrowthLeadsPage() {
       const res = await growthLeadsApi.list(params);
       setLeads(res.data);
       setTotal(res.total);
+      setTotalPages(res.totalPages);
     } catch (e: any) {
       console.error(e);
       setError(e.response?.data?.message || e.message || 'Failed to load leads');
@@ -158,7 +160,7 @@ export default function GrowthLeadsPage() {
           </table>
           <Pagination
             page={page}
-            totalPages={Math.ceil(total / PAGE_SIZE)}
+            totalPages={totalPages}
             onPageChange={setPage}
           />
         </div>

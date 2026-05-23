@@ -303,7 +303,7 @@ export class WalletService {
 
     return {
       data: requests.map((r) => this.toAdminDto(r)),
-      meta: { total, page, limit, pages: Math.ceil(total / limit) },
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
     };
   }
 

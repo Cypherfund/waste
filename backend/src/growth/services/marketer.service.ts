@@ -154,13 +154,27 @@ The KmerTrash Team`;
     return Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8).toUpperCase();
   }
 
-  async findAll(): Promise<MarketerResponseDto[]> {
-    const profiles = await this.profileRepo.find({
+  async findAll(filters?: {
+    status?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ data: MarketerResponseDto[]; total: number; totalPages: number }> {
+    const where: any = {};
+    if (filters?.status) where.status = filters.status;
+
+    const page = filters?.page || 1;
+    const limit = filters?.limit || 20;
+
+    const [profiles, total] = await this.profileRepo.findAndCount({
+      where,
       relations: ['user'],
       order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
     });
 
-    return profiles.map(p => this.toResponseDto(p, p.user));
+    const data = profiles.map(p => this.toResponseDto(p, p.user));
+    return { data, total, totalPages: Math.ceil(total / limit) };
   }
 
   async findById(id: string): Promise<MarketerResponseDto> {

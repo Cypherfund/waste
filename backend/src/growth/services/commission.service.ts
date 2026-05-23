@@ -113,10 +113,10 @@ export class CommissionService {
     status?: CommissionStatus;
     page?: number;
     limit?: number;
-  }): Promise<{ data: CommissionTransaction[]; total: number }> {
+  }): Promise<{ data: CommissionTransaction[]; total: number; totalPages: number }> {
     const { marketerProfileId, status, page = 1, limit = 20 } = filters;
     const where: any = {};
-    
+
     if (marketerProfileId) where.marketerProfileId = marketerProfileId;
     if (status) where.status = status;
 
@@ -128,7 +128,7 @@ export class CommissionService {
       take: limit,
     });
 
-    return { data, total };
+    return { data, total, totalPages: Math.ceil(total / limit) };
   }
 
   async approveTransaction(

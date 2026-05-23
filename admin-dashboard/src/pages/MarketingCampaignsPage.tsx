@@ -13,6 +13,7 @@ export default function MarketingCampaignsPage() {
   const [selectedCampaign, setSelectedCampaign] = useState<MarketingCampaign | null>(null);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const limit = 20;
 
   const [budgetPeriods, setBudgetPeriods] = useState<MarketingBudgetPeriod[]>([]);
@@ -40,16 +41,17 @@ export default function MarketingCampaignsPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const [campaignsResponse, budgetPeriodsResponse, marketersData, schemesData] = await Promise.all([
+      const [campaignsResponse, budgetPeriodsResponse, marketersResponse, schemesData] = await Promise.all([
         growthCampaignsApi.list({ page, limit }),
         growthBudgetsApi.list({ page: 1, limit: 100 }),
-        growthMarketersApi.list(),
+        growthMarketersApi.list({ page: 1, limit: 100 }),
         growthSchemesApi.list(),
       ]);
       setCampaigns(campaignsResponse.data);
       setTotal(campaignsResponse.total);
+      setTotalPages(campaignsResponse.totalPages);
       setBudgetPeriods(budgetPeriodsResponse.data);
-      setMarketers(marketersData);
+      setMarketers(marketersResponse.data);
       setSchemes(schemesData);
     } catch (e) {
       console.error(e);
@@ -482,11 +484,11 @@ export default function MarketingCampaignsPage() {
                   Previous
                 </button>
                 <span className="px-3 py-1 text-sm text-gray-600">
-                  Page {page} of {Math.ceil(total / limit)}
+                  Page {page} of {totalPages}
                 </span>
                 <button
-                  onClick={() => setPage(p => Math.min(Math.ceil(total / limit), p + 1))}
-                  disabled={page >= Math.ceil(total / limit)}
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages}
                   className="rounded px-3 py-1 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
                 >
                   Next

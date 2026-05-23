@@ -45,8 +45,12 @@ export class GrowthAdminController {
 
   @Get('marketers')
   @ApiOperation({ summary: 'List all marketers' })
-  async listMarketers() {
-    return this.marketerService.findAll();
+  async listMarketers(
+    @Query('status') status?: string,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page?: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit?: number,
+  ) {
+    return this.marketerService.findAll({ status, page, limit });
   }
 
   @Get('marketers/:id')
