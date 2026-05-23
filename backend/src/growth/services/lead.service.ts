@@ -124,18 +124,13 @@ export class LeadService {
     }
 
     // Atomically increment daily counter + totalLeads, only if under limit
-    const result = await this.dataSource
-      .createQueryBuilder()
-      .update(MarketerProfile)
-      .set({
-        dailyLeadsCreated: () => 'daily_leads_created + 1',
-        totalLeads: () => 'total_leads + 1',
-      })
-      .where('id = :id AND daily_leads_created < :limit', {
-        id: profile.id,
-        limit: DAILY_LEAD_LIMIT,
-      })
-      .execute();
+    const result = await this.dataSource.query(
+      `UPDATE marketer_profiles 
+       SET daily_leads_created = daily_leads_created + 1, 
+           total_leads = total_leads + 1 
+       WHERE id = $1 AND daily_leads_created < $2`,
+      [profile.id, DAILY_LEAD_LIMIT]
+    );
 
     if (result.affected === 0) {
       throw new ForbiddenException({
