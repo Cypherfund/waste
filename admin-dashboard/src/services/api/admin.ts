@@ -197,3 +197,62 @@ export const paymentProvidersApi = {
   sync: (countryCode: string) =>
     client.post(`/admin/payments/providers/sync`, null, { params: { countryCode } }).then((r) => r.data),
 };
+
+export interface CleanupFilters {
+  createdBefore?: string;
+  createdAfter?: string;
+  phonePattern?: string;
+  emailPattern?: string;
+  roles?: string[];
+  forceAllNonAdmin?: boolean;
+}
+
+export interface CleanupComponents {
+  jobs?: boolean;
+  users?: boolean;
+  growth?: boolean;
+  marketingBudgets?: boolean;
+  payments?: boolean;
+  files?: boolean;
+  notifications?: boolean;
+}
+
+export interface CleanupRequest {
+  developerCode: string;
+  confirmationPhrase?: string;
+  dryRun?: boolean;
+  logId?: string;
+  filters: CleanupFilters;
+  components: CleanupComponents;
+}
+
+export interface CleanupAnalysis {
+  jobs: { jobs: number; proofs: number; ratings: number; disputes: number; fraudFlags: number; locationUpdates: number };
+  users: { users: number; addresses: number; paymentMethods: number; subscriptions: number };
+  growth: { leads: number; marketerProfiles: number; commissionTransactions: number; marketerPayoutRequests: number };
+  marketingBudgets: { campaigns: number; budgetPeriods: number; budgetTransactions: number };
+  payments: { paymentTransactions: number; earnings: number; payoutRequests: number; collectorFloatLedger: number };
+  files: { unusedFiles: number };
+  notifications: { notifications: number; marketerNotifications: number };
+}
+
+export interface CleanupResult {
+  success: boolean;
+  deletedCounts: CleanupAnalysis;
+  errors: string[];
+  logId: string;
+}
+
+export const systemCleanupApi = {
+  analyze: (request: CleanupRequest) =>
+    client.post<{ analysis: CleanupAnalysis; logId: string }>('/admin/system-cleanup/analyze', request).then((r) => r.data),
+
+  execute: (request: CleanupRequest) =>
+    client.post<CleanupResult>('/admin/system-cleanup/execute', request).then((r) => r.data),
+
+  logs: () =>
+    client.get<any[]>('/admin/system-cleanup/logs').then((r) => r.data),
+
+  getLog: (id: string) =>
+    client.get<any>(`/admin/system-cleanup/logs/${id}`).then((r) => r.data),
+};

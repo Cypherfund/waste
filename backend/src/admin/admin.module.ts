@@ -7,6 +7,8 @@ import { Dispute } from '../disputes/entities/dispute.entity';
 import { Earning } from '../earnings/entities/earning.entity';
 import { Rating } from '../ratings/entities/rating.entity';
 import { User } from '../users/entities/user.entity';
+import { SystemCleanupLog } from './entities/system-cleanup-log.entity';
+import { SystemCleanupService } from './services/system-cleanup.service';
 import { UsersModule } from '../users/users.module';
 import { JobsModule } from '../jobs/jobs.module';
 import { AssignmentModule } from '../assignment/assignment.module';
@@ -16,10 +18,14 @@ import { EarningsModule } from '../earnings/earnings.module';
 import { WalletModule } from '../wallet/wallet.module';
 import { CountriesModule } from '../countries/countries.module';
 import { PaymentsModule } from '../payments/payments.module';
+import { GrowthModule } from '../growth/growth.module';
+import { FilesModule } from '../files/files.module';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Job, Dispute, Earning, Rating, User]),
+    TypeOrmModule.forFeature([Job, Dispute, Earning, Rating, User, SystemCleanupLog]),
     UsersModule,
     JobsModule,
     AssignmentModule,
@@ -29,8 +35,12 @@ import { PaymentsModule } from '../payments/payments.module';
     WalletModule,
     CountriesModule,
     PaymentsModule,
+    GrowthModule,
+    FilesModule,
+    NotificationsModule,
+    SubscriptionsModule,
   ],
   controllers: [AdminController],
-  providers: [AdminService],
+  providers: [AdminService, SystemCleanupService],
 })
 export class AdminModule {}
