@@ -5,6 +5,7 @@ import { growthPayoutsApi } from '../services/api/growth';
 import Pagination from '../components/Pagination';
 import HelpGuide from '../components/HelpGuide';
 import { usePagination } from '../hooks/usePagination';
+import { useAlert } from '../contexts/AlertContext';
 
 const PAGE_SIZE = 20;
 
@@ -18,6 +19,7 @@ export default function MarketerPayoutsPage() {
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [payId, setPayId] = useState<string | null>(null);
+  const { showSuccess, showError } = useAlert();
   const [payRef, setPayRef] = useState('');
 
   const load = async () => {
@@ -42,9 +44,10 @@ export default function MarketerPayoutsPage() {
   const handleApprove = async (id: string) => {
     try {
       await growthPayoutsApi.approve(id);
+      showSuccess('Payout approved');
       load();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error');
+      showError(err.response?.data?.message || 'Error approving payout');
     }
   };
 
@@ -54,9 +57,10 @@ export default function MarketerPayoutsPage() {
       await growthPayoutsApi.reject(rejectId, rejectReason);
       setRejectId(null);
       setRejectReason('');
+      showSuccess('Payout rejected');
       load();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error');
+      showError(err.response?.data?.message || 'Error rejecting payout');
     }
   };
 
@@ -66,9 +70,10 @@ export default function MarketerPayoutsPage() {
       await growthPayoutsApi.markPaid(payId, payRef);
       setPayId(null);
       setPayRef('');
+      showSuccess('Payout marked as paid');
       load();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error');
+      showError(err.response?.data?.message || 'Error marking payout as paid');
     }
   };
 
