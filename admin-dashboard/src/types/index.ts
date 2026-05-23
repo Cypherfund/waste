@@ -34,6 +34,16 @@ export interface AdminUser {
   updatedAt: string;
 }
 
+export interface UserListResponse {
+  data: AdminUser[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
 export interface UserDetail extends AdminUser {
   completedJobs: number;
   totalEarnings: number;
@@ -75,7 +85,7 @@ export interface JobListResponse {
     total: number;
     page: number;
     limit: number;
-    pages: number;
+    totalPages: number;
   };
 }
 
@@ -152,7 +162,7 @@ export interface PayoutRequest {
 
 export interface PayoutListResponse {
   data: PayoutRequest[];
-  meta: { total: number; page: number; limit: number; pages: number };
+  meta: { total: number; page: number; limit: number; totalPages: number };
 }
 
 export interface PayoutMethod { key: string; label: string; }
@@ -184,7 +194,7 @@ export interface EarningsListResponse {
     total: number;
     page: number;
     limit: number;
-    pages: number;
+    totalPages: number;
   };
 }
 
@@ -323,6 +333,7 @@ export interface CommissionTransaction {
 export interface CommissionTransactionsResponse {
   data: CommissionTransaction[];
   total: number;
+  totalPages: number;
 }
 
 export interface MarketerPayoutRequest {
@@ -344,6 +355,7 @@ export interface MarketerPayoutRequest {
 export interface MarketerPayoutsResponse {
   data: MarketerPayoutRequest[];
   total: number;
+  totalPages: number;
 }
 
 // ─── Marketing Budget & Campaigns ───────────────────────────────

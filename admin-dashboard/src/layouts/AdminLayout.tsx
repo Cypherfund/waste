@@ -35,6 +35,8 @@ const NAV_ITEMS = [
   { to: '/payment-providers', label: 'Payment Providers', icon: CreditCard },
   { to: '/config', label: 'Config', icon: Settings },
   // Growth
+  { to: '/marketing-budgets', label: 'Marketing Budgets', icon: Wallet },
+  { to: '/marketing-campaigns', label: 'Marketing Campaigns', icon: Target },
   { to: '/marketers', label: 'Marketers', icon: Megaphone },
   { to: '/growth-leads', label: 'Growth Leads', icon: Target },
   { to: '/commissions', label: 'Commissions', icon: Trophy },

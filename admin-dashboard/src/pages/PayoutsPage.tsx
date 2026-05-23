@@ -57,7 +57,7 @@ export default function PayoutsPage() {
     }
   };
 
-  const totalPages = data?.meta.pages ?? 1;
+  const totalPages = data?.meta.totalPages ?? 1;
   const pendingCount = data?.data.filter((p) => p.status === 'PENDING').length ?? 0;
 
   return (

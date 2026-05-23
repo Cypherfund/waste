@@ -83,10 +83,10 @@ export class MarketerPayoutService {
     status?: PayoutStatus;
     page?: number;
     limit?: number;
-  }): Promise<{ data: MarketerPayoutRequest[]; total: number }> {
+  }): Promise<{ data: MarketerPayoutRequest[]; total: number; totalPages: number }> {
     const { status, page = 1, limit = 20 } = filters || {};
     const where: any = {};
-    
+
     if (status) where.status = status;
 
     const [data, total] = await this.payoutRepo.findAndCount({
@@ -97,7 +97,7 @@ export class MarketerPayoutService {
       take: limit,
     });
 
-    return { data, total };
+    return { data, total, totalPages: Math.ceil(total / limit) };
   }
 
   async approvePayout(

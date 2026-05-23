@@ -55,7 +55,7 @@ export default function EarningsPage() {
     window.open(url, '_blank');
   };
 
-  const totalPages = data?.meta.pages ?? 1;
+  const totalPages = data?.meta.totalPages ?? 1;
 
   const totalAmount = data?.data.reduce((sum, e) => sum + e.totalAmount, 0) ?? 0;
   const confirmedAmount = data?.data

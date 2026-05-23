@@ -70,7 +70,7 @@ export class CampaignService {
     budgetPeriodId?: string;
     page?: number;
     limit?: number;
-  }): Promise<{ data: MarketingCampaign[]; total: number }> {
+  }): Promise<{ data: MarketingCampaign[]; total: number; totalPages: number }> {
     const where: any = {};
     if (filters?.status) where.status = filters.status;
     if (filters?.territory) where.territory = filters.territory;
@@ -87,7 +87,7 @@ export class CampaignService {
       take: limit,
     });
 
-    return { data, total };
+    return { data, total, totalPages: Math.ceil(total / limit) };
   }
 
   async findCampaignById(id: string): Promise<MarketingCampaign> {

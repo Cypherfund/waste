@@ -3,38 +3,54 @@ import { UserPlus, Ban, CheckCircle, Copy, Check, Smartphone, Mail, MessageCircl
 import { Marketer } from '../types';
 import { growthMarketersApi } from '../services/api/growth';
 import HelpGuide from '../components/HelpGuide';
+import Pagination from '../components/Pagination';
+import { usePagination } from '../hooks/usePagination';
+import { useAlert } from '../contexts/AlertContext';
+
+const PAGE_SIZE = 20;
 
 export default function MarketersPage() {
   const [marketers, setMarketers] = useState<Marketer[]>([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({ name: '', phone: '', email: '', territory: '' });
   const [newMarketer, setNewMarketer] = useState<Marketer | null>(null);
+  const { page, setPage } = usePagination();
+  const { showSuccess, showError } = useAlert();
 
   const load = async () => {
     setLoading(true);
     try {
-      const data = await growthMarketersApi.list();
-      setMarketers(data);
+      const response = await growthMarketersApi.list({ page, limit: PAGE_SIZE });
+      setMarketers(response.data);
+      setTotal(response.total);
+      setTotalPages(response.totalPages);
     } catch (e) {
-      console.error(e);
+      showError('Failed to load marketers');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [page]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    setCreating(true);
     try {
       const created = await growthMarketersApi.create(form);
       setShowCreate(false);
       setForm({ name: '', phone: '', email: '', territory: '' });
       setNewMarketer(created);
+      showSuccess('Marketer created successfully');
       load();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error creating marketer');
+      showError(err.response?.data?.message || 'Error creating marketer');
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -42,12 +58,14 @@ export default function MarketersPage() {
     try {
       if (m.status === 'ACTIVE') {
         await growthMarketersApi.suspend(m.id);
+        showSuccess('Marketer suspended');
       } else {
         await growthMarketersApi.activate(m.id);
+        showSuccess('Marketer activated');
       }
       load();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error updating status');
+      showError(err.response?.data?.message || 'Error updating status');
     }
   };
 
@@ -130,8 +148,10 @@ export default function MarketersPage() {
               />
             </div>
             <div className="mt-5 flex justify-end gap-2">
-              <button type="button" onClick={() => setShowCreate(false)} className="rounded px-4 py-2 text-sm text-gray-600 hover:bg-gray-100">Cancel</button>
-              <button type="submit" className="rounded bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700">Create</button>
+              <button type="button" onClick={() => setShowCreate(false)} className="rounded px-4 py-2 text-sm text-gray-600 hover:bg-gray-100" disabled={creating}>Cancel</button>
+              <button type="submit" className="rounded bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed" disabled={creating}>
+                {creating ? 'Creating...' : 'Create'}
+              </button>
             </div>
           </form>
         </div>
@@ -293,6 +313,7 @@ export default function MarketersPage() {
               ))}
             </tbody>
           </table>
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </div>
       )}
     </div>

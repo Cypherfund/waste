@@ -4,6 +4,7 @@ import { CommissionScheme, CommissionTransaction } from '../types';
 import { growthSchemesApi, growthCommissionsApi } from '../services/api/growth';
 import Pagination from '../components/Pagination';
 import { usePagination } from '../hooks/usePagination';
+import { useAlert } from '../contexts/AlertContext';
 
 const PAGE_SIZE = 20;
 
@@ -12,11 +13,13 @@ export default function CommissionsPage() {
   const [schemes, setSchemes] = useState<CommissionScheme[]>([]);
   const [transactions, setTransactions] = useState<CommissionTransaction[]>([]);
   const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('PENDING');
   const { page, setPage, resetPage } = usePagination();
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const { showSuccess, showError } = useAlert();
   const [showCreateScheme, setShowCreateScheme] = useState(false);
   const [schemeForm, setSchemeForm] = useState({ name: '', type: 'HOUSEHOLD_ONBOARDING', description: '', commissionType: 'FIXED', amount: '' });
   const [editingScheme, setEditingScheme] = useState<CommissionScheme | null>(null);
@@ -34,6 +37,7 @@ export default function CommissionsPage() {
       const res = await growthCommissionsApi.list(params);
       setTransactions(res.data);
       setTotal(res.total);
+      setTotalPages(res.totalPages);
     } catch (e) {
       console.error(e);
     } finally {
@@ -48,9 +52,10 @@ export default function CommissionsPage() {
   const handleApprove = async (id: string) => {
     try {
       await growthCommissionsApi.approve(id);
+      showSuccess('Commission approved');
       loadTransactions();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error');
+      showError(err.response?.data?.message || 'Error approving commission');
     }
   };
 
@@ -60,9 +65,10 @@ export default function CommissionsPage() {
       await growthCommissionsApi.reject(rejectId, rejectReason);
       setRejectId(null);
       setRejectReason('');
+      showSuccess('Commission rejected');
       loadTransactions();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error');
+      showError(err.response?.data?.message || 'Error rejecting commission');
     }
   };
 
@@ -72,9 +78,10 @@ export default function CommissionsPage() {
       await growthSchemesApi.create({ ...schemeForm, amount: Number(schemeForm.amount) });
       setShowCreateScheme(false);
       setSchemeForm({ name: '', type: 'HOUSEHOLD_ONBOARDING', description: '', commissionType: 'FIXED', amount: '' });
+      showSuccess('Scheme created successfully');
       loadSchemes();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error creating scheme');
+      showError(err.response?.data?.message || 'Error creating scheme');
     }
   };
 
@@ -84,9 +91,10 @@ export default function CommissionsPage() {
       await growthSchemesApi.update(editingScheme.id, { amount: Number(editAmount) } as any);
       setEditingScheme(null);
       setEditAmount('');
+      showSuccess('Scheme updated successfully');
       loadSchemes();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error updating scheme');
+      showError(err.response?.data?.message || 'Error updating scheme');
     }
   };
 
@@ -94,9 +102,10 @@ export default function CommissionsPage() {
     if (!confirm('Deactivate this commission scheme?')) return;
     try {
       await growthSchemesApi.deactivate(id);
+      showSuccess('Scheme deactivated');
       loadSchemes();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error deactivating scheme');
+      showError(err.response?.data?.message || 'Error deactivating scheme');
     }
   };
 
@@ -262,7 +271,7 @@ export default function CommissionsPage() {
               </table>
               <Pagination
                 page={page}
-                totalPages={Math.ceil(total / PAGE_SIZE)}
+                totalPages={totalPages}
                 onPageChange={setPage}
               />
             </div>

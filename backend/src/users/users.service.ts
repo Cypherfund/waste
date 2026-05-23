@@ -82,11 +82,24 @@ export class UsersService {
   async listUsers(filters?: {
     role?: string;
     isActive?: boolean;
-  }): Promise<User[]> {
+    page?: number;
+    limit?: number;
+  }): Promise<{ data: User[]; total: number }> {
     const where: any = {};
     if (filters?.role) where.role = filters.role;
     if (filters?.isActive !== undefined) where.isActive = filters.isActive;
-    return this.userRepo.find({ where, order: { createdAt: 'DESC' } });
+
+    const page = filters?.page || 1;
+    const limit = filters?.limit || 20;
+
+    const [data, total] = await this.userRepo.findAndCount({
+      where,
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    return { data, total };
   }
 
   async countByRole(role: string): Promise<number> {

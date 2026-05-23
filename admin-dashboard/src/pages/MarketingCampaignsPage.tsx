@@ -3,6 +3,7 @@ import { Plus, X, Users, Target, Play, Pause, Square, Ban, Settings } from 'luci
 import { MarketingCampaign, MarketingBudgetPeriod, Marketer, CommissionScheme } from '../types';
 import { growthCampaignsApi, growthBudgetsApi, growthMarketersApi, growthSchemesApi } from '../services/api/growth';
 import HelpGuide from '../components/HelpGuide';
+import { useAlert } from '../contexts/AlertContext';
 
 export default function MarketingCampaignsPage() {
   const [campaigns, setCampaigns] = useState<MarketingCampaign[]>([]);
@@ -13,7 +14,9 @@ export default function MarketingCampaignsPage() {
   const [selectedCampaign, setSelectedCampaign] = useState<MarketingCampaign | null>(null);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const limit = 20;
+  const { showSuccess, showError } = useAlert();
 
   const [budgetPeriods, setBudgetPeriods] = useState<MarketingBudgetPeriod[]>([]);
   const [marketers, setMarketers] = useState<Marketer[]>([]);
@@ -40,16 +43,17 @@ export default function MarketingCampaignsPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const [campaignsResponse, budgetPeriodsResponse, marketersData, schemesData] = await Promise.all([
+      const [campaignsResponse, budgetPeriodsResponse, marketersResponse, schemesData] = await Promise.all([
         growthCampaignsApi.list({ page, limit }),
         growthBudgetsApi.list({ page: 1, limit: 100 }),
-        growthMarketersApi.list(),
+        growthMarketersApi.list({ page: 1, limit: 100 }),
         growthSchemesApi.list(),
       ]);
       setCampaigns(campaignsResponse.data);
       setTotal(campaignsResponse.total);
+      setTotalPages(campaignsResponse.totalPages);
       setBudgetPeriods(budgetPeriodsResponse.data);
-      setMarketers(marketersData);
+      setMarketers(marketersResponse.data);
       setSchemes(schemesData);
     } catch (e) {
       console.error(e);
@@ -82,27 +86,30 @@ export default function MarketingCampaignsPage() {
         endDate: '',
         budgetAmount: '',
       });
+      showSuccess('Campaign created successfully');
       load();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error creating campaign');
+      showError(err.response?.data?.message || 'Error creating campaign');
     }
   };
 
   const handleActivate = async (campaign: MarketingCampaign) => {
     try {
       await growthCampaignsApi.activate(campaign.id);
+      showSuccess('Campaign activated');
       load();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error activating campaign');
+      showError(err.response?.data?.message || 'Error activating campaign');
     }
   };
 
   const handlePause = async (campaign: MarketingCampaign) => {
     try {
       await growthCampaignsApi.pause(campaign.id);
+      showSuccess('Campaign paused');
       load();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error pausing campaign');
+      showError(err.response?.data?.message || 'Error pausing campaign');
     }
   };
 
@@ -110,9 +117,10 @@ export default function MarketingCampaignsPage() {
     if (!confirm(`End campaign "${campaign.name}"?`)) return;
     try {
       await growthCampaignsApi.end(campaign.id);
+      showSuccess('Campaign ended');
       load();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error ending campaign');
+      showError(err.response?.data?.message || 'Error ending campaign');
     }
   };
 
@@ -120,9 +128,10 @@ export default function MarketingCampaignsPage() {
     if (!confirm(`Cancel campaign "${campaign.name}"?`)) return;
     try {
       await growthCampaignsApi.cancel(campaign.id);
+      showSuccess('Campaign cancelled');
       load();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error cancelling campaign');
+      showError(err.response?.data?.message || 'Error cancelling campaign');
     }
   };
 
@@ -134,9 +143,10 @@ export default function MarketingCampaignsPage() {
       setShowAssignMarketers(false);
       setAssignMarketersForm({ marketerProfileIds: [] });
       setSelectedCampaign(null);
+      showSuccess('Marketers assigned successfully');
       load();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error assigning marketers');
+      showError(err.response?.data?.message || 'Error assigning marketers');
     }
   };
 
@@ -148,9 +158,10 @@ export default function MarketingCampaignsPage() {
       setShowAssignSchemes(false);
       setAssignSchemesForm({ schemeIds: [] });
       setSelectedCampaign(null);
+      showSuccess('Schemes assigned successfully');
       load();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error assigning schemes');
+      showError(err.response?.data?.message || 'Error assigning schemes');
     }
   };
 
@@ -482,11 +493,11 @@ export default function MarketingCampaignsPage() {
                   Previous
                 </button>
                 <span className="px-3 py-1 text-sm text-gray-600">
-                  Page {page} of {Math.ceil(total / limit)}
+                  Page {page} of {totalPages}
                 </span>
                 <button
-                  onClick={() => setPage(p => Math.min(Math.ceil(total / limit), p + 1))}
-                  disabled={page >= Math.ceil(total / limit)}
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages}
                   className="rounded px-3 py-1 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
                 >
                   Next
