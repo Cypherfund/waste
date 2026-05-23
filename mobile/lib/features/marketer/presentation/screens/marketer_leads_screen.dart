@@ -18,8 +18,21 @@ class _MarketerLeadsScreenState extends State<MarketerLeadsScreen> {
   @override
   void initState() {
     super.initState();
+    _loadLeads();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reload if data is stale (2+ minutes old), matching collector pattern
+    if (context.read<MarketerProvider>().isStale) {
+      _loadLeads();
+    }
+  }
+
+  void _loadLeads() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<MarketerProvider>().loadLeads();
+      context.read<MarketerProvider>().loadLeads(status: _statusFilter);
     });
   }
 

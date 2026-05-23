@@ -111,10 +111,14 @@ class WebSocketService {
 
     _socket?.dispose();
 
+    debugPrint('[WS] Connecting to host: ${AppConfig.wsBaseUrl}');
+    debugPrint('[WS] Socket.IO path: ${AppConfig.socketIoPath}');
+
     _socket = io.io(
-      '${AppConfig.wsBaseUrl}${AppConfig.wsNamespace}',
+      AppConfig.wsBaseUrl,
       io.OptionBuilder()
           .setTransports(['websocket'])
+          .setPath(AppConfig.socketIoPath)
           .setAuth({'token': accessToken})
           .disableAutoConnect()
           .build(),

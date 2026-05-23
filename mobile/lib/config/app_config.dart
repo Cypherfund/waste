@@ -13,10 +13,19 @@ class AppConfig {
   }
 
   static String get wsBaseUrl {
-    if (_wsBaseUrlOverride.isNotEmpty) return _wsBaseUrlOverride;
+    debugPrint('[AppConfig] _wsBaseUrlOverride: "$_wsBaseUrlOverride"');
+    debugPrint('[AppConfig] kIsWeb: $kIsWeb');
+    if (_wsBaseUrlOverride.isNotEmpty) {
+      // Keep only the host, remove any trailing slashes
+      return _wsBaseUrlOverride
+          .replaceAll('wss://', 'https://')
+          .replaceAll('ws://', 'http://')
+          .replaceAll(RegExp(r'/+$'), '');
+    }
     if (kIsWeb) return 'http://10.12.1.172:3001';
     return 'http://10.12.1.172:3001';
   }
 
-  static const String wsNamespace = '/ws';
+  static const String socketIoPath = '/waste/socket.io';
+  static const String wsNamespace = '';
 }

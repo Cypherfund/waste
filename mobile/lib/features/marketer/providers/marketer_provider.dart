@@ -42,6 +42,10 @@ class MarketerProvider extends ChangeNotifier {
   String? _error;
   String? get error => _error;
 
+  DateTime? _lastFetched;
+  bool get isStale => _lastFetched == null ||
+      DateTime.now().difference(_lastFetched!) > const Duration(minutes: 2);
+
   Future<void> loadDashboard() async {
     _loading = true;
     _error = null;
@@ -61,6 +65,7 @@ class MarketerProvider extends ChangeNotifier {
     notifyListeners();
     try {
       _leads = await _api.getLeads(status: status);
+      _lastFetched = DateTime.now();
     } catch (e) {
       _error = ApiClient.extractErrorMessage(e);
     } finally {
