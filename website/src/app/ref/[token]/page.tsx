@@ -10,8 +10,8 @@ export default function ReferralPage() {
     const referralToken = params.token as string;
     
     if (referralToken) {
-      // Redirect to the mobile web app with the referral token
-      window.location.href = `https://app.kmertrash.com?token=${referralToken}`;
+      // Redirect to the mobile web app's register screen with the referral token
+      window.location.href = `https://app.kmertrash.com/register?token=${referralToken}`;
     } else {
       // No token found, redirect to home
       window.location.href = '/';

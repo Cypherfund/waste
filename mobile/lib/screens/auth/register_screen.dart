@@ -7,9 +7,11 @@ import '../../widgets/app_text_field.dart';
 import '../../widgets/loading_button.dart';
 import '../../widgets/error_banner.dart';
 import '../../services/deep_link/deep_link_service.dart';
+import 'dart:html' as html show window, EventListener;
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
+  final String? initialReferralToken;
+  const RegisterScreen({super.key, this.initialReferralToken});
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -34,20 +36,51 @@ class _RegisterScreenState extends State<RegisterScreen> {
     {'code': '+221', 'name': 'Senegal', 'flag': '🇸🇳'},
   ];
 
+  html.EventListener? _urlChangeListener;
+
   @override
   void initState() {
     super.initState();
-    _extractReferralTokenFromUrl();
+    // Extract token immediately on web
+    if (kIsWeb) {
+      _extractReferralTokenFromUrl();
+      // Pre-fill from widget parameter if provided
+      if (widget.initialReferralToken != null && widget.initialReferralToken!.isNotEmpty) {
+        _referralCodeController.text = widget.initialReferralToken!;
+        debugPrint('[RegisterScreen] Pre-filled referral token from widget parameter: ${widget.initialReferralToken}');
+      }
+      // Listen for URL changes (e.g., when user clicks a link while app is open)
+      _urlChangeListener = (event) {
+        _extractReferralTokenFromUrl();
+      };
+      html.window.addEventListener('popstate', _urlChangeListener);
+      html.window.addEventListener('hashchange', _urlChangeListener);
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Also check on dependency changes (e.g., after navigation)
+    if (kIsWeb) {
+      _extractReferralTokenFromUrl();
+    }
   }
 
   void _extractReferralTokenFromUrl() {
     if (kIsWeb) {
       try {
-        final uri = Uri.base;
+        // Use window.location.href for more reliable URL detection on web
+        final url = html.window.location.href;
+        final uri = Uri.parse(url);
         final token = uri.queryParameters['token'];
         if (token != null && token.isNotEmpty) {
-          _referralCodeController.text = token;
-          debugPrint('[RegisterScreen] Extracted referral token from URL: $token');
+          // Always update the controller with the latest token from URL
+          if (_referralCodeController.text != token) {
+            _referralCodeController.text = token;
+            debugPrint('[RegisterScreen] Extracted referral token from URL: $token');
+            debugPrint('[RegisterScreen] Full URL: $url');
+          }
         }
       } catch (e) {
         debugPrint('[RegisterScreen] Error extracting token from URL: $e');
@@ -57,6 +90,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
+    if (kIsWeb && _urlChangeListener != null) {
+      html.window.removeEventListener('popstate', _urlChangeListener);
+      html.window.removeEventListener('hashchange', _urlChangeListener);
+    }
     _nameController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
@@ -97,6 +134,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Check URL on every build to catch navigation changes
+    if (kIsWeb) {
+      _extractReferralTokenFromUrl();
+    }
     final auth = context.watch<AuthProvider>();
 
     return Scaffold(
