@@ -20,10 +20,10 @@ export class SystemCleanupLog {
   @Column({ type: 'jsonb' })
   components: Record<string, any>;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ name: 'analysis_before', type: 'jsonb', nullable: true })
   analysisBefore: Record<string, any>;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ name: 'deleted_counts', type: 'jsonb', nullable: true })
   deletedCounts: Record<string, any>;
 
   @Column({ type: 'jsonb', default: [] })

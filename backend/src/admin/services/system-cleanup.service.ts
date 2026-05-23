@@ -269,10 +269,18 @@ export class SystemCleanupService {
     }
 
     if (components.growth) {
-      analysis.growth.leads = await this.leadRepo.count({ where: userWhere });
-      analysis.growth.marketerProfiles = await this.marketerProfileRepo.count({ where: userWhere });
-      analysis.growth.commissionTransactions = await this.commissionTransactionRepo.count({ where: userWhere });
-      analysis.growth.marketerPayoutRequests = await this.marketerPayoutRequestRepo.count({ where: userWhere });
+      analysis.growth.leads = userIds.length > 0 ? await this.leadRepo.count({ where: { marketerId: In(userIds) } }) : 0;
+      analysis.growth.marketerProfiles = userIds.length > 0 ? await this.marketerProfileRepo.count({ where: { userId: In(userIds) } }) : 0;
+      
+      // Get marketer profile IDs for the users
+      const marketerProfiles = userIds.length > 0 ? await this.marketerProfileRepo.find({ 
+        where: { userId: In(userIds) }, 
+        select: ['id'] 
+      }) : [];
+      const marketerProfileIds = marketerProfiles.map(mp => mp.id);
+      
+      analysis.growth.commissionTransactions = marketerProfileIds.length > 0 ? await this.commissionTransactionRepo.count({ where: { marketerProfileId: In(marketerProfileIds) } }) : 0;
+      analysis.growth.marketerPayoutRequests = marketerProfileIds.length > 0 ? await this.marketerPayoutRequestRepo.count({ where: { marketerProfileId: In(marketerProfileIds) } }) : 0;
     }
 
     if (components.marketingBudgets) {
@@ -296,7 +304,15 @@ export class SystemCleanupService {
     if (components.notifications) {
       const notificationWhere = userIds.length > 0 ? { userId: In(userIds) } : {};
       analysis.notifications.notifications = await this.notificationRepo.count({ where: notificationWhere });
-      analysis.notifications.marketerNotifications = await this.marketerNotificationRepo.count({ where: userWhere });
+      
+      // Get marketer profile IDs for the users
+      const marketerProfiles = userIds.length > 0 ? await this.marketerProfileRepo.find({ 
+        where: { userId: In(userIds) }, 
+        select: ['id'] 
+      }) : [];
+      const marketerProfileIds = marketerProfiles.map(mp => mp.id);
+      
+      analysis.notifications.marketerNotifications = marketerProfileIds.length > 0 ? await this.marketerNotificationRepo.count({ where: { marketerProfileId: In(marketerProfileIds) } }) : 0;
     }
 
     return analysis;
@@ -334,7 +350,15 @@ export class SystemCleanupService {
       if (components.notifications) {
         const notificationWhere = userIds.length > 0 ? { userId: In(userIds) } : {};
         deletedCounts.notifications.notifications = await this.deleteCount(queryRunner, this.notificationRepo, notificationWhere, dryRun, errors);
-        deletedCounts.notifications.marketerNotifications = await this.deleteCount(queryRunner, this.marketerNotificationRepo, userWhere, dryRun, errors);
+        
+        // Get marketer profile IDs for the users
+        const marketerProfiles = userIds.length > 0 ? await this.marketerProfileRepo.find({ 
+          where: { userId: In(userIds) }, 
+          select: ['id'] 
+        }) : [];
+        const marketerProfileIds = marketerProfiles.map(mp => mp.id);
+        
+        deletedCounts.notifications.marketerNotifications = marketerProfileIds.length > 0 ? await this.deleteCount(queryRunner, this.marketerNotificationRepo, { marketerProfileId: In(marketerProfileIds) }, dryRun, errors) : 0;
       }
 
       if (components.payments) {
@@ -346,10 +370,17 @@ export class SystemCleanupService {
       }
 
       if (components.growth) {
-        deletedCounts.growth.commissionTransactions = await this.deleteCount(queryRunner, this.commissionTransactionRepo, userWhere, dryRun, errors);
-        deletedCounts.growth.marketerPayoutRequests = await this.deleteCount(queryRunner, this.marketerPayoutRequestRepo, userWhere, dryRun, errors);
-        deletedCounts.growth.leads = await this.deleteCount(queryRunner, this.leadRepo, userWhere, dryRun, errors);
-        deletedCounts.growth.marketerProfiles = await this.deleteCount(queryRunner, this.marketerProfileRepo, userWhere, dryRun, errors);
+        // Get marketer profile IDs for the users
+        const marketerProfiles = userIds.length > 0 ? await this.marketerProfileRepo.find({ 
+          where: { userId: In(userIds) }, 
+          select: ['id'] 
+        }) : [];
+        const marketerProfileIds = marketerProfiles.map(mp => mp.id);
+        
+        deletedCounts.growth.leads = userIds.length > 0 ? await this.deleteCount(queryRunner, this.leadRepo, { marketerId: In(userIds) }, dryRun, errors) : 0;
+        deletedCounts.growth.marketerProfiles = userIds.length > 0 ? await this.deleteCount(queryRunner, this.marketerProfileRepo, { userId: In(userIds) }, dryRun, errors) : 0;
+        deletedCounts.growth.commissionTransactions = marketerProfileIds.length > 0 ? await this.deleteCount(queryRunner, this.commissionTransactionRepo, { marketerProfileId: In(marketerProfileIds) }, dryRun, errors) : 0;
+        deletedCounts.growth.marketerPayoutRequests = marketerProfileIds.length > 0 ? await this.deleteCount(queryRunner, this.marketerPayoutRequestRepo, { marketerProfileId: In(marketerProfileIds) }, dryRun, errors) : 0;
       }
 
       if (components.marketingBudgets) {
