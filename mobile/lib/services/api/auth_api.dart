@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../../config/app_config.dart';
 import '../../models/auth_response.dart';
 import 'api_client.dart';
