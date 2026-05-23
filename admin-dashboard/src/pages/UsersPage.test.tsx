@@ -62,7 +62,7 @@ const mockedUpdateStatus = vi.mocked(usersApi.updateStatus);
 describe('UsersPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockedList.mockResolvedValue(mockUsers as any);
+    mockedList.mockResolvedValue({ data: mockUsers, total: mockUsers.length, totalPages: 1 } as any);
   });
 
   it('shows spinner then renders user table', async () => {
@@ -77,7 +77,7 @@ describe('UsersPage', () => {
   });
 
   it('shows empty state when no users match', async () => {
-    mockedList.mockResolvedValue([]);
+    mockedList.mockResolvedValue({ data: [], total: 0, totalPages: 0 } as any);
     render(<UsersPage />);
 
     await waitFor(() => {
