@@ -128,10 +128,10 @@ export class LeadService {
       .createQueryBuilder()
       .update(MarketerProfile)
       .set({
-        dailyLeadsCreated: () => '"daily_leads_created" + 1',
-        totalLeads: () => '"total_leads" + 1',
+        dailyLeadsCreated: () => 'daily_leads_created + 1',
+        totalLeads: () => 'total_leads + 1',
       })
-      .where('id = :id AND "daily_leads_created" < :limit', {
+      .where('id = :id AND daily_leads_created < :limit', {
         id: profile.id,
         limit: DAILY_LEAD_LIMIT,
       })
