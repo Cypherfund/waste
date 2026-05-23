@@ -1,11 +1,12 @@
 import 'dart:async';
-import 'package:uni_links/uni_links.dart';
+import 'package:app_links/app_links.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class DeepLinkService {
   StreamSubscription? _sub;
   String? _pendingReferralToken;
+  final AppLinks _appLinks = AppLinks();
 
   String? get pendingReferralToken => _pendingReferralToken;
 
@@ -15,18 +16,18 @@ class DeepLinkService {
 
     // Handle initial link (app opened from cold start)
     try {
-      final initialLink = await getInitialLink();
+      final initialLink = await _appLinks.getInitialLink();
       if (initialLink != null) {
-        _handleLink(initialLink);
+        _handleLink(initialLink.toString());
       }
     } catch (e) {
       debugPrint('[DeepLink] Error getting initial link: $e');
     }
 
     // Handle incoming links while app is running
-    _sub = linkStream.listen((String? link) {
-      if (link != null) {
-        _handleLink(link);
+    _sub = _appLinks.uriLinkStream.listen((Uri? uri) {
+      if (uri != null) {
+        _handleLink(uri.toString());
       }
     }, onError: (err) {
       debugPrint('[DeepLink] Error on link stream: $err');

@@ -19,6 +19,7 @@ class SavedAccount {
 
   bool get isHousehold => role == 'HOUSEHOLD';
   bool get isCollector => role == 'COLLECTOR';
+  bool get isMarketer => role == 'MARKETER';
 
   String get initials {
     final parts = name.trim().split(RegExp(r'\s+'));

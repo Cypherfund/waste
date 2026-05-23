@@ -350,7 +350,9 @@ class _SavedAccountTile extends StatelessWidget {
                 radius: 20,
                 backgroundColor: account.isHousehold
                     ? AppColors.primary.withValues(alpha: 0.12)
-                    : const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                    : account.isMarketer
+                        ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                        : const Color(0xFFF59E0B).withValues(alpha: 0.15),
                 child: Text(
                   account.initials,
                   style: TextStyle(
@@ -358,7 +360,9 @@ class _SavedAccountTile extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                     color: account.isHousehold
                         ? AppColors.primary
-                        : const Color(0xFFF59E0B),
+                        : account.isMarketer
+                            ? const Color(0xFF10B981)
+                            : const Color(0xFFF59E0B),
                   ),
                 ),
               ),
@@ -376,7 +380,7 @@ class _SavedAccountTile extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '${account.isHousehold ? 'Household' : 'Collector'} · ${account.phone}',
+                      '${account.isHousehold ? 'Household' : account.isMarketer ? 'Marketer' : 'Collector'} · ${account.phone}',
                       style: const TextStyle(
                         fontSize: 11,
                         color: Color(0xFF9CA3AF),
