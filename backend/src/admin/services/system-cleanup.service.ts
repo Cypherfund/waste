@@ -94,7 +94,7 @@ export class SystemCleanupService {
     private locationUpdateRepo: Repository<LocationUpdate>,
     @InjectRepository(Notification)
     private notificationRepo: Repository<Notification>,
-    @InjectRepository(File)
+    @InjectRepository(FileRecord)
     private fileRepo: Repository<FileRecord>,
     @InjectRepository(Earning)
     private earningRepo: Repository<Earning>,
