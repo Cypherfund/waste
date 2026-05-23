@@ -33,7 +33,6 @@
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="https"/>
         <data android:host="app.kmertrash.com"/>
-        <data android:pathPrefix="/register"/>
       </intent-filter>
       <!-- Custom scheme for app deep linking -->
       <intent-filter>
