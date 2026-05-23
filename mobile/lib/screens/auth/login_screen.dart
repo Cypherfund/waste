@@ -75,7 +75,14 @@ class _LoginScreenState extends State<LoginScreen> {
       }
       await markOnboardingCompleted();
       if (mounted) {
-        final route = auth.user?.isCollector == true ? '/collector-home' : '/home';
+        String route;
+        if (auth.user?.isCollector == true) {
+          route = '/collector-home';
+        } else if (auth.user?.isMarketer == true) {
+          route = '/marketer-home';
+        } else {
+          route = '/home';
+        }
         Navigator.pushNamedAndRemoveUntil(context, route, (r) => false);
       }
     }
