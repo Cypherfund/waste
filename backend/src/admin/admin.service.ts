@@ -60,7 +60,17 @@ export class AdminService {
 
   async listUsers(filters?: { role?: string; isActive?: boolean; page?: number; limit?: number }) {
     const { page, limit, ...userFilters } = filters || {};
-    return this.usersService.listUsers({ ...userFilters, page, limit });
+    const result = await this.usersService.listUsers({ ...userFilters, page, limit });
+    const totalPages = Math.ceil(result.total / (limit || 20));
+    return {
+      data: result.data,
+      meta: {
+        total: result.total,
+        totalPages,
+        page: page || 1,
+        limit: limit || 20,
+      },
+    };
   }
 
   async getUserDetail(userId: string) {

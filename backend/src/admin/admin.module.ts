@@ -44,6 +44,7 @@ import { Notification } from '../notifications/entities/notification.entity';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { UserSubscription } from '../subscriptions/entities/user-subscription.entity';
 import { LocationUpdate } from '../websocket/entities/location-update.entity';
+import { CollectorAvailability } from '../timeslots/entities/collector-availability.entity';
 
 @Module({
   imports: [
@@ -76,6 +77,7 @@ import { LocationUpdate } from '../websocket/entities/location-update.entity';
       Notification,
       UserSubscription,
       LocationUpdate,
+      CollectorAvailability,
     ]),
     UsersModule,
     JobsModule,

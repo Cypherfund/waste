@@ -8,6 +8,7 @@ import { Job } from '../../jobs/entities/job.entity';
 import { Proof } from '../../jobs/entities/proof.entity';
 import { Rating } from '../../ratings/entities/rating.entity';
 import { Dispute } from '../../disputes/entities/dispute.entity';
+import { CollectorAvailability } from '../../timeslots/entities/collector-availability.entity';
 import { FraudFlag } from '../../fraud/entities/fraud-flag.entity';
 import { LocationUpdate } from '../../websocket/entities/location-update.entity';
 import { Notification } from '../../notifications/entities/notification.entity';
@@ -61,7 +62,7 @@ export interface CleanupRequest {
 
 export interface CleanupAnalysis {
   jobs: { jobs: number; proofs: number; ratings: number; disputes: number; fraudFlags: number; locationUpdates: number };
-  users: { users: number; addresses: number; paymentMethods: number; subscriptions: number };
+  users: { users: number; addresses: number; paymentMethods: number; subscriptions: number; collectorAvailability: number };
   growth: { leads: number; marketerProfiles: number; commissionTransactions: number; marketerPayoutRequests: number };
   marketingBudgets: { campaigns: number; budgetPeriods: number; budgetTransactions: number };
   payments: { paymentTransactions: number; earnings: number; payoutRequests: number; collectorFloatLedger: number };
@@ -108,6 +109,8 @@ export class SystemCleanupService {
     private userPaymentMethodRepo: Repository<UserPaymentMethod>,
     @InjectRepository(UserSubscription)
     private userSubscriptionRepo: Repository<UserSubscription>,
+    @InjectRepository(CollectorAvailability)
+    private collectorAvailabilityRepo: Repository<CollectorAvailability>,
     @InjectRepository(PaymentTransaction)
     private paymentTransactionRepo: Repository<PaymentTransaction>,
     @InjectRepository(Lead)
@@ -248,7 +251,7 @@ export class SystemCleanupService {
   private async performAnalysis(filters: CleanupFilters, components: CleanupComponents): Promise<CleanupAnalysis> {
     const analysis: CleanupAnalysis = {
       jobs: { jobs: 0, proofs: 0, ratings: 0, disputes: 0, fraudFlags: 0, locationUpdates: 0 },
-      users: { users: 0, addresses: 0, paymentMethods: 0, subscriptions: 0 },
+      users: { users: 0, addresses: 0, paymentMethods: 0, subscriptions: 0, collectorAvailability: 0 },
       growth: { leads: 0, marketerProfiles: 0, commissionTransactions: 0, marketerPayoutRequests: 0 },
       marketingBudgets: { campaigns: 0, budgetPeriods: 0, budgetTransactions: 0 },
       payments: { paymentTransactions: 0, earnings: 0, payoutRequests: 0, collectorFloatLedger: 0 },
@@ -275,6 +278,7 @@ export class SystemCleanupService {
       analysis.users.addresses = userIds.length > 0 ? await this.userAddressRepo.count({ where: { userId: In(userIds) } }) : 0;
       analysis.users.paymentMethods = userIds.length > 0 ? await this.userPaymentMethodRepo.count({ where: { userId: In(userIds) } }) : 0;
       analysis.users.subscriptions = userIds.length > 0 ? await this.userSubscriptionRepo.count({ where: { userId: In(userIds) } }) : 0;
+      analysis.users.collectorAvailability = userIds.length > 0 ? await this.collectorAvailabilityRepo.count({ where: { collectorId: In(userIds) } }) : 0;
     }
 
     if (components.growth) {
@@ -308,6 +312,9 @@ export class SystemCleanupService {
 
     if (components.files) {
       analysis.files.unusedFiles = await this.fileRepo.count({ where: { isUsed: false } });
+      if (userIds.length > 0) {
+        analysis.files.unusedFiles += await this.fileRepo.count({ where: { uploadedBy: In(userIds) } });
+      }
     }
 
     if (components.notifications) {
@@ -330,7 +337,7 @@ export class SystemCleanupService {
   private async performDeletion(filters: CleanupFilters, components: CleanupComponents, dryRun: boolean, errors: string[]): Promise<CleanupAnalysis> {
     const deletedCounts: CleanupAnalysis = {
       jobs: { jobs: 0, proofs: 0, ratings: 0, disputes: 0, fraudFlags: 0, locationUpdates: 0 },
-      users: { users: 0, addresses: 0, paymentMethods: 0, subscriptions: 0 },
+      users: { users: 0, addresses: 0, paymentMethods: 0, subscriptions: 0, collectorAvailability: 0 },
       growth: { leads: 0, marketerProfiles: 0, commissionTransactions: 0, marketerPayoutRequests: 0 },
       marketingBudgets: { campaigns: 0, budgetPeriods: 0, budgetTransactions: 0 },
       payments: { paymentTransactions: 0, earnings: 0, payoutRequests: 0, collectorFloatLedger: 0 },
@@ -416,17 +423,22 @@ export class SystemCleanupService {
         deletedCounts.notifications.marketerNotifications = marketerProfileIds.length > 0 ? await this.deleteCount(queryRunner, this.marketerNotificationRepo, { marketerProfileId: In(marketerProfileIds) }, dryRun, errors) : 0;
       }
 
-      // 7. Delete user-related entities (before users)
+      // 7. Delete files (before users since files reference users via uploadedBy)
+      if (components.files) {
+        const fileWhere = userIds.length > 0 ? { uploadedBy: In(userIds) } : {};
+        deletedCounts.files.unusedFiles = await this.deleteCount(queryRunner, this.fileRepo, { isUsed: false }, dryRun, errors);
+        if (userIds.length > 0) {
+          deletedCounts.files.unusedFiles += await this.deleteCount(queryRunner, this.fileRepo, fileWhere, dryRun, errors);
+        }
+      }
+
+      // 8. Delete user-related entities (before users)
       if (components.users) {
         deletedCounts.users.subscriptions = userIds.length > 0 ? await this.deleteCount(queryRunner, this.userSubscriptionRepo, { userId: In(userIds) }, dryRun, errors) : 0;
         deletedCounts.users.paymentMethods = userIds.length > 0 ? await this.deleteCount(queryRunner, this.userPaymentMethodRepo, { userId: In(userIds) }, dryRun, errors) : 0;
         deletedCounts.users.addresses = userIds.length > 0 ? await this.deleteCount(queryRunner, this.userAddressRepo, { userId: In(userIds) }, dryRun, errors) : 0;
+        deletedCounts.users.collectorAvailability = userIds.length > 0 ? await this.deleteCount(queryRunner, this.collectorAvailabilityRepo, { collectorId: In(userIds) }, dryRun, errors) : 0;
         deletedCounts.users.users = await this.deleteCount(queryRunner, this.userRepo, userWhere, dryRun, errors);
-      }
-
-      // 8. Delete files
-      if (components.files) {
-        deletedCounts.files.unusedFiles = await this.deleteCount(queryRunner, this.fileRepo, { isUsed: false }, dryRun, errors);
       }
 
       if (!dryRun) {
