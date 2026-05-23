@@ -27,6 +27,7 @@ import 'services/location/location_tracking_service.dart';
 import 'services/offline/offline_queue_service.dart';
 import 'services/offline/sync_service.dart';
 import 'services/offline/connectivity_service.dart';
+import 'services/deep_link/deep_link_service.dart';
 import 'screens/collector/collector_shell.dart';
 import 'screens/collector/collector_cashout_screen.dart';
 import 'features/shared/payment_methods_setup_screen.dart';
@@ -118,12 +119,15 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
   late final NotificationsApi _notificationsApi;
   late final NotificationsProvider _notificationsProvider;
   late final UserPaymentMethodsProvider _userPaymentMethodsProvider;
+  late final DeepLinkService _deepLinkService;
 
   @override
   void initState() {
     super.initState();
     _onboardingCompleted = widget.onboardingCompleted;
     _storage = SecureStorageService();
+    _deepLinkService = DeepLinkService();
+    _deepLinkService.init();
 
     _apiClient = ApiClient(storage: _storage);
     _authApi = AuthApi(_apiClient);
@@ -222,6 +226,7 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
         Provider.value(value: _locationService),
         Provider.value(value: _queueService),
         Provider.value(value: _syncService),
+        Provider.value(value: _deepLinkService),
       ],
       child: MaterialApp(
         title: 'KmerTrash',

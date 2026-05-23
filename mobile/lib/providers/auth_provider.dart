@@ -192,13 +192,14 @@ class AuthProvider extends ChangeNotifier {
     required String role,
     String? email,
     String? countryCode,
+    String? referralToken,
   }) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      debugPrint('AuthProvider: Starting register for phone: $phone');
+      debugPrint('AuthProvider: Starting register for phone: $phone, referralToken: $referralToken');
       final response = await _authApi.register(
         name: name,
         phone: phone,
@@ -206,6 +207,7 @@ class AuthProvider extends ChangeNotifier {
         role: role,
         email: email,
         countryCode: countryCode,
+        referralToken: referralToken,
       );
       debugPrint('AuthProvider: Register successful. User role: ${response.user.role}, isHousehold: ${response.user.isHousehold}, isCollector: ${response.user.isCollector}');
 

@@ -26,6 +26,7 @@ class AuthApi {
     required String role,
     String? email,
     String? countryCode,
+    String? referralToken,
   }) async {
     final response = await _client.dio.post('/auth/register', data: {
       'name': name,
@@ -34,6 +35,7 @@ class AuthApi {
       'role': role,
       if (email != null && email.isNotEmpty) 'email': email,
       if (countryCode != null && countryCode.isNotEmpty) 'countryCode': countryCode,
+      if (referralToken != null && referralToken.isNotEmpty) 'referralToken': referralToken,
     });
     return AuthResponse.fromJson(response.data as Map<String, dynamic>);
   }

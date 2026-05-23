@@ -14,6 +14,7 @@ export default function GrowthLeadsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const { page, setPage, resetPage } = usePagination();
 
   const load = async () => {
@@ -63,6 +64,36 @@ export default function GrowthLeadsPage() {
         {status}
       </span>
     );
+  };
+
+  const handleResendWhatsApp = async (leadId: string) => {
+    setActionLoading(leadId);
+    try {
+      const result = await growthLeadsApi.resendWhatsApp(leadId);
+      if (result.whatsappUrl) {
+        window.open(result.whatsappUrl, '_blank');
+      }
+      await load();
+    } catch (e: any) {
+      console.error(e);
+      setError(e.response?.data?.message || e.message || 'Failed to resend WhatsApp');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleExpire = async (leadId: string) => {
+    if (!confirm('Are you sure you want to expire this lead?')) return;
+    setActionLoading(leadId);
+    try {
+      await growthLeadsApi.expire(leadId);
+      await load();
+    } catch (e: any) {
+      console.error(e);
+      setError(e.response?.data?.message || e.message || 'Failed to expire lead');
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   return (
@@ -133,6 +164,7 @@ export default function GrowthLeadsPage() {
                 <th className="px-4 py-3">SMS</th>
                 <th className="px-4 py-3">Invited</th>
                 <th className="px-4 py-3">Expires</th>
+                <th className="px-4 py-3">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -153,6 +185,28 @@ export default function GrowthLeadsPage() {
                   </td>
                   <td className="px-4 py-3 text-gray-500 text-xs">
                     {new Date(l.expiresAt).toLocaleDateString()}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex gap-2">
+                      {l.smsStatus === 'FAILED' && (
+                        <button
+                          onClick={() => handleResendWhatsApp(l.id)}
+                          disabled={actionLoading === l.id}
+                          className="text-xs bg-green-50 text-green-600 hover:bg-green-100 px-2 py-1 rounded disabled:opacity-50"
+                        >
+                          {actionLoading === l.id ? '...' : 'WhatsApp'}
+                        </button>
+                      )}
+                      {l.status === 'INVITED' && (
+                        <button
+                          onClick={() => handleExpire(l.id)}
+                          disabled={actionLoading === l.id}
+                          className="text-xs bg-red-50 text-red-600 hover:bg-red-100 px-2 py-1 rounded disabled:opacity-50"
+                        >
+                          {actionLoading === l.id ? '...' : 'Expire'}
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

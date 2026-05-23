@@ -4,6 +4,8 @@ import {
   UnauthorizedException,
   ForbiddenException,
   Logger,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -16,6 +18,7 @@ import { LoginDto } from './dto/login.dto';
 import { AuthResponseDto, UserResponseDto, TokenResponseDto } from './dto/auth-response.dto';
 import { FeatureFlagService, FEATURE_FLAGS } from '../config/feature-flags';
 import { UserRole } from '../common/enums/role.enum';
+import { LeadService } from '../growth/services/lead.service';
 
 @Injectable()
 export class AuthService {
@@ -28,6 +31,8 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly featureFlagService: FeatureFlagService,
+    @Inject(forwardRef(() => LeadService))
+    private readonly leadService: LeadService,
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthResponseDto> {
@@ -76,6 +81,17 @@ export class AuthService {
 
     const savedUser = await this.userRepo.save(user);
     this.logger.log(`User registered: ${savedUser.id} (${savedUser.role})`);
+
+    // Convert lead to user if referral token provided
+    if (dto.referralToken) {
+      try {
+        await this.leadService.convertLeadToUser(dto.referralToken, savedUser.id);
+        this.logger.log(`Lead converted to user: ${dto.referralToken} -> ${savedUser.id}`);
+      } catch (error) {
+        // Log but don't fail registration if lead conversion fails
+        this.logger.warn(`Failed to convert lead to user: ${error.message}`);
+      }
+    }
 
     // Generate tokens
     const tokens = await this.generateTokens(savedUser);

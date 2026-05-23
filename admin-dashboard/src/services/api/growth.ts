@@ -30,6 +30,12 @@ export const growthMarketersApi = {
 export const growthLeadsApi = {
   list: (params?: { marketerId?: string; status?: string; page?: number; limit?: number }) =>
     client.get<{ data: GrowthLead[]; total: number; totalPages: number }>('/admin/growth/leads', { params }).then((r) => r.data),
+
+  expire: (id: string) =>
+    client.post(`/admin/growth/leads/${id}/expire`).then((r) => r.data),
+
+  resendWhatsApp: (id: string) =>
+    client.post(`/admin/growth/leads/${id}/resend-whatsapp`).then((r) => r.data),
 };
 
 export const growthSchemesApi = {

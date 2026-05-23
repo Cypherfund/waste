@@ -5,6 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/app_text_field.dart';
 import '../../widgets/loading_button.dart';
 import '../../widgets/error_banner.dart';
+import '../../services/deep_link/deep_link_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -20,6 +21,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _referralCodeController = TextEditingController();
   bool _obscurePassword = true;
   
   String _selectedCountryCode = '+237'; // Default to Cameroon
@@ -38,6 +40,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _referralCodeController.dispose();
     super.dispose();
   }
 
@@ -45,6 +48,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final auth = context.read<AuthProvider>();
+    final deepLinkService = context.read<DeepLinkService>();
+    
+    // Use manual entry if provided, otherwise use deep link token
+    final referralToken = _referralCodeController.text.trim().isNotEmpty
+        ? _referralCodeController.text.trim()
+        : deepLinkService.pendingReferralToken;
+    
     await auth.register(
       name: _nameController.text.trim(),
       phone: '$_selectedCountryCode${_phoneController.text.trim()}',
@@ -54,7 +64,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ? null
           : _emailController.text.trim(),
       countryCode: _selectedCountryCode,
+      referralToken: referralToken,
     );
+
+    // Clear the referral token after successful registration
+    deepLinkService.clearPendingToken();
 
     // Navigation is handled by Consumer in main.dart based on auth state
   }
@@ -235,6 +249,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       }
                       return null;
                     },
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+
+                  // Referral Code (optional)
+                  AppTextField(
+                    controller: _referralCodeController,
+                    label: 'Referral Code (Optional)',
+                    hint: 'Enter referral code if you have one',
+                    prefixIcon: const Icon(Icons.card_giftcard_outlined, color: AppColors.textHint, size: 22),
                   ),
                   const SizedBox(height: AppSpacing.lg),
 

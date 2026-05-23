@@ -89,6 +89,12 @@ export class GrowthAdminController {
     return this.leadService.expireLead(id);
   }
 
+  @Post('leads/:id/resend-whatsapp')
+  @ApiOperation({ summary: 'Resend failed lead invite via WhatsApp' })
+  async resendViaWhatsApp(@Param('id', ParseUUIDPipe) id: string) {
+    return this.leadService.adminResendViaWhatsApp(id);
+  }
+
   // Commission Schemes
   @Post('commission-schemes')
   @ApiOperation({ summary: 'Create commission scheme' })

@@ -249,9 +249,9 @@ export class LeadService {
     return lead;
   }
 
-  async convertLeadToUser(leadId: string, userId: string): Promise<void> {
+  async convertLeadToUser(referralToken: string, userId: string): Promise<void> {
     const lead = await this.leadRepo.findOne({
-      where: { id: leadId },
+      where: { referralToken },
     });
 
     if (!lead) {
@@ -446,5 +446,48 @@ export class LeadService {
       // Send confirmation
       await this.smsService.send(phone, 'You have opted out of KmerTrash messages. Reply START to resubscribe. / Vous vous êtes désabonné des messages KmerTrash. Répondez START pour vous réabonner.');
     }
+  }
+
+  async adminResendViaWhatsApp(leadId: string): Promise<Lead> {
+    const lead = await this.leadRepo.findOne({
+      where: { id: leadId },
+      relations: ['marketer'],
+    });
+
+    if (!lead) {
+      throw new NotFoundException('Lead not found');
+    }
+
+    if (lead.smsStatus !== SMSSStatus.FAILED) {
+      throw new BadRequestException('Can only resend failed invites via WhatsApp');
+    }
+
+    // Get marketer profile for referral code
+    const profile = await this.profileRepo.findOne({
+      where: { userId: lead.marketerId },
+      relations: ['user'],
+    });
+
+    if (!profile) {
+      throw new NotFoundException('Marketer profile not found');
+    }
+
+    const referralLink = `https://kmertrash.com/ref/${lead.referralToken}`;
+    const marketerName = profile?.user?.name || 'Your friend';
+
+    // Bilingual WhatsApp message
+    const message = `Hello ${lead.name}! ${marketerName} invited you to KmerTrash - smart waste collection. Complete signup: ${referralLink} (expires in 7 days). Questions? Reply STOP to opt out. / Bonjour ${lead.name}! ${marketerName} vous invite sur KmerTrash. Inscription: ${referralLink} (expire dans 7 jours).`;
+
+    // Send via WhatsApp (using WhatsApp Business API URL scheme)
+    const whatsappUrl = `https://wa.me/${lead.phone.replace('+', '')}?text=${encodeURIComponent(message)}`;
+
+    // Update lead status
+    lead.smsStatus = SMSSStatus.SENT;
+    lead.smsSentAt = new Date();
+    lead.source = 'WHATSAPP' as any;
+    lead.smsRetryCount = 0;
+    await this.leadRepo.save(lead);
+
+    return { ...lead, whatsappUrl } as any;
   }
 }

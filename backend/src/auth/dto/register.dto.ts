@@ -48,4 +48,9 @@ export class RegisterDto {
   @IsString()
   @MaxLength(10)
   countryCode?: string;
+
+  @ApiPropertyOptional({ example: 'abc123def456', description: 'Referral token from lead invitation' })
+  @IsOptional()
+  @IsString()
+  referralToken?: string;
 }

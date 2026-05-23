@@ -17,6 +17,32 @@
         <action android:name="android.intent.action.MAIN"/>
         <category android:name="android.intent.category.LAUNCHER"/>
       </intent-filter>
+      <!-- Deep linking for marketing site referral URLs -->
+      <intent-filter android:autoVerify="true">
+        <action android:name="android.intent.action.VIEW"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+        <category android:name="android.intent.category.BROWSABLE"/>
+        <data android:scheme="https"/>
+        <data android:host="kmertrash.com"/>
+        <data android:pathPrefix="/ref"/>
+      </intent-filter>
+      <!-- Deep linking for app.kmertrash.com (Flutter web hybrid) -->
+      <intent-filter android:autoVerify="true">
+        <action android:name="android.intent.action.VIEW"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+        <category android:name="android.intent.category.BROWSABLE"/>
+        <data android:scheme="https"/>
+        <data android:host="app.kmertrash.com"/>
+        <data android:pathPrefix="/register"/>
+      </intent-filter>
+      <!-- Custom scheme for app deep linking -->
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+        <category android:name="android.intent.category.BROWSABLE"/>
+        <data android:scheme="kmertrash"/>
+        <data android:host="ref"/>
+      </intent-filter>
     </activity>
     <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
