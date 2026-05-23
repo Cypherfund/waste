@@ -236,13 +236,24 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
         theme: AppTheme.lightTheme,
         onGenerateRoute: (settings) {
           // Handle query parameters for register route on web
-          if (kIsWeb && settings.name == '/register') {
+          if (kIsWeb) {
             final uri = Uri.base;
             final token = uri.queryParameters['token'];
-            debugPrint('[Main] Register route with token: $token, full URL: ${uri.toString()}');
-            return MaterialPageRoute(
-              builder: (context) => RegisterScreen(initialReferralToken: token),
-            );
+            if (token != null && token.isNotEmpty) {
+              debugPrint('[Main] Found token in URL: $token, route: ${settings.name}');
+              // If on root path with token, navigate to register screen
+              if (settings.name == '/' || settings.name == null) {
+                return MaterialPageRoute(
+                  builder: (context) => RegisterScreen(initialReferralToken: token),
+                );
+              }
+              // If explicitly navigating to register with token
+              if (settings.name == '/register') {
+                return MaterialPageRoute(
+                  builder: (context) => RegisterScreen(initialReferralToken: token),
+                );
+              }
+            }
           }
           // Default route handling for other routes
           return null;
