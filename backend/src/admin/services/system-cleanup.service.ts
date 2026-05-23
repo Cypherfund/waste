@@ -203,10 +203,19 @@ export class SystemCleanupService {
     }
 
     // Validate that execute request matches the analysis log
-    if (JSON.stringify(log.filters) !== JSON.stringify(request.filters)) {
+    const normalizeObj = (obj: any) => {
+      const normalized: any = {};
+      const keys = Object.keys(obj).sort();
+      for (const key of keys) {
+        normalized[key] = obj[key];
+      }
+      return normalized;
+    };
+
+    if (JSON.stringify(normalizeObj(log.filters)) !== JSON.stringify(normalizeObj(request.filters))) {
       throw new BadRequestException('Filters do not match the analysis. Please run analysis again.');
     }
-    if (JSON.stringify(log.components) !== JSON.stringify(request.components)) {
+    if (JSON.stringify(normalizeObj(log.components)) !== JSON.stringify(normalizeObj(request.components))) {
       throw new BadRequestException('Components do not match the analysis. Please run analysis again.');
     }
 
@@ -337,38 +346,40 @@ export class SystemCleanupService {
     await queryRunner.startTransaction();
 
     try {
-      if (components.jobs) {
-        const jobWhere = userIds.length > 0 ? { householdId: In(userIds) } : {};
-        deletedCounts.jobs.locationUpdates = await this.deleteCount(queryRunner, this.locationUpdateRepo, jobWhere, dryRun, errors);
-        deletedCounts.jobs.proofs = await this.deleteCount(queryRunner, this.proofRepo, jobWhere, dryRun, errors);
-        deletedCounts.jobs.ratings = await this.deleteCount(queryRunner, this.ratingRepo, jobWhere, dryRun, errors);
-        deletedCounts.jobs.disputes = await this.deleteCount(queryRunner, this.disputeRepo, jobWhere, dryRun, errors);
-        deletedCounts.jobs.fraudFlags = await this.deleteCount(queryRunner, this.fraudFlagRepo, jobWhere, dryRun, errors);
-        deletedCounts.jobs.jobs = await this.deleteCount(queryRunner, this.jobRepo, jobWhere, dryRun, errors);
+      // Delete in order respecting foreign key constraints
+      
+      // 1. Delete earnings first (they reference jobs)
+      if (components.payments) {
+        deletedCounts.payments.earnings = userIds.length > 0 ? await this.deleteCount(queryRunner, this.earningRepo, { collectorId: In(userIds) }, dryRun, errors) : 0;
       }
-
-      if (components.notifications) {
-        const notificationWhere = userIds.length > 0 ? { userId: In(userIds) } : {};
-        deletedCounts.notifications.notifications = await this.deleteCount(queryRunner, this.notificationRepo, notificationWhere, dryRun, errors);
-        
-        // Get marketer profile IDs for the users
-        const marketerProfiles = userIds.length > 0 ? await this.marketerProfileRepo.find({ 
-          where: { userId: In(userIds) }, 
+      
+      // 2. Delete job-related entities
+      if (components.jobs) {
+        // Get job IDs for the households
+        const jobs = userIds.length > 0 ? await this.jobRepo.find({ 
+          where: { householdId: In(userIds) }, 
           select: ['id'] 
         }) : [];
-        const marketerProfileIds = marketerProfiles.map(mp => mp.id);
+        const jobIds = jobs.map(j => j.id);
         
-        deletedCounts.notifications.marketerNotifications = marketerProfileIds.length > 0 ? await this.deleteCount(queryRunner, this.marketerNotificationRepo, { marketerProfileId: In(marketerProfileIds) }, dryRun, errors) : 0;
+        const jobWhere = jobIds.length > 0 ? { jobId: In(jobIds) } : {};
+        deletedCounts.jobs.locationUpdates = jobIds.length > 0 ? await this.deleteCount(queryRunner, this.locationUpdateRepo, jobWhere, dryRun, errors) : 0;
+        deletedCounts.jobs.proofs = jobIds.length > 0 ? await this.deleteCount(queryRunner, this.proofRepo, jobWhere, dryRun, errors) : 0;
+        deletedCounts.jobs.ratings = jobIds.length > 0 ? await this.deleteCount(queryRunner, this.ratingRepo, jobWhere, dryRun, errors) : 0;
+        deletedCounts.jobs.disputes = jobIds.length > 0 ? await this.deleteCount(queryRunner, this.disputeRepo, jobWhere, dryRun, errors) : 0;
+        deletedCounts.jobs.fraudFlags = jobIds.length > 0 ? await this.deleteCount(queryRunner, this.fraudFlagRepo, jobWhere, dryRun, errors) : 0;
+        deletedCounts.jobs.jobs = userIds.length > 0 ? await this.deleteCount(queryRunner, this.jobRepo, { householdId: In(userIds) }, dryRun, errors) : 0;
       }
-
+      
+      // 3. Delete payment-related entities (after jobs are gone)
       if (components.payments) {
         const paymentWhere = userIds.length > 0 ? { userId: In(userIds) } : {};
         deletedCounts.payments.paymentTransactions = await this.deleteCount(queryRunner, this.paymentTransactionRepo, paymentWhere, dryRun, errors);
-        deletedCounts.payments.earnings = userIds.length > 0 ? await this.deleteCount(queryRunner, this.earningRepo, { collectorId: In(userIds) }, dryRun, errors) : 0;
         deletedCounts.payments.payoutRequests = userIds.length > 0 ? await this.deleteCount(queryRunner, this.payoutRequestRepo, { collectorId: In(userIds) }, dryRun, errors) : 0;
         deletedCounts.payments.collectorFloatLedger = userIds.length > 0 ? await this.deleteCount(queryRunner, this.collectorFloatLedgerRepo, { collectorId: In(userIds) }, dryRun, errors) : 0;
       }
 
+      // 4. Delete growth-related entities
       if (components.growth) {
         // Get marketer profile IDs for the users
         const marketerProfiles = userIds.length > 0 ? await this.marketerProfileRepo.find({ 
@@ -383,12 +394,29 @@ export class SystemCleanupService {
         deletedCounts.growth.marketerPayoutRequests = marketerProfileIds.length > 0 ? await this.deleteCount(queryRunner, this.marketerPayoutRequestRepo, { marketerProfileId: In(marketerProfileIds) }, dryRun, errors) : 0;
       }
 
+      // 5. Delete marketing budgets
       if (components.marketingBudgets) {
         deletedCounts.marketingBudgets.budgetTransactions = await this.deleteCount(queryRunner, this.budgetTransactionRepo, {}, dryRun, errors);
         deletedCounts.marketingBudgets.campaigns = await this.deleteCount(queryRunner, this.marketingCampaignRepo, {}, dryRun, errors);
         deletedCounts.marketingBudgets.budgetPeriods = await this.deleteCount(queryRunner, this.marketingBudgetPeriodRepo, {}, dryRun, errors);
       }
 
+      // 6. Delete notifications
+      if (components.notifications) {
+        const notificationWhere = userIds.length > 0 ? { userId: In(userIds) } : {};
+        deletedCounts.notifications.notifications = await this.deleteCount(queryRunner, this.notificationRepo, notificationWhere, dryRun, errors);
+        
+        // Get marketer profile IDs for the users
+        const marketerProfiles = userIds.length > 0 ? await this.marketerProfileRepo.find({ 
+          where: { userId: In(userIds) }, 
+          select: ['id'] 
+        }) : [];
+        const marketerProfileIds = marketerProfiles.map(mp => mp.id);
+        
+        deletedCounts.notifications.marketerNotifications = marketerProfileIds.length > 0 ? await this.deleteCount(queryRunner, this.marketerNotificationRepo, { marketerProfileId: In(marketerProfileIds) }, dryRun, errors) : 0;
+      }
+
+      // 7. Delete user-related entities (before users)
       if (components.users) {
         deletedCounts.users.subscriptions = userIds.length > 0 ? await this.deleteCount(queryRunner, this.userSubscriptionRepo, { userId: In(userIds) }, dryRun, errors) : 0;
         deletedCounts.users.paymentMethods = userIds.length > 0 ? await this.deleteCount(queryRunner, this.userPaymentMethodRepo, { userId: In(userIds) }, dryRun, errors) : 0;
@@ -396,6 +424,7 @@ export class SystemCleanupService {
         deletedCounts.users.users = await this.deleteCount(queryRunner, this.userRepo, userWhere, dryRun, errors);
       }
 
+      // 8. Delete files
       if (components.files) {
         deletedCounts.files.unusedFiles = await this.deleteCount(queryRunner, this.fileRepo, { isUsed: false }, dryRun, errors);
       }
