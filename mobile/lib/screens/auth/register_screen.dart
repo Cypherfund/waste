@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
@@ -32,6 +33,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
     {'code': '+225', 'name': 'Ivory Coast', 'flag': '🇨🇮'},
     {'code': '+221', 'name': 'Senegal', 'flag': '🇸🇳'},
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _extractReferralTokenFromUrl();
+  }
+
+  void _extractReferralTokenFromUrl() {
+    if (kIsWeb) {
+      try {
+        final uri = Uri.base;
+        final token = uri.queryParameters['token'];
+        if (token != null && token.isNotEmpty) {
+          _referralCodeController.text = token;
+          debugPrint('[RegisterScreen] Extracted referral token from URL: $token');
+        }
+      } catch (e) {
+        debugPrint('[RegisterScreen] Error extracting token from URL: $e');
+      }
+    }
+  }
 
   @override
   void dispose() {
