@@ -20,6 +20,7 @@ import PendingPaymentsPage from '../pages/PendingPaymentsPage';
 import CollectorFloatPage from '../pages/CollectorFloatPage';
 import MarketingBudgetsPage from '../pages/MarketingBudgetsPage';
 import MarketingCampaignsPage from '../pages/MarketingCampaignsPage';
+import SystemCleanupPage from '../pages/SystemCleanupPage';
 
 export const router = createBrowserRouter([
   {
@@ -52,6 +53,7 @@ export const router = createBrowserRouter([
       { path: 'collector-float', element: <CollectorFloatPage /> },
       { path: 'marketing-budgets', element: <MarketingBudgetsPage /> },
       { path: 'marketing-campaigns', element: <MarketingCampaignsPage /> },
+      { path: 'system-cleanup', element: <SystemCleanupPage /> },
     ],
   },
 ]);

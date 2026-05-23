@@ -16,6 +16,7 @@ import {
 import { Response } from 'express';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
+import { SystemCleanupService } from './services/system-cleanup.service';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UserRole } from '../common/enums/role.enum';
@@ -43,6 +44,7 @@ export class AdminController {
     private readonly walletService: WalletService,
     private readonly countriesService: CountriesService,
     private readonly paymentService: PaymentService,
+    private readonly systemCleanupService: SystemCleanupService,
   ) {}
 
   // ─── USERS ────────────────────────────────────────────────────
@@ -314,5 +316,33 @@ export class AdminController {
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
   ) {
     return this.adminService.getCollectorPerformance(limit);
+  }
+
+  // ─── SYSTEM CLEANUP (Developer Tool) ───────────────────────────
+
+  @Post('system-cleanup/analyze')
+  analyzeCleanup(
+    @Body() body: any,
+    @CurrentUser('sub') adminId: string,
+  ) {
+    return this.systemCleanupService.analyzeCleanup(body, adminId);
+  }
+
+  @Post('system-cleanup/execute')
+  executeCleanup(
+    @Body() body: any,
+    @CurrentUser('sub') adminId: string,
+  ) {
+    return this.systemCleanupService.executeCleanup(body, adminId);
+  }
+
+  @Get('system-cleanup/logs')
+  getCleanupLogs() {
+    return this.systemCleanupService.getLogs();
+  }
+
+  @Get('system-cleanup/logs/:id')
+  getCleanupLog(@Param('id', ParseUUIDPipe) id: string) {
+    return this.systemCleanupService.getLog(id);
   }
 }

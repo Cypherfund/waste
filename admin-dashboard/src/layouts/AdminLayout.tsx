@@ -34,6 +34,7 @@ const NAV_ITEMS = [
   { to: '/fraud-flags', label: 'Fraud Flags', icon: Shield },
   { to: '/payment-providers', label: 'Payment Providers', icon: CreditCard },
   { to: '/config', label: 'Config', icon: Settings },
+  { to: '/system-cleanup', label: 'Developer Cleanup', icon: Trash2, danger: true },
   // Growth
   { to: '/marketing-budgets', label: 'Marketing Budgets', icon: Wallet },
   { to: '/marketing-campaigns', label: 'Marketing Campaigns', icon: Target },
@@ -95,7 +96,7 @@ export default function AdminLayout() {
         </div>
 
         <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-3">
-          {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
+          {NAV_ITEMS.map(({ to, label, icon: Icon, danger }) => (
             <NavLink
               key={to}
               to={to}
@@ -103,7 +104,9 @@ export default function AdminLayout() {
               onClick={closeSidebar}
               className={({ isActive }) =>
                 `flex items-center gap-2.5 rounded px-3 py-2 text-sm transition-colors ${
-                  isActive
+                  danger
+                    ? 'text-red-400 hover:bg-red-900/30 hover:text-red-300'
+                    : isActive
                     ? 'bg-green-700/30 text-green-400 font-medium'
                     : 'hover:bg-gray-800 hover:text-white'
                 }`
