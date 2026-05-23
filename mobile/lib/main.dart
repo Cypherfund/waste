@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'config/app_theme.dart';
 import 'features/onboarding/onboarding_flow.dart';
@@ -253,6 +254,7 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
             onSignUp: null,
           ),
           // '/register' is handled by onGenerateRoute to support query parameters
+        },
         home: _onboardingCompleted
             ? Consumer<AuthProvider>(
                 builder: (context, auth, _) {

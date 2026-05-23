@@ -7,7 +7,7 @@ import '../../widgets/app_text_field.dart';
 import '../../widgets/loading_button.dart';
 import '../../widgets/error_banner.dart';
 import '../../services/deep_link/deep_link_service.dart';
-import 'dart:html' as html show window, EventListener;
+import 'dart:html' as html show window, EventListener if (dart.library.html);
 
 class RegisterScreen extends StatefulWidget {
   final String? initialReferralToken;
@@ -36,8 +36,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     {'code': '+221', 'name': 'Senegal', 'flag': '🇸🇳'},
   ];
 
-  html.EventListener? _urlChangeListener;
-
   @override
   void initState() {
     super.initState();
@@ -50,11 +48,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         debugPrint('[RegisterScreen] Pre-filled referral token from widget parameter: ${widget.initialReferralToken}');
       }
       // Listen for URL changes (e.g., when user clicks a link while app is open)
-      _urlChangeListener = (event) {
-        _extractReferralTokenFromUrl();
-      };
-      html.window.addEventListener('popstate', _urlChangeListener);
-      html.window.addEventListener('hashchange', _urlChangeListener);
+      _setupUrlChangeListener();
     }
   }
 
@@ -67,8 +61,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  void _setupUrlChangeListener() {
+    // Only setup listeners on web platform
+    if (dart.library.html) {
+      html.EventListener? listener = (event) {
+        _extractReferralTokenFromUrl();
+      };
+      html.window.addEventListener('popstate', listener);
+      html.window.addEventListener('hashchange', listener);
+    }
+  }
+
   void _extractReferralTokenFromUrl() {
-    if (kIsWeb) {
+    if (kIsWeb && dart.library.html) {
       try {
         // Use window.location.href for more reliable URL detection on web
         final url = html.window.location.href;
@@ -90,10 +95,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
-    if (kIsWeb && _urlChangeListener != null) {
-      html.window.removeEventListener('popstate', _urlChangeListener);
-      html.window.removeEventListener('hashchange', _urlChangeListener);
-    }
     _nameController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
