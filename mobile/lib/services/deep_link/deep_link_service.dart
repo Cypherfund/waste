@@ -63,14 +63,14 @@ class DeepLinkService {
     // Extract referral token from URL
     // Expected formats:
     // - https://kmertrash.com/ref/{token}
-    // - https://app.kmertrash.com/register?token={token}
+    // - https://app.kmertrash.com?token={token}
     // - kmertrash://ref?token={token}
     // - kmertrash://ref/{token}
     final uri = Uri.parse(link);
     
     String? token;
     
-    // Try query parameter first (for app.kmertrash.com/register?token=xxx or kmertrash://ref?token=xxx)
+    // Try query parameter first (for app.kmertrash.com?token=xxx or kmertrash://ref?token=xxx)
     token = uri.queryParameters['token'];
     
     // Fallback to path segment (for https://kmertrash.com/ref/xxx or kmertrash://ref/xxx)
