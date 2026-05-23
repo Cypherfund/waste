@@ -202,6 +202,14 @@ export class SystemCleanupService {
       throw new BadRequestException('Cleanup log not found. Please run analysis first.');
     }
 
+    // Validate that execute request matches the analysis log
+    if (JSON.stringify(log.filters) !== JSON.stringify(request.filters)) {
+      throw new BadRequestException('Filters do not match the analysis. Please run analysis again.');
+    }
+    if (JSON.stringify(log.components) !== JSON.stringify(request.components)) {
+      throw new BadRequestException('Components do not match the analysis. Please run analysis again.');
+    }
+
     log.status = CleanupStatus.COMPLETED;
     log.startedAt = new Date();
     await this.cleanupLogRepo.save(log);
@@ -291,7 +299,28 @@ export class SystemCleanupService {
       analysis.notifications.marketerNotifications = await this.marketerNotificationRepo.count({ where: userWhere });
     }
 
+    return analysis;
+  }
 
+  private async performDeletion(filters: CleanupFilters, components: CleanupComponents, dryRun: boolean, errors: string[]): Promise<CleanupAnalysis> {
+    const deletedCounts: CleanupAnalysis = {
+      jobs: { jobs: 0, proofs: 0, ratings: 0, disputes: 0, fraudFlags: 0, locationUpdates: 0 },
+      users: { users: 0, addresses: 0, paymentMethods: 0, subscriptions: 0 },
+      growth: { leads: 0, marketerProfiles: 0, commissionTransactions: 0, marketerPayoutRequests: 0 },
+      marketingBudgets: { campaigns: 0, budgetPeriods: 0, budgetTransactions: 0 },
+      payments: { paymentTransactions: 0, earnings: 0, payoutRequests: 0, collectorFloatLedger: 0 },
+      files: { unusedFiles: 0 },
+      notifications: { notifications: 0, marketerNotifications: 0 },
+    };
+
+    const userWhere = this.buildUserWhereClause(filters);
+    const userIds = components.users ? await this.getUserIds(userWhere) : [];
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
       if (components.jobs) {
         const jobWhere = userIds.length > 0 ? { householdId: In(userIds) } : {};
         deletedCounts.jobs.locationUpdates = await this.deleteCount(queryRunner, this.locationUpdateRepo, jobWhere, dryRun, errors);
@@ -342,8 +371,6 @@ export class SystemCleanupService {
 
       if (!dryRun) {
         await queryRunner.commitTransaction();
-      } else {
-        await queryRunner.rollbackTransaction();
       }
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -387,7 +414,7 @@ export class SystemCleanupService {
 
   private async deleteCount(
     queryRunner: any,
-    repo: Repository<T>,
+    repo: Repository<any>,
     where: any,
     dryRun: boolean,
     errors: string[],
