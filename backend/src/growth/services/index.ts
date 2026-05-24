@@ -8,3 +8,4 @@ export { MarketerNotificationService } from './marketer-notification.service';
 export { LeadCleanupService } from './lead-cleanup.service';
 export { BudgetService } from './budget.service';
 export { CampaignService } from './campaign.service';
+export { CommissionReconciliationService } from './commission-reconciliation.service';

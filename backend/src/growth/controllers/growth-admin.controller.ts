@@ -18,7 +18,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums/role.enum';
-import { LeadService, MarketerService, CommissionService, MarketerPayoutService, MarketerNotificationService } from '../services';
+import { LeadService, MarketerService, CommissionService, MarketerPayoutService, MarketerNotificationService, CommissionReconciliationService } from '../services';
 import { CreateMarketerDto, CreateSchemeDto, ApproveCommissionDto, RejectCommissionDto } from '../dto';
 import { CommissionStatus, PayoutStatus } from '../entities';
 
@@ -34,6 +34,7 @@ export class GrowthAdminController {
     private readonly commissionService: CommissionService,
     private readonly payoutService: MarketerPayoutService,
     private readonly notificationService: MarketerNotificationService,
+    private readonly reconciliationService: CommissionReconciliationService,
   ) {}
 
   // Marketers
@@ -192,5 +193,24 @@ export class GrowthAdminController {
     @Request() req: any,
   ) {
     return this.payoutService.rejectPayout(id, req.user.sub, reason);
+  }
+
+  // Commission Reconciliation
+  @Post('commissions/reconcile/household-jobs')
+  @ApiOperation({ summary: 'Reconcile missing household job commissions' })
+  async reconcileHouseholdJobs() {
+    return this.reconciliationService.reconcileHouseholdJobCommissions();
+  }
+
+  @Post('commissions/reconcile/subscriptions')
+  @ApiOperation({ summary: 'Reconcile missing subscription commissions' })
+  async reconcileSubscriptions() {
+    return this.reconciliationService.reconcileSubscriptionCommissions();
+  }
+
+  @Post('commissions/reconcile/all')
+  @ApiOperation({ summary: 'Reconcile all missing commissions' })
+  async reconcileAll() {
+    return this.reconciliationService.reconcileAll();
   }
 }

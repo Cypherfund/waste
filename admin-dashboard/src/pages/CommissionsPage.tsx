@@ -193,20 +193,69 @@ export default function CommissionsPage() {
       {tab === 'transactions' && (
         <>
           {/* Status Filter */}
-          <div className="mb-4 flex gap-2">
-            {['', 'PENDING', 'APPROVED', 'REJECTED', 'PAID'].map((s) => (
+          <div className="mb-4 flex items-center justify-between gap-2">
+            <div className="flex gap-2">
+              {['', 'PENDING', 'APPROVED', 'REJECTED', 'PAID'].map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setStatusFilter(s)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                    statusFilter === s
+                      ? 'bg-green-600 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {s || 'All'}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2">
               <button
-                key={s}
-                onClick={() => setStatusFilter(s)}
-                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                  statusFilter === s
-                    ? 'bg-green-600 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
+                onClick={async () => {
+                  if (!confirm('Reconcile missing household job commissions?')) return;
+                  try {
+                    const result = await growthCommissionsApi.reconcileHouseholdJobs();
+                    showSuccess(`Reconciled: ${result.created} commissions created, ${result.errors} errors`);
+                    loadTransactions();
+                  } catch (err: any) {
+                    showError(err.response?.data?.message || 'Error reconciling');
+                  }
+                }}
+                className="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700"
               >
-                {s || 'All'}
+                Reconcile Jobs
               </button>
-            ))}
+              <button
+                onClick={async () => {
+                  if (!confirm('Reconcile missing subscription commissions?')) return;
+                  try {
+                    const result = await growthCommissionsApi.reconcileSubscriptions();
+                    showSuccess(`Reconciled: ${result.created} commissions created, ${result.errors} errors`);
+                    loadTransactions();
+                  } catch (err: any) {
+                    showError(err.response?.data?.message || 'Error reconciling');
+                  }
+                }}
+                className="rounded bg-purple-600 px-3 py-1 text-xs font-medium text-white hover:bg-purple-700"
+              >
+                Reconcile Subscriptions
+              </button>
+              <button
+                onClick={async () => {
+                  if (!confirm('Reconcile all missing commissions?')) return;
+                  try {
+                    const result = await growthCommissionsApi.reconcileAll();
+                    showSuccess(`Reconciled: ${result.householdJobs.created} jobs, ${result.subscriptions.created} subscriptions`);
+                    loadTransactions();
+                  } catch (err: any) {
+                    showError(err.response?.data?.message || 'Error reconciling');
+                  }
+                }}
+                className="rounded bg-orange-600 px-3 py-1 text-xs font-medium text-white hover:bg-orange-700"
+              >
+                Reconcile All
+              </button>
+            </div>
           </div>
 
           {loading ? (

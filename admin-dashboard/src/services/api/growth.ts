@@ -61,6 +61,15 @@ export const growthCommissionsApi = {
 
   reject: (id: string, reason: string) =>
     client.post(`/admin/growth/commission-transactions/${id}/reject`, { reason }).then((r) => r.data),
+
+  reconcileHouseholdJobs: () =>
+    client.post<{ processed: number; created: number; errors: number }>('/admin/growth/commissions/reconcile/household-jobs').then((r) => r.data),
+
+  reconcileSubscriptions: () =>
+    client.post<{ processed: number; created: number; errors: number }>('/admin/growth/commissions/reconcile/subscriptions').then((r) => r.data),
+
+  reconcileAll: () =>
+    client.post<{ householdJobs: { processed: number; created: number; errors: number }; subscriptions: { processed: number; created: number; errors: number } }>('/admin/growth/commissions/reconcile/all').then((r) => r.data),
 };
 
 export const growthPayoutsApi = {

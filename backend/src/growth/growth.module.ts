@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import {
   Lead,
   MarketerProfile,
@@ -18,6 +19,7 @@ import {
 } from './entities';
 import { User } from '../users/entities/user.entity';
 import { Job } from '../jobs/entities/job.entity';
+import { UserSubscription } from '../subscriptions/entities/user-subscription.entity';
 import {
   LeadService,
   MarketerService,
@@ -29,6 +31,7 @@ import {
   LeadCleanupService,
   BudgetService,
   CampaignService,
+  CommissionReconciliationService,
 } from './services';
 import {
   GrowthAdminController,
@@ -55,9 +58,11 @@ import {
       BudgetTransaction,
       User,
       Job,
+      UserSubscription,
     ]),
     ScheduleModule.forRoot(),
     NotificationsModule,
+    SubscriptionsModule,
   ],
   controllers: [
     GrowthAdminController,
@@ -77,6 +82,7 @@ import {
     LeadCleanupService,
     BudgetService,
     CampaignService,
+    CommissionReconciliationService,
   ],
   exports: [
     LeadService,
