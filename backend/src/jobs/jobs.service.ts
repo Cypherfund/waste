@@ -183,7 +183,7 @@ export class JobsService {
 
     this.emitEvent(JobEvents.CREATED, saved);
 
-    return this.toResponseDto(saved);
+    return await this.toResponseDto(saved);
   }
 
   async findMyJobs(
@@ -207,7 +207,7 @@ export class JobsService {
       take: limit,
     });
 
-    const data = jobs.map((job) => this.toResponseDto(job));
+    const data = await Promise.all(jobs.map((job) => this.toResponseDto(job)));
     return paginate(data, total, page, limit);
   }
 
@@ -232,7 +232,7 @@ export class JobsService {
       take: limit,
     });
 
-    const data = jobs.map((job) => this.toResponseDto(job));
+    const data = await Promise.all(jobs.map((job) => this.toResponseDto(job)));
     return paginate(data, total, page, limit);
   }
 
@@ -248,7 +248,7 @@ export class JobsService {
       throw new ForbiddenException('You can only view jobs assigned to you');
     }
 
-    return this.toResponseDto(job);
+    return await this.toResponseDto(job);
   }
 
   // ─── LIFECYCLE ────────────────────────────────────────────────
@@ -285,7 +285,7 @@ export class JobsService {
 
     this.emitEvent(JobEvents.ACCEPTED, fullJob);
 
-    return this.toResponseDto(fullJob);
+    return await this.toResponseDto(fullJob);
   }
 
   async rejectJob(
@@ -343,7 +343,7 @@ export class JobsService {
 
     this.emitEvent(JobEvents.STARTED, saved);
 
-    return this.toResponseDto(saved);
+    return await this.toResponseDto(saved);
   }
 
   async completeJob(
@@ -454,7 +454,7 @@ export class JobsService {
     };
     this.eventEmitter.emit(JobEvents.COMPLETED, payload);
 
-    return this.toResponseDto(saved);
+    return await this.toResponseDto(saved);
   }
 
   async validateJob(jobId: string, householdId: string): Promise<JobResponseDto> {
@@ -480,7 +480,7 @@ export class JobsService {
       timestamp: new Date(),
     });
 
-    return this.toResponseDto(saved);
+    return await this.toResponseDto(saved);
   }
 
   async cancelJob(
@@ -525,7 +525,7 @@ export class JobsService {
     };
     this.eventEmitter.emit(JobEvents.CANCELLED, payload);
 
-    return this.toResponseDto(saved);
+    return await this.toResponseDto(saved);
   }
 
   // ─── ASSIGNMENT (called by AssignmentService) ──────────────────
@@ -721,7 +721,12 @@ export class JobsService {
     this.eventEmitter.emit(event, payload);
   }
 
-  toResponseDto(job: Job): JobResponseDto {
+  private async calculateCollectorEarnings(job: Job): Promise<number> {
+    const earningsCalc = await this.earningsService.calculateEarnings(job);
+    return Math.min(earningsCalc.totalAmount, Number(job.quotedPrice));
+  }
+
+  async toResponseDto(job: Job): Promise<JobResponseDto> {
     return {
       id: job.id,
       householdId: job.householdId,
@@ -746,6 +751,7 @@ export class JobsService {
       quotedPrice: job.quotedPrice,
       pricingType: job.pricingType,
       isCoveredBySubscription: job.isCoveredBySubscription,
+      collectorEarnings: job.quotedPrice ? await this.calculateCollectorEarnings(job) : null,
       assignedAt: job.assignedAt,
       startedAt: job.startedAt,
       completedAt: job.completedAt,

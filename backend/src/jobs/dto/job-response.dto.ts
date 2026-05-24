@@ -72,6 +72,9 @@ export class JobResponseDto {
   @ApiPropertyOptional({ nullable: true })
   isCoveredBySubscription: boolean | null;
 
+  @ApiPropertyOptional({ nullable: true, description: 'Actual amount the collector will earn (after platform share)' })
+  collectorEarnings: number | null;
+
   @ApiPropertyOptional({ nullable: true })
   assignedAt: Date | null;
 

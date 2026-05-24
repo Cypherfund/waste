@@ -67,6 +67,7 @@ class Job {
   final double? quotedPrice;
   final String? pricingType;
   final bool? isCoveredBySubscription;
+  final double? collectorEarnings;
 
   Job({
     required this.id,
@@ -103,6 +104,7 @@ class Job {
     this.quotedPrice,
     this.pricingType,
     this.isCoveredBySubscription,
+    this.collectorEarnings,
   });
 
   factory Job.fromJson(Map<String, dynamic> json) {
@@ -155,6 +157,7 @@ class Job {
       quotedPrice: json['quotedPrice'] != null ? double.tryParse(json['quotedPrice'].toString()) : null,
       pricingType: json['pricingType'] as String?,
       isCoveredBySubscription: json['isCoveredBySubscription'] as bool?,
+      collectorEarnings: json['collectorEarnings'] != null ? double.tryParse(json['collectorEarnings'].toString()) : null,
     );
   }
 
@@ -189,6 +192,7 @@ class Job {
       'quotedPrice': quotedPrice,
       'pricingType': pricingType,
       'isCoveredBySubscription': isCoveredBySubscription,
+      'collectorEarnings': collectorEarnings,
     };
   }
 

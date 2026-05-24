@@ -129,7 +129,8 @@ export class AdminService {
       order: { createdAt: 'DESC' },
       take: 100,
     });
-    return paginate(jobs.map((j) => this.jobsService.toResponseDto(j)), total, 1, 100);
+    const data = await Promise.all(jobs.map((j) => this.jobsService.toResponseDto(j)));
+    return paginate(data, total, 1, 100);
   }
 
   async listJobs(filters: AdminJobFilterDto): Promise<PaginatedResponse<JobResponseDto>> {
@@ -159,17 +160,13 @@ export class AdminService {
       take: limit,
     });
 
-    return paginate(
-      jobs.map((j) => this.jobsService.toResponseDto(j)),
-      total,
-      page,
-      limit,
-    );
+    const data = await Promise.all(jobs.map((j) => this.jobsService.toResponseDto(j)));
+    return paginate(data, total, page, limit);
   }
 
   async getJob(jobId: string): Promise<JobResponseDto> {
     const job = await this.jobsService.getJobEntity(jobId);
-    return this.jobsService.toResponseDto(job);
+    return await this.jobsService.toResponseDto(job);
   }
 
   // ─── MANUAL ASSIGNMENT ────────────────────────────────────────
@@ -309,7 +306,7 @@ export class AdminService {
     // Trigger job assignment since it's now verified
     this.assignmentService.autoAssign(jobId);
 
-    return this.jobsService.toResponseDto(saved);
+    return await this.jobsService.toResponseDto(saved);
   }
 
   async rejectPayment(jobId: string, adminId: string, reason?: string): Promise<JobResponseDto> {
@@ -336,7 +333,7 @@ export class AdminService {
     const saved = await this.jobRepo.save(job);
     this.logger.log(`Admin ${adminId} rejected payment for job ${jobId}: ${reason}`);
 
-    return this.jobsService.toResponseDto(saved);
+    return await this.jobsService.toResponseDto(saved);
   }
 
   // ─── STATS ────────────────────────────────────────────────────

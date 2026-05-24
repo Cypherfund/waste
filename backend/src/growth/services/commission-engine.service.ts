@@ -70,6 +70,12 @@ export class CommissionEngineService {
       return;
     }
 
+    // Skip commission if lead has no campaign (cannot be approved)
+    if (!lead.campaignId) {
+      this.logger.log(`Lead ${lead.id} has no campaignId - skipping commission creation`);
+      return;
+    }
+
     // Get marketer profile
     const profile = await this.profileRepo.findOne({
       where: { userId: lead.marketerId },
@@ -157,6 +163,12 @@ export class CommissionEngineService {
       return;
     }
 
+    // Skip commission if lead has no campaign (cannot be approved)
+    if (!lead.campaignId) {
+      this.logger.log(`Lead ${lead.id} has no campaignId - skipping commission creation`);
+      return;
+    }
+
     // Get marketer profile
     const profile = await this.profileRepo.findOne({
       where: { userId: lead.marketerId },
@@ -235,6 +247,12 @@ export class CommissionEngineService {
 
     if (!lead) {
       this.logger.log(`No qualified lead found for user ${payload.userId}`);
+      return;
+    }
+
+    // Skip commission if lead has no campaign (cannot be approved)
+    if (!lead.campaignId) {
+      this.logger.log(`Lead ${lead.id} has no campaignId - skipping commission creation`);
       return;
     }
 
