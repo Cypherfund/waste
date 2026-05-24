@@ -81,7 +81,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                         title: 'Collector',
                         subtitle:
                             'Collect waste, earn money\nand support your community.',
-                        image: 'assets/images/onboarding/collector.png',
+                        image: 'assets/images/onboarding/collector.webp',
                       ),
 
                       _roleCard(
@@ -89,7 +89,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                         title: 'Household',
                         subtitle:
                             'Schedule waste collection\nand keep your area clean.',
-                        image: 'assets/images/onboarding/household.png',
+                        image: 'assets/images/onboarding/household.webp',
                       ),
 
                       const Spacer(),

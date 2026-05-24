@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 // ─── Colors ───────────────────────────────────────────────────────────────────
 
@@ -140,56 +139,66 @@ class AppTypography {
   /// 1.0 = original size, 1.15 = 15% larger, 1.2 = 20% larger
   static const double scale = 1.15;
 
-  static TextStyle get heading1 => GoogleFonts.inter(
+  static const String _font = 'Inter';
+
+  static TextStyle get heading1 => TextStyle(
+        fontFamily: _font,
         fontSize: 24 * scale,
         fontWeight: FontWeight.w700,
         color: AppColors.textPrimary,
         height: 1.3,
       );
 
-  static TextStyle get heading2 => GoogleFonts.inter(
+  static TextStyle get heading2 => TextStyle(
+        fontFamily: _font,
         fontSize: 20 * scale,
         fontWeight: FontWeight.w700,
         color: AppColors.textPrimary,
         height: 1.3,
       );
 
-  static TextStyle get heading3 => GoogleFonts.inter(
+  static TextStyle get heading3 => TextStyle(
+        fontFamily: _font,
         fontSize: 18 * scale,
         fontWeight: FontWeight.w600,
         color: AppColors.textPrimary,
         height: 1.3,
       );
 
-  static TextStyle get subtitle => GoogleFonts.inter(
+  static TextStyle get subtitle => TextStyle(
+        fontFamily: _font,
         fontSize: 16 * scale,
         fontWeight: FontWeight.w500,
         color: AppColors.textPrimary,
         height: 1.4,
       );
 
-  static TextStyle get body => GoogleFonts.inter(
+  static TextStyle get body => TextStyle(
+        fontFamily: _font,
         fontSize: 14 * scale,
         fontWeight: FontWeight.w400,
         color: AppColors.textPrimary,
         height: 1.5,
       );
 
-  static TextStyle get bodyMedium => GoogleFonts.inter(
+  static TextStyle get bodyMedium => TextStyle(
+        fontFamily: _font,
         fontSize: 14 * scale,
         fontWeight: FontWeight.w500,
         color: AppColors.textPrimary,
         height: 1.5,
       );
 
-  static TextStyle get caption => GoogleFonts.inter(
+  static TextStyle get caption => TextStyle(
+        fontFamily: _font,
         fontSize: 12 * scale,
         fontWeight: FontWeight.w400,
         color: AppColors.textSecondary,
         height: 1.4,
       );
 
-  static TextStyle get overline => GoogleFonts.inter(
+  static TextStyle get overline => TextStyle(
+        fontFamily: _font,
         fontSize: 11 * scale,
         fontWeight: FontWeight.w500,
         color: AppColors.textSecondary,
@@ -197,13 +206,15 @@ class AppTypography {
         height: 1.4,
       );
 
-  static TextStyle get button => GoogleFonts.inter(
+  static TextStyle get button => TextStyle(
+        fontFamily: _font,
         fontSize: 16 * scale,
         fontWeight: FontWeight.w600,
         height: 1.2,
       );
 
-  static TextStyle get label => GoogleFonts.inter(
+  static TextStyle get label => TextStyle(
+        fontFamily: _font,
         fontSize: 13 * scale,
         fontWeight: FontWeight.w500,
         color: AppColors.textSecondary,
@@ -230,7 +241,9 @@ class AppTheme {
         onSurface: AppColors.textPrimary,
         error: AppColors.error,
       ),
-      textTheme: GoogleFonts.interTextTheme().apply(
+      fontFamily: 'Inter',
+      textTheme: const TextTheme().apply(
+        fontFamily: 'Inter',
         bodyColor: AppColors.textPrimary,
         displayColor: AppColors.textPrimary,
       ),
@@ -240,7 +253,8 @@ class AppTheme {
         scrolledUnderElevation: 0,
         backgroundColor: AppColors.surface,
         foregroundColor: AppColors.textPrimary,
-        titleTextStyle: GoogleFonts.inter(
+        titleTextStyle: const TextStyle(
+          fontFamily: 'Inter',
           fontSize: 18 * AppTypography.scale,
           fontWeight: FontWeight.w600,
           color: AppColors.textPrimary,
@@ -324,11 +338,13 @@ class AppTheme {
         unselectedItemColor: AppColors.textHint,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
-        selectedLabelStyle: GoogleFonts.inter(
+        selectedLabelStyle: const TextStyle(
+          fontFamily: 'Inter',
           fontSize: 12 * AppTypography.scale,
           fontWeight: FontWeight.w600,
         ),
-        unselectedLabelStyle: GoogleFonts.inter(
+        unselectedLabelStyle: const TextStyle(
+          fontFamily: 'Inter',
           fontSize: 12 * AppTypography.scale,
           fontWeight: FontWeight.w400,
         ),
@@ -337,11 +353,13 @@ class AppTheme {
         labelColor: AppColors.primary,
         unselectedLabelColor: AppColors.textSecondary,
         indicatorColor: AppColors.primary,
-        labelStyle: GoogleFonts.inter(
+        labelStyle: const TextStyle(
+          fontFamily: 'Inter',
           fontSize: 14 * AppTypography.scale,
           fontWeight: FontWeight.w600,
         ),
-        unselectedLabelStyle: GoogleFonts.inter(
+        unselectedLabelStyle: const TextStyle(
+          fontFamily: 'Inter',
           fontSize: 14 * AppTypography.scale,
           fontWeight: FontWeight.w400,
         ),

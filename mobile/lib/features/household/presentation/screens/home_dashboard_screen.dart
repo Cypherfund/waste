@@ -513,7 +513,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
             width: 118,
             height: 118,
             child: Image.asset(
-              'assets/images/status/next-pickup.png',
+              'assets/images/status/next-pickup.webp',
               fit: BoxFit.contain,
               errorBuilder: (_, __, ___) {
                 return Container(
@@ -859,7 +859,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
             width: 112,
             height: 112,
             child: Image.asset(
-              'assets/images/scheduling/calendar.png',
+              'assets/images/scheduling/calendar.webp',
               fit: BoxFit.contain,
               errorBuilder: (_, __, ___) {
                 return Icon(

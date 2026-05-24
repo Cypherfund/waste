@@ -411,7 +411,7 @@ class _BookingStatusRequestedScreenState
             ),
           ),
           Image.asset(
-            'assets/images/status/searching-for-a-collector.png',
+            'assets/images/status/searching-for-a-collector.webp',
             width: 200,
             height: 200,
             fit: BoxFit.contain,

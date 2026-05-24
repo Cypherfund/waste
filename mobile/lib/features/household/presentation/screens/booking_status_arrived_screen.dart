@@ -166,7 +166,7 @@ class _BookingStatusArrivedScreenState extends State<BookingStatusArrivedScreen>
               ),
               child: Center(
                 child: Image.asset(
-                  'assets/images/status/collector-arrived.png',
+                  'assets/images/status/collector-arrived.webp',
                   width: 80,
                   height: 80,
                   errorBuilder: (_, __, ___) => const Icon(

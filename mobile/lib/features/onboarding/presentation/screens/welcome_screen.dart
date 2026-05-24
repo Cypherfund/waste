@@ -33,7 +33,7 @@ class WelcomeScreen extends StatelessWidget {
                       right: 0,
                       bottom: 0,
                       child: Image.asset(
-                        'assets/images/onboarding/screen-hysacam.png',
+                        'assets/images/onboarding/screen-hysacam.webp',
                         fit: BoxFit.fitWidth,
                         alignment: Alignment.bottomCenter,
                       ),
