@@ -1060,30 +1060,12 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               ],
             ),
             child: SafeArea(
-              child: Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: Colors.red.shade400),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      onPressed: () {
-                        // Report issue
-                      },
-                      child: Text(
-                        'Report Issue',
-                        style: TextStyle(
-                          color: Colors.red.shade600,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
@@ -1092,21 +1074,59 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                         ),
                         elevation: 0,
                       ),
-                      onPressed: () {
-                        Navigator.pushNamed(
-                          context,
-                          '/rate-collector',
-                          arguments: job.id,
-                        );
+                      onPressed: () async {
+                        final jobProvider = context.read<JobProvider>();
+                        final success = await jobProvider.validateProof(job.id);
+                        if (success && mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Pickup confirmed successfully!'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                          await jobProvider.refreshJob(job.id);
+                        } else if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Failed to confirm pickup. Please try again.'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
                       },
                       child: const Text(
-                        'Rate Pickup',
+                        'Confirm Pickup',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: Colors.red.shade400),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          onPressed: () {
+                            // Report issue
+                          },
+                          child: Text(
+                            'Report Issue',
+                            style: TextStyle(
+                              color: Colors.red.shade600,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

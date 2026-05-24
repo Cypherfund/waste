@@ -8,13 +8,7 @@ import { LeadService } from './lead.service';
 import { MarketerNotificationService } from './marketer-notification.service';
 import { Job } from '../../jobs/entities/job.entity';
 import { PaymentStatus } from '../../common/enums/payment-status.enum';
-
-interface JobCompletedEvent {
-  jobId: string;
-  collectorId: string;
-  householdId: string;
-  completedAt: Date;
-}
+import { JobEventPayload } from '../../events/events.types';
 
 @Injectable()
 export class CommissionEngineService {
@@ -35,7 +29,7 @@ export class CommissionEngineService {
   ) {}
 
   @OnEvent('job.validated')
-  async handleJobValidated(payload: JobCompletedEvent): Promise<void> {
+  async handleJobValidated(payload: JobEventPayload): Promise<void> {
     this.logger.log(`Processing commission for validated job ${payload.jobId}`);
 
     // Find lead for this household (first successful pickup)
@@ -142,8 +136,13 @@ export class CommissionEngineService {
   }
 
   @OnEvent('job.completed')
-  async handleJobCompleted(payload: JobCompletedEvent): Promise<void> {
+  async handleJobCompleted(payload: JobEventPayload): Promise<void> {
     this.logger.log(`Processing commission for job ${payload.jobId}`);
+
+    if (!payload.collectorId) {
+      this.logger.log(`No collectorId in payload for job ${payload.jobId}`);
+      return;
+    }
 
     // Find lead for this collector
     const lead = await this.leadRepo.findOne({
