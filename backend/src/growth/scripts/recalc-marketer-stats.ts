@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 import { MarketerProfile } from '../entities/marketer-profile.entity';
 import { CommissionTransaction, CommissionStatus } from '../entities/commission-transaction.entity';
@@ -6,7 +7,20 @@ import { CommissionTransaction, CommissionStatus } from '../entities/commission-
  * Recalculate marketer stats from commission transactions
  * This fixes corrupted stats where pendingAmount doesn't match actual pending commissions
  */
-export async function recalcMarketerStats(dataSource: DataSource): Promise<void> {
+async function recalcMarketerStats(): Promise<void> {
+  const dataSource = new DataSource({
+    type: 'postgres',
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT || '5432'),
+    username: process.env.DB_USERNAME || 'postgres',
+    password: process.env.DB_PASSWORD || 'postgres',
+    database: process.env.DB_DATABASE || 'waste',
+    entities: [MarketerProfile, CommissionTransaction],
+    synchronize: false,
+  });
+
+  await dataSource.initialize();
+
   const profileRepo = dataSource.getRepository(MarketerProfile);
   const transactionRepo = dataSource.getRepository(CommissionTransaction);
 
@@ -51,4 +65,7 @@ export async function recalcMarketerStats(dataSource: DataSource): Promise<void>
   }
 
   console.log('Marketer stats recalculated successfully');
+  await dataSource.destroy();
 }
+
+recalcMarketerStats().catch(console.error);
