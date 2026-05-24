@@ -53,8 +53,8 @@ export class CommissionService {
           transaction.marketerProfileId,
         );
 
-        campaign.committedAmount -= amount;
-        campaign.spentAmount += amount;
+        campaign.committedAmount = parseFloat(campaign.committedAmount.toString()) - amount;
+        campaign.spentAmount = parseFloat(campaign.spentAmount.toString()) + amount;
         await this.campaignRepo.save(campaign);
 
         transaction.budgetStatus = BudgetStatus.SPENT;
@@ -193,7 +193,7 @@ export class CommissionService {
     );
 
     // Update campaign committed amount
-    campaign.committedAmount += amount;
+    campaign.committedAmount = parseFloat(campaign.committedAmount.toString()) + amount;
     await this.campaignRepo.save(campaign);
 
     // Update commission budget status

@@ -50,7 +50,7 @@ export class BudgetService {
     // Validate that new budget is not below already committed + spent
     if (dto.totalBudget !== undefined) {
       const newBudget = dto.totalBudget;
-      const currentUsage = period.committedAmount + period.spentAmount;
+      const currentUsage = parseFloat(period.committedAmount.toString()) + parseFloat(period.spentAmount.toString());
       if (newBudget < currentUsage) {
         throw new BadRequestException(
           `Cannot reduce budget below already committed (${period.committedAmount}) + spent (${period.spentAmount})`,
@@ -98,7 +98,7 @@ export class BudgetService {
 
   async checkBudgetAvailability(budgetPeriodId: string, amount: number): Promise<boolean> {
     const period = await this.findBudgetPeriodById(budgetPeriodId);
-    const remaining = period.totalBudget - period.committedAmount - period.spentAmount;
+    const remaining = period.totalBudget - parseFloat(period.committedAmount.toString()) - parseFloat(period.spentAmount.toString());
     return remaining >= amount;
   }
 
@@ -110,13 +110,13 @@ export class BudgetService {
     marketerProfileId: string,
   ): Promise<void> {
     const period = await this.findBudgetPeriodById(budgetPeriodId);
-    const balanceBefore = period.totalBudget - period.committedAmount - period.spentAmount;
+    const balanceBefore = period.totalBudget - parseFloat(period.committedAmount.toString()) - parseFloat(period.spentAmount.toString());
 
     if (balanceBefore < amount) {
       throw new BadRequestException('Insufficient budget period balance');
     }
 
-    period.committedAmount += amount;
+    period.committedAmount = parseFloat(period.committedAmount.toString()) + amount;
     await this.budgetPeriodRepo.save(period);
 
     await this.createBudgetTransaction({
@@ -126,8 +126,8 @@ export class BudgetService {
       marketerProfileId,
       type: BudgetTransactionType.COMMITTED,
       amount,
-      balanceBefore: period.committedAmount - amount,
-      balanceAfter: period.committedAmount,
+      balanceBefore: parseFloat(period.committedAmount.toString()) - amount,
+      balanceAfter: parseFloat(period.committedAmount.toString()),
       description: 'Commission approved - budget reserved',
     });
   }
@@ -141,8 +141,8 @@ export class BudgetService {
   ): Promise<void> {
     const period = await this.findBudgetPeriodById(budgetPeriodId);
     
-    period.committedAmount -= amount;
-    period.spentAmount += amount;
+    period.committedAmount = parseFloat(period.committedAmount.toString()) - amount;
+    period.spentAmount = parseFloat(period.spentAmount.toString()) + amount;
     await this.budgetPeriodRepo.save(period);
 
     await this.createBudgetTransaction({
@@ -152,8 +152,8 @@ export class BudgetService {
       marketerProfileId,
       type: BudgetTransactionType.SPENT,
       amount,
-      balanceBefore: period.spentAmount - amount,
-      balanceAfter: period.spentAmount,
+      balanceBefore: parseFloat(period.spentAmount.toString()) - amount,
+      balanceAfter: parseFloat(period.spentAmount.toString()),
       description: 'Commission paid - budget spent',
     });
   }
@@ -167,7 +167,7 @@ export class BudgetService {
   ): Promise<void> {
     const period = await this.findBudgetPeriodById(budgetPeriodId);
     
-    period.committedAmount -= amount;
+    period.committedAmount = parseFloat(period.committedAmount.toString()) - amount;
     await this.budgetPeriodRepo.save(period);
 
     await this.createBudgetTransaction({
@@ -177,8 +177,8 @@ export class BudgetService {
       marketerProfileId,
       type: BudgetTransactionType.RELEASED,
       amount,
-      balanceBefore: period.committedAmount + amount,
-      balanceAfter: period.committedAmount,
+      balanceBefore: parseFloat(period.committedAmount.toString()) + amount,
+      balanceAfter: parseFloat(period.committedAmount.toString()),
       description: 'Commission reversed - budget released',
     });
   }

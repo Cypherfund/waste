@@ -295,8 +295,8 @@ export class CampaignService {
         total: campaign.budgetAmount,
         committed: campaign.committedAmount,
         spent: campaign.spentAmount,
-        remaining: campaign.budgetAmount - campaign.committedAmount - campaign.spentAmount,
-        usagePct: ((campaign.committedAmount + campaign.spentAmount) / campaign.budgetAmount) * 100,
+        remaining: campaign.budgetAmount - parseFloat(campaign.committedAmount.toString()) - parseFloat(campaign.spentAmount.toString()),
+        usagePct: ((parseFloat(campaign.committedAmount.toString()) + parseFloat(campaign.spentAmount.toString())) / campaign.budgetAmount) * 100,
       },
     };
   }
