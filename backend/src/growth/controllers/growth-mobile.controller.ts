@@ -15,7 +15,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums/role.enum';
-import { LeadService, MarketerService, CommissionService, MarketerPayoutService, MarketerNotificationService, CampaignService } from '../services';
+import { LeadService, MarketerService, CommissionService, MarketerPayoutService, MarketerNotificationService, CampaignService, CommissionEngineService } from '../services';
 import { CreateLeadDto, CreatePayoutRequestDto } from '../dto';
 import { LeadStatus } from '../entities';
 
@@ -32,6 +32,7 @@ export class GrowthMobileController {
     private readonly payoutService: MarketerPayoutService,
     private readonly notificationService: MarketerNotificationService,
     private readonly campaignService: CampaignService,
+    private readonly commissionEngineService: CommissionEngineService,
   ) {}
 
   @Get('dashboard')
