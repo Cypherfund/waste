@@ -17,6 +17,7 @@ import {
   BudgetTransaction,
 } from './entities';
 import { User } from '../users/entities/user.entity';
+import { Job } from '../jobs/entities/job.entity';
 import {
   LeadService,
   MarketerService,
@@ -53,6 +54,7 @@ import {
       CampaignCommissionScheme,
       BudgetTransaction,
       User,
+      Job,
     ]),
     ScheduleModule.forRoot(),
     NotificationsModule,
