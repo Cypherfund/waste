@@ -68,6 +68,8 @@ import 'features/household/presentation/screens/review_pickup_screen.dart';
 import 'features/household/presentation/screens/choose_payment_method_screen.dart';
 import 'features/household/presentation/screens/manual_payment_screen.dart';
 import 'features/household/presentation/screens/cash_confirmation_screen.dart';
+import 'features/household/presentation/screens/integrated_payment_screen.dart';
+import 'features/household/presentation/screens/payment_processing_screen.dart';
 import 'features/household/presentation/screens/payment_result_screen.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
@@ -310,6 +312,8 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
           ),
           '/choose-payment-method': (context) => const ChoosePaymentMethodScreen(),
           '/manual-payment': (context) => const ManualPaymentScreen(),
+          '/integrated-payment': (context) => const IntegratedPaymentScreen(),
+          '/payment-processing': (context) => const PaymentProcessingScreen(),
           '/cash-confirmation': (context) => const CashConfirmationScreen(),
           '/payment-result': (context) => PaymentResultScreen(
             arguments: ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {},
