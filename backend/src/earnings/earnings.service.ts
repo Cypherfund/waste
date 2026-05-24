@@ -268,13 +268,14 @@ export class EarningsService {
     // Start of this month
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const confirmedStatuses = [EarningStatus.CONFIRMED];
+    // Include both PENDING and CONFIRMED earnings so completed jobs show up even before validation
+    const summaryStatuses = [EarningStatus.PENDING, EarningStatus.CONFIRMED];
 
     const [today, thisWeek, thisMonth, allTime] = await Promise.all([
-      this.sumEarnings(collectorId, confirmedStatuses, todayStart),
-      this.sumEarnings(collectorId, confirmedStatuses, weekStart),
-      this.sumEarnings(collectorId, confirmedStatuses, monthStart),
-      this.sumEarnings(collectorId, confirmedStatuses),
+      this.sumEarnings(collectorId, summaryStatuses, todayStart),
+      this.sumEarnings(collectorId, summaryStatuses, weekStart),
+      this.sumEarnings(collectorId, summaryStatuses, monthStart),
+      this.sumEarnings(collectorId, summaryStatuses),
     ]);
 
     return { today, thisWeek, thisMonth, allTime };

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../models/job.dart';
 import '../../../../providers/job_provider.dart';
+import 'booking_details_screen.dart';
 import 'booking_status_assigned_screen.dart';
 import 'booking_status_requested_screen.dart';
 import 'booking_status_on_the_way_screen.dart';
@@ -50,22 +51,12 @@ class _JobTrackingScreenState extends State<JobTrackingScreen> {
       case JobStatus.paymentPending:
         break;
       case JobStatus.requested:
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => BookingStatusRequestedScreen(jobId: widget.jobId),
-          ),
-        );
-        break;
       case JobStatus.assigned:
-        // If the pickup hasn't arrived yet, show the "confirmed/upcoming" screen
-        // rather than the "collector on the way" screen.
+        // Show booking details screen until job is actively in progress
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => isPickupDay
-                ? BookingStatusAssignedScreen(jobId: widget.jobId)
-                : BookingStatusRequestedScreen(jobId: widget.jobId),
+            builder: (context) => BookingDetailsScreen(jobId: widget.jobId),
           ),
         );
         break;

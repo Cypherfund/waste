@@ -94,15 +94,9 @@ class _ReviewPickupScreenState extends State<ReviewPickupScreen> {
       pickupType: pickupType,
     );
 
-    // Load pricing if not already loaded
-    if (subProvider.pricingQuote == null) {
-      subProvider.loadPricingQuote();
-    }
-
-    // Sync pricing to flow provider when loaded
-    if (subProvider.pricingQuote != null) {
-      flowProvider.setPricingQuote(subProvider.pricingQuote!);
-    }
+    // Always fetch fresh pricing — stale quote from a previous booking would misrepresent remaining pickups
+    subProvider.clearPricingQuote();
+    subProvider.loadPricingQuote();
   }
 
   @override
@@ -144,16 +138,6 @@ class _ReviewPickupScreenState extends State<ReviewPickupScreen> {
                   final quote = subProvider.pricingQuote;
                   final isLoading = subProvider.isPricingLoading;
 
-                  if (isLoading) {
-                    return _buildLoadingState();
-                  }
-
-                  if (quote == null) {
-                    return _buildPricingErrorState(subProvider);
-                  }
-
-
-
                   return SingleChildScrollView(
                     padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
                     child: Column(
@@ -163,8 +147,13 @@ class _ReviewPickupScreenState extends State<ReviewPickupScreen> {
                         _buildPickupSummary(flowProvider),
                         const SizedBox(height: 24),
 
-                        // Pricing section (the main focus)
-                        _buildPricingSection(quote, subProvider),
+                        // Pricing section — shows skeleton while loading, error if null, content otherwise
+                        if (isLoading)
+                          _buildPricingSkeletonSection()
+                        else if (quote == null)
+                          _buildPricingErrorState(subProvider)
+                        else
+                          _buildPricingSection(quote, subProvider),
                       ],
                     ),
                   );
@@ -178,22 +167,34 @@ class _ReviewPickupScreenState extends State<ReviewPickupScreen> {
     );
   }
 
-  Widget _buildLoadingState() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircularProgressIndicator(),
-          SizedBox(height: 16),
-          Text(
-            'Loading pricing...',
-            style: TextStyle(
-              fontSize: 14,
-              color: Color(0xFF6B7280),
-            ),
+  Widget _buildPricingSkeletonSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SkeletonBox(width: 100, height: 14),
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF3F4F6),
+            borderRadius: BorderRadius.circular(12),
           ),
-        ],
-      ),
+          child: const Column(
+            children: [
+              _SkeletonBox(width: double.infinity, height: 14),
+              SizedBox(height: 12),
+              _SkeletonBox(width: 120, height: 36),
+              SizedBox(height: 12),
+              _SkeletonBox(width: double.infinity, height: 12),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        const _SkeletonBox(width: double.infinity, height: 54),
+        const SizedBox(height: 12),
+        const _SkeletonBox(width: double.infinity, height: 54),
+      ],
     );
   }
 
@@ -607,9 +608,11 @@ class _ReviewPickupScreenState extends State<ReviewPickupScreen> {
               ),
             ),
             onPressed: _isCreatingJob ? null : () => _navigateToSubscriptionPlans(),
-            child: const Text(
-              'Subscribe & Save',
-              style: TextStyle(
+            child: Text(
+              quote.subscriptionSavingsMessage != null
+                  ? 'Subscribe & Save ${_extractSavingsAmount(quote.subscriptionSavingsMessage!)}'
+                  : 'Subscribe & Save',
+              style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
               ),
@@ -727,6 +730,15 @@ class _ReviewPickupScreenState extends State<ReviewPickupScreen> {
     Navigator.pushNamed(context, '/subscription-plans');
   }
 
+  /// Extracts the savings amount string from a message like
+  /// "Subscribe for 3,500 XAF/month — save up to 4,500 XAF/month"
+  /// Returns e.g. "4,500 XAF" or falls back to the full message.
+  String _extractSavingsAmount(String message) {
+    final match = RegExp(r'save up to (.+?)(?:/month|$)', caseSensitive: false).firstMatch(message);
+    if (match != null) return match.group(1)!.trim();
+    return message;
+  }
+
   Future<void> _createFreeBooking() async {
     setState(() => _isCreatingJob = true);
 
@@ -765,18 +777,54 @@ class _ReviewPickupScreenState extends State<ReviewPickupScreen> {
     } catch (e) {
       if (mounted) {
         final msg = ApiClient.extractErrorMessage(e);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(msg),
-            backgroundColor: Colors.red.shade700,
-            duration: const Duration(seconds: 5),
-          ),
-        );
+        // Show dialog for 409 conflict errors (e.g., duplicate job on same date)
+        if (e.toString().contains('409') || msg.contains('already have an active job')) {
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Cannot Schedule Pickup'),
+              content: Text(msg),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(msg),
+              backgroundColor: Colors.red.shade700,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
       }
     } finally {
       if (mounted) {
         setState(() => _isCreatingJob = false);
       }
     }
+  }
+}
+
+class _SkeletonBox extends StatelessWidget {
+  final double width;
+  final double height;
+
+  const _SkeletonBox({required this.width, required this.height});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width == double.infinity ? double.infinity : width,
+      height: height,
+      decoration: BoxDecoration(
+        color: const Color(0xFFE5E7EB),
+        borderRadius: BorderRadius.circular(6),
+      ),
+    );
   }
 }

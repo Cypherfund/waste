@@ -7,6 +7,7 @@ class DeepLinkService {
   StreamSubscription? _sub;
   String? _pendingReferralToken;
   final AppLinks _appLinks = AppLinks();
+  Function()? onReferralLinkReceived;
 
   String? get pendingReferralToken => _pendingReferralToken;
 
@@ -82,6 +83,8 @@ class DeepLinkService {
       _pendingReferralToken = token;
       _storeToken(token);
       debugPrint('[DeepLink] Extracted referral token: $token');
+      // Trigger callback to notify app that referral link was received
+      onReferralLinkReceived?.call();
     }
   }
 

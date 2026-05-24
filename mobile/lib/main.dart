@@ -134,6 +134,7 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
     _onboardingCompleted = widget.onboardingCompleted;
     _storage = SecureStorageService();
     _deepLinkService = DeepLinkService();
+    _deepLinkService.onReferralLinkReceived = _handleReferralLink;
     _deepLinkService.init();
 
     _apiClient = ApiClient(storage: _storage);
@@ -187,11 +188,19 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
         _subscriptionProvider.reset();
         _collectorEarningsProvider.reset();
         _notificationsProvider.reset();
+        _userPaymentMethodsProvider.reset();
+        _marketerProvider.reset();
       },
     );
 
     // Restore session immediately before UI builds
     _authProvider.tryRestoreSession();
+
+    // Check if there's a pending referral token from a deep link
+    // If so, logout and show onboarding
+    if (_deepLinkService.pendingReferralToken != null) {
+      _handleReferralLink();
+    }
 
     _collectorJobsProvider = CollectorJobsProvider(
       jobApi: _jobApi,
@@ -211,6 +220,15 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
     };
 
     _syncService.initialize();
+  }
+
+  void _handleReferralLink() {
+    // If user is logged in, logout them and show onboarding with referral token
+    if (_authProvider.status == AuthStatus.authenticated) {
+      _authProvider.logout();
+    }
+    // Navigate to onboarding/register screen
+    setState(() => _onboardingCompleted = false);
   }
 
   @override

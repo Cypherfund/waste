@@ -24,7 +24,9 @@ class SubscriptionPlan {
     return SubscriptionPlan(
       id: json['id'] as String,
       name: json['name'] as String,
-      price: (json['price'] as num).toDouble(),
+      price: json['price'] is String
+          ? double.tryParse(json['price'] as String) ?? 0.0
+          : (json['price'] as num).toDouble(),
       currency: json['currency'] as String? ?? 'XAF',
       pickupsPerWeek: json['pickupsPerWeek'] as int,
       isActive: json['isActive'] as bool? ?? true,

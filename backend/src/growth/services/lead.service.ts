@@ -273,7 +273,10 @@ export class LeadService {
     });
     if (profile) {
       profile.totalRegistered++;
-      profile.conversionRate = (profile.totalRegistered / profile.totalLeads) * 100;
+      // Guard against division by zero
+      profile.conversionRate = profile.totalLeads > 0
+        ? (profile.totalRegistered / profile.totalLeads) * 100
+        : 0;
       await this.profileRepo.save(profile);
 
       // Send notification

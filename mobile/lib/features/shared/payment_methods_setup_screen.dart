@@ -24,7 +24,9 @@ class _PaymentMethodsSetupScreenState extends State<PaymentMethodsSetupScreen> {
     final args = ModalRoute.of(context)?.settings.arguments as Map?;
     if (args != null && _mode == null) {
       _mode = args['mode'] == 'cashin' ? PaymentMethodMode.cashin : PaymentMethodMode.cashout;
-      _loadData();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadData();
+      });
     }
   }
 
@@ -278,14 +280,15 @@ class _PaymentMethodsSetupScreenState extends State<PaymentMethodsSetupScreen> {
     final accountNameController = TextEditingController(text: method?.accountName ?? '');
     bool isDefault = method?.isDefault ?? false;
     String? selectedPaymentCode = method?.paymentCode;
-    
-    final providers = _getProviders();
+    // providers are read inside the builder so they update if appConfig loads while sheet is open
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (context) => StatefulBuilder(
-        builder: (context, setSheetState) => Padding(
+        builder: (context, setSheetState) {
+          final providers = _getProviders();
+          return Padding(
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(context).viewInsets.bottom,
           ),
@@ -303,24 +306,54 @@ class _PaymentMethodsSetupScreenState extends State<PaymentMethodsSetupScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                if (method == null && providers.isNotEmpty) ...[
-                  DropdownButtonFormField<String>(
-                    value: selectedPaymentCode,
-                    decoration: const InputDecoration(
-                      labelText: 'Payment Provider',
-                      border: OutlineInputBorder(),
+                if (method == null) ...[
+                  if (providers.isEmpty)
+                    Consumer<SubscriptionProvider>(
+                      builder: (context, sub, _) {
+                        if (sub.isPricingLoading) {
+                          return const Padding(
+                            padding: EdgeInsets.only(bottom: 16),
+                            child: Row(
+                              children: [
+                                SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                                SizedBox(width: 10),
+                                Text('Loading payment providers...'),
+                              ],
+                            ),
+                          );
+                        }
+                        return const Padding(
+                          padding: EdgeInsets.only(bottom: 16),
+                          child: Text(
+                            'No payment providers available. Please try again later.',
+                            style: TextStyle(color: Colors.red, fontSize: 13),
+                          ),
+                        );
+                      },
+                    )
+                  else ...[
+                    DropdownButtonFormField<String>(
+                      value: selectedPaymentCode,
+                      decoration: const InputDecoration(
+                        labelText: 'Payment Provider',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: providers.map((provider) {
+                        return DropdownMenuItem<String>(
+                          value: provider.paymentCode,
+                          child: Text(provider.providerName),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setSheetState(() => selectedPaymentCode = value);
+                      },
                     ),
-                    items: providers.map((provider) {
-                      return DropdownMenuItem<String>(
-                        value: provider.paymentCode,
-                        child: Text(provider.providerName),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      setSheetState(() => selectedPaymentCode = value);
-                    },
-                  ),
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 16),
+                  ],
                 ],
                 TextField(
                   controller: accountNumberController,
@@ -413,7 +446,8 @@ class _PaymentMethodsSetupScreenState extends State<PaymentMethodsSetupScreen> {
               ],
             ),
           ),
-        ),
+        );
+        },
       ),
     );
   }

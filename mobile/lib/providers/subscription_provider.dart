@@ -43,7 +43,9 @@ class SubscriptionProvider extends ChangeNotifier {
     notifyListeners();
     try {
       _plans = await _api.getPlans();
+      debugPrint('[SubscriptionProvider] Loaded ${_plans.length} plans');
     } catch (e) {
+      debugPrint('[SubscriptionProvider] Error loading plans: $e');
       _error = ApiClient.extractErrorMessage(e);
     } finally {
       _isLoading = false;
@@ -121,6 +123,11 @@ class SubscriptionProvider extends ChangeNotifier {
       _isActing = false;
       notifyListeners();
     }
+  }
+
+  void clearPricingQuote() {
+    _pricingQuote = null;
+    notifyListeners();
   }
 
   void clearError() {

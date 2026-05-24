@@ -258,7 +258,9 @@ class _AccountTile extends StatelessWidget {
             radius: 24,
             backgroundColor: account.isHousehold
                 ? AppColors.primary.withValues(alpha: 0.12)
-                : const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                : account.isMarketer
+                    ? const Color(0xFF8B5CF6).withValues(alpha: 0.15)
+                    : const Color(0xFFF59E0B).withValues(alpha: 0.15),
             child: Text(
               account.initials,
               style: TextStyle(
@@ -266,7 +268,9 @@ class _AccountTile extends StatelessWidget {
                 fontWeight: FontWeight.w800,
                 color: account.isHousehold
                     ? AppColors.primary
-                    : const Color(0xFFF59E0B),
+                    : account.isMarketer
+                        ? const Color(0xFF7C3AED)
+                        : const Color(0xFFF59E0B),
               ),
             ),
           ),
@@ -304,17 +308,25 @@ class _AccountTile extends StatelessWidget {
             decoration: BoxDecoration(
               color: account.isHousehold
                   ? AppColors.primary.withValues(alpha: 0.1)
-                  : const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                  : account.isMarketer
+                      ? const Color(0xFF8B5CF6).withValues(alpha: 0.12)
+                      : const Color(0xFFF59E0B).withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
-              account.isHousehold ? 'Household' : 'Collector',
+              account.isHousehold
+                  ? 'Household'
+                  : account.isMarketer
+                      ? 'Marketer'
+                      : 'Collector',
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
                 color: account.isHousehold
                     ? AppColors.primary
-                    : const Color(0xFFD97706),
+                    : account.isMarketer
+                        ? const Color(0xFF7C3AED)
+                        : const Color(0xFFD97706),
               ),
             ),
           ),

@@ -242,10 +242,15 @@ class _CollectorHomeTabState extends State<CollectorHomeTab>
               ),
               const SizedBox(width: 9),
               Expanded(
-                child: _overviewTile(
-                  icon: Icons.check_circle_outline_rounded,
-                  title: 'Jobs Completed',
-                  value: '3',
+                child: Consumer<CollectorJobsProvider>(
+                  builder: (context, jobs, _) {
+                    final completedCount = jobs.completedJobs.length;
+                    return _overviewTile(
+                      icon: Icons.check_circle_outline_rounded,
+                      title: 'Jobs Completed',
+                      value: '$completedCount',
+                    );
+                  },
                 ),
               ),
             ],

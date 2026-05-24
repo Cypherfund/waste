@@ -69,8 +69,19 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (auth.status == AuthStatus.authenticated) {
       if (widget.addAccountMode) {
-        // Account is auto-saved by AuthProvider; just pop back to profile
-        if (mounted) Navigator.pop(context);
+        // Account is auto-saved by AuthProvider; navigate to appropriate home screen
+        await markOnboardingCompleted();
+        if (mounted) {
+          String route;
+          if (auth.user?.isCollector == true) {
+            route = '/collector-home';
+          } else if (auth.user?.isMarketer == true) {
+            route = '/marketer-home';
+          } else {
+            route = '/home';
+          }
+          Navigator.pushNamedAndRemoveUntil(context, route, (r) => false);
+        }
         return;
       }
       await markOnboardingCompleted();

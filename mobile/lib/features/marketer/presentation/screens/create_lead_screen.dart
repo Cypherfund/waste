@@ -21,6 +21,14 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
   String? _selectedCampaignId;
   List<MarketingCampaign> _campaigns = [];
   bool _loadingCampaigns = true;
+  String _selectedCountryCode = '+237'; // Default to Cameroon
+  final List<Map<String, String>> _countries = [
+    {'code': '+237', 'name': 'Cameroon', 'flag': '🇨🇲'},
+    {'code': '+234', 'name': 'Nigeria', 'flag': '🇳🇬'},
+    {'code': '+233', 'name': 'Ghana', 'flag': '🇬🇭'},
+    {'code': '+225', 'name': 'Ivory Coast', 'flag': '🇨🇮'},
+    {'code': '+221', 'name': 'Senegal', 'flag': '🇸🇳'},
+  ];
 
   @override
   void initState() {
@@ -64,7 +72,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
       await context.read<MarketerProvider>().createLead(
         CreateLeadRequest(
           name: _nameCtrl.text.trim(),
-          phone: _phoneCtrl.text.trim(),
+          phone: '$_selectedCountryCode${_phoneCtrl.text.trim()}',
           type: _type,
           area: _areaCtrl.text.trim().isEmpty ? null : _areaCtrl.text.trim(),
           notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
@@ -215,20 +223,58 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
               ),
               const SizedBox(height: 16),
 
-              TextFormField(
-                controller: _phoneCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Phone Number *',
-                  hintText: '+237...',
-                  prefixIcon: Icon(Icons.phone),
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.phone,
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) return 'Phone is required';
-                  if (!v.trim().startsWith('+')) return 'Include country code (e.g. +237)';
-                  return null;
-                },
+              Row(
+                children: [
+                  // Country Code Dropdown
+                  Container(
+                    width: 110,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: _selectedCountryCode,
+                        isExpanded: true,
+                        items: _countries.map((country) {
+                          return DropdownMenuItem<String>(
+                            value: country['code'],
+                            child: Row(
+                              children: [
+                                Text(country['flag']!, style: const TextStyle(fontSize: 20)),
+                                const SizedBox(width: 8),
+                                Text(
+                                  country['code']!,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (value) => setState(() => _selectedCountryCode = value!),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Phone Number Input
+                  Expanded(
+                    child: TextFormField(
+                      controller: _phoneCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Phone Number *',
+                        hintText: '6XX XXX XXX',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.phone,
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return 'Phone is required';
+                        if (v.trim().length < 8) return 'Enter a valid phone number';
+                        return null;
+                      },
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
 

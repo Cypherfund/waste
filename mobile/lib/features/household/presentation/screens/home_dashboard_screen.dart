@@ -440,24 +440,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                         ),
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFEDD5),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: const Text(
-                        'Assigning...',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFFF97316),
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
+                    _buildStatusBadge(nextPickup.status),
                   ],
                 ),
                 const SizedBox(height: 18),
@@ -531,6 +514,57 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(JobStatus status) {
+    String label;
+    Color bgColor;
+    Color textColor;
+
+    switch (status) {
+      case JobStatus.requested:
+        label = 'Assigning...';
+        bgColor = const Color(0xFFFFEDD5);
+        textColor = const Color(0xFFF97316);
+        break;
+      case JobStatus.assigned:
+        label = 'Assigned';
+        bgColor = const Color(0xFFE0F2FE);
+        textColor = const Color(0xFF0284C7);
+        break;
+      case JobStatus.inProgress:
+        label = 'In Progress';
+        bgColor = const Color(0xFFDCFCE7);
+        textColor = const Color(0xFF16A34A);
+        break;
+      case JobStatus.completed:
+      case JobStatus.validated:
+      case JobStatus.rated:
+        label = 'Completed';
+        bgColor = const Color(0xFFE0E7FF);
+        textColor = const Color(0xFF4F46E5);
+        break;
+      default:
+        label = 'Pending';
+        bgColor = const Color(0xFFF3F4F6);
+        textColor = const Color(0xFF6B7280);
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          color: textColor,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }

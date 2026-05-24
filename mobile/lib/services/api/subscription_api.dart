@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import '../../models/subscription.dart';
 import 'api_client.dart';
 
@@ -8,7 +9,9 @@ class SubscriptionApi {
 
   Future<List<SubscriptionPlan>> getPlans() async {
     final response = await _client.dio.get('/subscriptions/plans');
+    debugPrint('[SubscriptionApi] Response: ${response.data}');
     final list = response.data as List<dynamic>;
+    debugPrint('[SubscriptionApi] List length: ${list.length}');
     return list
         .map((e) => SubscriptionPlan.fromJson(e as Map<String, dynamic>))
         .toList();

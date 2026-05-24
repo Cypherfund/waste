@@ -224,6 +224,16 @@ export class JobsService {
 
     if (filters.status) {
       where.status = filters.status;
+    } else {
+      // By default, include all job statuses for collectors: ASSIGNED, IN_PROGRESS, COMPLETED, VALIDATED, RATED
+      // This ensures completed jobs show up in the collector's job list
+      where.status = In([
+        JobStatus.ASSIGNED,
+        JobStatus.IN_PROGRESS,
+        JobStatus.COMPLETED,
+        JobStatus.VALIDATED,
+        JobStatus.RATED,
+      ]);
     }
 
     const page = filters.page ?? 1;

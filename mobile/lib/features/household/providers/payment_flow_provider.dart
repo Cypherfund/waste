@@ -74,6 +74,7 @@ class PaymentFlowProvider extends ChangeNotifier {
     this.locationLat = locationLat;
     this.locationLng = locationLng;
     if (pickupType != null) this.pickupType = pickupType;
+    pricingQuote = null; // reset so fresh pricing is synced from SubscriptionProvider
     notifyListeners();
   }
 

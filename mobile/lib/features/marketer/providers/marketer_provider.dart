@@ -172,4 +172,16 @@ class MarketerProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  void reset() {
+    _dashboard = null;
+    _leads = [];
+    _commissions = [];
+    _payouts = [];
+    _notifications = [];
+    _activeCampaigns = [];
+    _loading = false;
+    _error = null;
+    notifyListeners();
+  }
 }

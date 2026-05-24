@@ -270,6 +270,7 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> _loadSavedAccounts() async {
     _savedAccounts = await _storage.getSavedAccounts();
+    notifyListeners();
   }
 
   /// Called by the login screen to ensure saved accounts are visible after logout.

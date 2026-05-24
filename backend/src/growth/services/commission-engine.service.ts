@@ -6,27 +6,14 @@ import { Lead, LeadStatus, CommissionTransaction, CommissionStatus, TriggerType,
 import { CommissionService } from './commission.service';
 import { LeadService } from './lead.service';
 import { MarketerNotificationService } from './marketer-notification.service';
-
-interface BookingCompletedEvent {
-  bookingId: string;
-  userId: string;
-  amount: number;
-  collectorId: string;
-  paymentStatus: string;
-}
+import { Job } from '../../jobs/entities/job.entity';
+import { PaymentStatus } from '../../common/enums/payment-status.enum';
 
 interface JobCompletedEvent {
   jobId: string;
   collectorId: string;
   householdId: string;
   completedAt: Date;
-}
-
-interface SubscriptionPaidEvent {
-  subscriptionId: string;
-  userId: string;
-  amount: number;
-  planType: string;
 }
 
 @Injectable()
@@ -40,25 +27,21 @@ export class CommissionEngineService {
     private readonly transactionRepo: Repository<CommissionTransaction>,
     @InjectRepository(MarketerProfile)
     private readonly profileRepo: Repository<MarketerProfile>,
+    @InjectRepository(Job)
+    private readonly jobRepo: Repository<Job>,
     private readonly commissionService: CommissionService,
     private readonly leadService: LeadService,
     private readonly notificationService: MarketerNotificationService,
   ) {}
 
-  @OnEvent('booking.completed')
-  async handleBookingCompleted(payload: BookingCompletedEvent): Promise<void> {
-    this.logger.log(`Processing commission for booking ${payload.bookingId}`);
+  @OnEvent('job.validated')
+  async handleJobValidated(payload: JobCompletedEvent): Promise<void> {
+    this.logger.log(`Processing commission for validated job ${payload.jobId}`);
 
-    // Only commission if payment confirmed and collector assigned
-    if (payload.paymentStatus !== 'PAID') {
-      this.logger.log(`Skipping commission - payment not confirmed for booking ${payload.bookingId}`);
-      return;
-    }
-
-    // Find lead for this user
+    // Find lead for this household (first successful pickup)
     const lead = await this.leadRepo.findOne({
-      where: { 
-        registeredUserId: payload.userId,
+      where: {
+        registeredUserId: payload.householdId,
         type: 'HOUSEHOLD' as any,
         status: LeadStatus.REGISTERED,
       },
@@ -66,13 +49,27 @@ export class CommissionEngineService {
     });
 
     if (!lead) {
-      this.logger.log(`No active lead found for user ${payload.userId}`);
+      this.logger.log(`No active lead found for household ${payload.householdId}`);
       return;
     }
 
     // Skip commission if lead has no campaign (cannot be approved)
     if (!lead.campaignId) {
       this.logger.log(`Lead ${lead.id} has no campaignId - skipping commission creation`);
+      return;
+    }
+
+    // Check if job has payment - only commission if payment is verified/confirmed
+    // Note: For household jobs, payment should be VERIFIED before commission is awarded
+    const job = await this.jobRepo.findOne({
+      where: { id: payload.jobId },
+    });
+    if (!job) {
+      this.logger.error(`Job ${payload.jobId} not found`);
+      return;
+    }
+    if (job.paymentStatus !== PaymentStatus.VERIFIED && job.paymentStatus !== PaymentStatus.NOT_REQUIRED) {
+      this.logger.log(`Skipping commission - payment not verified for job ${payload.jobId}, status: ${job.paymentStatus}`);
       return;
     }
 
@@ -86,7 +83,7 @@ export class CommissionEngineService {
       return;
     }
 
-    // Get eligible schemes
+    // Get eligible schemes for first successful pickup
     const schemes = await this.commissionService.getEligibleSchemes(
       profile.id,
       'HOUSEHOLD_ONBOARDING',
@@ -97,7 +94,7 @@ export class CommissionEngineService {
       return;
     }
 
-    // Use first eligible scheme (could be enhanced to select best scheme)
+    // Use first eligible scheme
     const scheme = schemes[0];
 
     // Calculate amount
@@ -105,20 +102,20 @@ export class CommissionEngineService {
     if (scheme.commissionType === 'FIXED') {
       amount = parseFloat(scheme.amount.toString());
     } else {
-      // Percentage of booking amount
-      amount = (parseFloat(scheme.amount.toString()) / 100) * payload.amount;
+      // Percentage - use default 1000 XAF as base for pickup
+      amount = (parseFloat(scheme.amount.toString()) / 100) * 1000;
     }
 
-    // Idempotency: check if commission already exists for this lead + trigger + reference
+    // Idempotency check
     const existing = await this.transactionRepo.findOne({
-      where: { leadId: lead.id, triggerType: TriggerType.FIRST_SUCCESSFUL_BOOKING, referenceId: payload.bookingId },
+      where: { leadId: lead.id, triggerType: TriggerType.FIRST_SUCCESSFUL_BOOKING, referenceId: payload.jobId },
     });
     if (existing) {
-      this.logger.log(`Commission already exists for booking ${payload.bookingId}, skipping`);
+      this.logger.log(`Commission already exists for job ${payload.jobId}, skipping`);
       return;
     }
 
-    // Mark lead as qualified first
+    // Mark lead as qualified
     await this.leadService.markLeadQualified(lead.id);
 
     // Create commission transaction
@@ -127,12 +124,12 @@ export class CommissionEngineService {
       schemeId: scheme.id,
       leadId: lead.id,
       triggerType: TriggerType.FIRST_SUCCESSFUL_BOOKING,
-      referenceId: payload.bookingId,
-      referenceType: 'booking',
+      referenceId: payload.jobId,
+      referenceType: 'job',
       amount,
       status: CommissionStatus.PENDING,
-      campaignId: lead.campaignId, // Copy campaignId from lead
-      description: `Commission for household booking #${payload.bookingId}`,
+      campaignId: lead.campaignId,
+      description: `Commission for household first successful pickup #${payload.jobId}`,
     });
 
     const saved = await this.transactionRepo.save(transaction);
@@ -150,7 +147,7 @@ export class CommissionEngineService {
 
     // Find lead for this collector
     const lead = await this.leadRepo.findOne({
-      where: { 
+      where: {
         registeredUserId: payload.collectorId,
         type: 'COLLECTOR' as any,
         status: LeadStatus.REGISTERED,
@@ -166,6 +163,20 @@ export class CommissionEngineService {
     // Skip commission if lead has no campaign (cannot be approved)
     if (!lead.campaignId) {
       this.logger.log(`Lead ${lead.id} has no campaignId - skipping commission creation`);
+      return;
+    }
+
+    // Check if job has payment - only commission if payment is verified/confirmed
+    // Note: For collector jobs, payment should be VERIFIED before commission is awarded
+    const job = await this.jobRepo.findOne({
+      where: { id: payload.jobId },
+    });
+    if (!job) {
+      this.logger.error(`Job ${payload.jobId} not found`);
+      return;
+    }
+    if (job.paymentStatus !== PaymentStatus.VERIFIED && job.paymentStatus !== PaymentStatus.NOT_REQUIRED) {
+      this.logger.log(`Skipping commission - payment not verified for job ${payload.jobId}, status: ${job.paymentStatus}`);
       return;
     }
 
@@ -220,91 +231,6 @@ export class CommissionEngineService {
       status: CommissionStatus.PENDING,
       campaignId: lead.campaignId, // Copy campaignId from lead
       description: `Commission for collector first pickup #${payload.jobId}`,
-    });
-
-    const saved = await this.transactionRepo.save(transaction);
-
-    // Update marketer pending amount
-    profile.pendingAmount += amount;
-    await this.profileRepo.save(profile);
-
-    this.logger.log(`Created commission ${saved.id} for ${amount} XAF`);
-  }
-
-  @OnEvent('subscription.paid')
-  async handleSubscriptionPaid(payload: SubscriptionPaidEvent): Promise<void> {
-    this.logger.log(`Processing commission for subscription ${payload.subscriptionId}`);
-
-    // Find lead for this user
-    const lead = await this.leadRepo.findOne({
-      where: { 
-        registeredUserId: payload.userId,
-        type: 'HOUSEHOLD' as any,
-        status: LeadStatus.QUALIFIED, // Must be qualified first
-      },
-      relations: ['marketer'],
-    });
-
-    if (!lead) {
-      this.logger.log(`No qualified lead found for user ${payload.userId}`);
-      return;
-    }
-
-    // Skip commission if lead has no campaign (cannot be approved)
-    if (!lead.campaignId) {
-      this.logger.log(`Lead ${lead.id} has no campaignId - skipping commission creation`);
-      return;
-    }
-
-    // Get marketer profile
-    const profile = await this.profileRepo.findOne({
-      where: { userId: lead.marketerId },
-    });
-
-    if (!profile) {
-      this.logger.error(`Marketer profile not found for user ${lead.marketerId}`);
-      return;
-    }
-
-    // Get eligible schemes
-    const schemes = await this.commissionService.getEligibleSchemes(
-      profile.id,
-      'SUBSCRIPTION_PAYMENT',
-    );
-
-    if (schemes.length === 0) {
-      this.logger.log(`No eligible schemes for marketer ${profile.id}`);
-      return;
-    }
-
-    // Use first eligible scheme
-    const scheme = schemes[0];
-
-    // Calculate amount (always percentage for subscriptions)
-    const percentage = parseFloat(scheme.amount.toString());
-    const amount = (percentage / 100) * payload.amount;
-
-    // Idempotency check
-    const existing = await this.transactionRepo.findOne({
-      where: { leadId: lead.id, triggerType: TriggerType.SUBSCRIPTION_PAID, referenceId: payload.subscriptionId },
-    });
-    if (existing) {
-      this.logger.log(`Commission already exists for subscription ${payload.subscriptionId}, skipping`);
-      return;
-    }
-
-    // Create commission transaction
-    const transaction = this.transactionRepo.create({
-      marketerProfileId: profile.id,
-      schemeId: scheme.id,
-      leadId: lead.id,
-      triggerType: TriggerType.SUBSCRIPTION_PAID,
-      referenceId: payload.subscriptionId,
-      referenceType: 'subscription',
-      amount,
-      status: CommissionStatus.PENDING,
-      campaignId: lead.campaignId, // Copy campaignId from lead
-      description: `Commission for subscription #${payload.subscriptionId} (${percentage}% of ${payload.amount} XAF)`,
     });
 
     const saved = await this.transactionRepo.save(transaction);
