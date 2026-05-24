@@ -349,7 +349,7 @@ class _CollectorCompleteJobScreenState
     final success = await provider.completeJob(
       widget.job.id,
       proofImage: _proofImage!,
-      cashCollected: _requiresCashConfirmation() ? _cashConfirmed : null,
+      cashCollected: widget.job.paymentMode == 'CASH' ? (_requiresCashConfirmation() ? _cashConfirmed : true) : null,
       collectedAmount: _requiresCashConfirmation() ? widget.job.quotedPrice : null,
     );
 

@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../models/job.dart';
 import '../../../../providers/job_provider.dart';
+import '../../../../services/websocket/websocket_service.dart';
 
 class BookingStatusRequestedScreen extends StatefulWidget {
   final String jobId;
@@ -23,7 +24,7 @@ class BookingStatusRequestedScreen extends StatefulWidget {
 
 class _BookingStatusRequestedScreenState
     extends State<BookingStatusRequestedScreen> {
-  Timer? _refreshTimer;
+  StreamSubscription<JobStatusUpdate>? _statusSubscription;
   bool _isCancelling = false;
 
   @override
@@ -32,17 +33,23 @@ class _BookingStatusRequestedScreenState
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _refreshJobStatus();
-    });
-
-    _refreshTimer = Timer.periodic(const Duration(seconds: 10), (_) {
-      _refreshJobStatus();
+      _listenToJobStatus();
     });
   }
 
   @override
   void dispose() {
-    _refreshTimer?.cancel();
+    _statusSubscription?.cancel();
     super.dispose();
+  }
+
+  void _listenToJobStatus() {
+    final wsService = context.read<WebSocketService>();
+    _statusSubscription = wsService.jobStatusStream.listen((update) {
+      if (update.jobId == widget.jobId && mounted) {
+        _refreshJobStatus();
+      }
+    });
   }
 
   Future<void> _refreshJobStatus() async {
