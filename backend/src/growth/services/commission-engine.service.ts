@@ -90,6 +90,7 @@ export class CommissionEngineService {
 
     // Use first eligible scheme
     const scheme = schemes[0];
+    this.logger.log(`Using scheme ${scheme.id}, type: ${scheme.type}, commissionType: ${scheme.commissionType}, amount: ${scheme.amount}`);
 
     // Calculate amount
     let amount = 0;
@@ -99,6 +100,8 @@ export class CommissionEngineService {
       // Percentage - use default 1000 XAF as base for pickup
       amount = (parseFloat(scheme.amount.toString()) / 100) * 1000;
     }
+
+    this.logger.log(`Calculated commission amount: ${amount} XAF`);
 
     // Idempotency check
     const existing = await this.transactionRepo.findOne({
@@ -130,9 +133,9 @@ export class CommissionEngineService {
 
     // Update marketer pending amount
     profile.pendingAmount += amount;
-    await this.profileRepo.save(profile);
+    const updatedProfile = await this.profileRepo.save(profile);
 
-    this.logger.log(`Created commission ${saved.id} for ${amount} XAF`);
+    this.logger.log(`Created commission ${saved.id} for ${amount} XAF, profile pendingAmount now: ${updatedProfile.pendingAmount}`);
   }
 
   @OnEvent(JobEvents.COMPLETED)
