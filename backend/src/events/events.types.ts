@@ -37,6 +37,7 @@ export interface JobRejectedPayload extends JobEventPayload {
 
 export interface JobAssignedPayload extends JobEventPayload {
   attempt: number;
+  isManualAssignment?: boolean;
 }
 
 export interface JobAssignmentTimeoutPayload {

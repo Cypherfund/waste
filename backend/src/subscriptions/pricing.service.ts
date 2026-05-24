@@ -110,19 +110,29 @@ export class PricingService {
     };
   }
 
-  async consumePickup(userId: string): Promise<void> {
+  async consumePickup(userId: string): Promise<boolean> {
     const sub = await this.getActiveSubscription(userId);
-    if (!sub) return;
+    if (!sub) return false;
 
     await this.resetWeeklyPickupsIfNeeded(sub);
 
-    if (sub.remainingPickupsThisWeek > 0) {
-      sub.remainingPickupsThisWeek -= 1;
-      await this.subRepo.save(sub);
+    // Atomic decrement: only succeeds if remaining > 0 at the moment of the UPDATE
+    const result = await this.subRepo
+      .createQueryBuilder()
+      .update()
+      .set({ remainingPickupsThisWeek: () => 'remaining_pickups_this_week - 1' })
+      .where('id = :id AND remaining_pickups_this_week > 0', { id: sub.id })
+      .execute();
+
+    const consumed = (result.affected ?? 0) > 0;
+    if (consumed) {
       this.logger.log(
-        `Consumed 1 pickup for user ${userId}. Remaining: ${sub.remainingPickupsThisWeek}`,
+        `Consumed 1 pickup for user ${userId}. Remaining: ${sub.remainingPickupsThisWeek - 1}`,
       );
+    } else {
+      this.logger.warn(`Pickup quota already exhausted for user ${userId} — job creation blocked`);
     }
+    return consumed;
   }
 
   async getActiveSubscription(userId: string): Promise<UserSubscription | null> {

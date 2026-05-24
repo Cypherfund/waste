@@ -63,6 +63,14 @@ export class NotificationsService {
         { jobId: payload.jobId },
       );
     }
+    // Notify household only for manual assignments — auto-assign notifies household on JOB_ACCEPTED (when collector accepts)
+    if (payload.isManualAssignment) {
+      await this.createAndDispatch(
+        payload.householdId,
+        NotificationType.JOB_ACCEPTED,
+        { jobId: payload.jobId },
+      );
+    }
   }
 
   @OnEvent(JobEvents.ACCEPTED)

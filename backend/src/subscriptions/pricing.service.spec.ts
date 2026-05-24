@@ -45,9 +45,17 @@ describe('PricingService', () => {
   });
 
   beforeEach(async () => {
+    const mockQueryBuilder = {
+      update: jest.fn().mockReturnThis(),
+      set: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      execute: jest.fn().mockResolvedValue({ affected: 1 }),
+    };
     subRepo = {
       findOne: jest.fn(),
       save: jest.fn((entity) => Promise.resolve(entity)),
+      createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
+      _mockQueryBuilder: mockQueryBuilder,
     };
 
     planRepo = {
@@ -163,36 +171,37 @@ describe('PricingService', () => {
   });
 
   describe('consumePickup', () => {
-    it('should consume pickup for user with active subscription', async () => {
+    it('should return true and execute atomic decrement for user with active subscription', async () => {
       const subscription = makeSubscription({ remainingPickupsThisWeek: 3 });
       subRepo.findOne.mockResolvedValue(subscription);
+      subRepo._mockQueryBuilder.execute.mockResolvedValue({ affected: 1 });
 
-      await service.consumePickup('user-1');
+      const result = await service.consumePickup('user-1');
 
-      expect(subscription.remainingPickupsThisWeek).toBe(2);
-      expect(subRepo.save).toHaveBeenCalledWith(subscription);
+      expect(result).toBe(true);
+      expect(subRepo.createQueryBuilder).toHaveBeenCalled();
     });
 
-    it('should not consume pickup if user has no subscription', async () => {
+    it('should return false if user has no subscription', async () => {
       subRepo.findOne.mockResolvedValue(null);
 
-      await service.consumePickup('user-1');
+      const result = await service.consumePickup('user-1');
 
-      expect(subRepo.save).not.toHaveBeenCalled();
+      expect(result).toBe(false);
+      expect(subRepo.createQueryBuilder).not.toHaveBeenCalled();
     });
 
-    it('should not consume pickup if remaining pickups is 0', async () => {
+    it('should return false if atomic decrement finds remaining = 0', async () => {
       const subscription = makeSubscription({ remainingPickupsThisWeek: 0 });
       subRepo.findOne.mockResolvedValue(subscription);
+      subRepo._mockQueryBuilder.execute.mockResolvedValue({ affected: 0 });
 
-      await service.consumePickup('user-1');
+      const result = await service.consumePickup('user-1');
 
-      expect(subscription.remainingPickupsThisWeek).toBe(0);
-      expect(subRepo.save).not.toHaveBeenCalled();
+      expect(result).toBe(false);
     });
 
     it('should reset weekly pickups before consuming if needed', async () => {
-      // Use a date from last week to trigger reset
       const lastWeek = new Date();
       lastWeek.setDate(lastWeek.getDate() - 7);
       const lastWeekMonday = getMondayOfWeek(lastWeek);
@@ -204,12 +213,13 @@ describe('PricingService', () => {
       });
       subRepo.findOne.mockResolvedValue(subscription);
       planRepo.find.mockResolvedValue([makePlan()]);
+      subRepo._mockQueryBuilder.execute.mockResolvedValue({ affected: 1 });
 
-      await service.consumePickup('user-1');
+      const result = await service.consumePickup('user-1');
 
-      expect(subscription.remainingPickupsThisWeek).toBe(2); // After reset (3) - consume (1) = 2
+      expect(result).toBe(true);
       expect(subscription.weekResetDate).toBe(getMondayOfWeek(new Date()).toISOString().split('T')[0]);
-      expect(subRepo.save).toHaveBeenCalledWith(subscription);
+      expect(subRepo.save).toHaveBeenCalledWith(subscription); // reset saves
     });
   });
 

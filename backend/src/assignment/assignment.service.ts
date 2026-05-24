@@ -200,6 +200,7 @@ export class AssignmentService {
       status: JobStatus.ASSIGNED,
       timestamp: new Date(),
       attempt: job.assignmentAttempts + 1,
+      isManualAssignment: true,
     };
     this.eventEmitter.emit(JobEvents.ASSIGNED, payload);
   }
@@ -284,6 +285,7 @@ export class AssignmentService {
       status: JobStatus.ASSIGNED,
       timestamp: new Date(),
       attempt: job.assignmentAttempts + 1,
+      isManualAssignment: true,
     };
     this.eventEmitter.emit(JobEvents.ASSIGNED, payload);
   }

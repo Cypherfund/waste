@@ -137,9 +137,14 @@ export class JobsService {
       }
     }
 
-    // Consume pickup if covered by subscription
+    // Consume pickup if covered by subscription (atomic — blocks over-booking on concurrent requests)
     if (pricingQuote.isCoveredBySubscription) {
-      await this.pricingService.consumePickup(householdId);
+      const consumed = await this.pricingService.consumePickup(householdId);
+      if (!consumed) {
+        throw new ConflictException(
+          'Your weekly pickup quota has been exhausted. Please wait until next week or upgrade your plan.',
+        );
+      }
     }
 
     const job = this.jobRepo.create({
