@@ -265,6 +265,62 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
             onSignUp: null,
           ),
           // '/register' is handled by onGenerateRoute to support query parameters
+          '/home': (context) => const HomeDashboardScreen(),
+          '/bookings': (context) => const BookingsListScreen(),
+          '/wallet': (context) => const WalletScreen(),
+          '/profile': (context) => const ProfileScreen(),
+          '/schedule-pickup': (context) => const SchedulePickupTypeScreen(),
+          '/schedule-date-time': (context) => ScheduleDateTimeScreen(
+            arguments: ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {},
+          ),
+          '/schedule-location': (context) => ScheduleLocationScreen(
+            arguments: ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {},
+          ),
+          '/schedule-review': (context) => ScheduleReviewPaymentScreen(
+            arguments: ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {},
+          ),
+          '/subscription-plans': (context) => const SubscriptionPlansScreen(),
+          '/manage-subscription': (context) => const ManageSubscriptionScreen(),
+          '/booking-confirmed': (context) => BookingConfirmedScreen(
+            arguments: ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {},
+          ),
+          '/job-tracking': (context) => JobTrackingScreen(
+            jobId: ModalRoute.of(context)?.settings.arguments as String? ?? '',
+          ),
+          '/booking-details': (context) => BookingDetailsScreen(
+            jobId: ModalRoute.of(context)?.settings.arguments as String? ?? '',
+          ),
+          '/transactions': (context) => const TransactionHistoryScreen(),
+          '/notifications': (context) => const NotificationsScreen(),
+          '/support': (context) => const SupportScreen(),
+          '/payment-methods': (context) => const PaymentMethodsScreen(),
+          '/payment-methods-setup': (context) => const PaymentMethodsSetupScreen(),
+          '/addresses': (context) => const AddressesScreen(),
+          '/top-up': (context) => const TopUpWalletScreen(),
+          // Marketer routes
+          '/marketer-home': (context) => const MarketerShell(),
+          // Collector routes
+          '/collector-home': (context) => const CollectorShell(),
+          '/collector-jobs': (context) => const CollectorShell(),
+          '/collector-earnings': (context) => const CollectorShell(),
+          '/collector-cashout': (context) => const CollectorCashoutScreen(),
+          '/collector-cashout-success': (context) => const CollectorCashoutSuccessScreen(),
+          '/collector-start-job': (context) => CollectorStartJobScreen(
+            job: ModalRoute.of(context)?.settings.arguments as Job,
+          ),
+          '/collector-complete-job': (context) => CollectorCompleteJobScreen(
+            job: ModalRoute.of(context)?.settings.arguments as Job,
+          ),
+          '/collector-job-completed': (context) => CollectorJobCompletedScreen(
+            job: ModalRoute.of(context)?.settings.arguments as Job,
+          ),
+          '/collector-arrived': (context) => CollectorArrivedScreen(
+            job: ModalRoute.of(context)?.settings.arguments as Job,
+          ),
+          '/collector-navigate': (context) => CollectorNavigateScreen(
+            job: ModalRoute.of(context)?.settings.arguments as Job,
+          ),
+          '/collector-job-detail': (context) => const CollectorJobDetailScreen(),
         },
         home: _onboardingCompleted
             ? Consumer<AuthProvider>(
