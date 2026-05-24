@@ -5,6 +5,7 @@ import '../../../../config/app_theme.dart';
 import '../../../../config/app_config.dart';
 import '../../../../models/job.dart';
 import '../../../../providers/job_provider.dart';
+import '../widgets/payment_timeline.dart';
 
 class BookingDetailsScreen extends StatefulWidget {
   final String jobId;
@@ -118,7 +119,19 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                     _buildRatingSection(job),
                   
                   const SizedBox(height: 20),
-                  
+
+                  // Payment Status Card (if payment mode is set)
+                  if (job.paymentMode != null)
+                    _buildPaymentStatusCard(job),
+
+                  const SizedBox(height: 20),
+
+                  // Payment Timeline (if payment mode is set)
+                  if (job.paymentMode != null)
+                    PaymentTimeline.forJob(job),
+
+                  const SizedBox(height: 20),
+
                   // Timeline
                   _buildTimeline(job),
                   
@@ -726,6 +739,176 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
   
+  Widget _buildPaymentStatusCard(Job job) {
+    String statusText;
+    Color statusColor;
+    IconData statusIcon;
+
+    switch (job.paymentStatus?.toLowerCase()) {
+      case 'verified':
+      case 'not_required':
+        statusText = 'Payment Confirmed';
+        statusColor = Colors.green;
+        statusIcon = Icons.check_circle;
+        break;
+      case 'pending':
+        statusText = 'Payment Pending';
+        statusColor = Colors.orange;
+        statusIcon = Icons.pending;
+        break;
+      case 'awaiting_admin_verification':
+        statusText = 'Awaiting Verification';
+        statusColor = Colors.orange;
+        statusIcon = Icons.hourglass_empty;
+        break;
+      case 'provider_pending':
+        statusText = 'Processing Payment';
+        statusColor = Colors.blue;
+        statusIcon = Icons.sync;
+        break;
+      case 'rejected':
+      case 'failed':
+        statusText = 'Payment Failed';
+        statusColor = Colors.red;
+        statusIcon = Icons.error;
+        break;
+      default:
+        statusText = 'Payment Status';
+        statusColor = Colors.grey;
+        statusIcon = Icons.info;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                statusIcon,
+                color: statusColor,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Payment',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade800,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  statusText,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: statusColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildPaymentDetail(
+                  label: 'Mode',
+                  value: _getPaymentModeText(job.paymentMode),
+                ),
+              ),
+              if (job.paymentMethod != null) ...[
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildPaymentDetail(
+                    label: 'Method',
+                    value: job.paymentMethod!,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          if (job.paymentRef != null) ...[
+            const SizedBox(height: 8),
+            _buildPaymentDetail(
+              label: 'Reference',
+              value: job.paymentRef!,
+            ),
+          ],
+          if (job.quotedPrice != null) ...[
+            const SizedBox(height: 8),
+            _buildPaymentDetail(
+              label: 'Amount',
+              value: '${job.quotedPrice!.toStringAsFixed(0)} XAF',
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentDetail({
+    required String label,
+    required String value,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey.shade600,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey.shade800,
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _getPaymentModeText(String? mode) {
+    switch (mode?.toLowerCase()) {
+      case 'cash':
+        return 'Cash';
+      case 'manual_provider':
+        return 'Manual Transfer';
+      case 'integrated_provider':
+        return 'Online Payment';
+      case 'subscription':
+        return 'Subscription';
+      default:
+        return mode ?? 'N/A';
+    }
+  }
+
   Widget _buildTimelineItem({
     required IconData icon,
     required String title,
