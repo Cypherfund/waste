@@ -15,6 +15,9 @@ class PaymentFlowProvider extends ChangeNotifier {
   double? locationLat;
   double? locationLng;
 
+  // Pickup type
+  String pickupType = 'oneTime'; // 'oneTime' | 'monthly'
+
   // Pricing
   PricingQuote? pricingQuote;
   double get amountDue => pricingQuote?.quotedPrice ?? 0;
@@ -61,6 +64,7 @@ class PaymentFlowProvider extends ChangeNotifier {
     String? landmark,
     double? locationLat,
     double? locationLng,
+    String? pickupType,
   }) {
     this.scheduledDate = scheduledDate;
     this.scheduledTime = scheduledTime;
@@ -69,6 +73,7 @@ class PaymentFlowProvider extends ChangeNotifier {
     this.landmark = landmark;
     this.locationLat = locationLat;
     this.locationLng = locationLng;
+    if (pickupType != null) this.pickupType = pickupType;
     notifyListeners();
   }
 

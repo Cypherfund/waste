@@ -14,6 +14,7 @@ class SubscriptionProvider extends ChangeNotifier {
   AppConfig? _appConfig;
   double? _walletBalance;
   bool _isLoading = false;
+  bool _isPricingLoading = false;
   bool _isActing = false;
   String? _error;
 
@@ -29,6 +30,7 @@ class SubscriptionProvider extends ChangeNotifier {
   AppConfig? get appConfig => _appConfig;
   double? get walletBalance => _walletBalance;
   bool get isLoading => _isLoading;
+  bool get isPricingLoading => _isPricingLoading;
   bool get isActing => _isActing;
   String? get error => _error;
 
@@ -60,6 +62,8 @@ class SubscriptionProvider extends ChangeNotifier {
   }
 
   Future<void> loadPricingQuote() async {
+    _isPricingLoading = true;
+    notifyListeners();
     try {
       _appConfig = await _walletApi.getAppConfig();
     } catch (e) {
@@ -67,9 +71,10 @@ class SubscriptionProvider extends ChangeNotifier {
     }
     try {
       _pricingQuote = await _api.getPricingQuote();
-    } catch (_) {
-      // pricing-quote endpoint may not exist; ignore silently
+    } catch (e) {
+      _error = ApiClient.extractErrorMessage(e);
     }
+    _isPricingLoading = false;
     notifyListeners();
   }
 

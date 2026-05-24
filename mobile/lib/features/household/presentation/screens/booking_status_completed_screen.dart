@@ -275,7 +275,7 @@ class _BookingStatusCompletedScreenState extends State<BookingStatusCompletedScr
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                onPressed: () => Navigator.pushNamed(context, '/schedule-pickup'),
+                onPressed: () => Navigator.pushNamed(context, '/schedule-date-time'),
                 child: const Text("Schedule"),
               )
             ],

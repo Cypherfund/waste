@@ -116,7 +116,9 @@ class PricingQuote {
       remainingPickupsThisWeek: json['remainingPickupsThisWeek'] as int?,
       planName: json['planName'] as String?,
       perPickupPrice: (json['perPickupPrice'] as num).toDouble(),
-      subscriptionPrice: (json['subscriptionPrice'] as num?)?.toDouble(),
+      subscriptionPrice: json['subscriptionPrice'] != null
+          ? double.tryParse(json['subscriptionPrice'].toString())
+          : null,
       subscriptionSavingsMessage: json['subscriptionSavingsMessage'] as String?,
     );
   }

@@ -108,7 +108,7 @@ class _SubmittedVariant extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
           ),
         ),
-        onPressed: () => _navigateToBookingDetails(context),
+        onPressed: () => _navigateToBookingDetails(context, job: job),
         child: const Text(
           'View Booking Status',
           style: TextStyle(
@@ -194,7 +194,7 @@ class _SuccessVariant extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
           ),
         ),
-        onPressed: () => _navigateToBookingDetails(context),
+        onPressed: () => _navigateToBookingDetails(context, job: job),
         child: const Text(
           'Track Pickup',
           style: TextStyle(
@@ -445,7 +445,7 @@ class _CashVariant extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
           ),
         ),
-        onPressed: () => _navigateToBookingDetails(context),
+        onPressed: () => _navigateToBookingDetails(context, job: job),
         child: Text(
           isFree ? 'Track Pickup' : 'Track Pickup',
           style: const TextStyle(
@@ -660,9 +660,13 @@ Widget _buildDetailRowWithBadge(String label, String value, Color bgColor, Color
 }
 
 // Navigation helpers
-void _navigateToBookingDetails(BuildContext context) {
-  // TODO: Navigate to booking details with the job ID
-  // Navigator.pushNamed(context, '/booking-details', arguments: {'jobId': job.id});
+void _navigateToBookingDetails(BuildContext context, {required Job job}) {
+  Navigator.pushNamedAndRemoveUntil(
+    context,
+    '/booking-details',
+    (route) => route.settings.name == '/home',
+    arguments: job.id,
+  );
 }
 
 void _navigateHome(BuildContext context) {

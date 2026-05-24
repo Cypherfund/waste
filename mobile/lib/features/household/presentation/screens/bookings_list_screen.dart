@@ -346,7 +346,7 @@ class _BookingsListScreenState extends State<BookingsListScreen>
               height: 48,
               child: ElevatedButton(
                 onPressed: () {
-                  Navigator.pushNamed(context, '/schedule-pickup');
+                  Navigator.pushNamed(context, '/schedule-date-time');
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,

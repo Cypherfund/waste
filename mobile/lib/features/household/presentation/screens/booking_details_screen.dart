@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../../config/app_theme.dart';
+import '../../../../config/app_config.dart';
 import '../../../../models/job.dart';
 import '../../../../providers/job_provider.dart';
 
@@ -512,9 +513,23 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: Image.network(
-                      job.proof!.imageUrl,
+                      _resolveImageUrl(job.proof!.imageUrl),
                       fit: BoxFit.cover,
                       width: double.infinity,
+                      loadingBuilder: (context, child, progress) {
+                        if (progress == null) return child;
+                        return Container(
+                          color: Colors.grey.shade100,
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              value: progress.expectedTotalBytes != null
+                                  ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes!
+                                  : null,
+                              strokeWidth: 2,
+                            ),
+                          ),
+                        );
+                      },
                       errorBuilder: (context, error, stackTrace) {
                         return _buildPhotoPlaceholder();
                       },
@@ -527,6 +542,12 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
   
+  String _resolveImageUrl(String url) {
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    final base = AppConfig.apiBaseUrl.replaceAll(RegExp(r'/api/v\d+/?$'), '');
+    return '$base${url.startsWith('/') ? '' : '/'}$url';
+  }
+
   Widget _buildPhotoPlaceholder() {
     return Container(
       decoration: BoxDecoration(

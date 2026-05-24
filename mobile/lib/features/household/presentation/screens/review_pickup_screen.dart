@@ -5,6 +5,7 @@ import '../../../../config/app_theme.dart';
 import '../../../../models/subscription.dart';
 import '../../../../providers/subscription_provider.dart';
 import '../../../../providers/job_provider.dart';
+import '../../../../services/api/api_client.dart';
 import '../../providers/payment_flow_provider.dart';
 import '../../providers/payment_flow_enums.dart';
 import '../widgets/status_badge.dart';
@@ -35,7 +36,27 @@ class _ReviewPickupScreenState extends State<ReviewPickupScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeFlow();
+      // Listen for pricing loading to complete and sync to flow provider
+      context.read<SubscriptionProvider>().addListener(_onPricingLoaded);
     });
+  }
+
+  @override
+  void dispose() {
+    // Safe remove — provider may already be gone if screen is popped
+    try {
+      context.read<SubscriptionProvider>().removeListener(_onPricingLoaded);
+    } catch (_) {}
+    super.dispose();
+  }
+
+  void _onPricingLoaded() {
+    if (!mounted) return;
+    final subProvider = context.read<SubscriptionProvider>();
+    final flowProvider = context.read<PaymentFlowProvider>();
+    if (subProvider.pricingQuote != null && flowProvider.pricingQuote == null) {
+      flowProvider.setPricingQuote(subProvider.pricingQuote!);
+    }
   }
 
   void _initializeFlow() {
@@ -50,6 +71,7 @@ class _ReviewPickupScreenState extends State<ReviewPickupScreen> {
     final landmark = widget.arguments['landmark'] as String?;
     final locationLat = widget.arguments['locationLat'] as double?;
     final locationLng = widget.arguments['locationLng'] as double?;
+    final pickupType = widget.arguments['pickupType'] as String? ?? 'oneTime';
 
     // Validate required fields
     if (scheduledDate == null) {
@@ -69,6 +91,7 @@ class _ReviewPickupScreenState extends State<ReviewPickupScreen> {
       landmark: landmark,
       locationLat: locationLat,
       locationLng: locationLng,
+      pickupType: pickupType,
     );
 
     // Load pricing if not already loaded
@@ -119,16 +142,17 @@ class _ReviewPickupScreenState extends State<ReviewPickupScreen> {
               child: Consumer2<PaymentFlowProvider, SubscriptionProvider>(
                 builder: (context, flowProvider, subProvider, _) {
                   final quote = subProvider.pricingQuote;
-                  final isLoading = subProvider.isLoading;
+                  final isLoading = subProvider.isPricingLoading;
 
-                  if (isLoading || quote == null) {
+                  if (isLoading) {
                     return _buildLoadingState();
                   }
 
-                  // Sync pricing to flow provider
-                  if (flowProvider.pricingQuote == null) {
-                    flowProvider.setPricingQuote(quote);
+                  if (quote == null) {
+                    return _buildPricingErrorState(subProvider);
                   }
+
+
 
                   return SingleChildScrollView(
                     padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
@@ -173,6 +197,41 @@ class _ReviewPickupScreenState extends State<ReviewPickupScreen> {
     );
   }
 
+  Widget _buildPricingErrorState(SubscriptionProvider subProvider) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.wifi_off_rounded, size: 56, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
+            const Text(
+              'Could not load pricing',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF374151)),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Check your internet connection and try again.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () => subProvider.loadPricingQuote(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildPickupSummary(PaymentFlowProvider flowProvider) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -196,6 +255,18 @@ class _ReviewPickupScreenState extends State<ReviewPickupScreen> {
             title: 'Address',
             value: flowProvider.locationAddress ?? 'Unknown',
             subtitle: flowProvider.landmark,
+          ),
+          const Divider(height: 24, color: Color(0xFFE5E7EB)),
+          _buildInfoRow(
+            icon: Icons.delete_outline_rounded,
+            title: 'Waste Type',
+            value: 'General Waste',
+          ),
+          const Divider(height: 24, color: Color(0xFFE5E7EB)),
+          _buildInfoRow(
+            icon: Icons.local_shipping_outlined,
+            title: 'Pickup Type',
+            value: flowProvider.pickupType == 'monthly' ? 'Monthly Subscription' : 'One-time Pickup',
           ),
         ],
       ),
@@ -693,8 +764,13 @@ class _ReviewPickupScreenState extends State<ReviewPickupScreen> {
       }
     } catch (e) {
       if (mounted) {
+        final msg = ApiClient.extractErrorMessage(e);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to create booking: $e')),
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: Colors.red.shade700,
+            duration: const Duration(seconds: 5),
+          ),
         );
       }
     } finally {
