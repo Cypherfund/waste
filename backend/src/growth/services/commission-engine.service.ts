@@ -8,7 +8,7 @@ import { LeadService } from './lead.service';
 import { MarketerNotificationService } from './marketer-notification.service';
 import { Job } from '../../jobs/entities/job.entity';
 import { PaymentStatus } from '../../common/enums/payment-status.enum';
-import { JobEventPayload } from '../../events/events.types';
+import { JobEventPayload, JobEvents } from '../../events/events.types';
 
 @Injectable()
 export class CommissionEngineService {
@@ -28,7 +28,7 @@ export class CommissionEngineService {
     private readonly notificationService: MarketerNotificationService,
   ) {}
 
-  @OnEvent('job.validated')
+  @OnEvent(JobEvents.VALIDATED)
   async handleJobValidated(payload: JobEventPayload): Promise<void> {
     this.logger.log(`Processing commission for validated job ${payload.jobId}`);
 
@@ -135,7 +135,7 @@ export class CommissionEngineService {
     this.logger.log(`Created commission ${saved.id} for ${amount} XAF`);
   }
 
-  @OnEvent('job.completed')
+  @OnEvent(JobEvents.COMPLETED)
   async handleJobCompleted(payload: JobEventPayload): Promise<void> {
     this.logger.log(`Processing commission for job ${payload.jobId}`);
 
