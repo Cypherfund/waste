@@ -1,10 +1,7 @@
-import 'reflect-metadata';
 import { DataSource } from 'typeorm';
-import { MarketerProfile } from '../entities/marketer-profile.entity';
-import { CommissionTransaction, CommissionStatus } from '../entities/commission-transaction.entity';
 
 /**
- * Recalculate marketer stats from commission transactions
+ * Recalculate marketer stats from commission transactions using raw SQL
  * This fixes corrupted stats where pendingAmount doesn't match actual pending commissions
  */
 async function recalcMarketerStats(): Promise<void> {
@@ -15,52 +12,52 @@ async function recalcMarketerStats(): Promise<void> {
     username: process.env.DB_USERNAME || 'postgres',
     password: process.env.DB_PASSWORD || 'postgres',
     database: process.env.DB_DATABASE || 'waste',
-    entities: [MarketerProfile, CommissionTransaction],
     synchronize: false,
+    ssl: {
+      rejectUnauthorized: false,
+    },
   });
 
   await dataSource.initialize();
 
-  const profileRepo = dataSource.getRepository(MarketerProfile);
-  const transactionRepo = dataSource.getRepository(CommissionTransaction);
-
-  const profiles = await profileRepo.find();
+  // Get all marketer profiles
+  const profiles = await dataSource.query(`
+    SELECT id, pending_amount, approved_amount, total_paid, total_earned
+    FROM marketer_profiles
+  `);
 
   for (const profile of profiles) {
-    const transactions = await transactionRepo.find({
-      where: { marketerProfileId: profile.id },
-    });
+    // Calculate actual stats from commission transactions
+    const stats = await dataSource.query(`
+      SELECT 
+        COALESCE(SUM(CASE WHEN status = 'PENDING' THEN amount ELSE 0 END), 0) as pending,
+        COALESCE(SUM(CASE WHEN status = 'APPROVED' THEN amount ELSE 0 END), 0) as approved,
+        COALESCE(SUM(CASE WHEN status = 'PAID' THEN amount ELSE 0 END), 0) as paid
+      FROM commission_transactions
+      WHERE marketer_profile_id = $1
+    `, [profile.id]);
 
-    const pending = transactions
-      .filter(t => t.status === CommissionStatus.PENDING)
-      .reduce((sum, t) => sum + parseFloat(t.amount.toString()), 0);
-
-    const approved = transactions
-      .filter(t => t.status === CommissionStatus.APPROVED)
-      .reduce((sum, t) => sum + parseFloat(t.amount.toString()), 0);
-
-    const paid = transactions
-      .filter(t => t.status === CommissionStatus.PAID)
-      .reduce((sum, t) => sum + parseFloat(t.amount.toString()), 0);
-
-    const totalEarned = approved + paid;
+    const { pending, approved, paid } = stats[0];
+    const totalEarned = parseFloat(approved) + parseFloat(paid);
 
     if (
-      profile.pendingAmount !== pending ||
-      profile.approvedAmount !== approved ||
-      profile.totalPaid !== paid ||
-      profile.totalEarned !== totalEarned
+      parseFloat(profile.pending_amount) !== parseFloat(pending) ||
+      parseFloat(profile.approved_amount) !== parseFloat(approved) ||
+      parseFloat(profile.total_paid) !== parseFloat(paid) ||
+      parseFloat(profile.total_earned) !== totalEarned
     ) {
       console.log(`Fixing stats for marketer ${profile.id}:`);
-      console.log(`  Before: pending=${profile.pendingAmount}, approved=${profile.approvedAmount}, paid=${profile.totalPaid}, earned=${profile.totalEarned}`);
+      console.log(`  Before: pending=${profile.pending_amount}, approved=${profile.approved_amount}, paid=${profile.total_paid}, earned=${profile.total_earned}`);
       console.log(`  After:  pending=${pending}, approved=${approved}, paid=${paid}, earned=${totalEarned}`);
 
-      profile.pendingAmount = pending;
-      profile.approvedAmount = approved;
-      profile.totalPaid = paid;
-      profile.totalEarned = totalEarned;
-
-      await profileRepo.save(profile);
+      await dataSource.query(`
+        UPDATE marketer_profiles
+        SET pending_amount = $1,
+            approved_amount = $2,
+            total_paid = $3,
+            total_earned = $4
+        WHERE id = $5
+      `, [pending, approved, paid, totalEarned, profile.id]);
     }
   }
 
