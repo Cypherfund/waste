@@ -141,6 +141,18 @@ export const FraudEvents = {
   COLLECTOR_AUTO_PAUSED: 'fraud.collector_auto_paused',
 } as const;
 
+export const SubscriptionEvents = {
+  PAID: 'subscription.paid',
+} as const;
+
+export interface SubscriptionPaidPayload {
+  subscriptionId: string;
+  userId: string;
+  planId: string;
+  amount: number;
+  timestamp: Date;
+}
+
 export interface FraudFlagCreatedPayload {
   flagId: string;
   jobId: string;

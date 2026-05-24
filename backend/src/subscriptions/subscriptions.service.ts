@@ -6,9 +6,11 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SubscriptionPlan } from './entities/subscription-plan.entity';
 import { UserSubscription } from './entities/user-subscription.entity';
 import { SubscriptionStatus } from '../common/enums/subscription-status.enum';
+import { SubscriptionEvents } from '../events/events.types';
 
 @Injectable()
 export class SubscriptionsService {
@@ -19,6 +21,7 @@ export class SubscriptionsService {
     private readonly planRepo: Repository<SubscriptionPlan>,
     @InjectRepository(UserSubscription)
     private readonly subRepo: Repository<UserSubscription>,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async listPlans(): Promise<SubscriptionPlan[]> {
@@ -62,6 +65,16 @@ export class SubscriptionsService {
 
     const saved = await this.subRepo.save(sub);
     this.logger.log(`User ${userId} subscribed to plan ${plan.name}`);
+
+    // Emit subscription paid event for commission processing
+    this.eventEmitter.emit(SubscriptionEvents.PAID, {
+      subscriptionId: saved.id,
+      userId,
+      planId: plan.id,
+      amount: plan.price,
+      timestamp: new Date(),
+    });
+
     return saved;
   }
 

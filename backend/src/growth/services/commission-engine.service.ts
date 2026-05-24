@@ -8,7 +8,7 @@ import { LeadService } from './lead.service';
 import { MarketerNotificationService } from './marketer-notification.service';
 import { Job } from '../../jobs/entities/job.entity';
 import { PaymentStatus } from '../../common/enums/payment-status.enum';
-import { JobEventPayload, JobEvents } from '../../events/events.types';
+import { JobEventPayload, JobEvents, SubscriptionPaidPayload, SubscriptionEvents } from '../../events/events.types';
 
 @Injectable()
 export class CommissionEngineService {
@@ -242,5 +242,98 @@ export class CommissionEngineService {
     await this.profileRepo.save(profile);
 
     this.logger.log(`Created commission ${saved.id} for ${amount} XAF`);
+  }
+
+  @OnEvent(SubscriptionEvents.PAID)
+  async handleSubscriptionPaid(payload: SubscriptionPaidPayload): Promise<void> {
+    this.logger.log(`Processing commission for subscription payment ${payload.subscriptionId}`);
+
+    // Find lead for this household (subscription payment)
+    const lead = await this.leadRepo.findOne({
+      where: {
+        registeredUserId: payload.userId,
+        type: 'HOUSEHOLD' as any,
+        status: LeadStatus.REGISTERED,
+      },
+      relations: ['marketer'],
+    });
+
+    if (!lead) {
+      this.logger.log(`No active lead found for user ${payload.userId}`);
+      return;
+    }
+
+    // Skip commission if lead has no campaign (cannot be approved)
+    if (!lead.campaignId) {
+      this.logger.log(`Lead ${lead.id} has no campaignId - skipping commission creation`);
+      return;
+    }
+
+    // Get marketer profile
+    const profile = await this.profileRepo.findOne({
+      where: { userId: lead.marketerId },
+    });
+
+    if (!profile) {
+      this.logger.error(`Marketer profile not found for user ${lead.marketerId}`);
+      return;
+    }
+
+    // Get eligible schemes for subscription payment
+    const schemes = await this.commissionService.getEligibleSchemes(
+      profile.id,
+      'SUBSCRIPTION_PAYMENT',
+    );
+
+    if (schemes.length === 0) {
+      this.logger.log(`No eligible schemes for marketer ${profile.id}`);
+      return;
+    }
+
+    // Use first eligible scheme
+    const scheme = schemes[0];
+    this.logger.log(`Using scheme ${scheme.id}, type: ${scheme.type}, commissionType: ${scheme.commissionType}, amount: ${scheme.amount}`);
+
+    // Calculate amount
+    let amount = 0;
+    if (scheme.commissionType === 'FIXED') {
+      amount = parseFloat(scheme.amount.toString());
+    } else {
+      // Percentage - use subscription payment amount as base
+      amount = (parseFloat(scheme.amount.toString()) / 100) * payload.amount;
+    }
+
+    this.logger.log(`Calculated commission amount: ${amount} XAF`);
+
+    // Idempotency check
+    const existing = await this.transactionRepo.findOne({
+      where: { leadId: lead.id, triggerType: TriggerType.SUBSCRIPTION_PAID, referenceId: payload.subscriptionId },
+    });
+    if (existing) {
+      this.logger.log(`Commission already exists for subscription ${payload.subscriptionId}, skipping`);
+      return;
+    }
+
+    // Create commission transaction
+    const transaction = this.transactionRepo.create({
+      marketerProfileId: profile.id,
+      schemeId: scheme.id,
+      leadId: lead.id,
+      triggerType: TriggerType.SUBSCRIPTION_PAID,
+      referenceId: payload.subscriptionId,
+      referenceType: 'subscription',
+      amount,
+      status: CommissionStatus.PENDING,
+      campaignId: lead.campaignId,
+      description: `Commission for subscription payment #${payload.subscriptionId}`,
+    });
+
+    const saved = await this.transactionRepo.save(transaction);
+
+    // Update marketer pending amount
+    profile.pendingAmount += amount;
+    const updatedProfile = await this.profileRepo.save(profile);
+
+    this.logger.log(`Created commission ${saved.id} for ${amount} XAF, profile pendingAmount now: ${updatedProfile.pendingAmount}`);
   }
 }
