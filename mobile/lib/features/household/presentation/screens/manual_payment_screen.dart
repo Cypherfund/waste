@@ -9,7 +9,8 @@ import '../../../../providers/job_provider.dart';
 import '../../../../providers/subscription_provider.dart';
 import '../../../../providers/user_payment_methods_provider.dart';
 import '../../../../services/api/files_api.dart';
-import '../providers/payment_flow_provider.dart';
+import '../../providers/payment_flow_provider.dart';
+import '../../providers/payment_flow_enums.dart';
 
 /// Screen 3: Manual Payment Screen
 /// 

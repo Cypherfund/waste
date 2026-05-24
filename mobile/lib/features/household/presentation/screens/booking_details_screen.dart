@@ -421,9 +421,9 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'John Doe',
-                      style: TextStyle(
+                    Text(
+                      job.collectorName ?? 'Collector',
+                      style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
                         color: Colors.black87,
@@ -439,7 +439,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '4.8',
+                          job.collectorRating?.toStringAsFixed(1) ?? '4.8',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -448,7 +448,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          '• ID: CDR-1234',
+                          job.collectorId != null ? '• ID: ${job.collectorId!.substring(0, 8)}' : '',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey.shade600,

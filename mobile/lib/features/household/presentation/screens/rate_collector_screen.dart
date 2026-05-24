@@ -126,9 +126,9 @@ class _RateCollectorScreenState extends State<RateCollectorScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'John Doe',
-            style: TextStyle(
+          Text(
+            job.collectorName ?? 'Collector',
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w600,
               color: Colors.black87,
@@ -136,7 +136,7 @@ class _RateCollectorScreenState extends State<RateCollectorScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Collector ID: CDR-1234',
+            job.collectorId != null ? 'Collector ID: ${job.collectorId!.substring(0, 8)}' : '',
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey.shade600,

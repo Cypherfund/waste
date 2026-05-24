@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../models/job.dart';
 import '../../../models/subscription.dart';
+import 'payment_flow_enums.dart';
+export 'payment_flow_enums.dart';
 
 /// Provider to manage state across the multi-screen payment flow
 class PaymentFlowProvider extends ChangeNotifier {
@@ -195,19 +197,4 @@ class PaymentFlowProvider extends ChangeNotifier {
     }
     return locationAddress ?? '';
   }
-}
-
-/// Payment provider modes
-enum PaymentProviderMode {
-  manual,
-  integrated,
-  cash,
-}
-
-/// Payment result types for PaymentResultScreen
-enum PaymentResultType {
-  submitted,    // Manual payment submitted, awaiting verification
-  success,      // Integrated payment successful
-  failed,       // Payment failed/rejected
-  cash,         // Cash booking created
 }

@@ -5,7 +5,8 @@ import '../../../../config/app_theme.dart';
 import '../../../../models/subscription.dart';
 import '../../../../providers/subscription_provider.dart';
 import '../../../../providers/job_provider.dart';
-import '../providers/payment_flow_provider.dart';
+import '../../providers/payment_flow_provider.dart';
+import '../../providers/payment_flow_enums.dart';
 import '../widgets/status_badge.dart';
 
 /// Screen 1: Review Pickup with pricing-first design
@@ -42,13 +43,22 @@ class _ReviewPickupScreenState extends State<ReviewPickupScreen> {
     final subProvider = context.read<SubscriptionProvider>();
 
     // Extract pickup details from arguments
-    final scheduledDate = widget.arguments['scheduledDate'] as DateTime;
-    final scheduledTime = widget.arguments['scheduledTime'] as String;
+    final scheduledDate = widget.arguments['scheduledDate'] as DateTime?;
+    final scheduledTime = widget.arguments['scheduledTime'] as String? ?? '10:00 AM';
     final locationAddress = widget.arguments['locationAddress'] as String? ?? 'Unknown location';
     final locationArea = widget.arguments['locationArea'] as String?;
     final landmark = widget.arguments['landmark'] as String?;
     final locationLat = widget.arguments['locationLat'] as double?;
     final locationLng = widget.arguments['locationLng'] as double?;
+
+    // Validate required fields
+    if (scheduledDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid pickup date. Please restart booking.')),
+      );
+      Navigator.pop(context);
+      return;
+    }
 
     // Initialize flow provider
     flowProvider.initPickupDetails(

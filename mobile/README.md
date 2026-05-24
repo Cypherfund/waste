@@ -252,4 +252,4 @@ shorebird release android --artifact apk -- --dart-define=API_BASE_URL=https://o
 
 shorebird patch android --release-version 1.0.0+1 --artifact apk -- --dart-define=API_BASE_URL=https://om-combined.onrender.com/api/v1 --dart-define=WS_BASE_URL=wss://om-combined.onrender.com/waste
 
-flutter run --no-pub --dart-define=API_BASE_URL=https://om-combined.onrender.com/waste/api/v1 --dart-define=WS_BASE_URL=wss://om-combined.onrender.com/waste
+flutter run --no-pub --dart-define=API_BASE_URL=https://om-combined.onrender.com/waste/api/v1 --dart-define=WS_BASE_URL=wss://om-combined.onrender.com

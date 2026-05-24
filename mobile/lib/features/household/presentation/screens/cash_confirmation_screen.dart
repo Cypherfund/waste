@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../providers/job_provider.dart';
-import '../providers/payment_flow_provider.dart';
+import '../../providers/payment_flow_provider.dart';
+import '../../providers/payment_flow_enums.dart';
 import '../widgets/payment_timeline.dart';
 
 /// Screen 6: Cash Confirmation Screen

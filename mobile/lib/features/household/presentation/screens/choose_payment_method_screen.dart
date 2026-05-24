@@ -4,7 +4,9 @@ import '../../../../config/app_theme.dart';
 import '../../../shared/payment_methods_setup_screen.dart';
 import '../../../../providers/subscription_provider.dart';
 import '../../../../providers/user_payment_methods_provider.dart';
-import '../providers/payment_flow_provider.dart';
+import '../../../../services/api/wallet_api.dart';
+import '../../providers/payment_flow_provider.dart';
+import '../../providers/payment_flow_enums.dart';
 import '../widgets/payment_method_card.dart';
 
 /// Screen 2: Choose Payment Method
@@ -313,15 +315,4 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
         break;
     }
   }
-}
-
-/// AppConfig model (referenced in code)
-class AppConfig {
-  final bool paymentIntegrationEnabled;
-  final bool cashEnabled;
-
-  AppConfig({
-    required this.paymentIntegrationEnabled,
-    required this.cashEnabled,
-  });
 }
