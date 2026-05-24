@@ -227,8 +227,8 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                 children: [
                   // Country Code Dropdown
                   Container(
-                    width: 110,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    width: 120,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.grey),
                       borderRadius: BorderRadius.circular(4),
@@ -241,12 +241,13 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
                           return DropdownMenuItem<String>(
                             value: country['code'],
                             child: Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(country['flag']!, style: const TextStyle(fontSize: 20)),
-                                const SizedBox(width: 8),
+                                Text(country['flag']!, style: const TextStyle(fontSize: 18)),
+                                const SizedBox(width: 6),
                                 Text(
                                   country['code']!,
-                                  style: const TextStyle(fontSize: 12),
+                                  style: const TextStyle(fontSize: 11),
                                 ),
                               ],
                             ),
