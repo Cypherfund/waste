@@ -491,7 +491,7 @@ class _ScheduleLocationScreenState extends State<ScheduleLocationScreen> {
 
                       Navigator.pushNamed(
                         context,
-                        '/schedule-review',
+                        '/review-pickup',
                         arguments: {
                           ...args,
                           'locationAddress': _streetAddress,

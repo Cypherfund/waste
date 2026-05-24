@@ -63,6 +63,12 @@ import 'screens/household/manage_subscription_screen.dart';
 import 'features/marketer/data/marketer_api.dart';
 import 'features/marketer/providers/marketer_provider.dart';
 import 'features/marketer/presentation/marketer_shell.dart';
+import 'features/household/providers/payment_flow_provider.dart';
+import 'features/household/presentation/screens/review_pickup_screen.dart';
+import 'features/household/presentation/screens/choose_payment_method_screen.dart';
+import 'features/household/presentation/screens/manual_payment_screen.dart';
+import 'features/household/presentation/screens/cash_confirmation_screen.dart';
+import 'features/household/presentation/screens/payment_result_screen.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -221,6 +227,7 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
         ChangeNotifierProvider.value(value: _marketerProvider),
         ChangeNotifierProvider.value(value: _notificationsProvider),
         ChangeNotifierProvider.value(value: _userPaymentMethodsProvider),
+        ChangeNotifierProvider(create: (_) => PaymentFlowProvider()),
         Provider.value(value: _walletApi),
         Provider.value(value: _filesApi),
         Provider.value(value: widget.connectivityService),
@@ -277,6 +284,16 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
             arguments: ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {},
           ),
           '/schedule-review': (context) => ScheduleReviewPaymentScreen(
+            arguments: ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {},
+          ),
+          // New payment flow screens
+          '/review-pickup': (context) => ReviewPickupScreen(
+            arguments: ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {},
+          ),
+          '/choose-payment-method': (context) => const ChoosePaymentMethodScreen(),
+          '/manual-payment': (context) => const ManualPaymentScreen(),
+          '/cash-confirmation': (context) => const CashConfirmationScreen(),
+          '/payment-result': (context) => PaymentResultScreen(
             arguments: ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {},
           ),
           '/subscription-plans': (context) => const SubscriptionPlansScreen(),
