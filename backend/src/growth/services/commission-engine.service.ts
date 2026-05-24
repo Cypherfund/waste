@@ -125,6 +125,7 @@ export class CommissionEngineService {
       referenceType: 'booking',
       amount,
       status: CommissionStatus.PENDING,
+      campaignId: lead.campaignId, // Copy campaignId from lead
       description: `Commission for household booking #${payload.bookingId}`,
     });
 
@@ -205,6 +206,7 @@ export class CommissionEngineService {
       referenceType: 'job',
       amount,
       status: CommissionStatus.PENDING,
+      campaignId: lead.campaignId, // Copy campaignId from lead
       description: `Commission for collector first pickup #${payload.jobId}`,
     });
 
@@ -283,6 +285,7 @@ export class CommissionEngineService {
       referenceType: 'subscription',
       amount,
       status: CommissionStatus.PENDING,
+      campaignId: lead.campaignId, // Copy campaignId from lead
       description: `Commission for subscription #${payload.subscriptionId} (${percentage}% of ${payload.amount} XAF)`,
     });
 
