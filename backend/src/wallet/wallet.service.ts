@@ -59,14 +59,14 @@ export class WalletService {
 
   // ── GET app config (payment integration + support + providers) ───────────
   async getAppConfig(countryCode: string) {
-    const [paymentEnabled, manualInstructions, whatsapp, minAdvanceHoursStr, cashEnabledStr, maxAdvanceDays] = await Promise.all([
+    const [paymentEnabled, manualInstructions, whatsapp, minAdvanceHours, cashEnabledStr, maxAdvanceDays] = await Promise.all([
       this.systemConfigService.getBoolean('feature.payment_integration', false),
       this.systemConfigService.getString(
         'payment.manual_instructions',
         'Send your payment to the admin via Mobile Money. Use your phone number as reference.',
       ),
       this.systemConfigService.getString('support.whatsapp_number', ''),
-      this.systemConfigService.getString('booking.min_advance_hours', '24'),
+      this.systemConfigService.getNumber('booking.min_advance_hours', 24),
       this.systemConfigService.getString('payments.cash_enabled', 'false'),
       this.systemConfigService.getNumber('booking.max_advance_days', 30),
     ]);
@@ -102,7 +102,7 @@ export class WalletService {
         supportsCashin: p.supportsCashin,
         supportsCashout: p.supportsCashout,
       })),
-      minAdvanceHours: parseInt(minAdvanceHoursStr, 10) || 24,
+      minAdvanceHours,
       maxAdvanceDays,
     };
   }
@@ -142,25 +142,13 @@ export class WalletService {
 
   // ── GET payout config ─────────────────────────────────────────
   async getPayoutConfig() {
-    const [minStr, maxStr, methodsStr, mmLabel, bankLabel, payoutMode] = await Promise.all([
-      this.systemConfigService.getString('payout.min_withdrawal', '1000'),
-      this.systemConfigService.getString('payout.max_withdrawal', '500000'),
-      this.systemConfigService.getString('payout.methods_enabled', 'MOBILE_MONEY,BANK_TRANSFER'),
-      this.systemConfigService.getString('payout.mobile_money_label', 'MTN Mobile Money / Orange Money'),
-      this.systemConfigService.getString('payout.bank_transfer_label', 'Bank Transfer'),
+    const [minWithdrawal, maxWithdrawal, payoutMode] = await Promise.all([
+      this.systemConfigService.getNumber('payout.min_withdrawal', 1000),
+      this.systemConfigService.getNumber('payout.max_withdrawal', 500000),
       this.systemConfigService.getString('marketer.payout_mode', 'MANUAL_APPROVAL'),
     ]);
 
-    const methods = methodsStr
-      .split(',')
-      .map((m) => m.trim())
-      .filter(Boolean)
-      .map((key) => ({
-        key,
-        label: key === 'MOBILE_MONEY' ? mmLabel : key === 'BANK_TRANSFER' ? bankLabel : key,
-      }));
-
-    // Get cashout providers (supportsCashout=true)
+    // Get cashout providers (supportsCashout=true) — source of truth for enabled payout methods
     const cashoutProviders = await this.paymentProviderRepo.find({
       where: {
         isEnabled: true,
@@ -169,9 +157,15 @@ export class WalletService {
       order: { providerName: 'ASC' },
     });
 
+    // Derive allowed methods from payment_providers table (provider overrides system defaults)
+    const methods = cashoutProviders.map((p) => ({
+      key: p.paymentCode,
+      label: p.providerName,
+    }));
+
     return {
-      minWithdrawal: Number(minStr),
-      maxWithdrawal: Number(maxStr),
+      minWithdrawal,
+      maxWithdrawal,
       methods,
       payoutMode: payoutMode as 'MANUAL_APPROVAL' | 'AUTO_PROVIDER_PAYOUT',
       cashoutProviders: cashoutProviders.map((p) => ({
@@ -185,6 +179,8 @@ export class WalletService {
         manualProofRequired: p.manualProofRequired,
         supportsCashin: p.supportsCashin,
         supportsCashout: p.supportsCashout,
+        minWithdrawal: p.minWithdrawal !== null ? Number(p.minWithdrawal) : null,
+        maxWithdrawal: p.maxWithdrawal !== null ? Number(p.maxWithdrawal) : null,
       })),
     };
   }
@@ -196,21 +192,26 @@ export class WalletService {
   ): Promise<PayoutRequest> {
     const config = await this.getPayoutConfig();
 
-    if (dto.amount < config.minWithdrawal) {
-      throw new BadRequestException(
-        `Minimum withdrawal is ${config.minWithdrawal} XAF`,
-      );
-    }
-    if (dto.amount > config.maxWithdrawal) {
-      throw new BadRequestException(
-        `Maximum withdrawal is ${config.maxWithdrawal} XAF`,
-      );
-    }
-
     const validMethods = config.methods.map((m) => m.key);
     if (!validMethods.includes(dto.method)) {
       throw new BadRequestException(
         `Unsupported payment method. Enabled: ${validMethods.join(', ')}`,
+      );
+    }
+
+    // Provider-level min/max override system config fallback
+    const provider = config.cashoutProviders.find((p) => p.paymentCode === dto.method);
+    const effectiveMin = provider?.minWithdrawal ?? config.minWithdrawal;
+    const effectiveMax = provider?.maxWithdrawal ?? config.maxWithdrawal;
+
+    if (dto.amount < effectiveMin) {
+      throw new BadRequestException(
+        `Minimum withdrawal for this method is ${effectiveMin} XAF`,
+      );
+    }
+    if (dto.amount > effectiveMax) {
+      throw new BadRequestException(
+        `Maximum withdrawal for this method is ${effectiveMax} XAF`,
       );
     }
 

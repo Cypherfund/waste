@@ -132,7 +132,7 @@ export class CommissionEngineService {
     const saved = await this.transactionRepo.save(transaction);
 
     // Update marketer pending amount
-    profile.pendingAmount += amount;
+    profile.pendingAmount = parseFloat(profile.pendingAmount.toString()) + amount;
     const updatedProfile = await this.profileRepo.save(profile);
 
     this.logger.log(`Created commission ${saved.id} for ${amount} XAF, profile pendingAmount now: ${updatedProfile.pendingAmount}`);
@@ -238,7 +238,7 @@ export class CommissionEngineService {
     const saved = await this.transactionRepo.save(transaction);
 
     // Update marketer pending amount
-    profile.pendingAmount += amount;
+    profile.pendingAmount = parseFloat(profile.pendingAmount.toString()) + amount;
     await this.profileRepo.save(profile);
 
     this.logger.log(`Created commission ${saved.id} for ${amount} XAF`);
@@ -331,7 +331,7 @@ export class CommissionEngineService {
     const saved = await this.transactionRepo.save(transaction);
 
     // Update marketer pending amount
-    profile.pendingAmount += amount;
+    profile.pendingAmount = parseFloat(profile.pendingAmount.toString()) + amount;
     const updatedProfile = await this.profileRepo.save(profile);
 
     this.logger.log(`Created commission ${saved.id} for ${amount} XAF, profile pendingAmount now: ${updatedProfile.pendingAmount}`);

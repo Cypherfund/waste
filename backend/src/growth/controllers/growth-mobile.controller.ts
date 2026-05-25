@@ -68,10 +68,10 @@ export class GrowthMobileController {
         qualificationRate: profile.qualificationRate,
       },
       commissions: {
-        pending: profile.pendingAmount,
-        approved: profile.approvedAmount,
-        paid: profile.totalPaid,
-        totalEarned: profile.totalEarned,
+        pending: parseFloat(profile.pendingAmount as any),
+        approved: parseFloat(profile.approvedAmount as any),
+        paid: parseFloat(profile.totalPaid as any),
+        totalEarned: parseFloat(profile.totalEarned as any),
       },
       recentLeads: leads.slice(0, 5),
     };

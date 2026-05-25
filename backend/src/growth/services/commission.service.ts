@@ -69,8 +69,8 @@ export class CommissionService {
 
     // Update marketer stats
     const profile = transaction.marketerProfile;
-    profile.approvedAmount -= amount;
-    profile.totalPaid += amount;
+    profile.approvedAmount = parseFloat(profile.approvedAmount.toString()) - amount;
+    profile.totalPaid = parseFloat(profile.totalPaid.toString()) + amount;
     await this.profileRepo.save(profile);
 
     return saved;
@@ -212,9 +212,9 @@ export class CommissionService {
     // Update marketer stats
     const profile = transaction.marketerProfile;
     const amt = parseFloat(transaction.amount.toString());
-    profile.pendingAmount -= amt;
-    profile.approvedAmount += amt;
-    profile.totalEarned += amt;
+    profile.pendingAmount = parseFloat(profile.pendingAmount.toString()) - amt;
+    profile.approvedAmount = parseFloat(profile.approvedAmount.toString()) + amt;
+    profile.totalEarned = parseFloat(profile.totalEarned.toString()) + amt;
     await this.profileRepo.save(profile);
 
     return saved;
@@ -247,7 +247,7 @@ export class CommissionService {
 
     // Update marketer stats
     const profile = transaction.marketerProfile;
-    profile.pendingAmount -= parseFloat(transaction.amount.toString());
+    profile.pendingAmount = parseFloat(profile.pendingAmount.toString()) - parseFloat(transaction.amount.toString());
     await this.profileRepo.save(profile);
 
     return saved;
