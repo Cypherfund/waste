@@ -26,9 +26,22 @@ export class SubscriptionsController {
   @Roles(UserRole.HOUSEHOLD)
   subscribe(
     @CurrentUser('sub') userId: string,
-    @Body() body: { planId: string },
+    @Body() body: {
+      planId: string;
+      paymentMode?: string;
+      paymentRef?: string;
+      paymentProofUrl?: string;
+      paymentPhone?: string;
+      providerTransactionId?: string;
+    },
   ) {
-    return this.subscriptionsService.subscribe(userId, body.planId);
+    const { planId, ...paymentFields } = body;
+    const hasPayment = !!paymentFields.paymentMode;
+    return this.subscriptionsService.subscribe(
+      userId,
+      planId,
+      hasPayment ? paymentFields : undefined,
+    );
   }
 
   @Get('my')
@@ -78,5 +91,26 @@ export class SubscriptionsController {
     @Body() body: { name?: string; price?: number; pickupsPerWeek?: number; isActive?: boolean; description?: string },
   ) {
     return this.subscriptionsService.adminUpdatePlan(id, body);
+  }
+
+  @Get('admin/pending-payments')
+  @Roles(UserRole.ADMIN)
+  adminListPendingPayments() {
+    return this.subscriptionsService.adminListPendingSubscriptionPayments();
+  }
+
+  @Patch('admin/:id/verify-payment')
+  @Roles(UserRole.ADMIN)
+  adminVerifyPayment(@Param('id', ParseUUIDPipe) id: string) {
+    return this.subscriptionsService.adminVerifySubscription(id);
+  }
+
+  @Patch('admin/:id/reject-payment')
+  @Roles(UserRole.ADMIN)
+  adminRejectPayment(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: { reason?: string },
+  ) {
+    return this.subscriptionsService.adminRejectSubscription(id, body?.reason);
   }
 }

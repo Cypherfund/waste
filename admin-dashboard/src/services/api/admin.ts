@@ -141,26 +141,60 @@ export const subscriptionPlansApi = {
 
 export const pendingPaymentsApi = {
   list: () =>
-    client.get<PendingPayment[]>('/admin/jobs/pending-payment')
-      .then((r) => (r.data as unknown as { data: Job[] }).data.map((j): PendingPayment => ({
-        jobId: j.id,
-        householdId: j.householdId,
-        householdName: j.householdName ?? null,
-        scheduledDate: j.scheduledDate,
-        paymentMode: j.paymentMode ?? 'MANUAL_PROVIDER',
-        paymentMethod: j.paymentMethod,
-        paymentRef: j.paymentRef,
-        paymentProofUrl: j.paymentProofUrl,
-        paymentStatus: j.paymentStatus ?? 'PENDING',
-        quotedPrice: j.quotedPrice,
-        createdAt: j.createdAt,
-      }))),
+    client.get<{ data: any[] }>('/admin/jobs/pending-payment')
+      .then((r) => {
+        const items = (r.data as unknown as { data: any[] }).data;
+        return items.map((item): PendingPayment => {
+          if (item.paymentSource === 'SUBSCRIPTION_PAYMENT') {
+            return {
+              jobId: null,
+              subscriptionId: item.subscriptionId ?? null,
+              paymentSource: 'SUBSCRIPTION_PAYMENT',
+              householdId: item.householdId,
+              householdName: item.householdName ?? null,
+              planName: item.planName ?? null,
+              scheduledDate: item.scheduledDate,
+              paymentMode: item.paymentMode ?? 'MANUAL_PROVIDER',
+              paymentMethod: item.paymentMethod ?? null,
+              paymentRef: item.paymentRef ?? null,
+              paymentProofUrl: item.paymentProofUrl ?? null,
+              paymentStatus: item.paymentStatus ?? 'AWAITING_ADMIN_VERIFICATION',
+              quotedPrice: item.quotedPrice ?? null,
+              createdAt: item.createdAt,
+            };
+          }
+          return {
+            jobId: item.id ?? item.jobId,
+            subscriptionId: null,
+            paymentSource: 'JOB_PAYMENT',
+            householdId: item.householdId,
+            householdName: item.householdName ?? null,
+            planName: null,
+            scheduledDate: item.scheduledDate,
+            paymentMode: item.paymentMode ?? 'MANUAL_PROVIDER',
+            paymentMethod: item.paymentMethod ?? null,
+            paymentRef: item.paymentRef ?? null,
+            paymentProofUrl: item.paymentProofUrl ?? null,
+            paymentStatus: item.paymentStatus ?? 'PENDING',
+            quotedPrice: item.quotedPrice ?? null,
+            createdAt: item.createdAt,
+          };
+        });
+      }),
 
-  verify: (jobId: string) =>
-    client.patch(`/admin/jobs/${jobId}/verify-payment`).then((r) => r.data),
+  verify: (item: PendingPayment) => {
+    if (item.paymentSource === 'SUBSCRIPTION_PAYMENT' && item.subscriptionId) {
+      return client.patch(`/subscriptions/admin/${item.subscriptionId}/verify-payment`).then((r) => r.data);
+    }
+    return client.patch(`/admin/jobs/${item.jobId}/verify-payment`).then((r) => r.data);
+  },
 
-  reject: (jobId: string, reason: string) =>
-    client.patch(`/admin/jobs/${jobId}/reject-payment`, { reason }).then((r) => r.data),
+  reject: (item: PendingPayment, reason: string) => {
+    if (item.paymentSource === 'SUBSCRIPTION_PAYMENT' && item.subscriptionId) {
+      return client.patch(`/subscriptions/admin/${item.subscriptionId}/reject-payment`, { reason }).then((r) => r.data);
+    }
+    return client.patch(`/admin/jobs/${item.jobId}/reject-payment`, { reason }).then((r) => r.data);
+  },
 };
 
 export const collectorFloatApi = {

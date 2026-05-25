@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../config/app_theme.dart';
+import '../../../../providers/subscription_provider.dart';
 import '../../providers/payment_flow_provider.dart';
+import '../../providers/payment_flow_enums.dart';
 import '../widgets/payment_method_card.dart';
 
 /// Screen 3a: Integrated Payment
@@ -74,7 +76,7 @@ class _IntegratedPaymentScreenState extends State<IntegratedPaymentScreen> {
                   const SizedBox(height: 24),
 
                   // Payment details
-                  _buildPaymentDetailsCard(providerName, amount),
+                  _buildPaymentDetailsCard(providerName, amount, flowProvider),
 
                   const SizedBox(height: 24),
 
@@ -165,7 +167,7 @@ class _IntegratedPaymentScreenState extends State<IntegratedPaymentScreen> {
     );
   }
 
-  Widget _buildPaymentDetailsCard(String providerName, double amount) {
+  Widget _buildPaymentDetailsCard(String providerName, double amount, PaymentFlowProvider flowProvider) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -190,7 +192,7 @@ class _IntegratedPaymentScreenState extends State<IntegratedPaymentScreen> {
           const SizedBox(height: 12),
           _buildDetailRow('Amount', '${amount.toStringAsFixed(0)} XAF'),
           const SizedBox(height: 12),
-          _buildDetailRow('Type', 'One-time payment'),
+          _buildDetailRow('Type', flowProvider.isSubscriptionContext ? 'Subscription payment' : 'One-time payment'),
         ],
       ),
     );
@@ -255,17 +257,42 @@ class _IntegratedPaymentScreenState extends State<IntegratedPaymentScreen> {
 
     try {
       final flowProvider = context.read<PaymentFlowProvider>();
-      
-      // Simulate API call to initiate payment
-      await Future.delayed(const Duration(seconds: 2));
-      
-      if (!mounted) return;
 
-      // Navigate to payment processing screen
+      // ── Subscription integrated payment branch ───────────────────
+      if (flowProvider.isSubscriptionContext) {
+        final subProvider = context.read<SubscriptionProvider>();
+        final subscription = await subProvider.subscribeWithPayment(
+          planId: flowProvider.subscriptionPlanId!,
+          paymentMode: 'INTEGRATED_PROVIDER',
+          paymentPhone: flowProvider.paymentPhone,
+        );
+
+        if (!mounted) return;
+
+        if (subscription == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(subProvider.error ?? 'Failed to initiate subscription payment'),
+              backgroundColor: Colors.red.shade600,
+            ),
+          );
+          return;
+        }
+
+        // Store transaction ID if returned, then poll
+        if (subscription.providerTransactionId != null) {
+          flowProvider.setProviderTransactionId(subscription.providerTransactionId!);
+        }
+        Navigator.pushNamed(context, '/payment-processing');
+        return;
+      }
+
+      // ── Job integrated payment branch (existing) ─────────────────
+      await Future.delayed(const Duration(seconds: 2));
+      if (!mounted) return;
       Navigator.pushNamed(context, '/payment-processing');
     } catch (e) {
       if (!mounted) return;
-      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to initiate payment: $e'),

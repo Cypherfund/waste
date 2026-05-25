@@ -13,6 +13,7 @@ import { Dispute } from '../disputes/entities/dispute.entity';
 import { Earning } from '../earnings/entities/earning.entity';
 import { Rating } from '../ratings/entities/rating.entity';
 import { User } from '../users/entities/user.entity';
+import { UserSubscription } from '../subscriptions/entities/user-subscription.entity';
 import { JobStatus } from '../common/enums/job-status.enum';
 import { UserRole } from '../common/enums/role.enum';
 import { DisputeStatus } from '../common/enums/dispute-status.enum';
@@ -33,6 +34,7 @@ describe('AdminService', () => {
   let earningRepo: any;
   let ratingRepo: any;
   let userRepo: any;
+  let subRepo: any;
 
   const mockQb = () => ({
     select: jest.fn().mockReturnThis(),
@@ -108,6 +110,7 @@ describe('AdminService', () => {
 
     jobRepo = {
       findAndCount: jest.fn().mockResolvedValue([[], 0]),
+      find: jest.fn().mockResolvedValue([]),
       count: jest.fn().mockResolvedValue(10),
       createQueryBuilder: jest.fn().mockReturnValue(mockQb()),
     };
@@ -123,6 +126,11 @@ describe('AdminService', () => {
 
     ratingRepo = {
       createQueryBuilder: jest.fn().mockReturnValue(mockQb()),
+    };
+
+    subRepo = {
+      findAndCount: jest.fn().mockResolvedValue([[], 0]),
+      find: jest.fn().mockResolvedValue([]),
     };
 
     userRepo = {
@@ -156,6 +164,7 @@ describe('AdminService', () => {
         { provide: getRepositoryToken(Earning), useValue: earningRepo },
         { provide: getRepositoryToken(Rating), useValue: ratingRepo },
         { provide: getRepositoryToken(User), useValue: userRepo },
+        { provide: getRepositoryToken(UserSubscription), useValue: subRepo },
       ],
     }).compile();
 
@@ -444,6 +453,123 @@ describe('AdminService', () => {
       expect(result[0]).toHaveProperty('completedJobs');
       expect(result[0]).toHaveProperty('totalEarnings');
       expect(result[0]).toHaveProperty('avgCompletionTime');
+    });
+  });
+
+  // ─── PENDING PAYMENTS (unified job + subscription) ────────────
+
+  describe('listPendingPaymentJobs()', () => {
+    const makeJob = (overrides: any = {}): any => ({
+      id: 'job-1',
+      householdId: 'hh-1',
+      status: 'PENDING',
+      paymentStatus: 'AWAITING_ADMIN_VERIFICATION',
+      createdAt: new Date('2026-05-01'),
+      ...overrides,
+    });
+
+    const makePendingSub = (overrides: any = {}): any => ({
+      id: 'sub-1',
+      userId: 'user-1',
+      status: 'PENDING_PAYMENT',
+      paymentMode: 'MANUAL_PROVIDER',
+      paymentRef: 'TX-123',
+      paymentProofUrl: null,
+      paymentStatus: 'AWAITING_ADMIN_VERIFICATION',
+      startDate: '2026-05-26',
+      createdAt: new Date('2026-05-02'),
+      plan: { id: 'plan-1', name: 'Basic', price: 3500 },
+      user: { name: 'Jane Doe' },
+      ...overrides,
+    });
+
+    beforeEach(() => {
+      jobsService.toResponseDto = jest.fn((j) => Promise.resolve({
+        id: j.id,
+        householdId: j.householdId,
+        paymentStatus: j.paymentStatus,
+        createdAt: j.createdAt,
+      }));
+    });
+
+    it('returns empty list when no pending payments exist', async () => {
+      jobRepo.find.mockResolvedValue([]);
+      subRepo.findAndCount.mockResolvedValue(undefined); // not called directly
+      subRepo.find = jest.fn().mockResolvedValue([]);
+
+      const result = await service.listPendingPaymentJobs();
+
+      expect(result.data).toHaveLength(0);
+      expect(result.meta.total).toBe(0);
+    });
+
+    it('tags job rows with paymentSource: JOB_PAYMENT', async () => {
+      jobRepo.find.mockResolvedValue([makeJob()]);
+      subRepo.find = jest.fn().mockResolvedValue([]);
+
+      const result = await service.listPendingPaymentJobs();
+
+      expect(result.data[0].paymentSource).toBe('JOB_PAYMENT');
+    });
+
+    it('tags subscription rows with paymentSource: SUBSCRIPTION_PAYMENT', async () => {
+      jobRepo.find.mockResolvedValue([]);
+      subRepo.find = jest.fn().mockResolvedValue([makePendingSub()]);
+
+      const result = await service.listPendingPaymentJobs();
+
+      expect(result.data[0].paymentSource).toBe('SUBSCRIPTION_PAYMENT');
+    });
+
+    it('subscription row has null jobId and valid subscriptionId', async () => {
+      jobRepo.find.mockResolvedValue([]);
+      subRepo.find = jest.fn().mockResolvedValue([makePendingSub()]);
+
+      const result = await service.listPendingPaymentJobs();
+      const row = result.data[0];
+
+      expect(row.jobId).toBeNull();
+      expect(row.subscriptionId).toBe('sub-1');
+    });
+
+    it('subscription row includes planName from relation', async () => {
+      jobRepo.find.mockResolvedValue([]);
+      subRepo.find = jest.fn().mockResolvedValue([makePendingSub()]);
+
+      const result = await service.listPendingPaymentJobs();
+
+      expect(result.data[0].planName).toBe('Basic');
+    });
+
+    it('subscription row includes householdName from user relation', async () => {
+      jobRepo.find.mockResolvedValue([]);
+      subRepo.find = jest.fn().mockResolvedValue([makePendingSub()]);
+
+      const result = await service.listPendingPaymentJobs();
+
+      expect(result.data[0].householdName).toBe('Jane Doe');
+    });
+
+    it('returns combined and sorted results (oldest first)', async () => {
+      const olderSub = makePendingSub({ createdAt: new Date('2026-04-30') });
+      const newerJob = makeJob({ createdAt: new Date('2026-05-10') });
+      jobRepo.find.mockResolvedValue([newerJob]);
+      subRepo.find = jest.fn().mockResolvedValue([olderSub]);
+
+      const result = await service.listPendingPaymentJobs();
+
+      expect(result.data).toHaveLength(2);
+      expect(result.data[0].paymentSource).toBe('SUBSCRIPTION_PAYMENT'); // older first
+      expect(result.data[1].paymentSource).toBe('JOB_PAYMENT');
+    });
+
+    it('meta.total equals combined count', async () => {
+      jobRepo.find.mockResolvedValue([makeJob()]);
+      subRepo.find = jest.fn().mockResolvedValue([makePendingSub(), makePendingSub({ id: 'sub-2' })]);
+
+      const result = await service.listPendingPaymentJobs();
+
+      expect(result.meta.total).toBe(3);
     });
   });
 });

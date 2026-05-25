@@ -169,7 +169,7 @@ describe('CommissionEngineService', () => {
         }),
       );
       expect(transactionRepo.save).toHaveBeenCalled();
-      expect(leadService.markLeadQualified).toHaveBeenCalledWith('lead-1');
+      expect(leadService.markLeadQualified).toHaveBeenCalledWith('lead-1', 'booking');
     });
 
     it('should skip when no lead found for household', async () => {

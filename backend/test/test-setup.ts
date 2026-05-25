@@ -47,7 +47,8 @@ beforeAll(async () => {
   const tables = [
     'ratings', 'earnings', 'notifications', 
     'fraud_flags', 'disputes', 'jobs', 'users',
-    'files', 'proofs', 'location_updates', 'collector_availability', 'system_config'
+    'files', 'proofs', 'location_updates', 'collector_availability', 'system_config',
+    'user_subscriptions', 'subscription_plans',
   ];
   
   for (const table of tables) {
@@ -67,9 +68,11 @@ beforeAll(async () => {
   try {
     await dataSource.query(`
       INSERT INTO system_config (key, value, category, description) VALUES
-        ('pricing.per_pickup_price',         '500',  'pricing',    'Price per pickup in XAF'),
-        ('assignment.auto_assign_radius_km', '10',   'assignment', 'Radius in km for auto-assigning collectors'),
-        ('assignment.acceptance_timeout_s',  '120',  'assignment', 'Seconds collector has to accept before reassignment')
+        ('pricing.per_pickup_price',              '500',  'pricing',    'Price per pickup in XAF'),
+        ('pricing.subscription_pickups_per_week', '3',    'pricing',    'Default pickups per week for subscription plans'),
+        ('pricing.weeks_per_month',               '4',    'pricing',    'Weeks per month used for savings calculation'),
+        ('assignment.auto_assign_radius_km',      '10',   'assignment', 'Radius in km for auto-assigning collectors'),
+        ('assignment.acceptance_timeout_s',       '120',  'assignment', 'Seconds collector has to accept before reassignment')
       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
     `);
   } catch (error: any) {
@@ -83,7 +86,8 @@ afterAll(async () => {
     const tables = [
       'ratings', 'earnings', 'notifications', 
       'fraud_flags', 'disputes', 'jobs', 'users',
-      'files', 'proofs', 'location_updates', 'collector_availability', 'system_config'
+      'files', 'proofs', 'location_updates', 'collector_availability', 'system_config',
+      'user_subscriptions', 'subscription_plans',
     ];
     
     for (const table of tables) {

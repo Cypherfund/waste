@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../config/app_theme.dart';
 import '../../providers/subscription_provider.dart';
 import '../../models/subscription.dart';
+import '../../features/household/providers/payment_flow_provider.dart';
 
 class SubscriptionPlansScreen extends StatefulWidget {
   const SubscriptionPlansScreen({super.key});
@@ -331,26 +332,20 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
     );
   }
 
-  Future<void> _subscribe(SubscriptionPlan plan) async {
-    final sub = context.read<SubscriptionProvider>();
-    final ok = await sub.subscribe(plan.id);
-    if (!mounted) return;
-    if (ok) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("You're subscribed to ${plan.name} 🎉"),
-          backgroundColor: AppColors.primary,
-        ),
-      );
-      Navigator.pop(context);
-    } else if (sub.error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(sub.error!),
-          backgroundColor: Colors.red.shade600,
-        ),
-      );
-    }
+  void _subscribe(SubscriptionPlan plan) {
+    final flowProvider = context.read<PaymentFlowProvider>();
+    flowProvider.setSubscriptionContext(
+      plan.id,
+      planPrice: plan.price.toDouble(),
+    );
+    Navigator.pushNamed(
+      context,
+      '/choose-payment-method',
+      arguments: {
+        'hideCash': true,
+        'subtitle': 'for ${plan.name} subscription',
+      },
+    );
   }
 
   Widget _buildPlansError(SubscriptionProvider sub) {

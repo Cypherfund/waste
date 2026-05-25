@@ -17,10 +17,23 @@ class SubscriptionApi {
         .toList();
   }
 
-  Future<UserSubscription> subscribe(String planId) async {
+  Future<UserSubscription> subscribe(
+    String planId, {
+    String? paymentMode,
+    String? paymentRef,
+    String? paymentProofUrl,
+    String? paymentPhone,
+    String? providerTransactionId,
+  }) async {
+    final data = <String, dynamic>{'planId': planId};
+    if (paymentMode != null) data['paymentMode'] = paymentMode;
+    if (paymentRef != null) data['paymentRef'] = paymentRef;
+    if (paymentProofUrl != null) data['paymentProofUrl'] = paymentProofUrl;
+    if (paymentPhone != null) data['paymentPhone'] = paymentPhone;
+    if (providerTransactionId != null) data['providerTransactionId'] = providerTransactionId;
     final response = await _client.dio.post(
       '/subscriptions/subscribe',
-      data: {'planId': planId},
+      data: data,
     );
     return UserSubscription.fromJson(response.data as Map<String, dynamic>);
   }

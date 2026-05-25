@@ -15,6 +15,8 @@ import { FraudService } from '../fraud/fraud.service';
 import { SystemConfigService } from '../config/system-config.service';
 import { FeatureFlagService, FEATURE_FLAGS } from '../config/feature-flags';
 import { Job } from '../jobs/entities/job.entity';
+import { UserSubscription } from '../subscriptions/entities/user-subscription.entity';
+import { SubscriptionStatus } from '../common/enums/subscription-status.enum';
 import { Dispute } from '../disputes/entities/dispute.entity';
 import { Earning } from '../earnings/entities/earning.entity';
 import { Rating } from '../ratings/entities/rating.entity';
@@ -54,6 +56,8 @@ export class AdminService {
     private readonly ratingRepo: Repository<Rating>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    @InjectRepository(UserSubscription)
+    private readonly subRepo: Repository<UserSubscription>,
   ) {}
 
   // ─── USERS ────────────────────────────────────────────────────
@@ -120,17 +124,51 @@ export class AdminService {
 
   // ─── JOBS ─────────────────────────────────────────────────────
 
-  async listPendingPaymentJobs(): Promise<PaginatedResponse<JobResponseDto>> {
-    const [jobs, total] = await this.jobRepo.findAndCount({
-      where: {
-        paymentStatus: In([PaymentStatus.PENDING, PaymentStatus.AWAITING_ADMIN_VERIFICATION]) as any,
-      },
-      relations: ['household', 'collector'],
-      order: { createdAt: 'DESC' },
-      take: 100,
-    });
-    const data = await Promise.all(jobs.map((j) => this.jobsService.toResponseDto(j)));
-    return paginate(data, total, 1, 100);
+  async listPendingPaymentJobs(): Promise<{ data: any[]; meta: any }> {
+    const [jobs, pendingSubs] = await Promise.all([
+      this.jobRepo.find({
+        where: {
+          paymentStatus: In([PaymentStatus.PENDING, PaymentStatus.AWAITING_ADMIN_VERIFICATION]) as any,
+        },
+        relations: ['household', 'collector'],
+        order: { createdAt: 'DESC' },
+        take: 100,
+      }),
+      this.subRepo.find({
+        where: { status: SubscriptionStatus.PENDING_PAYMENT },
+        relations: ['plan', 'user'],
+        order: { createdAt: 'ASC' },
+      }),
+    ]);
+
+    const jobRows = await Promise.all(
+      jobs.map(async (j) => {
+        const dto = await this.jobsService.toResponseDto(j);
+        return { ...dto, paymentSource: 'JOB_PAYMENT' };
+      }),
+    );
+
+    const subRows = pendingSubs.map((s) => ({
+      jobId: null,
+      subscriptionId: s.id,
+      paymentSource: 'SUBSCRIPTION_PAYMENT',
+      householdId: s.userId,
+      householdName: (s as any).user?.name ?? null,
+      planName: (s as any).plan?.name ?? null,
+      scheduledDate: s.startDate,
+      paymentMode: s.paymentMode ?? 'MANUAL_PROVIDER',
+      paymentMethod: s.paymentMode ?? null,
+      paymentRef: s.paymentRef,
+      paymentProofUrl: s.paymentProofUrl,
+      paymentStatus: s.paymentStatus ?? 'AWAITING_ADMIN_VERIFICATION',
+      quotedPrice: (s as any).plan?.price ?? null,
+      createdAt: s.createdAt,
+    }));
+
+    const combined = [...jobRows, ...subRows].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    );
+    return { data: combined, meta: { total: combined.length, page: 1, limit: 200 } };
   }
 
   async listJobs(filters: AdminJobFilterDto): Promise<PaginatedResponse<JobResponseDto>> {

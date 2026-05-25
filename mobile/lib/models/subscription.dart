@@ -1,4 +1,4 @@
-enum SubscriptionStatus { ACTIVE, EXPIRED, CANCELLED }
+enum SubscriptionStatus { ACTIVE, EXPIRED, CANCELLED, PENDING_PAYMENT, PAYMENT_FAILED }
 enum PricingType { SUBSCRIPTION, PAY_PER_PICKUP }
 
 class SubscriptionPlan {
@@ -45,6 +45,12 @@ class UserSubscription {
   final String? weekResetDate;
   final SubscriptionStatus status;
   final DateTime? cancelledAt;
+  final String? paymentMode;
+  final String? paymentStatus;
+  final String? paymentRef;
+  final String? paymentProofUrl;
+  final String? paymentPhone;
+  final String? providerTransactionId;
 
   UserSubscription({
     required this.id,
@@ -56,6 +62,12 @@ class UserSubscription {
     this.weekResetDate,
     required this.status,
     this.cancelledAt,
+    this.paymentMode,
+    this.paymentStatus,
+    this.paymentRef,
+    this.paymentProofUrl,
+    this.paymentPhone,
+    this.providerTransactionId,
   });
 
   factory UserSubscription.fromJson(Map<String, dynamic> json) {
@@ -78,10 +90,17 @@ class UserSubscription {
       cancelledAt: json['cancelledAt'] != null
           ? DateTime.parse(json['cancelledAt'] as String)
           : null,
+      paymentMode: json['paymentMode'] as String?,
+      paymentStatus: json['paymentStatus'] as String?,
+      paymentRef: json['paymentRef'] as String?,
+      paymentProofUrl: json['paymentProofUrl'] as String?,
+      paymentPhone: json['paymentPhone'] as String?,
+      providerTransactionId: json['providerTransactionId'] as String?,
     );
   }
 
   bool get isActive => status == SubscriptionStatus.ACTIVE;
+  bool get isPendingPayment => status == SubscriptionStatus.PENDING_PAYMENT;
 }
 
 class PricingQuote {

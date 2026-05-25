@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../providers/job_provider.dart';
 import '../../../../providers/subscription_provider.dart';
+import '../../../../models/subscription.dart';
 import '../../../../providers/user_payment_methods_provider.dart';
 import '../../../../services/api/files_api.dart';
 import '../../providers/payment_flow_provider.dart';
@@ -419,7 +420,10 @@ class _ManualPaymentScreenState extends State<ManualPaymentScreen> {
     );
   }
 
-  Widget _buildWarningBanner() {
+  Widget _buildWarningBanner(bool isSubscription) {
+    final message = isSubscription
+        ? 'Your subscription will become active after admin verifies your payment. This may take a few minutes.'
+        : 'Your pickup will start after admin verifies your payment. This may take a few minutes.';
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -432,7 +436,7 @@ class _ManualPaymentScreenState extends State<ManualPaymentScreen> {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Your pickup will start after admin verifies your payment. This may take a few minutes.',
+              message,
               style: TextStyle(
                 fontSize: 13,
                 color: Colors.orange.shade800,
@@ -609,6 +613,38 @@ class _ManualPaymentScreenState extends State<ManualPaymentScreen> {
     setState(() => _isCreatingJob = true);
 
     try {
+      // ── Subscription payment branch ──────────────────────────────
+      if (flowProvider.isSubscriptionContext) {
+        final subProvider = context.read<SubscriptionProvider>();
+        final subscription = await subProvider.subscribeWithPayment(
+          planId: flowProvider.subscriptionPlanId!,
+          paymentMode: 'MANUAL_PROVIDER',
+          paymentRef: paymentRef,
+          paymentProofUrl: _uploadedProofUrl,
+        );
+
+        if (subscription != null && mounted) {
+          flowProvider.setManualPaymentDetails(
+            paymentRef: paymentRef,
+            paymentProofUrl: _uploadedProofUrl,
+          );
+          flowProvider.setResultType(PaymentResultType.submitted);
+
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/payment-result',
+            (route) => route.settings.name == '/home',
+            arguments: {
+              'resultType': PaymentResultType.submitted,
+              'isSubscription': true,
+              'subscription': subscription,
+            },
+          );
+        }
+        return;
+      }
+
+      // ── Job payment branch (existing) ────────────────────────────
       final jobProvider = context.read<JobProvider>();
 
       final job = await jobProvider.createJob(

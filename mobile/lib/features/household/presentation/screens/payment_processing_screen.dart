@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../services/api/wallet_api.dart';
 import '../../providers/payment_flow_provider.dart';
+import '../../providers/payment_flow_enums.dart';
 
 /// Screen 3b: Payment Processing
 /// 
@@ -96,26 +97,43 @@ class _PaymentProcessingScreenState extends State<PaymentProcessingScreen> {
   }
 
   void _handlePaymentSuccess() {
+    final flowProvider = context.read<PaymentFlowProvider>();
+    final isSubscription = flowProvider.isSubscriptionContext;
     Navigator.pushReplacementNamed(
       context,
       '/payment-result',
-      arguments: {'status': 'success'},
+      arguments: {
+        'resultType': PaymentResultType.success,
+        'isSubscription': isSubscription,
+      },
     );
   }
 
   void _handlePaymentError(String error) {
+    final flowProvider = context.read<PaymentFlowProvider>();
+    final isSubscription = flowProvider.isSubscriptionContext;
     Navigator.pushReplacementNamed(
       context,
       '/payment-result',
-      arguments: {'status': 'failed', 'error': error},
+      arguments: {
+        'resultType': PaymentResultType.failed,
+        'isSubscription': isSubscription,
+        'failureReason': error,
+      },
     );
   }
 
   void _handleTimeout() {
+    final flowProvider = context.read<PaymentFlowProvider>();
+    final isSubscription = flowProvider.isSubscriptionContext;
     Navigator.pushReplacementNamed(
       context,
       '/payment-result',
-      arguments: {'status': 'timeout'},
+      arguments: {
+        'resultType': PaymentResultType.failed,
+        'isSubscription': isSubscription,
+        'failureReason': 'Payment timed out. Please try again.',
+      },
     );
   }
 

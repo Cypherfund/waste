@@ -225,9 +225,12 @@ export interface PaymentProvider {
 }
 
 export interface PendingPayment {
-  jobId: string;
+  jobId: string | null;
+  subscriptionId?: string | null;
+  paymentSource: 'JOB_PAYMENT' | 'SUBSCRIPTION_PAYMENT';
   householdId: string;
   householdName: string | null;
+  planName?: string | null;
   scheduledDate: string;
   paymentMode: string;
   paymentMethod: string | null;

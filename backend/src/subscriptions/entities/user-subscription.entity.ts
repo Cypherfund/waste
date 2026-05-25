@@ -11,6 +11,7 @@ import {
 import { User } from '../../users/entities/user.entity';
 import { SubscriptionPlan } from './subscription-plan.entity';
 import { SubscriptionStatus } from '../../common/enums/subscription-status.enum';
+import { PaymentStatus } from '../../common/enums/payment-status.enum';
 
 @Entity('user_subscriptions')
 export class UserSubscription {
@@ -53,6 +54,24 @@ export class UserSubscription {
 
   @Column({ type: 'timestamptz', nullable: true, name: 'cancelled_at' })
   cancelledAt: Date | null;
+
+  @Column({ type: 'varchar', length: 50, nullable: true, name: 'payment_mode' })
+  paymentMode: string | null;
+
+  @Column({ type: 'enum', enum: PaymentStatus, nullable: true, name: 'payment_status' })
+  paymentStatus: PaymentStatus | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true, name: 'payment_ref' })
+  paymentRef: string | null;
+
+  @Column({ type: 'varchar', length: 500, nullable: true, name: 'payment_proof_url' })
+  paymentProofUrl: string | null;
+
+  @Column({ type: 'varchar', length: 50, nullable: true, name: 'payment_phone' })
+  paymentPhone: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true, name: 'provider_transaction_id' })
+  providerTransactionId: string | null;
 
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt: Date;

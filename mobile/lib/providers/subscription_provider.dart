@@ -107,6 +107,38 @@ class SubscriptionProvider extends ChangeNotifier {
     }
   }
 
+  Future<UserSubscription?> subscribeWithPayment({
+    required String planId,
+    required String paymentMode,
+    String? paymentRef,
+    String? paymentProofUrl,
+    String? paymentPhone,
+    String? providerTransactionId,
+  }) async {
+    _isActing = true;
+    _error = null;
+    notifyListeners();
+    try {
+      final subscription = await _api.subscribe(
+        planId,
+        paymentMode: paymentMode,
+        paymentRef: paymentRef,
+        paymentProofUrl: paymentProofUrl,
+        paymentPhone: paymentPhone,
+        providerTransactionId: providerTransactionId,
+      );
+      _subscription = subscription;
+      notifyListeners();
+      return subscription;
+    } catch (e) {
+      _error = ApiClient.extractErrorMessage(e);
+      return null;
+    } finally {
+      _isActing = false;
+      notifyListeners();
+    }
+  }
+
   Future<bool> cancel() async {
     _isActing = true;
     _error = null;

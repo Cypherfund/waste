@@ -444,6 +444,167 @@ describe('Commission Engine — Integration Tests', () => {
     });
   });
 
+  // ── 7. Subscription payment → SUBSCRIPTION_PAID commission ──────────────
+
+  describe('7. subscription.paid trigger → subscription commission (10%)', () => {
+    let subMarketerProfileId: string;
+    let subMarketerId: string;
+    let subMarketerToken: string;
+    let subHouseholdToken: string;
+    let subHouseholdId: string;
+    let planId: string;
+    let subscriptionId: string;
+
+    const SUB_SCHEME_ID = 'a39d1660-8734-4b0e-a891-8cbb26464c1a'; // 10% PERCENTAGE
+
+    beforeAll(async () => {
+      // Fresh marketer so commissions are isolated
+      const mkRes = await request(httpServer)
+        .post('/api/v1/admin/growth/marketers')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ name: 'Sub Commission Marketer', phone: '+237611000030', password: 'Marketer123!' })
+        .expect(201);
+      subMarketerProfileId = mkRes.body.id;
+      subMarketerId = mkRes.body.userId;
+      subMarketerToken = await loginAndGetToken(baseUrl, '+237611000030', 'Marketer123!');
+
+      // Household user referred by this marketer
+      const hhUser = await createTestUser(
+        dataSource, 'sub-comm-hh@test.com', 'Pass123!', UserRole.HOUSEHOLD, 'Sub HH', '+237611000031',
+      );
+      subHouseholdId = hhUser.id;
+      subHouseholdToken = await loginAndGetToken(baseUrl, '+237611000031', 'Pass123!');
+
+      // Register lead
+      await dataSource.query(
+        `INSERT INTO leads (marketer_id, name, phone, type, status, referral_token, referral_code, source,
+                           invited_at, expires_at, sms_status, sms_retry_count, registered_user_id, campaign_id)
+         VALUES ($1, 'Sub HH', '+237611000031', 'HOUSEHOLD', 'REGISTERED', $2, $3, 'MANUAL',
+                 NOW(), NOW() + INTERVAL '30 days', 'DELIVERED', 0, $4, $5)`,
+        [subMarketerId, `TOK-SUB-${Date.now()}`, `MKR-SUB-${Date.now()}`, subHouseholdId, campaignId],
+      );
+
+      // Create subscription plan
+      const planRes = await request(httpServer)
+        .post('/api/v1/subscriptions/admin/plans')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ name: 'Commission Test Plan', price: 4000, pickupsPerWeek: 2 })
+        .expect(201);
+      planId = planRes.body.id;
+
+      // Subscribe with manual payment (sets PENDING_PAYMENT — no commission yet)
+      const subRes = await request(httpServer)
+        .post('/api/v1/subscriptions/subscribe')
+        .set('Authorization', `Bearer ${subHouseholdToken}`)
+        .send({ planId, paymentMode: 'MANUAL_PROVIDER', paymentRef: 'TXN-COMM-001' })
+        .expect(201);
+      subscriptionId = subRes.body.id;
+    });
+
+    afterAll(async () => {
+      try {
+        await dataSource.query(`DELETE FROM user_subscriptions WHERE id = $1`, [subscriptionId]);
+      } catch (_) {}
+    });
+
+    it('should NOT create a commission while subscription is still PENDING_PAYMENT', async () => {
+      const count = await countTransactions(subMarketerProfileId, 'PENDING');
+      expect(count).toBe(0);
+    });
+
+    it('should create a SUBSCRIPTION_PAID commission after admin verifies payment', async () => {
+      const countBefore = await countTransactions(subMarketerProfileId);
+
+      await request(httpServer)
+        .patch(`/api/v1/subscriptions/admin/${subscriptionId}/verify-payment`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      // Engine is event-driven and in-process — give it a tick to process
+      await new Promise((r) => setTimeout(r, 100));
+
+      const countAfter = await countTransactions(subMarketerProfileId);
+      expect(countAfter).toBe(countBefore + 1);
+    });
+
+    it('commission amount should be 10% of plan price (400 XAF on 4000 XAF plan)', async () => {
+      const [row] = await dataSource.query(
+        `SELECT amount, trigger_type, status FROM commission_transactions
+         WHERE marketer_profile_id = $1 AND trigger_type = 'SUBSCRIPTION_PAID'
+         LIMIT 1`,
+        [subMarketerProfileId],
+      );
+
+      expect(Number(row.amount)).toBe(400); // 10% of 4000
+      expect(row.trigger_type).toBe('SUBSCRIPTION_PAID');
+      expect(row.status).toBe('PENDING');
+    });
+
+    it('marketer profile pendingAmount should include the subscription commission', async () => {
+      const profile = await getProfile(subMarketerProfileId);
+      expect(profile.pendingAmount).toBeGreaterThanOrEqual(400);
+    });
+
+    it('commission appears in marketer /commissions dashboard', async () => {
+      const res = await request(httpServer)
+        .get('/api/v1/marketer/commissions')
+        .set('Authorization', `Bearer ${subMarketerToken}`)
+        .expect(200);
+
+      const subTx = res.body.pending.find((t: any) => t.triggerType === 'SUBSCRIPTION_PAID');
+      expect(subTx).toBeDefined();
+      expect(Number(subTx.amount)).toBe(400);
+    });
+
+    it('should NOT fire commission on verify if no marketer lead exists for the household', async () => {
+      // Create an unregistered household (no lead) and subscribe them
+      const orphanHH = await createTestUser(
+        dataSource, 'orphan-hh@test.com', 'Pass123!', UserRole.HOUSEHOLD, 'Orphan HH', '+237611000032',
+      );
+      const orphanToken = await loginAndGetToken(baseUrl, '+237611000032', 'Pass123!');
+
+      const orphanSub = await request(httpServer)
+        .post('/api/v1/subscriptions/subscribe')
+        .set('Authorization', `Bearer ${orphanToken}`)
+        .send({ planId, paymentMode: 'MANUAL_PROVIDER', paymentRef: 'TXN-ORPHAN-001' })
+        .expect(201);
+
+      const txCountBefore = await dataSource.query(
+        `SELECT COUNT(*) FROM commission_transactions WHERE trigger_type = 'SUBSCRIPTION_PAID'`,
+      );
+
+      await request(httpServer)
+        .patch(`/api/v1/subscriptions/admin/${orphanSub.body.id}/verify-payment`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      await new Promise((r) => setTimeout(r, 100));
+
+      const txCountAfter = await dataSource.query(
+        `SELECT COUNT(*) FROM commission_transactions WHERE trigger_type = 'SUBSCRIPTION_PAID'`,
+      );
+
+      // Count should be unchanged — no lead = no commission
+      expect(Number(txCountAfter[0].count)).toBe(Number(txCountBefore[0].count));
+
+      // Cleanup
+      await dataSource.query(`DELETE FROM user_subscriptions WHERE id = $1`, [orphanSub.body.id]);
+    });
+
+    it('should be idempotent — verifying same subscription twice does not double-commission', async () => {
+      // Try to verify again — should 400 on status guard, commission count unchanged
+      const countBefore = await countTransactions(subMarketerProfileId);
+
+      await request(httpServer)
+        .patch(`/api/v1/subscriptions/admin/${subscriptionId}/verify-payment`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      const countAfter = await countTransactions(subMarketerProfileId);
+      expect(countAfter).toBe(countBefore);
+    });
+  });
+
   // ── 6. Dashboard /commissions response shape ──────────────────────────────
 
   describe('6. /marketer/commissions response shape', () => {

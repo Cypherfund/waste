@@ -20,11 +20,19 @@ class ChoosePaymentMethodScreen extends StatefulWidget {
 }
 
 class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
+  bool _hideCash = false;
+  String? _subtitle;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadPaymentMethods();
+      final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      setState(() {
+        _hideCash = (args?['hideCash'] as bool?) ?? false;
+        _subtitle = args?['subtitle'] as String?;
+      });
     });
   }
 
@@ -105,8 +113,10 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
 
                         const SizedBox(height: 24),
 
-                        // Cash option (if enabled)
-                        if (appConfig?.cashEnabled ?? false) ...[
+                        // Cash option (hidden for subscription context)
+                        if ((appConfig?.cashEnabled ?? false) &&
+                            !_hideCash &&
+                            !flowProvider.isSubscriptionContext) ...[
                           Text(
                             'Or pay with',
                             style: TextStyle(
@@ -159,7 +169,7 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'For one waste pickup',
+            _subtitle ?? 'For one waste pickup',
             style: TextStyle(
               fontSize: 13,
               color: Colors.grey.shade600,

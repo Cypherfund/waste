@@ -20,7 +20,9 @@ class PaymentFlowProvider extends ChangeNotifier {
 
   // Pricing
   PricingQuote? pricingQuote;
-  double get amountDue => pricingQuote?.quotedPrice ?? 0;
+  double get amountDue => isSubscriptionContext
+      ? (_subscriptionAmountDue ?? 0)
+      : (pricingQuote?.quotedPrice ?? 0);
   bool get isFree => pricingQuote?.isCoveredBySubscription ?? false;
 
   // Payment method selection
@@ -36,6 +38,13 @@ class PaymentFlowProvider extends ChangeNotifier {
   // Integrated payment details
   String? paymentPhone;
   String? providerTransactionId;
+
+  // Subscription context
+  bool isSubscriptionContext = false;
+  String? subscriptionPlanId;
+
+  // Override amountDue for subscription context (plan price)
+  double? _subscriptionAmountDue;
 
   // Job created during flow
   Job? createdJob;
@@ -163,6 +172,33 @@ class PaymentFlowProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Set subscription context — clears pickup job state
+  void setSubscriptionContext(String planId, {double? planPrice}) {
+    isSubscriptionContext = true;
+    subscriptionPlanId = planId;
+    _subscriptionAmountDue = planPrice;
+    createdJob = null;
+    scheduledDate = null;
+    scheduledTime = null;
+    resultType = null;
+    error = null;
+    notifyListeners();
+  }
+
+  /// Clear subscription context — called on result exit or back navigation
+  void clearSubscriptionContext() {
+    isSubscriptionContext = false;
+    subscriptionPlanId = null;
+    _subscriptionAmountDue = null;
+    notifyListeners();
+  }
+
+  /// Set the amount due directly (used for subscription plan price)
+  void setAmountDue(double amount) {
+    _subscriptionAmountDue = amount;
+    notifyListeners();
+  }
+
   /// Clear error
   void clearError() {
     error = null;
@@ -189,6 +225,9 @@ class PaymentFlowProvider extends ChangeNotifier {
     providerTransactionId = null;
     createdJob = null;
     resultType = null;
+    isSubscriptionContext = false;
+    subscriptionPlanId = null;
+    _subscriptionAmountDue = null;
     _isCreatingJob = false;
     _isUploadingProof = false;
     _isInitiatingPayment = false;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../models/job.dart';
+import '../../../../models/subscription.dart';
 import '../../providers/payment_flow_provider.dart';
 import '../../providers/payment_flow_enums.dart';
 import '../widgets/payment_timeline.dart';
@@ -24,7 +25,24 @@ class PaymentResultScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final resultType = arguments['resultType'] as PaymentResultType;
+    final isSubscription = arguments['isSubscription'] as bool? ?? false;
+    final subscription = arguments['subscription'] as UserSubscription?;
     final job = arguments['job'] as Job?;
+
+    // Subscription result variants (no Job required)
+    if (isSubscription) {
+      switch (resultType) {
+        case PaymentResultType.submitted:
+          return _SubscriptionSubmittedVariant(subscription: subscription);
+        case PaymentResultType.success:
+          return _SubscriptionActivatedVariant(subscription: subscription);
+        case PaymentResultType.failed:
+          final reason = arguments['failureReason'] as String?;
+          return _SubscriptionFailedVariant(reason: reason);
+        default:
+          break;
+      }
+    }
 
     if (job == null) {
       return const Scaffold(
@@ -657,6 +675,223 @@ Widget _buildDetailRowWithBadge(String label, String value, Color bgColor, Color
       ),
     ],
   );
+}
+
+// ─── Subscription Result Variants ──────────────────────────────────────────
+
+class _SubscriptionSubmittedVariant extends StatelessWidget {
+  final UserSubscription? subscription;
+  const _SubscriptionSubmittedVariant({this.subscription});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF8E1),
+                  borderRadius: BorderRadius.circular(40),
+                ),
+                child: const Icon(Icons.schedule, size: 40, color: Color(0xFFFFA000)),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Subscription Payment Submitted',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF111827)),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'We received your payment details. An admin will verify your payment shortly. Your subscription will become active after verification.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade600, height: 1.5),
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 52),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    elevation: 0,
+                  ),
+                  onPressed: () {
+                    context.read<PaymentFlowProvider>().clearSubscriptionContext();
+                    Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false);
+                  },
+                  child: const Text('Back to Home', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 52),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    side: BorderSide(color: AppColors.primary),
+                  ),
+                  onPressed: () {
+                    context.read<PaymentFlowProvider>().clearSubscriptionContext();
+                    Navigator.pushNamedAndRemoveUntil(context, '/review-pickup', (_) => false);
+                  },
+                  child: Text('Pay Once for Now', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SubscriptionActivatedVariant extends StatelessWidget {
+  final UserSubscription? subscription;
+  const _SubscriptionActivatedVariant({this.subscription});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F5E9),
+                  borderRadius: BorderRadius.circular(40),
+                ),
+                child: Icon(Icons.check_circle, size: 40, color: AppColors.primary),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Subscription Activated!',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF111827)),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Your subscription is now active. You can now book covered pickups.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade600, height: 1.5),
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 52),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    elevation: 0,
+                  ),
+                  onPressed: () {
+                    context.read<PaymentFlowProvider>().clearSubscriptionContext();
+                    Navigator.pushNamedAndRemoveUntil(context, '/review-pickup', (_) => false);
+                  },
+                  child: const Text('Continue Booking', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () {
+                  context.read<PaymentFlowProvider>().clearSubscriptionContext();
+                  Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false);
+                },
+                child: Text('Back to Home', style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SubscriptionFailedVariant extends StatelessWidget {
+  final String? reason;
+  const _SubscriptionFailedVariant({this.reason});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFEBEE),
+                  borderRadius: BorderRadius.circular(40),
+                ),
+                child: const Icon(Icons.error_outline, size: 40, color: Color(0xFFC62828)),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Subscription Payment Issue',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF111827)),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                reason != null
+                    ? 'We could not verify your payment.\nReason: $reason'
+                    : 'We could not verify your payment. Please try again or contact support.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade600, height: 1.5),
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 52),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    elevation: 0,
+                  ),
+                  onPressed: () => Navigator.pushNamedAndRemoveUntil(
+                    context, '/subscription-plans', (_) => false),
+                  child: const Text('Try Again', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () {
+                  context.read<PaymentFlowProvider>().clearSubscriptionContext();
+                  Navigator.pushNamedAndRemoveUntil(context, '/review-pickup', (_) => false);
+                },
+                child: Text('Pay Once for Now', style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // Navigation helpers
