@@ -9,6 +9,7 @@ import { MarketerNotificationService } from './marketer-notification.service';
 import { Job } from '../../jobs/entities/job.entity';
 import { PaymentStatus } from '../../common/enums/payment-status.enum';
 import { JobEventPayload, JobEvents, SubscriptionPaidPayload, SubscriptionEvents } from '../../events/events.types';
+import { QualificationReason } from './lead.service';
 
 @Injectable()
 export class CommissionEngineService {
@@ -113,7 +114,7 @@ export class CommissionEngineService {
     }
 
     // Mark lead as qualified
-    await this.leadService.markLeadQualified(lead.id);
+    await this.leadService.markLeadQualified(lead.id, QualificationReason.BOOKING);
 
     // Create commission transaction
     const transaction = this.transactionRepo.create({
@@ -329,6 +330,9 @@ export class CommissionEngineService {
     });
 
     const saved = await this.transactionRepo.save(transaction);
+
+    // Mark lead as qualified (subscription payment is a qualifying event)
+    await this.leadService.markLeadQualified(lead.id, QualificationReason.SUBSCRIPTION);
 
     // Update marketer pending amount
     profile.pendingAmount = parseFloat(profile.pendingAmount.toString()) + amount;

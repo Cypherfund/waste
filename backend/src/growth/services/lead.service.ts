@@ -10,6 +10,11 @@ import { CampaignService } from './campaign.service';
 
 const DAILY_LEAD_LIMIT = 20;
 
+export enum QualificationReason {
+  BOOKING = 'booking',
+  SUBSCRIPTION = 'subscription',
+}
+
 @Injectable()
 export class LeadService {
   constructor(
@@ -290,7 +295,7 @@ export class LeadService {
     }
   }
 
-  async markLeadQualified(leadId: string): Promise<void> {
+  async markLeadQualified(leadId: string, reason?: QualificationReason): Promise<void> {
     const lead = await this.leadRepo.findOne({
       where: { id: leadId },
     });
@@ -318,12 +323,16 @@ export class LeadService {
         : 0;
       await this.profileRepo.save(profile);
 
-      // Send notification
+      // Send notification with detailed message based on qualification reason
+      const message = reason === QualificationReason.SUBSCRIPTION
+        ? `${lead.name} has subscribed. Commission pending approval!`
+        : `${lead.name} has made their first booking. Commission pending approval!`;
+
       await this.notificationService.sendNotification(
         profile.id,
         NotificationType.LEAD_QUALIFIED,
         'Lead Qualified! 🎉',
-        `${lead.name} has made their first booking. Commission pending approval!`,
+        message,
         { leadId: lead.id },
       );
     }

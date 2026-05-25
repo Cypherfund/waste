@@ -62,6 +62,19 @@ beforeAll(async () => {
       }
     }
   }
+
+  // Seed required system_config values for tests (category is NOT NULL)
+  try {
+    await dataSource.query(`
+      INSERT INTO system_config (key, value, category, description) VALUES
+        ('pricing.per_pickup_price',         '500',  'pricing',    'Price per pickup in XAF'),
+        ('assignment.auto_assign_radius_km', '10',   'assignment', 'Radius in km for auto-assigning collectors'),
+        ('assignment.acceptance_timeout_s',  '120',  'assignment', 'Seconds collector has to accept before reassignment')
+      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+    `);
+  } catch (error: any) {
+    console.log('[Integration Tests] Could not seed system_config:', error.message);
+  }
 });
 
 afterAll(async () => {

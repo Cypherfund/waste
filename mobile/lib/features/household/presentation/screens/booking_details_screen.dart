@@ -1101,83 +1101,44 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             ),
             child: SafeArea(
               top: false,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 52,
-                      child: OutlinedButton(
-                        onPressed: _isCancelling
-                            ? null
-                            : () => _showCancelConfirmation(job),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFFDC2626),
-                          disabledForegroundColor:
-                              const Color(0xFFDC2626).withValues(alpha: 0.45),
-                          side: BorderSide(
-                            color: _isCancelling
-                                ? const Color(0xFFDC2626).withValues(alpha: 0.35)
-                                : const Color(0xFFDC2626),
-                            width: 1.2,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        child: _isCancelling
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Color(0xFFDC2626),
-                                ),
-                              )
-                            : const Text(
-                                'Cancel',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                      ),
+              child: SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: OutlinedButton(
+                  onPressed: _isCancelling
+                      ? null
+                      : () => _showCancelConfirmation(job),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFFDC2626),
+                    disabledForegroundColor:
+                        const Color(0xFFDC2626).withValues(alpha: 0.45),
+                    side: BorderSide(
+                      color: _isCancelling
+                          ? const Color(0xFFDC2626).withValues(alpha: 0.35)
+                          : const Color(0xFFDC2626),
+                      width: 1.2,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: SizedBox(
-                      height: 52,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          disabledBackgroundColor:
-                              AppColors.primary.withValues(alpha: 0.55),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
+                  child: _isCancelling
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Color(0xFFDC2626),
                           ),
-                          elevation: 0,
-                        ),
-                        onPressed: _isCancelling
-                            ? null
-                            : () {
-                                Navigator.pushNamed(
-                                  context,
-                                  '/job-tracking',
-                                  arguments: job.id,
-                                );
-                              },
-                        child: const Text(
-                          'Track Pickup',
+                        )
+                      : const Text(
+                          'Cancel Booking',
                           style: TextStyle(
                             fontSize: 15,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           );

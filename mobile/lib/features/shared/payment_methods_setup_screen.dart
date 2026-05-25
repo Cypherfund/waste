@@ -83,6 +83,13 @@ class _PaymentMethodsSetupScreenState extends State<PaymentMethodsSetupScreen> {
           ),
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add, color: Colors.black),
+            tooltip: 'Add method',
+            onPressed: () => _showEditBottomSheet(null),
+          ),
+        ],
       ),
       body: Consumer<UserPaymentMethodsProvider>(
         builder: (context, provider, _) {
@@ -212,12 +219,15 @@ class _PaymentMethodsSetupScreenState extends State<PaymentMethodsSetupScreen> {
               children: [
                 Row(
                   children: [
-                    Text(
-                      method.providerName,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
+                    Flexible(
+                      child: Text(
+                        method.providerName,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
                       ),
                     ),
                     if (method.isDefault) ...[

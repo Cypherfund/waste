@@ -158,7 +158,7 @@ class CollectorEarningsTabState extends State<CollectorEarningsTab>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '${_periodLabels[_selectedPeriod]}\'s Earnings',
+                                _periodLabels[_selectedPeriod],
                                 style: AppTypography.caption.copyWith(color: Colors.white70),
                               ),
                               const SizedBox(height: 4),

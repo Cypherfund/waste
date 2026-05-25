@@ -121,6 +121,9 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
           onRefresh: () async {
             await _loadJobs();
             await _getCurrentLocation();
+            if (mounted) {
+              context.read<SubscriptionProvider>().loadMySubscription();
+            }
           },
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -444,9 +447,9 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                   ],
                 ),
                 const SizedBox(height: 18),
-                const Text(
-                  "We're finding a nearby collector",
-                  style: TextStyle(
+                Text(
+                  _getPickupStatusSubtitle(nextPickup.status),
+                  style: const TextStyle(
                     fontSize: 13,
                     color: Color(0xFF6B7280),
                     fontWeight: FontWeight.w500,
@@ -516,6 +519,27 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
         ],
       ),
     );
+  }
+
+  String _getPickupStatusSubtitle(JobStatus status) {
+    switch (status) {
+      case JobStatus.requested:
+        return "We're finding a nearby collector";
+      case JobStatus.assigned:
+        return 'Collector assigned — preparing for pickup';
+      case JobStatus.inProgress:
+        return 'Your collector is on the way!';
+      case JobStatus.completed:
+      case JobStatus.validated:
+      case JobStatus.rated:
+        return 'Pickup completed';
+      case JobStatus.cancelled:
+        return 'Pickup was cancelled';
+      case JobStatus.disputed:
+        return 'Pickup is under dispute';
+      default:
+        return 'Scheduled';
+    }
   }
 
   Widget _buildStatusBadge(JobStatus status) {

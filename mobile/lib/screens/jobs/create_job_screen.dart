@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../config/app_theme.dart';
 import '../../providers/jobs_provider.dart';
+import '../../providers/subscription_provider.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/app_text_field.dart';
 import '../../widgets/error_banner.dart';
@@ -20,9 +21,21 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   final _addressController = TextEditingController();
   final _notesController = TextEditingController();
 
-  DateTime _scheduledDate = DateTime.now().add(const Duration(days: 1));
+  late DateTime _scheduledDate;
+  late DateTime _firstAllowedDate;
   TimeOfDay _startTime = const TimeOfDay(hour: 8, minute: 0);
   TimeOfDay _endTime = const TimeOfDay(hour: 10, minute: 0);
+
+  @override
+  void initState() {
+    super.initState();
+    final appConfig = context.read<SubscriptionProvider>().appConfig;
+    final minAdvanceHours = appConfig?.minAdvanceHours ?? 24;
+    final now = DateTime.now();
+    final earliest = now.add(Duration(hours: minAdvanceHours));
+    _firstAllowedDate = DateTime(earliest.year, earliest.month, earliest.day);
+    _scheduledDate = _firstAllowedDate;
+  }
 
   @override
   void dispose() {
@@ -40,12 +53,10 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   }
 
   Future<void> _pickDate() async {
-    final tomorrow = DateTime.now().add(const Duration(days: 1));
-    final firstAllowedDate = DateTime(tomorrow.year, tomorrow.month, tomorrow.day);
     final picked = await showDatePicker(
       context: context,
-      initialDate: _scheduledDate.isBefore(firstAllowedDate) ? firstAllowedDate : _scheduledDate,
-      firstDate: firstAllowedDate,
+      initialDate: _scheduledDate.isBefore(_firstAllowedDate) ? _firstAllowedDate : _scheduledDate,
+      firstDate: _firstAllowedDate,
       lastDate: DateTime.now().add(const Duration(days: 90)),
       builder: (context, child) {
         return Theme(
