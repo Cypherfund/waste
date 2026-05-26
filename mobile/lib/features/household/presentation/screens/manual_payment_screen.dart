@@ -110,7 +110,7 @@ class _ManualPaymentScreenState extends State<ManualPaymentScreen> {
                         const SizedBox(height: 24),
 
                         // Warning banner
-                        _buildWarningBanner(),
+                        _buildWarningBanner(flowProvider.isSubscriptionContext),
                         const SizedBox(height: 24),
 
                         // WhatsApp support (if available)

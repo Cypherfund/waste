@@ -63,7 +63,7 @@ export class MarketerPayoutService {
       const savedRequest = await manager.save(request);
 
       // Update approved amount
-      profile.approvedAmount -= dto.amount;
+      profile.approvedAmount = Number(profile.approvedAmount) - Number(dto.amount);
       await manager.save(profile);
 
       return savedRequest;
@@ -151,7 +151,7 @@ export class MarketerPayoutService {
 
     // Return amount to approved balance
     const profile = payout.marketerProfile;
-    profile.approvedAmount += parseFloat(payout.amount.toString());
+    profile.approvedAmount = Number(profile.approvedAmount) + parseFloat(payout.amount.toString());
     await this.profileRepo.save(profile);
 
     // Notify marketer
@@ -196,7 +196,7 @@ export class MarketerPayoutService {
 
     // Update marketer stats
     const profile = payout.marketerProfile;
-    profile.totalPaid += parseFloat(payout.amount.toString());
+    profile.totalPaid = Number(profile.totalPaid) + parseFloat(payout.amount.toString());
     await this.profileRepo.save(profile);
 
     // Notify marketer

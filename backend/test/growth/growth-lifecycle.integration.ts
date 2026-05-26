@@ -525,14 +525,12 @@ describe('Growth Module — Integration Tests', () => {
         `SELECT approved_amount FROM marketer_profiles WHERE id = $1`,
         [marketerProfileId],
       );
-      // Payout status is now REJECTED — balance restoration checked via DB status
       const [rejected] = await dataSource.query(
         `SELECT status FROM marketer_payout_requests WHERE id = $1`,
         [payoutId],
       );
       expect(rejected.status).toBe('REJECTED');
-      // approved_amount should be >= 3000 (service adds amount back)
-      expect(Number(profile.approved_amount)).toBeGreaterThanOrEqual(3000);
+      expect(Number(profile.approved_amount)).toBe(5000); // 3000 + 2000 returned
     });
 
     it('should require paidReference when marking payout as paid', async () => {
@@ -579,8 +577,7 @@ describe('Growth Module — Integration Tests', () => {
         `SELECT total_paid FROM marketer_profiles WHERE id = $1`,
         [marketerProfileId],
       );
-      // Service increments totalPaid
-      expect(Number(profile.total_paid)).toBeGreaterThanOrEqual(0);
+      expect(Number(profile.total_paid)).toBeGreaterThan(0);
 
       const [payout] = await dataSource.query(
         `SELECT paid_reference, status FROM marketer_payout_requests WHERE id = $1`,
