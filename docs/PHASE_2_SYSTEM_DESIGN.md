@@ -711,8 +711,6 @@ INSERT INTO system_config (key, value, data_type, category, description, is_feat
   ('feature.location_tracking', 'true', 'boolean', 'feature', 'Enable real-time location tracking', true),
   ('feature.payment_integration', 'true', 'boolean', 'feature', 'Enable payment integration', true),
   ('pricing.per_pickup_price', '1000', 'number', 'pricing', 'Price per pickup for pay-as-you-go (XAF)', false),
-  ('pricing.subscription_price', '3500', 'number', 'pricing', 'Monthly subscription price (XAF)', false),
-  ('pricing.subscription_pickups_per_week', '2', 'number', 'pricing', 'Pickups included per week in standard plan', false),
   ('payout.min_withdrawal', '1000', 'number', 'payout', 'Minimum withdrawal amount (XAF)', false),
   ('payout.max_withdrawal', '500000', 'number', 'payout', 'Maximum withdrawal amount (XAF)', false),
   ('payout.methods_enabled', 'MOBILE_MONEY,BANK_TRANSFER', 'string', 'payout', 'Comma-separated list of enabled payout methods', false),
