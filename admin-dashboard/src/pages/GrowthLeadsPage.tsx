@@ -148,7 +148,7 @@ export default function GrowthLeadsPage() {
           <p className="text-gray-500">No leads found.</p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+        <div className="overflow-x-auto rounded-lg border bg-white shadow-sm">
           <div className="flex items-center justify-between border-b bg-gray-50 px-4 py-2 text-xs text-gray-500">
             <span>{total} lead{total !== 1 ? 's' : ''}</span>
             <span>Page {page} of {Math.ceil(total / PAGE_SIZE) || 1}</span>
