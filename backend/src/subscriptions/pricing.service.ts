@@ -75,7 +75,7 @@ export class PricingService {
         planName: null,
         perPickupPrice,
         subscriptionPrice: subscriptionPrice ?? 0,
-        subscriptionSavingsMessage: await this.buildSavingsMessage(perPickupPrice, subscriptionPrice),
+        subscriptionSavingsMessage: await this.buildSavingsMessage(perPickupPrice, subscriptionPrice, cheapestPlan?.pickupsPerWeek),
         recommendedPlan: buildRecommendedPlan(cheapestPlan),
       };
     }
@@ -154,8 +154,7 @@ export class PricingService {
     const mondayStr = monday.toISOString().split('T')[0];
 
     if (sub.weekResetDate !== mondayStr) {
-      const defaultPickupsPerWeek = await this.getRequiredNumber('pricing.subscription_pickups_per_week');
-      sub.remainingPickupsThisWeek = sub.plan?.pickupsPerWeek ?? defaultPickupsPerWeek;
+      sub.remainingPickupsThisWeek = sub.plan?.pickupsPerWeek ?? 2;
       sub.weekResetDate = mondayStr;
       await this.subRepo.save(sub);
       this.logger.log(`Reset weekly pickups for user ${sub.userId} to ${sub.remainingPickupsThisWeek}`);
@@ -171,12 +170,12 @@ export class PricingService {
     return d;
   }
 
-  private async buildSavingsMessage(perPickupPrice: number, subscriptionPrice?: number): Promise<string | null> {
+  private async buildSavingsMessage(perPickupPrice: number, subscriptionPrice?: number, pickupsPerWeek?: number): Promise<string | null> {
     if (!subscriptionPrice) return null;
     
-    const pickupsPerWeek = await this.getRequiredNumber('pricing.subscription_pickups_per_week');
+    const defaultPickupsPerWeek = pickupsPerWeek ?? 2;
     const weeksPerMonth = await this.getRequiredNumber('pricing.weeks_per_month');
-    const monthlyPickups = pickupsPerWeek * weeksPerMonth;
+    const monthlyPickups = defaultPickupsPerWeek * weeksPerMonth;
     const payAsYouGoCost = monthlyPickups * perPickupPrice;
     const savings = payAsYouGoCost - subscriptionPrice;
     if (savings <= 0) return null;

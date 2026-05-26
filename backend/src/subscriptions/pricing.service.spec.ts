@@ -67,7 +67,6 @@ describe('PricingService', () => {
         findOne: jest.fn().mockImplementation(({ where: { key } }) => {
           const values: Record<string, string> = {
             'pricing.per_pickup_price': '500',
-            'pricing.subscription_pickups_per_week': '3',
             'pricing.weeks_per_month': '4',
           };
           const value = values[key];
