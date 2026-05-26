@@ -403,15 +403,15 @@ export class SystemCleanupService {
 
       // 5. Delete marketing budgets
       if (components.marketingBudgets) {
-        deletedCounts.marketingBudgets.budgetTransactions = await this.deleteCount(queryRunner, this.budgetTransactionRepo, {}, dryRun, errors);
-        deletedCounts.marketingBudgets.campaigns = await this.deleteCount(queryRunner, this.marketingCampaignRepo, {}, dryRun, errors);
-        deletedCounts.marketingBudgets.budgetPeriods = await this.deleteCount(queryRunner, this.marketingBudgetPeriodRepo, {}, dryRun, errors);
+        deletedCounts.marketingBudgets.budgetTransactions = await this.deleteCount(queryRunner, this.budgetTransactionRepo, {}, dryRun, errors, true);
+        deletedCounts.marketingBudgets.campaigns = await this.deleteCount(queryRunner, this.marketingCampaignRepo, {}, dryRun, errors, true);
+        deletedCounts.marketingBudgets.budgetPeriods = await this.deleteCount(queryRunner, this.marketingBudgetPeriodRepo, {}, dryRun, errors, true);
       }
 
       // 6. Delete notifications
       if (components.notifications) {
         const notificationWhere = userIds.length > 0 ? { userId: In(userIds) } : {};
-        deletedCounts.notifications.notifications = await this.deleteCount(queryRunner, this.notificationRepo, notificationWhere, dryRun, errors);
+        deletedCounts.notifications.notifications = await this.deleteCount(queryRunner, this.notificationRepo, notificationWhere, dryRun, errors, userIds.length === 0);
         
         // Get marketer profile IDs for the users
         const marketerProfiles = userIds.length > 0 ? await this.marketerProfileRepo.find({ 
@@ -490,8 +490,13 @@ export class SystemCleanupService {
     where: any,
     dryRun: boolean,
     errors: string[],
+    skipEmpty: boolean = false,
   ): Promise<number> {
     try {
+      // Skip if where clause is empty and skipEmpty is true
+      if (skipEmpty && Object.keys(where).length === 0) {
+        return 0;
+      }
       const count = await repo.count({ where });
       if (!dryRun && count > 0) {
         await repo.delete(where);
