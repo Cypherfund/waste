@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:provider/provider.dart';
 import 'config/app_theme.dart';
 import 'features/onboarding/onboarding_flow.dart';
@@ -71,6 +71,10 @@ import 'features/household/presentation/screens/cash_confirmation_screen.dart';
 import 'features/household/presentation/screens/integrated_payment_screen.dart';
 import 'features/household/presentation/screens/payment_processing_screen.dart';
 import 'features/household/presentation/screens/payment_result_screen.dart';
+import 'services/api/app_update_api.dart';
+import 'providers/app_update_provider.dart';
+import 'screens/update/force_update_screen.dart';
+import 'widgets/optional_update_dialog.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -129,6 +133,8 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
   late final NotificationsProvider _notificationsProvider;
   late final UserPaymentMethodsProvider _userPaymentMethodsProvider;
   late final DeepLinkService _deepLinkService;
+  late final AppUpdateApi _appUpdateApi;
+  late final AppUpdateProvider _appUpdateProvider;
 
   @override
   void initState() {
@@ -153,6 +159,12 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
     _notificationsApi = NotificationsApi(_apiClient);
     _notificationsProvider = NotificationsProvider(api: _notificationsApi);
     _userPaymentMethodsProvider = UserPaymentMethodsProvider(walletApi: _walletApi);
+    _appUpdateApi = AppUpdateApi(_apiClient);
+    _appUpdateProvider = AppUpdateProvider(
+      api: _appUpdateApi,
+      platform: kIsWeb ? 'ALL' : _detectPlatform(),
+      appType: 'HOUSEHOLD',
+    );
     _wsService = WebSocketService();
     _locationService = LocationTrackingService(wsService: _wsService);
     _queueService = OfflineQueueService();
@@ -195,6 +207,12 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
       },
     );
 
+    // Wire WebSocket stream so app:update events trigger re-checks in real time
+    _appUpdateProvider.listenToWebSocket(_wsService.appUpdateStream);
+
+    // Update appType whenever the authenticated user's role is known
+    _authProvider.addListener(_onAuthChanged);
+
     // Restore session immediately before UI builds
     _authProvider.tryRestoreSession();
 
@@ -224,6 +242,29 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
     _syncService.initialize();
   }
 
+  void _onAuthChanged() {
+    final user = _authProvider.user;
+    if (user == null) return;
+    final appType = user.isCollector
+        ? 'COLLECTOR'
+        : user.isMarketer
+            ? 'MARKETER'
+            : 'HOUSEHOLD';
+    _appUpdateProvider.updateAppType(appType);
+  }
+
+  @override
+  void dispose() {
+    _authProvider.removeListener(_onAuthChanged);
+    super.dispose();
+  }
+
+  String _detectPlatform() {
+    if (defaultTargetPlatform == TargetPlatform.android) return 'ANDROID';
+    if (defaultTargetPlatform == TargetPlatform.iOS) return 'IOS';
+    return 'ALL';
+  }
+
   void _handleReferralLink() {
     // If user is logged in, logout them and show onboarding with referral token
     if (_authProvider.status == AuthStatus.authenticated) {
@@ -247,6 +288,7 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
         ChangeNotifierProvider.value(value: _marketerProvider),
         ChangeNotifierProvider.value(value: _notificationsProvider),
         ChangeNotifierProvider.value(value: _userPaymentMethodsProvider),
+        ChangeNotifierProvider.value(value: _appUpdateProvider),
         ChangeNotifierProvider(create: (_) => PaymentFlowProvider()),
         Provider.value(value: _walletApi),
         Provider.value(value: _filesApi),
@@ -361,7 +403,9 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
           ),
           '/collector-job-detail': (context) => const CollectorJobDetailScreen(),
         },
-        home: _onboardingCompleted
+        home: _AppUpdateGate(
+          updateProvider: _appUpdateProvider,
+          child: _onboardingCompleted
             ? Consumer<AuthProvider>(
                 builder: (context, auth, _) {
                   switch (auth.status) {
@@ -393,7 +437,85 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
                   markOnboardingCompleted();
                 },
               ),
+        ),
       ),
+    );
+  }
+}
+
+// ─── App Update Gate ──────────────────────────────────────────────────────────
+// Wraps the entire app home. Shows ForceUpdateScreen when required.
+// Shows OptionalUpdateDialog once per 24h.
+class _AppUpdateGate extends StatefulWidget {
+  final AppUpdateProvider updateProvider;
+  final Widget child;
+
+  const _AppUpdateGate({required this.updateProvider, required this.child});
+
+  @override
+  State<_AppUpdateGate> createState() => _AppUpdateGateState();
+}
+
+class _AppUpdateGateState extends State<_AppUpdateGate>
+    with WidgetsBindingObserver {
+  bool _optionalShown = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    widget.updateProvider.addListener(_onUpdateChanged);
+    // Fire the initial check non-blocking after the first frame so the gate
+    // listener is already attached when the result arrives.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      widget.updateProvider.checkForUpdate();
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    widget.updateProvider.removeListener(_onUpdateChanged);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      widget.updateProvider.checkForUpdate(force: true);
+    }
+  }
+
+  Future<void> _onUpdateChanged() async {
+    if (!mounted) return;
+    final provider = widget.updateProvider;
+    if (provider.hasForceUpdate) return; // handled by build
+    if (provider.hasOptionalUpdate && !_optionalShown) {
+      final should = await provider.shouldShowOptionalDialog();
+      if (should && mounted) {
+        _optionalShown = true;
+        await OptionalUpdateDialog.show(
+          context,
+          provider.updateInfo!,
+          () async {
+            await provider.dismissOptionalUpdate();
+            if (mounted) Navigator.of(context, rootNavigator: true).pop();
+          },
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: widget.updateProvider,
+      builder: (context, _) {
+        if (widget.updateProvider.hasForceUpdate) {
+          return ForceUpdateScreen(info: widget.updateProvider.updateInfo!);
+        }
+        return widget.child;
+      },
     );
   }
 }

@@ -1542,3 +1542,47 @@ Migration workflow:
 25. GPS tracking only during IN_PROGRESS; location deleted after job completion (privacy)
 26. APK size target: < 25MB
 27. Test coverage target: > 80% across all codebases
+28. App update management via `AppVersion` records; version enforcement via `X-App-Version`/`X-App-Build` headers; HTTP 426 for blocked clients
+
+---
+
+## 24. App Update Management System
+
+### 24.1 Overview
+
+Allows admin to publish version requirements per platform (Android/iOS/ALL) and app type (Household/Collector/Marketer/ALL). The mobile app checks on startup, resume, and in real-time via WebSocket. Forced updates show a blocking screen; optional updates show a dismissible dialog.
+
+### 24.2 User Flows
+
+**Mobile startup:**
+1. App launches → `_AppUpdateGate` fires `checkForUpdate()` non-blocking after first frame.
+2. If `forceUpdate=true` → show `ForceUpdateScreen` (blocking, no dismiss).
+3. If `updateAvailable=true` → show `OptionalUpdateDialog` (dismissible, throttled to once per 24 h).
+4. If `updateAvailable=false` → proceed normally.
+
+**Real-time update:**
+1. Admin publishes a new `AppVersion` record and clicks "Send Notification".
+2. Backend sends FCM push to all users with tokens.
+3. Backend broadcasts `app:update` event over WebSocket to all connected clients.
+4. Mobile `WebSocketService` receives event → `AppUpdateProvider.listenToWebSocket` fires `checkForUpdate(force: true)`.
+
+**Dynamic app type:**
+- On session restore / login, `_WasteWiseAppState._onAuthChanged` maps user role → `appType`:
+  - `COLLECTOR` → `'COLLECTOR'`, `MARKETER` → `'MARKETER'`, otherwise → `'HOUSEHOLD'`
+- Calls `AppUpdateProvider.updateAppType(appType)` which resets `_checked` and re-checks.
+
+**Version enforcement (API middleware):**
+- Requests include `X-App-Platform` + `X-App-Build` headers.
+- `AppVersionMiddleware` checks `AppUpdatesService.isVersionSupported()`.
+- If unsupported → HTTP 426 Upgrade Required.
+
+### 24.3 Key Decisions
+
+| Decision | Rationale |
+|---|---|
+| Non-blocking startup check | Avoids delaying app boot; gate attaches listener before result arrives |
+| WebSocket broadcast over FCM only | Instant delivery to connected users; FCM handles background/offline users |
+| Dynamic appType from role | Ensures Marketer users receive Marketer-specific version requirements |
+| `forceUpdate` = `buildNumber < minSupportedBuild` | Hard floor for security/compatibility fixes |
+| Throttle optional dialog to 24 h | Prevents annoying users who dismiss repeatedly |
+| Fail-open version check | If no active record exists, requests proceed normally |

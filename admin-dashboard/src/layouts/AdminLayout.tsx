@@ -21,6 +21,7 @@ import {
   Coins,
   Menu,
   X,
+  Smartphone,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -34,6 +35,7 @@ const NAV_ITEMS = [
   { to: '/fraud-flags', label: 'Fraud Flags', icon: Shield },
   { to: '/payment-providers', label: 'Payment Providers', icon: CreditCard },
   { to: '/config', label: 'Config', icon: Settings },
+  { to: '/app-updates', label: 'App Updates', icon: Smartphone },
   { to: '/system-cleanup', label: 'Developer Cleanup', icon: Trash2, danger: true },
   // Growth
   { to: '/marketing-budgets', label: 'Marketing Budgets', icon: Wallet },

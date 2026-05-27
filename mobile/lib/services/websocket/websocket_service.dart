@@ -92,12 +92,16 @@ class WebSocketService {
       StreamController<CollectorAssignedEvent>.broadcast();
   final _jobLocationController =
       StreamController<JobLocationUpdate>.broadcast();
+  final _appUpdateController =
+      StreamController<Map<String, dynamic>>.broadcast();
 
   Stream<JobStatusUpdate> get jobStatusStream => _jobStatusController.stream;
   Stream<CollectorAssignedEvent> get collectorAssignedStream =>
       _collectorAssignedController.stream;
   Stream<JobLocationUpdate> get jobLocationStream =>
       _jobLocationController.stream;
+  Stream<Map<String, dynamic>> get appUpdateStream =>
+      _appUpdateController.stream;
 
   bool get isConnected => _socket?.connected ?? false;
 
@@ -192,6 +196,14 @@ class WebSocketService {
       debugPrint('[WS] Location ack for job: ${data['jobId']}');
     });
 
+    _socket!.on('app:update', (data) {
+      try {
+        _appUpdateController.add(data as Map<String, dynamic>);
+      } catch (e) {
+        debugPrint('[WS] Failed to parse app:update: $e');
+      }
+    });
+
     _socket!.connect();
   }
 
@@ -242,5 +254,6 @@ class WebSocketService {
     _jobStatusController.close();
     _collectorAssignedController.close();
     _jobLocationController.close();
+    _appUpdateController.close();
   }
 }

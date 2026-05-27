@@ -7,12 +7,16 @@ import 'package:wastewise/providers/auth_provider.dart';
 import 'package:wastewise/services/api/auth_api.dart';
 import 'package:wastewise/services/storage/secure_storage.dart';
 import 'package:wastewise/services/websocket/websocket_service.dart';
+import 'package:wastewise/services/offline/sync_service.dart';
+import 'package:wastewise/models/saved_account.dart';
 
 class MockAuthApi extends Mock implements AuthApi {}
 
 class MockSecureStorage extends Mock implements SecureStorageService {}
 
 class MockWebSocketService extends Mock implements WebSocketService {}
+
+class MockSyncService extends Mock implements SyncService {}
 
 void main() {
   setUpAll(() {
@@ -24,11 +28,20 @@ void main() {
       isActive: true,
       createdAt: DateTime(2026, 1, 1),
     ));
+    registerFallbackValue(SavedAccount(
+      id: 'fallback',
+      name: 'Fallback',
+      phone: '+237600000000',
+      role: 'HOUSEHOLD',
+      accessToken: 'token',
+      refreshToken: 'refresh',
+    ));
   });
 
   late MockAuthApi mockAuthApi;
   late MockSecureStorage mockStorage;
   late MockWebSocketService mockWsService;
+  late MockSyncService mockSyncService;
   late AuthProvider provider;
 
   final testUser = User(
@@ -51,6 +64,7 @@ void main() {
     mockAuthApi = MockAuthApi();
     mockStorage = MockSecureStorage();
     mockWsService = MockWebSocketService();
+    mockSyncService = MockSyncService();
 
     when(() => mockWsService.connect(
           accessToken: any(named: 'accessToken'),
@@ -58,11 +72,34 @@ void main() {
           role: any(named: 'role'),
         )).thenReturn(null);
     when(() => mockWsService.disconnect()).thenReturn(null);
+    when(() => mockSyncService.setActiveUser(any())).thenReturn(null);
+
+    // Stub all SecureStorageService methods used by AuthProvider
+    when(() => mockStorage.getUser()).thenAnswer((_) async => null);
+    when(() => mockStorage.getAccessToken()).thenAnswer((_) async => null);
+    when(() => mockStorage.getRefreshToken()).thenAnswer((_) async => null);
+    when(() => mockStorage.saveTokens(
+          accessToken: any(named: 'accessToken'),
+          refreshToken: any(named: 'refreshToken'),
+        )).thenAnswer((_) async {});
+    when(() => mockStorage.saveUser(any())).thenAnswer((_) async {});
+    when(() => mockStorage.getSavedAccounts())
+        .thenAnswer((_) async => <SavedAccount>[]);
+    when(() => mockStorage.saveAccount(any()))
+        .thenAnswer((_) async {});
+    when(() => mockStorage.removeAccount(any()))
+        .thenAnswer((_) async {});
+    when(() => mockStorage.getActiveAccountId())
+        .thenAnswer((_) async => null);
+    when(() => mockStorage.setActiveAccountId(any()))
+        .thenAnswer((_) async {});
+    when(() => mockStorage.clearAll()).thenAnswer((_) async {});
 
     provider = AuthProvider(
       authApi: mockAuthApi,
       storage: mockStorage,
       wsService: mockWsService,
+      syncService: mockSyncService,
     );
   });
 
@@ -74,16 +111,25 @@ void main() {
 
     group('tryRestoreSession', () {
       test('restores session when valid user and token exist', () async {
+        // A real JWT with exp far in the future (year 2099) so no refresh is triggered.
+        // Header.Payload.Signature — payload: {"sub":"user-1","exp":4102444800}
+        const futureJwt =
+            'eyJhbGciOiJIUzI1NiJ9'
+            '.eyJzdWIiOiJ1c2VyLTEiLCJleHAiOjQxMDI0NDQ4MDB9'
+            '.signature';
+
         when(() => mockStorage.getUser()).thenAnswer((_) async => testUser);
         when(() => mockStorage.getAccessToken())
-            .thenAnswer((_) async => 'stored-token');
+            .thenAnswer((_) async => futureJwt);
+        when(() => mockStorage.getRefreshToken())
+            .thenAnswer((_) async => 'stored-refresh');
 
         await provider.tryRestoreSession();
 
         expect(provider.status, AuthStatus.authenticated);
         expect(provider.user?.id, 'user-1');
         verify(() => mockWsService.connect(
-              accessToken: 'stored-token',
+              accessToken: futureJwt,
               userId: 'user-1',
               role: 'HOUSEHOLD',
             )).called(1);
@@ -185,7 +231,7 @@ void main() {
         await provider.login(phone: '+237670000002', password: 'pass');
 
         expect(provider.status, AuthStatus.unauthenticated);
-        expect(provider.error, contains('household and collector users only'));
+        expect(provider.error, contains('household, collector and marketer users only'));
       });
     });
 

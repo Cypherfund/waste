@@ -2185,4 +2185,72 @@ Step 19: Flutter App — Offline queue + real-time
 
 Step 20: Integration testing + E2E
   → Full flow tests across all components
+
+Step 21: App Update Management System ✅ COMPLETED
+  → Backend: AppVersion entity, CRUD endpoints, middleware, WebSocket broadcast
+  → Mobile: AppUpdateProvider, ForceUpdateScreen, OptionalUpdateDialog, WS listener
+  → Admin: AppUpdatesPage with full CRUD + publish/deactivate + send notification
+  → Tests: service spec (13), gateway spec (+3), provider test (20+), WS service test (+2), admin page test (12)
 ```
+
+---
+
+## App Update Management System — Implementation
+
+### Backend (`backend/src/app-updates/`)
+
+| File | Purpose |
+|---|---|
+| `entities/app-version.entity.ts` | `AppVersion` entity: platform, appType, versionName, buildNumber, minSupportedBuild, latestBuild, updateType, title, message, storeUrl, releaseNotes, isActive, publishedAt |
+| `dto/check-update.dto.ts` | `CheckUpdateDto`: platform (AppPlatform), appType (AppType), versionName, buildNumber |
+| `dto/create-app-version.dto.ts` | Full creation/update DTO with validation |
+| `app-updates.service.ts` | `checkUpdate()`, `isVersionSupported()`, CRUD, `sendUpdateNotification()` — FCM + WS broadcast |
+| `app-updates.controller.ts` | `GET /app-updates/check`, `POST /app-updates`, `PATCH /:id`, `POST /:id/publish`, `POST /:id/deactivate`, `POST /:id/send-notification` |
+| `app-updates.module.ts` | Imports `WebSocketModule` to inject `AppWebSocketGateway` |
+| `middleware/app-version.middleware.ts` | Reads `X-App-Platform` + `X-App-Build`; returns 426 if `isVersionSupported()` is false |
+| `migrations/1779700000000-add-app-versions.ts` | Creates `app_versions` table with composite index |
+
+**WebSocket broadcast** (`websocket/websocket.gateway.ts`):
+- `broadcastAppUpdate(payload)` — emits `app:update` to all connected sockets via `this.server.emit()`
+- Called from `AppUpdatesService.sendUpdateNotification()` after FCM sends complete
+
+**Logic:**
+- `buildNumber < minSupportedBuild` → `forceUpdate: true`
+- `buildNumber < latestBuild` (but ≥ min) → `updateAvailable: true, forceUpdate: false`
+- `buildNumber >= latestBuild` → `updateAvailable: false`
+- Fail-open: if no active record exists, `isVersionSupported()` returns `true`
+
+### Mobile (`mobile/lib/`)
+
+| File | Purpose |
+|---|---|
+| `services/api/app_update_api.dart` | `AppUpdateApi.checkUpdate()` — HTTP POST to `/app-updates/check` |
+| `providers/app_update_provider.dart` | State management: `checkForUpdate()`, `updateAppType()`, `listenToWebSocket()`, `reset()`, `dispose()` |
+| `services/websocket/websocket_service.dart` | `appUpdateStream` — `StreamController.broadcast()` listening on `app:update` socket event |
+| `screens/update/force_update_screen.dart` | Blocking screen with store link; shown when `forceUpdate=true` |
+| `screens/update/optional_update_dialog.dart` | Dismissible dialog; throttled via `SharedPreferences` to once per 24 h |
+| `main.dart` | `_AppUpdateGate` — post-frame non-blocking check + lifecycle resume; `_onAuthChanged` — dynamic appType from role |
+
+**Dynamic appType mapping:**
+```
+COLLECTOR → 'COLLECTOR'
+MARKETER  → 'MARKETER'
+*         → 'HOUSEHOLD'
+```
+
+### Admin Dashboard (`admin-dashboard/src/pages/AppUpdatesPage.tsx`)
+
+- List all `AppVersion` records with platform/appType/version/build badges
+- Create / Edit inline form
+- Publish (activate) / Deactivate actions
+- Send Notification button → POST `/:id/send-notification` → FCM + WS broadcast
+
+### Test Coverage Added
+
+| Suite | File | Tests |
+|---|---|---|
+| Backend service | `app-updates/app-updates.service.spec.ts` | 13 (checkUpdate × 6, isVersionSupported × 3, sendUpdateNotification × 4) |
+| Backend gateway | `websocket/websocket.gateway.spec.ts` | +3 (broadcastAppUpdate: emit, payload shape, null storeUrl) |
+| Mobile provider | `test/providers/app_update_provider_test.dart` | 14 (initial state, checkForUpdate, updateAppType, listenToWebSocket, reset) |
+| Mobile WS service | `test/services/websocket_service_test.dart` | +2 (appUpdateStream broadcast, exposed getter) |
+| Admin page | `test/pages/AppUpdatesPage.test.tsx` | 12 (render, empty, error, create, edit, publish, send notification) |

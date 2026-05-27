@@ -59,5 +59,19 @@ void main() {
       service.jobStatusStream.listen((_) {});
       service.dispose();
     });
+
+    test('appUpdateStream is a broadcast stream', () {
+      final service = WebSocketService();
+      // Should be able to listen multiple times without error
+      service.appUpdateStream.listen((_) {});
+      service.appUpdateStream.listen((_) {});
+      service.dispose();
+    });
+
+    test('appUpdateStream is exposed on the service', () {
+      final service = WebSocketService();
+      expect(service.appUpdateStream, isNotNull);
+      service.dispose();
+    });
   });
 }
