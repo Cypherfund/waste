@@ -200,9 +200,9 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
             .where((p) => p.paymentCode.toUpperCase() == method.paymentCode.toUpperCase())
             .firstOrNull;
 
-        // Use per-provider integrationEnabled; fall back to global flag only if no provider config found
-        final integrationOn = providerConfig?.integrationEnabled
-            ?? (appConfig?.paymentIntegrationEnabled == true);
+        // Both global kill-switch AND per-provider flag must be true for integrated mode
+        final integrationOn = (appConfig?.paymentIntegrationEnabled == true)
+            && (providerConfig?.integrationEnabled ?? false);
         final mode = integrationOn
             ? PaymentProviderMode.integrated
             : PaymentProviderMode.manual;
