@@ -98,6 +98,7 @@ export class SubscriptionsService {
         subscriptionId: saved.id,
         userId,
         planId: plan.id,
+        planName: plan.name,
         amount: plan.price,
         timestamp: new Date(),
       });
@@ -207,6 +208,7 @@ export class SubscriptionsService {
       subscriptionId: saved.id,
       userId: saved.userId,
       planId: saved.planId,
+      planName: saved.plan.name,
       amount: saved.plan.price,
       timestamp: new Date(),
     });

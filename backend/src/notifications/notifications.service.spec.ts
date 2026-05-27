@@ -443,7 +443,7 @@ describe('NotificationsService', () => {
       expect(service.createAndDispatch).toHaveBeenCalledWith(
         'hh-1',
         NotificationType.PAYMENT_VERIFIED,
-        expect.objectContaining({ jobId: 'job-1', amount: 1000 }),
+        expect.objectContaining({ jobId: 'job-1', amount: 1000, targetScreen: 'booking_details' }),
       );
     });
 
@@ -458,7 +458,7 @@ describe('NotificationsService', () => {
       expect(service.createAndDispatch).toHaveBeenCalledWith(
         'hh-1',
         NotificationType.PAYMENT_REJECTED,
-        expect.objectContaining({ jobId: 'job-1', reason: 'Invalid receipt' }),
+        expect.objectContaining({ jobId: 'job-1', reason: 'Invalid receipt', targetScreen: 'booking_details' }),
       );
     });
 
@@ -473,7 +473,7 @@ describe('NotificationsService', () => {
       expect(service.createAndDispatch).toHaveBeenCalledWith(
         'hh-1',
         NotificationType.PAYMENT_FAILED,
-        expect.objectContaining({ jobId: 'job-1', reason: 'Payment gateway error' }),
+        expect.objectContaining({ jobId: 'job-1', reason: 'Payment gateway error', targetScreen: 'booking_details' }),
       );
     });
 
@@ -490,7 +490,7 @@ describe('NotificationsService', () => {
       expect(service.createAndDispatch).toHaveBeenCalledWith(
         'hh-1',
         NotificationType.SUBSCRIPTION_ACTIVATED,
-        expect.objectContaining({ subscriptionId: 'sub-1', planName: 'Weekly' }),
+        expect.objectContaining({ subscriptionId: 'sub-1', planName: 'Weekly', targetScreen: 'subscription' }),
       );
     });
 
@@ -507,12 +507,12 @@ describe('NotificationsService', () => {
       expect(service.createAndDispatch).toHaveBeenCalledWith(
         'hh-1',
         NotificationType.JOB_DISPUTED,
-        expect.objectContaining({ jobId: 'job-1' }),
+        expect.objectContaining({ jobId: 'job-1', targetScreen: 'booking_details' }),
       );
       expect(service.createAndDispatch).toHaveBeenCalledWith(
         'col-1',
         NotificationType.JOB_DISPUTED,
-        expect.objectContaining({ jobId: 'job-1' }),
+        expect.objectContaining({ jobId: 'job-1', targetScreen: 'booking_details' }),
       );
     });
 
@@ -531,12 +531,12 @@ describe('NotificationsService', () => {
       expect(service.createAndDispatch).toHaveBeenCalledWith(
         'hh-1',
         NotificationType.DISPUTE_RESOLVED,
-        expect.objectContaining({ jobId: 'job-1', disputeId: 'dispute-1' }),
+        expect.objectContaining({ jobId: 'job-1', disputeId: 'dispute-1', targetScreen: 'booking_details' }),
       );
       expect(service.createAndDispatch).toHaveBeenCalledWith(
         'col-1',
         NotificationType.DISPUTE_RESOLVED,
-        expect.objectContaining({ jobId: 'job-1', disputeId: 'dispute-1' }),
+        expect.objectContaining({ jobId: 'job-1', disputeId: 'dispute-1', targetScreen: 'booking_details' }),
       );
     });
 
@@ -552,7 +552,7 @@ describe('NotificationsService', () => {
       expect(service.createAndDispatch).toHaveBeenCalledWith(
         'marketer-1',
         NotificationType.COMMISSION_EARNED,
-        expect.objectContaining({ commissionId: 'comm-1', amount: 500 }),
+        expect.objectContaining({ commissionId: 'comm-1', amount: 500, targetScreen: 'earnings' }),
       );
     });
 
@@ -567,7 +567,7 @@ describe('NotificationsService', () => {
       expect(service.createAndDispatch).toHaveBeenCalledWith(
         'marketer-1',
         NotificationType.PAYOUT_APPROVED,
-        expect.objectContaining({ payoutRequestId: 'payout-1', amount: 10000 }),
+        expect.objectContaining({ payoutRequestId: 'payout-1', amount: 10000, targetScreen: 'earnings' }),
       );
     });
 
@@ -583,7 +583,7 @@ describe('NotificationsService', () => {
       expect(service.createAndDispatch).toHaveBeenCalledWith(
         'marketer-1',
         NotificationType.PAYOUT_REJECTED,
-        expect.objectContaining({ payoutRequestId: 'payout-1', amount: 10000, reason: 'Invalid bank details' }),
+        expect.objectContaining({ payoutRequestId: 'payout-1', amount: 10000, reason: 'Invalid bank details', targetScreen: 'earnings' }),
       );
     });
   });

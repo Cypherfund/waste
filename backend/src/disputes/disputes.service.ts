@@ -101,6 +101,7 @@ export class DisputesService {
   ): Promise<DisputeResponseDto> {
     const dispute = await this.disputeRepo.findOne({
       where: { id: disputeId },
+      relations: ['job'],
     });
 
     if (!dispute) {
@@ -134,6 +135,8 @@ export class DisputesService {
     this.eventEmitter.emit(DisputeEvents.RESOLVED, {
       disputeId: saved.id,
       jobId: dispute.jobId,
+      householdId: dispute.householdId,
+      collectorId: dispute.job?.collectorId,
       resolution: dto.resolution,
       resolvedBy: adminId,
       timestamp: new Date(),

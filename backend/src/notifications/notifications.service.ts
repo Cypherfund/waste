@@ -226,7 +226,7 @@ export class NotificationsService {
     await this.createAndDispatch(
       payload.userId,
       NotificationType.PAYMENT_VERIFIED,
-      { jobId: payload.jobId, amount: payload.amount, paymentMethod: payload.paymentMethod },
+      { jobId: payload.jobId, amount: payload.amount, paymentMethod: payload.paymentMethod, targetScreen: 'booking_details' },
     );
   }
 
@@ -235,7 +235,7 @@ export class NotificationsService {
     await this.createAndDispatch(
       payload.userId,
       NotificationType.PAYMENT_REJECTED,
-      { jobId: payload.jobId, reason: payload.reason },
+      { jobId: payload.jobId, reason: payload.reason, targetScreen: 'booking_details' },
     );
   }
 
@@ -244,7 +244,7 @@ export class NotificationsService {
     await this.createAndDispatch(
       payload.userId,
       NotificationType.PAYMENT_FAILED,
-      { jobId: payload.jobId, reason: payload.reason },
+      { jobId: payload.jobId, reason: payload.reason, targetScreen: 'booking_details' },
     );
   }
 
@@ -255,7 +255,7 @@ export class NotificationsService {
     await this.createAndDispatch(
       payload.userId,
       NotificationType.SUBSCRIPTION_ACTIVATED,
-      { subscriptionId: payload.subscriptionId, planName: payload.planName },
+      { subscriptionId: payload.subscriptionId, planName: payload.planName, targetScreen: 'subscription' },
     );
   }
 
@@ -267,13 +267,13 @@ export class NotificationsService {
     await this.createAndDispatch(
       payload.householdId,
       NotificationType.JOB_DISPUTED,
-      { jobId: payload.jobId },
+      { jobId: payload.jobId, targetScreen: 'booking_details' },
     );
     if (payload.collectorId) {
       await this.createAndDispatch(
         payload.collectorId,
         NotificationType.JOB_DISPUTED,
-        { jobId: payload.jobId },
+        { jobId: payload.jobId, targetScreen: 'booking_details' },
       );
     }
   }
@@ -284,13 +284,13 @@ export class NotificationsService {
     await this.createAndDispatch(
       payload.householdId,
       NotificationType.DISPUTE_RESOLVED,
-      { jobId: payload.jobId, disputeId: payload.disputeId, resolution: payload.resolution },
+      { jobId: payload.jobId, disputeId: payload.disputeId, resolution: payload.resolution, targetScreen: 'booking_details' },
     );
     if (payload.collectorId) {
       await this.createAndDispatch(
         payload.collectorId,
         NotificationType.DISPUTE_RESOLVED,
-        { jobId: payload.jobId, disputeId: payload.disputeId, resolution: payload.resolution },
+        { jobId: payload.jobId, disputeId: payload.disputeId, resolution: payload.resolution, targetScreen: 'booking_details' },
       );
     }
   }
@@ -302,7 +302,7 @@ export class NotificationsService {
     await this.createAndDispatch(
       payload.marketerUserId,
       NotificationType.COMMISSION_EARNED,
-      { commissionId: payload.commissionId, amount: payload.amount, reason: payload.reason },
+      { commissionId: payload.commissionId, amount: payload.amount, reason: payload.reason, targetScreen: 'earnings' },
     );
   }
 
@@ -311,7 +311,7 @@ export class NotificationsService {
     await this.createAndDispatch(
       payload.marketerUserId,
       NotificationType.PAYOUT_APPROVED,
-      { payoutRequestId: payload.payoutRequestId, amount: payload.amount },
+      { payoutRequestId: payload.payoutRequestId, amount: payload.amount, targetScreen: 'earnings' },
     );
   }
 
@@ -320,7 +320,7 @@ export class NotificationsService {
     await this.createAndDispatch(
       payload.marketerUserId,
       NotificationType.PAYOUT_REJECTED,
-      { payoutRequestId: payload.payoutRequestId, amount: payload.amount, reason: payload.reason },
+      { payoutRequestId: payload.payoutRequestId, amount: payload.amount, reason: payload.reason, targetScreen: 'earnings' },
     );
   }
 

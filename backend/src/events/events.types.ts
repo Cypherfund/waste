@@ -140,7 +140,7 @@ export interface EarningsConfirmedPayload {
 export const PaymentEvents = {
   VERIFIED: 'payment.verified',
   REJECTED: 'payment.rejected',
-  FAILED: 'payment.failed.notify',
+  FAILED: 'payment.failed',
 } as const;
 
 export interface PaymentVerifiedPayload {

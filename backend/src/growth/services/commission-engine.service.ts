@@ -142,7 +142,7 @@ export class CommissionEngineService {
 
     // Emit commission earned event for notification
     const commissionPayload: CommissionEarnedPayload = {
-      marketerUserId: lead.marketerId,
+      marketerUserId: profile.userId,
       commissionId: saved.id,
       amount,
       reason: 'First successful household pickup',
