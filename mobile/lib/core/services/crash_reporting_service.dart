@@ -1,5 +1,4 @@
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
-import 'package:flutter/foundation.dart';
 
 class CrashReportingService {
   static final CrashReportingService _instance = CrashReportingService._internal();
@@ -14,6 +13,7 @@ class CrashReportingService {
     required String role,
   }) async {
     await _crashlytics.setUserIdentifier(userId);
+    await _crashlytics.setCustomKey('userId', userId);
     await _crashlytics.setCustomKey('role', role);
   }
 
@@ -64,7 +64,7 @@ class CrashReportingService {
       exception,
       stack,
       fatal: fatal,
-      information: context?.entries.map((e) => '${e.key}: ${e.value}').toList(),
+      information: context?.entries.map((e) => '${e.key}: ${e.value}') ?? [],
     );
   }
 

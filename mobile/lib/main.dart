@@ -1,8 +1,9 @@
+import 'dart:ui';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode, defaultTargetPlatform, TargetPlatform;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'firebase_options.dart';
 import 'package:provider/provider.dart';
@@ -95,7 +96,13 @@ void main() async {
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
   // Initialize Crashlytics
-  await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(!kDebugMode);
+  const enableCrashlyticsInDebug = bool.fromEnvironment(
+    'ENABLE_CRASHLYTICS_DEBUG',
+    defaultValue: false,
+  );
+  await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
+    !kDebugMode || enableCrashlyticsInDebug,
+  );
 
   // Catch Flutter framework errors
   FlutterError.onError = (errorDetails) {
