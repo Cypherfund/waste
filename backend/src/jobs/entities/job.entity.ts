@@ -111,7 +111,7 @@ export class Job {
   @Column({ type: 'text', nullable: true, name: 'payment_proof_url' })
   paymentProofUrl: string | null;
 
-  @Column({ type: 'varchar', length: 20, nullable: true, name: 'payment_phone' })
+  @Column({ type: 'varchar', length: 50, nullable: true, name: 'payment_phone' })
   paymentPhone: string | null;
 
   @Column({ type: 'varchar', length: 100, nullable: true, name: 'provider_transaction_id' })
