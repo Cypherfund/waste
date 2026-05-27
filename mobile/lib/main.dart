@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 import 'config/app_theme.dart';
 import 'features/onboarding/onboarding_flow.dart';
 import 'providers/auth_provider.dart';
-import 'providers/auth_provider.dart' show AuthStatus;
 import 'providers/job_provider.dart';
 import 'providers/collector_jobs_provider.dart';
 import 'providers/collector_earnings_provider.dart';
