@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "106922831487",
+    "project_id": "kmertrash",
+    "storage_bucket": "kmertrash.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:106922831487:android:5e186d9dce6615157d594a",
+        "android_client_info": {
+          "package_name": "com.kmertrash.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA1ksB6a1pTmcbUfRJJlc6QdgTteye6Stk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

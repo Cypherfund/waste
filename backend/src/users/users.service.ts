@@ -65,6 +65,10 @@ export class UsersService {
     return this.userRepo.find({ where: { role: role as any, isActive: true } });
   }
 
+  async updateFcmToken(userId: string, fcmToken: string): Promise<void> {
+    await this.userRepo.update({ id: userId }, { fcmToken });
+  }
+
   async findAllWithFcmToken(): Promise<User[]> {
     return this.userRepo
       .createQueryBuilder('user')

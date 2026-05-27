@@ -1,4 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import * as admin from 'firebase-admin';
+import * as fs from 'fs';
 
 export interface PushMessage {
   token: string;
@@ -14,26 +17,77 @@ export interface PushResult {
 }
 
 @Injectable()
-export class FcmProvider {
+export class FcmProvider implements OnModuleInit {
   private readonly logger = new Logger(FcmProvider.name);
+  private app: admin.app.App | null = null;
 
-  /**
-   * Send a push notification via FCM.
-   * Stubbed for now — replace with real firebase-admin SDK call in production.
-   */
+  constructor(private readonly config: ConfigService) {}
+
+  onModuleInit() {
+    // Avoid re-initialising if another module already did so
+    if (admin.apps.length > 0) {
+      this.app = admin.apps[0]!;
+      return;
+    }
+
+    try {
+      const serviceAccountJson = this.config.get<string>('FIREBASE_SERVICE_ACCOUNT_JSON');
+      const serviceAccountPath = this.config.get<string>('FIREBASE_SERVICE_ACCOUNT_PATH');
+
+      let credential: admin.credential.Credential | null = null;
+
+      if (serviceAccountJson) {
+        const parsed = JSON.parse(serviceAccountJson);
+        credential = admin.credential.cert(parsed);
+      } else if (serviceAccountPath && fs.existsSync(serviceAccountPath)) {
+        credential = admin.credential.cert(serviceAccountPath);
+      }
+
+      if (!credential) {
+        this.logger.warn(
+          'FCM not configured: set FIREBASE_SERVICE_ACCOUNT_JSON or FIREBASE_SERVICE_ACCOUNT_PATH. Push notifications will be logged only.',
+        );
+        return;
+      }
+
+      this.app = admin.initializeApp({ credential });
+      this.logger.log('Firebase Admin SDK initialised');
+    } catch (err) {
+      this.logger.error(`Firebase Admin SDK init failed: ${err.message}`);
+    }
+  }
+
   async send(message: PushMessage): Promise<PushResult> {
     if (!message.token) {
       return { success: false, error: 'No FCM token provided' };
     }
 
-    try {
-      // TODO: Replace with real FCM call:
-      // const response = await admin.messaging().send({ ... });
-      this.logger.log(
-        `[STUB] FCM push to token ${message.token.slice(0, 12)}...: "${message.title}"`,
+    if (!this.app) {
+      this.logger.warn(
+        `[FCM STUB] Push to ${message.token.slice(0, 12)}...: "${message.title}"`,
       );
+      return { success: true, messageId: `stub-${Date.now()}` };
+    }
 
-      return { success: true, messageId: `fcm-stub-${Date.now()}` };
+    try {
+      const messageId = await admin.messaging(this.app).send({
+        token: message.token,
+        notification: {
+          title: message.title,
+          body: message.body,
+        },
+        data: message.data ?? {},
+        android: {
+          priority: 'high',
+        },
+        apns: {
+          payload: {
+            aps: { sound: 'default', badge: 1 },
+          },
+        },
+      });
+
+      return { success: true, messageId };
     } catch (error) {
       this.logger.error(`FCM push failed: ${error.message}`);
       return { success: false, error: error.message };

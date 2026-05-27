@@ -32,3 +32,7 @@ temp/
 
 #figma code
 scripts
+# Firebase service account key (NEVER commit)
+*-adminsdk-*.json
+*service-account*.json
+*serviceAccount*.json
