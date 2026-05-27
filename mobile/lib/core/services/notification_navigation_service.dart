@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 class NotificationNavigationService {
   final GlobalKey<NavigatorState> navigatorKey;
   final Function() isAuthenticated;
+  final Function(Map<String, dynamic>)? appUpdateCallback;
 
   // Deduplication guard
   final Map<String, DateTime> _handledMessages = {};
@@ -16,6 +17,7 @@ class NotificationNavigationService {
   NotificationNavigationService({
     required this.navigatorKey,
     required this.isAuthenticated,
+    this.appUpdateCallback,
   });
 
   /// Handle notification tap from foreground banner, background, or killed-app
@@ -66,6 +68,7 @@ class NotificationNavigationService {
     // Special case: app update
     if (type == 'APP_UPDATE_AVAILABLE') {
       debugPrint('[NotificationNavigation] APP_UPDATE_AVAILABLE - handled by AppUpdateProvider');
+      appUpdateCallback?.call(data);
       return;
     }
 
@@ -84,10 +87,23 @@ class NotificationNavigationService {
         break;
 
       case 'subscription':
+        final subscriptionId = data['subscriptionId'];
+        if (subscriptionId == null) {
+          debugPrint('[NotificationNavigation] Missing subscriptionId, falling back to notifications');
+          _fallbackToNotifications();
+          return;
+        }
         navigatorKey.currentState?.pushNamed('/subscription-plans');
         break;
 
       case 'earnings':
+        final commissionId = data['commissionId'];
+        final payoutRequestId = data['payoutRequestId'];
+        if (commissionId == null && payoutRequestId == null) {
+          debugPrint('[NotificationNavigation] Missing commissionId and payoutRequestId, falling back to notifications');
+          _fallbackToNotifications();
+          return;
+        }
         // Navigate to marketer earnings screen (MarketerShell with earnings tab)
         navigatorKey.currentState?.pushNamed(
           '/earnings',

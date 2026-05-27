@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'config/app_theme.dart';
 import 'features/onboarding/onboarding_flow.dart';
 import 'providers/auth_provider.dart';
+import 'providers/auth_provider.dart' show AuthStatus;
 import 'providers/job_provider.dart';
 import 'providers/collector_jobs_provider.dart';
 import 'providers/collector_earnings_provider.dart';
@@ -185,6 +186,7 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
     _notificationNavigationService = NotificationNavigationService(
       navigatorKey: appNavigatorKey,
       isAuthenticated: () => _authProvider.user != null,
+      appUpdateCallback: (data) => _appUpdateProvider.handlePushData(data),
     );
 
     _syncService = SyncService(
@@ -274,8 +276,11 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
             : 'HOUSEHOLD';
     _appUpdateProvider.updateAppType(appType);
 
-    // Process pending notification navigation after login
-    _notificationNavigationService.processPendingAfterLogin();
+    // Process pending notification navigation after confirmed login
+    // Only run when auth status is authenticated, not on every auth change
+    if (_authProvider.status == AuthStatus.authenticated) {
+      _notificationNavigationService.processPendingAfterLogin();
+    }
   }
 
   void _onAuthChangedFcm() {
@@ -463,7 +468,11 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
           '/top-up': (context) => const TopUpWalletScreen(),
           // Marketer routes
           '/marketer-home': (context) => const MarketerShell(),
-          '/earnings': (context) => const MarketerShell(),
+          '/earnings': (context) {
+            final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {};
+            final initialTab = args['tab'] as String?;
+            return MarketerShell(initialTab: initialTab);
+          },
           // Collector routes
           '/collector-home': (context) => const CollectorShell(),
           '/collector-jobs': (context) => const CollectorShell(),
