@@ -107,6 +107,8 @@ void main() async {
   // Catch Flutter framework errors
   FlutterError.onError = (errorDetails) {
     FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+    // Ensure errors are visible in debug mode when Crashlytics is disabled
+    FlutterError.presentError(errorDetails);
   };
 
   // Catch platform errors (async errors not caught by FlutterError.onError)
