@@ -163,7 +163,7 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
     _appUpdateProvider = AppUpdateProvider(
       api: _appUpdateApi,
       platform: kIsWeb ? 'ALL' : _detectPlatform(),
-      appType: 'HOUSEHOLD',
+      appType: 'ALL',
     );
     _wsService = WebSocketService();
     _locationService = LocationTrackingService(wsService: _wsService);

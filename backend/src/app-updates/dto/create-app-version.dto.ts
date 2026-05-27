@@ -1,5 +1,41 @@
-import { IsEnum, IsInt, IsOptional, IsString, Min, MaxLength } from 'class-validator';
+import {
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUrl,
+  Min,
+  MaxLength,
+  ValidateIf,
+  registerDecorator,
+  ValidationOptions,
+  ValidationArguments,
+} from 'class-validator';
 import { AppPlatform, AppType, UpdateType } from '../entities/app-version.entity';
+
+function MinBuildGte(property: string, validationOptions?: ValidationOptions) {
+  return function (object: object, propertyName: string) {
+    registerDecorator({
+      name: 'minBuildGte',
+      target: (object as any).constructor,
+      propertyName,
+      constraints: [property],
+      options: {
+        message: `latestBuild must be greater than or equal to minSupportedBuild`,
+        ...validationOptions,
+      },
+      validator: {
+        validate(value: any, args: ValidationArguments) {
+          const [relatedPropertyName] = args.constraints;
+          const relatedValue = (args.object as any)[relatedPropertyName];
+          return typeof value === 'number' &&
+            typeof relatedValue === 'number' &&
+            value >= relatedValue;
+        },
+      },
+    });
+  };
+}
 
 export class CreateAppVersionDto {
   @IsEnum(AppPlatform)
@@ -22,6 +58,7 @@ export class CreateAppVersionDto {
 
   @IsInt()
   @Min(1)
+  @MinBuildGte('minSupportedBuild')
   latestBuild: number;
 
   @IsEnum(UpdateType)
@@ -35,7 +72,8 @@ export class CreateAppVersionDto {
   message: string;
 
   @IsOptional()
-  @IsString()
+  @ValidateIf((o) => o.storeUrl != null && o.storeUrl !== '')
+  @IsUrl({ require_protocol: true })
   storeUrl?: string;
 
   @IsOptional()

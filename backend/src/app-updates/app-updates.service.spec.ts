@@ -1,10 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { validate } from 'class-validator';
+import { plainToInstance } from 'class-transformer';
 import { AppUpdatesService } from './app-updates.service';
 import { AppVersion, AppPlatform, AppType, UpdateType } from './entities/app-version.entity';
 import { FcmProvider } from '../notifications/providers/fcm.provider';
 import { UsersService } from '../users/users.service';
 import { AppWebSocketGateway } from '../websocket/websocket.gateway';
+import { CreateAppVersionDto } from './dto/create-app-version.dto';
 
 const makeVersion = (overrides: Partial<AppVersion> = {}): AppVersion => ({
   id: 1,
@@ -273,6 +276,62 @@ describe('AppUpdatesService', () => {
       repo.findOne.mockResolvedValue(null);
 
       await expect(service.sendUpdateNotification(999)).rejects.toThrow();
+    });
+  });
+
+  // ── CreateAppVersionDto validation ─────────────────────────────
+
+  describe('CreateAppVersionDto', () => {
+    const validBase = {
+      platform: AppPlatform.ALL,
+      appType: AppType.ALL,
+      versionName: '1.2.0',
+      buildNumber: 50,
+      minSupportedBuild: 40,
+      latestBuild: 50,
+      updateType: UpdateType.OPTIONAL,
+      title: 'Update Available',
+      message: 'Please update.',
+    };
+
+    it('passes validation with valid payload', async () => {
+      const dto = plainToInstance(CreateAppVersionDto, validBase);
+      const errors = await validate(dto);
+      expect(errors).toHaveLength(0);
+    });
+
+    it('rejects latestBuild < minSupportedBuild', async () => {
+      const dto = plainToInstance(CreateAppVersionDto, {
+        ...validBase,
+        minSupportedBuild: 50,
+        latestBuild: 40,
+      });
+      const errors = await validate(dto);
+      expect(errors.some((e) => e.property === 'latestBuild')).toBe(true);
+    });
+
+    it('rejects invalid storeUrl', async () => {
+      const dto = plainToInstance(CreateAppVersionDto, {
+        ...validBase,
+        storeUrl: 'not-a-url',
+      });
+      const errors = await validate(dto);
+      expect(errors.some((e) => e.property === 'storeUrl')).toBe(true);
+    });
+
+    it('accepts valid storeUrl', async () => {
+      const dto = plainToInstance(CreateAppVersionDto, {
+        ...validBase,
+        storeUrl: 'https://play.google.com/store/apps/details?id=com.test',
+      });
+      const errors = await validate(dto);
+      expect(errors).toHaveLength(0);
+    });
+
+    it('accepts missing storeUrl', async () => {
+      const dto = plainToInstance(CreateAppVersionDto, validBase);
+      const errors = await validate(dto);
+      expect(errors).toHaveLength(0);
     });
   });
 });
