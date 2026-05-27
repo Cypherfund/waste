@@ -191,7 +191,7 @@ class _ManualPaymentScreenState extends State<ManualPaymentScreen> {
           _buildInstructionStep(
             '1',
             'Send money to:',
-            selectedMethod.phoneNumber ?? selectedMethod.accountNumber ?? 'Contact support',
+            selectedMethod.accountNumber ?? 'Contact support',
             isHighlight: true,
           ),
           const SizedBox(height: 12),

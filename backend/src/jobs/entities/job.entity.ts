@@ -42,7 +42,7 @@ export class Job {
   @Column({ type: 'date', name: 'scheduled_date' })
   scheduledDate: string;
 
-  @Column({ type: 'varchar', length: 20, name: 'scheduled_time' })
+  @Column({ type: 'varchar', length: 50, name: 'scheduled_time' })
   scheduledTime: string;
 
   @Column({ type: 'varchar', length: 500, name: 'location_address' })
