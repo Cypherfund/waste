@@ -352,4 +352,45 @@ describe('AppWebSocketGateway', () => {
       expect(mockServer.to).toHaveBeenCalledWith('household:hh-1');
     });
   });
+
+  // ─── App Update Broadcast ───────────────────────────────────────
+
+  describe('broadcastAppUpdate', () => {
+    const updatePayload = {
+      updateType: 'OPTIONAL',
+      versionName: '2.0.0',
+      latestBuild: 100,
+      minSupportedBuild: 80,
+      title: 'Update Available',
+      message: 'A new version is ready.',
+      storeUrl: 'https://play.google.com/store/apps/details?id=com.test',
+    };
+
+    it('emits app:update to all connected sockets (no room filter)', () => {
+      gateway.broadcastAppUpdate(updatePayload);
+
+      expect(mockServer.emit).toHaveBeenCalledWith('app:update', updatePayload);
+    });
+
+    it('includes all required fields in the payload', () => {
+      gateway.broadcastAppUpdate(updatePayload);
+
+      expect(mockServer.emit).toHaveBeenCalledWith(
+        'app:update',
+        expect.objectContaining({
+          updateType: 'OPTIONAL',
+          versionName: '2.0.0',
+          latestBuild: 100,
+          minSupportedBuild: 80,
+        }),
+      );
+    });
+
+    it('handles null storeUrl gracefully', () => {
+      const payloadWithNoStore = { ...updatePayload, storeUrl: null };
+
+      expect(() => gateway.broadcastAppUpdate(payloadWithNoStore)).not.toThrow();
+      expect(mockServer.emit).toHaveBeenCalledWith('app:update', payloadWithNoStore);
+    });
+  });
 });

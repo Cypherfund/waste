@@ -223,6 +223,21 @@ export class AppWebSocketGateway
     });
   }
 
+  // ─── APP UPDATE BROADCAST ─────────────────────────────────────
+
+  broadcastAppUpdate(payload: {
+    updateType: string;
+    versionName: string;
+    latestBuild: number;
+    minSupportedBuild: number;
+    title: string;
+    message: string;
+    storeUrl: string | null;
+  }): void {
+    this.server.emit('app:update', payload);
+    this.logger.log(`Broadcasted app:update to all connected clients (v${payload.versionName})`);
+  }
+
   // ─── PRIVATE HELPERS ──────────────────────────────────────────
 
   /**

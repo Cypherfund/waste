@@ -65,6 +65,16 @@ export class UsersService {
     return this.userRepo.find({ where: { role: role as any, isActive: true } });
   }
 
+  async findAllWithFcmToken(): Promise<User[]> {
+    return this.userRepo
+      .createQueryBuilder('user')
+      .where('user.fcm_token IS NOT NULL')
+      .andWhere("user.fcm_token != ''")
+      .andWhere('user.is_active = true')
+      .select(['user.id', 'user.fcmToken'])
+      .getMany();
+  }
+
   async deactivateUser(userId: string): Promise<void> {
     const user = await this.userRepo.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');

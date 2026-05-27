@@ -21,6 +21,6 @@ import { AppWebSocketGateway } from './websocket.gateway';
     }),
   ],
   providers: [LocationService, WsJwtGuard, AppWebSocketGateway],
-  exports: [LocationService],
+  exports: [LocationService, AppWebSocketGateway],
 })
 export class WebSocketModule {}
