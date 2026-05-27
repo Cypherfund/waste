@@ -289,23 +289,29 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
 
   Widget _buildErrorState(String error) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFEBEE),
-        borderRadius: BorderRadius.circular(8),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
       ),
-      child: Row(
+      child: Column(
         children: [
-          const Icon(Icons.error_outline, color: Color(0xFFC62828)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              error,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Color(0xFFC62828),
-              ),
+          Icon(Icons.wifi_off_rounded, size: 40, color: Colors.grey.shade400),
+          const SizedBox(height: 12),
+          Text(
+            error,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade600,
             ),
+          ),
+          const SizedBox(height: 16),
+          TextButton.icon(
+            onPressed: _loadPaymentMethods,
+            icon: const Icon(Icons.refresh_rounded, size: 16),
+            label: const Text('Retry'),
           ),
         ],
       ),

@@ -35,7 +35,7 @@ class UserPaymentMethodsProvider extends ChangeNotifier {
     try {
       _methods = await _walletApi.getMyPaymentMethods(usage: usage);
     } catch (e) {
-      _error = e.toString();
+      _error = 'Unable to load payment methods. Please try again.';
       debugPrint('Error loading payment methods: $e');
     } finally {
       _loading = false;
@@ -61,7 +61,7 @@ class UserPaymentMethodsProvider extends ChangeNotifier {
       _methods.add(newMethod);
       notifyListeners();
     } catch (e) {
-      _error = e.toString();
+      _error = 'Unable to add payment method. Please try again.';
       debugPrint('Error adding payment method: $e');
       rethrow;
     }
@@ -84,7 +84,7 @@ class UserPaymentMethodsProvider extends ChangeNotifier {
       }
       notifyListeners();
     } catch (e) {
-      _error = e.toString();
+      _error = 'Unable to update payment method. Please try again.';
       debugPrint('Error updating payment method: $e');
       rethrow;
     }
@@ -96,7 +96,7 @@ class UserPaymentMethodsProvider extends ChangeNotifier {
       _methods.removeWhere((m) => m.id == id);
       notifyListeners();
     } catch (e) {
-      _error = e.toString();
+      _error = 'Unable to delete payment method. Please try again.';
       debugPrint('Error deleting payment method: $e');
       rethrow;
     }
@@ -107,7 +107,7 @@ class UserPaymentMethodsProvider extends ChangeNotifier {
       await _walletApi.setDefaultPaymentMethod(id, usage);
       await loadMethods(); // Reload to get updated default state
     } catch (e) {
-      _error = e.toString();
+      _error = 'Unable to update default payment method. Please try again.';
       debugPrint('Error setting default payment method: $e');
       rethrow;
     }
