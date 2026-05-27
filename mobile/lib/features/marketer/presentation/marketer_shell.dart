@@ -7,7 +7,9 @@ import 'screens/marketer_commissions_screen.dart';
 import 'screens/marketer_profile_screen.dart';
 
 class MarketerShell extends StatefulWidget {
-  const MarketerShell({super.key});
+  final String? initialTab;
+
+  const MarketerShell({super.key, this.initialTab});
 
   @override
   State<MarketerShell> createState() => _MarketerShellState();
@@ -26,6 +28,14 @@ class _MarketerShellState extends State<MarketerShell> {
   @override
   void initState() {
     super.initState();
+    
+    // Set initial tab based on navigation parameter
+    if (widget.initialTab == 'earnings') {
+      _currentIndex = 2; // Earnings tab index
+    } else if (widget.initialTab == 'leads') {
+      _currentIndex = 1; // Leads tab index
+    }
+    
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<MarketerProvider>().loadDashboard();
       context.read<MarketerProvider>().refreshUnreadCount();
