@@ -1,5 +1,8 @@
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'firebase_options.dart';
 import 'package:provider/provider.dart';
 import 'config/app_theme.dart';
 import 'features/onboarding/onboarding_flow.dart';
@@ -75,12 +78,18 @@ import 'services/api/app_update_api.dart';
 import 'providers/app_update_provider.dart';
 import 'screens/update/force_update_screen.dart';
 import 'widgets/optional_update_dialog.dart';
+import 'services/fcm_service.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
   final onboardingCompleted = await isOnboardingCompleted();
   final connectivityService = ConnectivityService();
   await connectivityService.initialize();
@@ -135,6 +144,7 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
   late final DeepLinkService _deepLinkService;
   late final AppUpdateApi _appUpdateApi;
   late final AppUpdateProvider _appUpdateProvider;
+  late final FcmService _fcmService;
 
   @override
   void initState() {
@@ -165,6 +175,7 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
       platform: kIsWeb ? 'ALL' : _detectPlatform(),
       appType: 'ALL',
     );
+    _fcmService = FcmService(apiClient: _apiClient);
     _wsService = WebSocketService();
     _locationService = LocationTrackingService(wsService: _wsService);
     _queueService = OfflineQueueService();
@@ -212,6 +223,7 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
 
     // Update appType whenever the authenticated user's role is known
     _authProvider.addListener(_onAuthChanged);
+    _authProvider.addListener(_onAuthChangedFcm);
 
     // Restore session immediately before UI builds
     _authProvider.tryRestoreSession();
@@ -253,9 +265,22 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
     _appUpdateProvider.updateAppType(appType);
   }
 
+  void _onAuthChangedFcm() {
+    if (_authProvider.user == null) return;
+    _fcmService.init(
+      onForegroundMessage: (message) {
+        final type = message.data['type'];
+        if (type == 'APP_UPDATE_AVAILABLE') {
+          _appUpdateProvider.handlePushData(message.data);
+        }
+      },
+    );
+  }
+
   @override
   void dispose() {
     _authProvider.removeListener(_onAuthChanged);
+    _authProvider.removeListener(_onAuthChangedFcm);
     super.dispose();
   }
 

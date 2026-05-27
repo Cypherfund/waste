@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Post, Delete, Body, Param } from '@nestjs/common';
+import { Controller, Get, Patch, Put, Post, Delete, Body, Param, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { IsString, IsOptional, IsNumber, IsBoolean } from 'class-validator';
 import { UsersService, CreateAddressDto } from './users.service';
@@ -6,6 +6,11 @@ import { UserProfileDto } from './dto/user-profile.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UserAddress } from './entities/user-address.entity';
+
+class UpdateFcmTokenBody {
+  @IsString()
+  fcmToken: string;
+}
 
 class CreateAddressBody implements CreateAddressDto {
   @IsString()
@@ -42,6 +47,16 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'User profile', type: UserProfileDto })
   async getProfile(@CurrentUser('sub') userId: string): Promise<UserProfileDto> {
     return this.usersService.getProfile(userId);
+  }
+
+  @Put('me/fcm-token')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Register or refresh the FCM push token for this device' })
+  async updateFcmToken(
+    @CurrentUser('sub') userId: string,
+    @Body() body: UpdateFcmTokenBody,
+  ): Promise<void> {
+    return this.usersService.updateFcmToken(userId, body.fcmToken);
   }
 
   @Patch('me')

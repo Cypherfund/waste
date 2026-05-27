@@ -249,6 +249,12 @@ shorebird release android --artifact apk  -- --dart-define=API_BASE_URL=https://
 
 shorebird release android --artifact apk -- --dart-define=API_BASE_URL=https://om-combined.onrender.com/api/v1 --dart-define=WS_BASE_URL=wss://om-combined.onrender.com/waste
 
+shorebird patch --platforms=android --release-version=1.0.0+3
+
+firebase appdistribution:distribute build/app/outputs/flutter-apk/app-release.apk \
+  --app 1:106922831487:android:5e186d9dce6615157d594a \
+  --release-notes "First test release of KmerTrash" \
+  --groups "kmertrash-testers"
 
 shorebird patch android --release-version 1.0.0+1 --artifact apk -- --dart-define=API_BASE_URL=https://om-combined.onrender.com/api/v1 --dart-define=WS_BASE_URL=wss://om-combined.onrender.com/waste
 
