@@ -109,6 +109,8 @@ export const DisputeEvents = {
 export interface DisputeResolvedPayload {
   disputeId: string;
   jobId: string;
+  householdId: string;
+  collectorId: string;
   resolution: string;
   resolvedBy: string;
   timestamp: Date;
@@ -135,6 +137,60 @@ export interface EarningsConfirmedPayload {
   timestamp: Date;
 }
 
+export const PaymentEvents = {
+  VERIFIED: 'payment.verified',
+  REJECTED: 'payment.rejected',
+  FAILED: 'payment.failed',
+} as const;
+
+export interface PaymentVerifiedPayload {
+  userId: string;
+  jobId: string;
+  amount?: number;
+  paymentMethod?: string;
+  timestamp: Date;
+}
+
+export interface PaymentRejectedPayload {
+  userId: string;
+  jobId: string;
+  reason?: string;
+  timestamp: Date;
+}
+
+export interface PaymentFailedPayload {
+  userId: string;
+  jobId?: string;
+  paymentTransactionId?: string;
+  reason?: string;
+  timestamp: Date;
+}
+
+export const CommissionEvents = {
+  EARNED: 'commission.earned',
+} as const;
+
+export interface CommissionEarnedPayload {
+  marketerUserId: string;
+  commissionId: string;
+  amount: number;
+  reason: string;
+  timestamp: Date;
+}
+
+export const PayoutEvents = {
+  APPROVED: 'payout.approved',
+  REJECTED: 'payout.rejected',
+} as const;
+
+export interface PayoutProcessedPayload {
+  marketerUserId: string;
+  payoutRequestId: string;
+  amount: number;
+  reason?: string;
+  timestamp: Date;
+}
+
 export const FraudEvents = {
   FLAG_CREATED: 'fraud.flag_created',
   FLAG_REVIEWED: 'fraud.flag_reviewed',
@@ -149,6 +205,7 @@ export interface SubscriptionPaidPayload {
   subscriptionId: string;
   userId: string;
   planId: string;
+  planName: string;
   amount: number;
   timestamp: Date;
 }

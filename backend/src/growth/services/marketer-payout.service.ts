@@ -1,9 +1,11 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { MarketerPayoutRequest, PayoutStatus, MarketerProfile, CommissionTransaction, CommissionStatus, NotificationType } from '../entities';
 import { CreatePayoutRequestDto } from '../dto';
 import { MarketerNotificationService } from './marketer-notification.service';
+import { PayoutEvents, PayoutProcessedPayload } from '../../events/events.types';
 
 @Injectable()
 export class MarketerPayoutService {
@@ -16,6 +18,7 @@ export class MarketerPayoutService {
     private readonly transactionRepo: Repository<CommissionTransaction>,
     private readonly notificationService: MarketerNotificationService,
     private readonly dataSource: DataSource,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async createPayoutRequest(
@@ -121,7 +124,18 @@ export class MarketerPayoutService {
     payout.reviewedBy = adminId;
     payout.reviewedAt = new Date();
 
-    return this.payoutRepo.save(payout);
+    const saved = await this.payoutRepo.save(payout);
+
+    // Emit payout approved event for notification
+    const payload: PayoutProcessedPayload = {
+      marketerUserId: payout.marketerProfile.userId,
+      payoutRequestId: payout.id,
+      amount: Number(payout.amount),
+      timestamp: new Date(),
+    };
+    this.eventEmitter.emit(PayoutEvents.APPROVED, payload);
+
+    return saved;
   }
 
   async rejectPayout(
@@ -154,14 +168,15 @@ export class MarketerPayoutService {
     profile.approvedAmount = Number(profile.approvedAmount) + parseFloat(payout.amount.toString());
     await this.profileRepo.save(profile);
 
-    // Notify marketer
-    await this.notificationService.sendNotification(
-      profile.id,
-      NotificationType.PAYOUT_PROCESSED,
-      'Payout Request Rejected',
-      `Your payout request for ${payout.amount} XAF was rejected. Reason: ${reason}`,
-      { payoutId: payout.id },
-    );
+    // Emit payout rejected event for notification
+    const payload: PayoutProcessedPayload = {
+      marketerUserId: profile.userId,
+      payoutRequestId: payout.id,
+      amount: Number(payout.amount),
+      reason,
+      timestamp: new Date(),
+    };
+    this.eventEmitter.emit(PayoutEvents.REJECTED, payload);
 
     return saved;
   }

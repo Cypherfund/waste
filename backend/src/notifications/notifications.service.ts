@@ -37,6 +37,18 @@ import {
   JobRatedPayload,
   EarningsEvents,
   EarningsConfirmedPayload,
+  PaymentEvents,
+  PaymentVerifiedPayload,
+  PaymentRejectedPayload,
+  PaymentFailedPayload,
+  CommissionEvents,
+  CommissionEarnedPayload,
+  PayoutEvents,
+  PayoutProcessedPayload,
+  SubscriptionEvents,
+  SubscriptionPaidPayload,
+  DisputeEvents,
+  DisputeResolvedPayload,
 } from '../events/events.types';
 
 @Injectable()
@@ -204,6 +216,111 @@ export class NotificationsService {
       payload.collectorId,
       NotificationType.EARNINGS_CONFIRMED,
       { jobId: payload.jobId },
+    );
+  }
+
+  // ─── PAYMENT EVENTS ─────────────────────────────────────────────
+
+  @OnEvent(PaymentEvents.VERIFIED)
+  async onPaymentVerified(payload: PaymentVerifiedPayload): Promise<void> {
+    await this.createAndDispatch(
+      payload.userId,
+      NotificationType.PAYMENT_VERIFIED,
+      { jobId: payload.jobId, amount: payload.amount, paymentMethod: payload.paymentMethod, targetScreen: 'booking_details' },
+    );
+  }
+
+  @OnEvent(PaymentEvents.REJECTED)
+  async onPaymentRejected(payload: PaymentRejectedPayload): Promise<void> {
+    await this.createAndDispatch(
+      payload.userId,
+      NotificationType.PAYMENT_REJECTED,
+      { jobId: payload.jobId, reason: payload.reason, targetScreen: 'booking_details' },
+    );
+  }
+
+  @OnEvent(PaymentEvents.FAILED)
+  async onPaymentFailed(payload: PaymentFailedPayload): Promise<void> {
+    await this.createAndDispatch(
+      payload.userId,
+      NotificationType.PAYMENT_FAILED,
+      { jobId: payload.jobId, reason: payload.reason, targetScreen: 'booking_details' },
+    );
+  }
+
+  // ─── SUBSCRIPTION EVENTS ────────────────────────────────────────
+
+  @OnEvent(SubscriptionEvents.PAID)
+  async onSubscriptionPaid(payload: SubscriptionPaidPayload): Promise<void> {
+    await this.createAndDispatch(
+      payload.userId,
+      NotificationType.SUBSCRIPTION_ACTIVATED,
+      { subscriptionId: payload.subscriptionId, planName: payload.planName, targetScreen: 'subscription' },
+    );
+  }
+
+  // ─── DISPUTE EVENTS ─────────────────────────────────────────────
+
+  @OnEvent(JobEvents.DISPUTED)
+  async onJobDisputed(payload: JobEventPayload): Promise<void> {
+    // Notify both household and collector
+    await this.createAndDispatch(
+      payload.householdId,
+      NotificationType.JOB_DISPUTED,
+      { jobId: payload.jobId, targetScreen: 'booking_details' },
+    );
+    if (payload.collectorId) {
+      await this.createAndDispatch(
+        payload.collectorId,
+        NotificationType.JOB_DISPUTED,
+        { jobId: payload.jobId, targetScreen: 'booking_details' },
+      );
+    }
+  }
+
+  @OnEvent(DisputeEvents.RESOLVED)
+  async onDisputeResolved(payload: DisputeResolvedPayload): Promise<void> {
+    // Notify both household and collector
+    await this.createAndDispatch(
+      payload.householdId,
+      NotificationType.DISPUTE_RESOLVED,
+      { jobId: payload.jobId, disputeId: payload.disputeId, resolution: payload.resolution, targetScreen: 'booking_details' },
+    );
+    if (payload.collectorId) {
+      await this.createAndDispatch(
+        payload.collectorId,
+        NotificationType.DISPUTE_RESOLVED,
+        { jobId: payload.jobId, disputeId: payload.disputeId, resolution: payload.resolution, targetScreen: 'booking_details' },
+      );
+    }
+  }
+
+  // ─── MARKETER EVENTS ────────────────────────────────────────────
+
+  @OnEvent(CommissionEvents.EARNED)
+  async onCommissionEarned(payload: CommissionEarnedPayload): Promise<void> {
+    await this.createAndDispatch(
+      payload.marketerUserId,
+      NotificationType.COMMISSION_EARNED,
+      { commissionId: payload.commissionId, amount: payload.amount, reason: payload.reason, targetScreen: 'earnings' },
+    );
+  }
+
+  @OnEvent(PayoutEvents.APPROVED)
+  async onPayoutApproved(payload: PayoutProcessedPayload): Promise<void> {
+    await this.createAndDispatch(
+      payload.marketerUserId,
+      NotificationType.PAYOUT_APPROVED,
+      { payoutRequestId: payload.payoutRequestId, amount: payload.amount, targetScreen: 'earnings' },
+    );
+  }
+
+  @OnEvent(PayoutEvents.REJECTED)
+  async onPayoutRejected(payload: PayoutProcessedPayload): Promise<void> {
+    await this.createAndDispatch(
+      payload.marketerUserId,
+      NotificationType.PAYOUT_REJECTED,
+      { payoutRequestId: payload.payoutRequestId, amount: payload.amount, reason: payload.reason, targetScreen: 'earnings' },
     );
   }
 
