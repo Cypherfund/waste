@@ -121,7 +121,7 @@ class _PaymentMethodsSetupScreenState extends State<PaymentMethodsSetupScreen> {
           // For now, show saved methods grouped by provider
           final groupedMethods = <String, List<UserPaymentMethod>>{};
           for (final method in methods) {
-            groupedMethods.putIfAbsent(method.paymentCode, () => []).add(method);
+            groupedMethods.putIfAbsent(method.paymentCode.toLowerCase(), () => []).add(method);
           }
 
           if (groupedMethods.isEmpty) {

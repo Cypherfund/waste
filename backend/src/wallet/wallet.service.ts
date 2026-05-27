@@ -59,6 +59,7 @@ export class WalletService {
 
   // ── GET app config (payment integration + support + providers) ───────────
   async getAppConfig(countryCode: string) {
+    countryCode = countryCode.toUpperCase();
     const [paymentEnabled, manualInstructions, whatsapp, minAdvanceHours, cashEnabledStr, maxAdvanceDays] = await Promise.all([
       this.systemConfigService.getBoolean('feature.payment_integration', false),
       this.systemConfigService.getString(
@@ -109,6 +110,7 @@ export class WalletService {
 
   // ── GET enabled payment providers for manual payment ───────────
   private async getEnabledPaymentProviders(countryCode: string): Promise<
+    // countryCode is already normalised to uppercase by caller
     Array<{
       paymentCode: string;
       providerName: string;
@@ -192,15 +194,16 @@ export class WalletService {
   ): Promise<PayoutRequest> {
     const config = await this.getPayoutConfig();
 
-    const validMethods = config.methods.map((m) => m.key);
-    if (!validMethods.includes(dto.method)) {
+    const normalizedMethod = dto.method.toUpperCase();
+    const validMethods = config.methods.map((m) => m.key.toUpperCase());
+    if (!validMethods.includes(normalizedMethod)) {
       throw new BadRequestException(
         `Unsupported payment method. Enabled: ${validMethods.join(', ')}`,
       );
     }
 
     // Provider-level min/max override system config fallback
-    const provider = config.cashoutProviders.find((p) => p.paymentCode === dto.method);
+    const provider = config.cashoutProviders.find((p) => p.paymentCode.toUpperCase() === normalizedMethod);
     const effectiveMin = provider?.minWithdrawal ?? config.minWithdrawal;
     const effectiveMax = provider?.maxWithdrawal ?? config.maxWithdrawal;
 
@@ -425,15 +428,15 @@ export class WalletService {
     const methods = await qb.getMany();
 
     // Fetch provider details for each method
-    const paymentCodes = [...new Set(methods.map((m) => m.paymentCode))];
+    const paymentCodes = [...new Set(methods.map((m) => m.paymentCode.toUpperCase()))];
     const providers = await this.paymentProviderRepo.find({
       where: { paymentCode: In(paymentCodes) },
     });
 
-    const providerMap = new Map(providers.map((p) => [p.paymentCode, p]));
+    const providerMap = new Map(providers.map((p) => [p.paymentCode.toUpperCase(), p]));
 
     return methods.map((m) => {
-      const provider = providerMap.get(m.paymentCode);
+      const provider = providerMap.get(m.paymentCode.toUpperCase());
       return {
         id: m.id,
         paymentCode: m.paymentCode,
@@ -460,8 +463,9 @@ export class WalletService {
     },
   ) {
     // Validate paymentCode exists and is enabled
+    const normalizedCode = dto.paymentCode.toUpperCase();
     const provider = await this.paymentProviderRepo.findOne({
-      where: { paymentCode: dto.paymentCode, isEnabled: true },
+      where: { paymentCode: normalizedCode, isEnabled: true },
     });
     if (!provider) {
       throw new BadRequestException(`Payment provider ${dto.paymentCode} not found or disabled`);
@@ -470,17 +474,17 @@ export class WalletService {
     // Validate usageType matches provider capabilities
     const usageType = dto.usageType ?? UserPaymentMethodUsageType.BOTH;
     if (usageType === UserPaymentMethodUsageType.CASHIN && !provider.supportsCashin) {
-      throw new BadRequestException(`Provider ${dto.paymentCode} does not support cash-in`);
+      throw new BadRequestException(`Provider ${normalizedCode} does not support cash-in`);
     }
     if (usageType === UserPaymentMethodUsageType.CASHOUT && !provider.supportsCashout) {
-      throw new BadRequestException(`Provider ${dto.paymentCode} does not support cash-out`);
+      throw new BadRequestException(`Provider ${normalizedCode} does not support cash-out`);
     }
 
     // Check for duplicate active method
     const existing = await this.userPaymentMethodRepo.findOne({
       where: {
         userId,
-        paymentCode: dto.paymentCode,
+        paymentCode: normalizedCode,
         accountNumber: dto.accountNumber,
         deletedAt: IsNull(),
       },
@@ -495,7 +499,7 @@ export class WalletService {
 
     const method = this.userPaymentMethodRepo.create({
       userId,
-      paymentCode: dto.paymentCode,
+      paymentCode: normalizedCode,
       accountNumber: dto.accountNumber,
       accountName: dto.accountName ?? null,
       usageType,

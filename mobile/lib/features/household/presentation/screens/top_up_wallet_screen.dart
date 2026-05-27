@@ -557,7 +557,7 @@ class _TopUpWalletScreenState extends State<TopUpWalletScreen> {
     if (method == null) return 'Unknown';
     final sub = context.read<SubscriptionProvider>();
     final providers = sub.appConfig?.enabledManualPaymentProviders ?? [];
-    final match = providers.where((p) => p.paymentCode == method).toList();
+    final match = providers.where((p) => p.paymentCode.toLowerCase() == method.toLowerCase()).toList();
     return match.isNotEmpty ? match.first.providerName : method;
   }
   
