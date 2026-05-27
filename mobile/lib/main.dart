@@ -1,7 +1,9 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:package_info_plus/package_info_plus.dart';
 import 'firebase_options.dart';
 import 'package:provider/provider.dart';
 import 'config/app_theme.dart';
@@ -80,6 +82,7 @@ import 'screens/update/force_update_screen.dart';
 import 'widgets/optional_update_dialog.dart';
 import 'services/fcm_service.dart';
 import 'core/services/notification_navigation_service.dart';
+import 'core/services/crash_reporting_service.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -90,6 +93,27 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
+  // Initialize Crashlytics
+  await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(!kDebugMode);
+
+  // Catch Flutter framework errors
+  FlutterError.onError = (errorDetails) {
+    FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+  };
+
+  // Catch platform errors (async errors not caught by FlutterError.onError)
+  PlatformDispatcher.instance.onError = (error, stack) {
+    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    return true;
+  };
+
+  // Set app context in Crashlytics
+  final packageInfo = await PackageInfo.fromPlatform();
+  await CrashReportingService().setAppContext(
+    appVersion: packageInfo.version,
+    buildNumber: packageInfo.buildNumber,
+  );
 
   final onboardingCompleted = await isOnboardingCompleted();
   final connectivityService = ConnectivityService();

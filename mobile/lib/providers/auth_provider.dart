@@ -8,6 +8,7 @@ import '../services/api/auth_api.dart';
 import '../services/offline/sync_service.dart';
 import '../services/storage/secure_storage.dart';
 import '../services/websocket/websocket_service.dart';
+import '../core/services/crash_reporting_service.dart';
 
 enum AuthStatus { unknown, authenticated, unauthenticated }
 
@@ -174,6 +175,12 @@ class AuthProvider extends ChangeNotifier {
       await _loadSavedAccounts();
       debugPrint('AuthProvider: Status set to authenticated');
       _connectWebSocket(response.accessToken);
+
+      // Set user context in Crashlytics
+      await CrashReportingService().setUser(
+        userId: response.user.id,
+        role: response.user.role,
+      );
     } catch (e) {
       debugPrint('AuthProvider: Login failed with error: $e');
       _error = ApiClient.extractErrorMessage(e);
@@ -264,6 +271,9 @@ class AuthProvider extends ChangeNotifier {
     _error = null;
     _onLogout?.call();
     notifyListeners();
+
+    // Clear user context in Crashlytics
+    await CrashReportingService().clearUser();
   }
 
   // ─── Multi-account ─────────────────────────────────────────────
