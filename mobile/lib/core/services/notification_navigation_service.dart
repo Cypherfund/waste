@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart';
+import 'crash_reporting_service.dart';
 
 class NotificationNavigationService {
   final GlobalKey<NavigatorState> navigatorKey;
@@ -65,6 +64,11 @@ class NotificationNavigationService {
 
     debugPrint('[NotificationNavigation] Navigating: type=$type, targetScreen=$targetScreen');
 
+    // Add breadcrumb for notification routing
+    await CrashReportingService().addBreadcrumb('Notification tap: $targetScreen');
+    await CrashReportingService().setLastNotificationType(type);
+    await CrashReportingService().setLastAction('navigate_notification');
+
     // Special case: app update
     if (type == 'APP_UPDATE_AVAILABLE') {
       debugPrint('[NotificationNavigation] APP_UPDATE_AVAILABLE - handled by AppUpdateProvider');
@@ -80,10 +84,19 @@ class NotificationNavigationService {
           _fallbackToNotifications();
           return;
         }
-        navigatorKey.currentState?.pushNamed(
-          '/booking-details',
-          arguments: jobId,
-        );
+        try {
+          navigatorKey.currentState?.pushNamed(
+            '/booking-details',
+            arguments: jobId,
+          );
+        } catch (e, stack) {
+          await CrashReportingService().recordError(
+            e,
+            stack,
+            context: {'targetScreen': targetScreen, 'type': type, 'jobId': jobId},
+          );
+          _fallbackToNotifications();
+        }
         break;
 
       case 'subscription':
@@ -93,7 +106,16 @@ class NotificationNavigationService {
           _fallbackToNotifications();
           return;
         }
-        navigatorKey.currentState?.pushNamed('/subscription-plans');
+        try {
+          navigatorKey.currentState?.pushNamed('/subscription-plans');
+        } catch (e, stack) {
+          await CrashReportingService().recordError(
+            e,
+            stack,
+            context: {'targetScreen': targetScreen, 'type': type, 'subscriptionId': subscriptionId},
+          );
+          _fallbackToNotifications();
+        }
         break;
 
       case 'earnings':
@@ -104,11 +126,20 @@ class NotificationNavigationService {
           _fallbackToNotifications();
           return;
         }
-        // Navigate to marketer earnings screen (MarketerShell with earnings tab)
-        navigatorKey.currentState?.pushNamed(
-          '/earnings',
-          arguments: {'tab': 'earnings'},
-        );
+        try {
+          // Navigate to marketer earnings screen (MarketerShell with earnings tab)
+          navigatorKey.currentState?.pushNamed(
+            '/earnings',
+            arguments: {'tab': 'earnings'},
+          );
+        } catch (e, stack) {
+          await CrashReportingService().recordError(
+            e,
+            stack,
+            context: {'targetScreen': targetScreen, 'type': type, 'commissionId': commissionId, 'payoutRequestId': payoutRequestId},
+          );
+          _fallbackToNotifications();
+        }
         break;
 
       default:
