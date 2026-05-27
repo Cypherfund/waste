@@ -79,6 +79,7 @@ import 'providers/app_update_provider.dart';
 import 'screens/update/force_update_screen.dart';
 import 'widgets/optional_update_dialog.dart';
 import 'services/fcm_service.dart';
+import 'core/services/notification_navigation_service.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -145,6 +146,7 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
   late final AppUpdateApi _appUpdateApi;
   late final AppUpdateProvider _appUpdateProvider;
   late final FcmService _fcmService;
+  late final NotificationNavigationService _notificationNavigationService;
 
   @override
   void initState() {
@@ -179,6 +181,11 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
     _wsService = WebSocketService();
     _locationService = LocationTrackingService(wsService: _wsService);
     _queueService = OfflineQueueService();
+
+    _notificationNavigationService = NotificationNavigationService(
+      navigatorKey: appNavigatorKey,
+      isAuthenticated: () => _authProvider.user != null,
+    );
 
     _syncService = SyncService(
       queueService: _queueService,
@@ -228,6 +235,9 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
     // Restore session immediately before UI builds
     _authProvider.tryRestoreSession();
 
+    // Handle notification taps when app was killed
+    _checkInitialMessage();
+
     // Check if there's a pending referral token from a deep link
     // If so, logout and show onboarding
     if (_deepLinkService.pendingReferralToken != null) {
@@ -263,6 +273,9 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
             ? 'MARKETER'
             : 'HOUSEHOLD';
     _appUpdateProvider.updateAppType(appType);
+
+    // Process pending notification navigation after login
+    _notificationNavigationService.processPendingAfterLogin();
   }
 
   void _onAuthChangedFcm() {
@@ -272,9 +285,54 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
         final type = message.data['type'];
         if (type == 'APP_UPDATE_AVAILABLE') {
           _appUpdateProvider.handlePushData(message.data);
+          return;
         }
+
+        // Show in-app banner for other notification types
+        _showNotificationBanner(message);
       },
     );
+
+    // Handle notification taps when app is in background
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      _notificationNavigationService.handleNotificationTap(message.data);
+    });
+  }
+
+  void _showNotificationBanner(RemoteMessage message) {
+    final title = message.notification?.title ?? message.data['title'] ?? 'Notification';
+    final body = message.notification?.body ?? message.data['body'] ?? '';
+
+    final snackBar = SnackBar(
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text(body),
+        ],
+      ),
+      action: SnackBarAction(
+        label: 'View',
+        onPressed: () {
+          _notificationNavigationService.handleNotificationTap(message.data);
+        },
+      ),
+      duration: const Duration(seconds: 5),
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+  }
+
+  Future<void> _checkInitialMessage() async {
+    final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+    if (initialMessage != null) {
+      // Delay slightly to allow auth state to settle
+      Future.delayed(const Duration(milliseconds: 500), () {
+        _notificationNavigationService.handleNotificationTap(initialMessage.data);
+      });
+    }
   }
 
   @override
@@ -405,6 +463,7 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
           '/top-up': (context) => const TopUpWalletScreen(),
           // Marketer routes
           '/marketer-home': (context) => const MarketerShell(),
+          '/earnings': (context) => const MarketerShell(),
           // Collector routes
           '/collector-home': (context) => const CollectorShell(),
           '/collector-jobs': (context) => const CollectorShell(),
