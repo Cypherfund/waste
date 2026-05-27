@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsWhere, Between, MoreThanOrEqual, LessThanOrEqual, In } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { UsersService } from '../users/users.service';
 import { JobsService } from '../jobs/jobs.service';
 import { AssignmentService } from '../assignment/assignment.service';
@@ -28,6 +29,7 @@ import { JobStatus } from '../common/enums/job-status.enum';
 import { PaymentStatus } from '../common/enums/payment-status.enum';
 import { UserRole } from '../common/enums/role.enum';
 import { EarningStatus } from '../common/enums/earning-status.enum';
+import { PaymentEvents, PaymentVerifiedPayload, PaymentRejectedPayload } from '../events/events.types';
 import { DisputeStatus } from '../common/enums/dispute-status.enum';
 import { FraudFlagStatus } from '../common/enums/fraud-type.enum';
 import { FraudSeverity } from '../common/enums/fraud-severity.enum';
@@ -46,6 +48,7 @@ export class AdminService {
     private readonly fraudService: FraudService,
     private readonly systemConfigService: SystemConfigService,
     private readonly featureFlagService: FeatureFlagService,
+    private readonly eventEmitter: EventEmitter2,
     @InjectRepository(Job)
     private readonly jobRepo: Repository<Job>,
     @InjectRepository(Dispute)
@@ -344,6 +347,16 @@ export class AdminService {
     // Trigger job assignment since it's now verified
     this.assignmentService.autoAssign(jobId);
 
+    // Emit payment verified event for notification
+    const payload: PaymentVerifiedPayload = {
+      userId: job.householdId,
+      jobId: job.id,
+      amount: job.quotedPrice ? Number(job.quotedPrice) : undefined,
+      paymentMethod: job.paymentMethod ?? undefined,
+      timestamp: new Date(),
+    };
+    this.eventEmitter.emit(PaymentEvents.VERIFIED, payload);
+
     return await this.jobsService.toResponseDto(saved);
   }
 
@@ -370,6 +383,15 @@ export class AdminService {
 
     const saved = await this.jobRepo.save(job);
     this.logger.log(`Admin ${adminId} rejected payment for job ${jobId}: ${reason}`);
+
+    // Emit payment rejected event for notification
+    const payload: PaymentRejectedPayload = {
+      userId: job.householdId,
+      jobId: job.id,
+      reason: reason ?? 'Payment verification failed',
+      timestamp: new Date(),
+    };
+    this.eventEmitter.emit(PaymentEvents.REJECTED, payload);
 
     return await this.jobsService.toResponseDto(saved);
   }

@@ -8,7 +8,7 @@ import { FeatureFlagService } from '../config/feature-flags';
 import { UsersService } from '../users/users.service';
 import { NotificationChannel, NotificationStatus } from '../common/enums/notification-channel.enum';
 import { NotificationType } from '../common/enums/notification-type.enum';
-import { JobEvents } from '../events/events.types';
+import { JobEvents, PaymentEvents, SubscriptionEvents, DisputeEvents, CommissionEvents, PayoutEvents } from '../events/events.types';
 import { JobStatus } from '../common/enums/job-status.enum';
 
 // ─── Helpers ────────────────────────────────────────────────────
@@ -426,6 +426,164 @@ describe('NotificationsService', () => {
         'admin-2',
         NotificationType.ASSIGNMENT_ESCALATED,
         expect.objectContaining({ attempts: 3 }),
+      );
+    });
+
+    // ─── New Event Listeners (payment, subscription, dispute, marketer) ───
+
+    it('onPaymentVerified should notify household', async () => {
+      await service.onPaymentVerified({
+        userId: 'hh-1',
+        jobId: 'job-1',
+        amount: 1000,
+        paymentMethod: 'OM',
+        timestamp: new Date(),
+      });
+
+      expect(service.createAndDispatch).toHaveBeenCalledWith(
+        'hh-1',
+        NotificationType.PAYMENT_VERIFIED,
+        expect.objectContaining({ jobId: 'job-1', amount: 1000 }),
+      );
+    });
+
+    it('onPaymentRejected should notify household', async () => {
+      await service.onPaymentRejected({
+        userId: 'hh-1',
+        jobId: 'job-1',
+        reason: 'Invalid receipt',
+        timestamp: new Date(),
+      });
+
+      expect(service.createAndDispatch).toHaveBeenCalledWith(
+        'hh-1',
+        NotificationType.PAYMENT_REJECTED,
+        expect.objectContaining({ jobId: 'job-1', reason: 'Invalid receipt' }),
+      );
+    });
+
+    it('onPaymentFailed should notify household', async () => {
+      await service.onPaymentFailed({
+        userId: 'hh-1',
+        jobId: 'job-1',
+        reason: 'Payment gateway error',
+        timestamp: new Date(),
+      });
+
+      expect(service.createAndDispatch).toHaveBeenCalledWith(
+        'hh-1',
+        NotificationType.PAYMENT_FAILED,
+        expect.objectContaining({ jobId: 'job-1', reason: 'Payment gateway error' }),
+      );
+    });
+
+    it('onSubscriptionPaid should notify household', async () => {
+      await service.onSubscriptionPaid({
+        userId: 'hh-1',
+        subscriptionId: 'sub-1',
+        planId: 'plan-1',
+        planName: 'Weekly',
+        amount: 5000,
+        timestamp: new Date(),
+      });
+
+      expect(service.createAndDispatch).toHaveBeenCalledWith(
+        'hh-1',
+        NotificationType.SUBSCRIPTION_ACTIVATED,
+        expect.objectContaining({ subscriptionId: 'sub-1', planName: 'Weekly' }),
+      );
+    });
+
+    it('onJobDisputed should notify both household and collector', async () => {
+      await service.onJobDisputed({
+        jobId: 'job-1',
+        householdId: 'hh-1',
+        collectorId: 'col-1',
+        status: JobStatus.DISPUTED,
+        timestamp: new Date(),
+      });
+
+      expect(service.createAndDispatch).toHaveBeenCalledTimes(2);
+      expect(service.createAndDispatch).toHaveBeenCalledWith(
+        'hh-1',
+        NotificationType.JOB_DISPUTED,
+        expect.objectContaining({ jobId: 'job-1' }),
+      );
+      expect(service.createAndDispatch).toHaveBeenCalledWith(
+        'col-1',
+        NotificationType.JOB_DISPUTED,
+        expect.objectContaining({ jobId: 'job-1' }),
+      );
+    });
+
+    it('onDisputeResolved should notify both household and collector', async () => {
+      await service.onDisputeResolved({
+        disputeId: 'dispute-1',
+        jobId: 'job-1',
+        householdId: 'hh-1',
+        collectorId: 'col-1',
+        resolution: 'Resolved in favor of household',
+        resolvedBy: 'admin-1',
+        timestamp: new Date(),
+      });
+
+      expect(service.createAndDispatch).toHaveBeenCalledTimes(2);
+      expect(service.createAndDispatch).toHaveBeenCalledWith(
+        'hh-1',
+        NotificationType.DISPUTE_RESOLVED,
+        expect.objectContaining({ jobId: 'job-1', disputeId: 'dispute-1' }),
+      );
+      expect(service.createAndDispatch).toHaveBeenCalledWith(
+        'col-1',
+        NotificationType.DISPUTE_RESOLVED,
+        expect.objectContaining({ jobId: 'job-1', disputeId: 'dispute-1' }),
+      );
+    });
+
+    it('onCommissionEarned should notify marketer', async () => {
+      await service.onCommissionEarned({
+        marketerUserId: 'marketer-1',
+        commissionId: 'comm-1',
+        amount: 500,
+        reason: 'First successful household pickup',
+        timestamp: new Date(),
+      });
+
+      expect(service.createAndDispatch).toHaveBeenCalledWith(
+        'marketer-1',
+        NotificationType.COMMISSION_EARNED,
+        expect.objectContaining({ commissionId: 'comm-1', amount: 500 }),
+      );
+    });
+
+    it('onPayoutApproved should notify marketer', async () => {
+      await service.onPayoutApproved({
+        marketerUserId: 'marketer-1',
+        payoutRequestId: 'payout-1',
+        amount: 10000,
+        timestamp: new Date(),
+      });
+
+      expect(service.createAndDispatch).toHaveBeenCalledWith(
+        'marketer-1',
+        NotificationType.PAYOUT_APPROVED,
+        expect.objectContaining({ payoutRequestId: 'payout-1', amount: 10000 }),
+      );
+    });
+
+    it('onPayoutRejected should notify marketer', async () => {
+      await service.onPayoutRejected({
+        marketerUserId: 'marketer-1',
+        payoutRequestId: 'payout-1',
+        amount: 10000,
+        reason: 'Invalid bank details',
+        timestamp: new Date(),
+      });
+
+      expect(service.createAndDispatch).toHaveBeenCalledWith(
+        'marketer-1',
+        NotificationType.PAYOUT_REJECTED,
+        expect.objectContaining({ payoutRequestId: 'payout-1', amount: 10000, reason: 'Invalid bank details' }),
       );
     });
   });

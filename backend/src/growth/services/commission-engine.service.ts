@@ -2,13 +2,14 @@ import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Lead, LeadStatus, CommissionTransaction, CommissionStatus, TriggerType, MarketerProfile } from '../entities';
 import { CommissionService } from './commission.service';
 import { LeadService } from './lead.service';
 import { MarketerNotificationService } from './marketer-notification.service';
 import { Job } from '../../jobs/entities/job.entity';
 import { PaymentStatus } from '../../common/enums/payment-status.enum';
-import { JobEventPayload, JobEvents, SubscriptionPaidPayload, SubscriptionEvents } from '../../events/events.types';
+import { JobEventPayload, JobEvents, SubscriptionPaidPayload, SubscriptionEvents, CommissionEvents, CommissionEarnedPayload } from '../../events/events.types';
 import { QualificationReason } from './lead.service';
 
 @Injectable()
@@ -27,6 +28,7 @@ export class CommissionEngineService {
     private readonly commissionService: CommissionService,
     private readonly leadService: LeadService,
     private readonly notificationService: MarketerNotificationService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   @OnEvent(JobEvents.VALIDATED)
@@ -137,6 +139,16 @@ export class CommissionEngineService {
     const updatedProfile = await this.profileRepo.save(profile);
 
     this.logger.log(`Created commission ${saved.id} for ${amount} XAF, profile pendingAmount now: ${updatedProfile.pendingAmount}`);
+
+    // Emit commission earned event for notification
+    const commissionPayload: CommissionEarnedPayload = {
+      marketerUserId: lead.marketerId,
+      commissionId: saved.id,
+      amount,
+      reason: 'First successful household pickup',
+      timestamp: new Date(),
+    };
+    this.eventEmitter.emit(CommissionEvents.EARNED, commissionPayload);
   }
 
   @OnEvent(JobEvents.COMPLETED)

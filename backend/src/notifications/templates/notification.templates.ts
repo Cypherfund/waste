@@ -91,6 +91,51 @@ const templates: Record<string, TemplateFactory> = {
     title: 'Account Deactivated',
     body: `Your account has been deactivated${ctx.reason ? `: ${ctx.reason}` : '. Contact support for assistance.'}.`,
   }),
+
+  [NotificationType.PAYMENT_VERIFIED]: (ctx) => ({
+    title: 'Payment Verified',
+    body: `Your payment${ctx.amount ? ` of ${ctx.amount} XAF` : ''} has been verified. Your job${ctx.jobId ? ` #${ctx.jobId.slice(0, 8)}` : ''} is now being assigned.`,
+  }),
+
+  [NotificationType.PAYMENT_REJECTED]: (ctx) => ({
+    title: 'Payment Rejected',
+    body: `Your payment was rejected${ctx.reason ? `: ${ctx.reason}` : ''}. Please resubmit payment for job${ctx.jobId ? ` #${ctx.jobId.slice(0, 8)}` : ''}.`,
+  }),
+
+  [NotificationType.PAYMENT_FAILED]: (ctx) => ({
+    title: 'Payment Failed',
+    body: `Your payment could not be processed${ctx.reason ? `: ${ctx.reason}` : ''}. Please try again or use a different payment method.`,
+  }),
+
+  [NotificationType.SUBSCRIPTION_ACTIVATED]: (ctx) => ({
+    title: 'Subscription Activated',
+    body: `Your ${ctx.planName || 'subscription'} is now active. You can start scheduling pickups.`,
+  }),
+
+  [NotificationType.JOB_DISPUTED]: (ctx) => ({
+    title: 'Job Disputed',
+    body: `A dispute has been raised for job${ctx.jobId ? ` #${ctx.jobId.slice(0, 8)}` : ''}. Admin will review shortly.`,
+  }),
+
+  [NotificationType.DISPUTE_RESOLVED]: (ctx) => ({
+    title: 'Dispute Resolved',
+    body: `The dispute for job${ctx.jobId ? ` #${ctx.jobId.slice(0, 8)}` : ''} has been resolved${ctx.resolution ? `: ${ctx.resolution}` : ''}.`,
+  }),
+
+  [NotificationType.COMMISSION_EARNED]: (ctx) => ({
+    title: 'Commission Earned',
+    body: `You earned ${ctx.amount} XAF commission${ctx.reason ? ` for ${ctx.reason}` : ''}.`,
+  }),
+
+  [NotificationType.PAYOUT_APPROVED]: (ctx) => ({
+    title: 'Payout Approved',
+    body: `Your payout request for ${ctx.amount} XAF has been approved and will be processed shortly.`,
+  }),
+
+  [NotificationType.PAYOUT_REJECTED]: (ctx) => ({
+    title: 'Payout Rejected',
+    body: `Your payout request for ${ctx.amount} XAF was rejected${ctx.reason ? `: ${ctx.reason}` : ''}.`,
+  }),
 };
 
 /**
@@ -119,4 +164,8 @@ export const CRITICAL_NOTIFICATION_TYPES = new Set<string>([
   NotificationType.JOB_CANCELLED,
   NotificationType.ASSIGNMENT_TIMEOUT,
   NotificationType.ASSIGNMENT_ESCALATED,
+  NotificationType.PAYMENT_VERIFIED,
+  NotificationType.PAYMENT_REJECTED,
+  NotificationType.PAYMENT_FAILED,
+  NotificationType.SUBSCRIPTION_ACTIVATED,
 ]);
