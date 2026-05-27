@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../providers/subscription_provider.dart';
+import '../../../../providers/job_provider.dart';
 import '../../providers/payment_flow_provider.dart';
 import '../../providers/payment_flow_enums.dart';
 import '../widgets/payment_method_card.dart';
@@ -287,10 +288,44 @@ class _IntegratedPaymentScreenState extends State<IntegratedPaymentScreen> {
         return;
       }
 
-      // ── Job integrated payment branch (existing) ─────────────────
-      await Future.delayed(const Duration(seconds: 2));
+      // ── Job integrated payment branch ────────────────────────────
+      final jobProvider = context.read<JobProvider>();
+
+      final job = await jobProvider.createJob(
+        scheduledDate: flowProvider.scheduledDate!,
+        scheduledTime: flowProvider.scheduledTime!,
+        locationAddress: flowProvider.fullAddress,
+        locationLat: flowProvider.locationLat,
+        locationLng: flowProvider.locationLng,
+        notes: 'Integrated payment: ${flowProvider.selectedProviderName}',
+        paymentMode: 'INTEGRATED_PROVIDER',
+        paymentMethod: flowProvider.selectedPaymentMethodCode,
+      );
+
       if (!mounted) return;
-      Navigator.pushNamed(context, '/payment-processing');
+
+      if (job == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(jobProvider.error ?? 'Failed to create booking'),
+            backgroundColor: Colors.red.shade600,
+          ),
+        );
+        return;
+      }
+
+      flowProvider.setCreatedJob(job);
+      flowProvider.setResultType(PaymentResultType.submitted);
+
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/payment-result',
+        (route) => route.settings.name == '/home',
+        arguments: {
+          'resultType': PaymentResultType.submitted,
+          'job': job,
+        },
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

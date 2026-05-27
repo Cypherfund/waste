@@ -84,6 +84,7 @@ class PaymentProvider {
   final bool supportsCashout;
   final double? minWithdrawal;
   final double? maxWithdrawal;
+  final String? imageUrl;
 
   PaymentProvider({
     required this.paymentCode,
@@ -98,6 +99,7 @@ class PaymentProvider {
     this.supportsCashout = false,
     this.minWithdrawal,
     this.maxWithdrawal,
+    this.imageUrl,
   });
 
   factory PaymentProvider.fromJson(Map<String, dynamic> j) => PaymentProvider(
@@ -113,6 +115,7 @@ class PaymentProvider {
         supportsCashout: j['supportsCashout'] as bool? ?? false,
         minWithdrawal: (j['minWithdrawal'] as num?)?.toDouble(),
         maxWithdrawal: (j['maxWithdrawal'] as num?)?.toDouble(),
+        imageUrl: j['imageUrl'] as String?,
       );
 
   bool get hasManualPaymentDetails =>

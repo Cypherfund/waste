@@ -105,6 +105,7 @@ class _PaymentProcessingScreenState extends State<PaymentProcessingScreen> {
       arguments: {
         'resultType': PaymentResultType.success,
         'isSubscription': isSubscription,
+        if (!isSubscription) 'job': flowProvider.createdJob,
       },
     );
   }
@@ -119,6 +120,7 @@ class _PaymentProcessingScreenState extends State<PaymentProcessingScreen> {
         'resultType': PaymentResultType.failed,
         'isSubscription': isSubscription,
         'failureReason': error,
+        if (!isSubscription) 'job': flowProvider.createdJob,
       },
     );
   }
@@ -133,6 +135,7 @@ class _PaymentProcessingScreenState extends State<PaymentProcessingScreen> {
         'resultType': PaymentResultType.failed,
         'isSubscription': isSubscription,
         'failureReason': 'Payment timed out. Please try again.',
+        if (!isSubscription) 'job': flowProvider.createdJob,
       },
     );
   }

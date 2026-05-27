@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import '../../../config/app_theme.dart';
 import '../../../providers/user_payment_methods_provider.dart';
@@ -37,7 +38,6 @@ class _PaymentMethodsSetupScreenState extends State<PaymentMethodsSetupScreen> {
     if (_mode == PaymentMethodMode.cashin) {
       await context.read<SubscriptionProvider>().loadPricingQuote();
     } else {
-      // Load payout config for cashout providers
       await context.read<CollectorEarningsProvider>().loadWallet();
     }
   }
@@ -49,7 +49,6 @@ class _PaymentMethodsSetupScreenState extends State<PaymentMethodsSetupScreen> {
       if (appConfig == null) return [];
       return appConfig.cashinProviders;
     } else {
-      // For cashout, get from payout config cashoutProviders (from payment_provider table)
       final earningsProvider = context.read<CollectorEarningsProvider>();
       final payoutConfig = earningsProvider.payoutConfig;
       if (payoutConfig == null) return [];
@@ -70,26 +69,20 @@ class _PaymentMethodsSetupScreenState extends State<PaymentMethodsSetupScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
+        surfaceTintColor: Colors.white,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.black, size: 16),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           title,
           style: const TextStyle(
             color: Colors.black,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
           ),
         ),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add, color: Colors.black),
-            tooltip: 'Add method',
-            onPressed: () => _showEditBottomSheet(null),
-          ),
-        ],
       ),
       body: Consumer<UserPaymentMethodsProvider>(
         builder: (context, provider, _) {
@@ -106,113 +99,126 @@ class _PaymentMethodsSetupScreenState extends State<PaymentMethodsSetupScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('Error: ${provider.error}'),
+                  Text(provider.error!),
                   const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: _loadData,
-                    child: const Text('Retry'),
-                  ),
+                  ElevatedButton(onPressed: _loadData, child: const Text('Retry')),
                 ],
               ),
             );
           }
 
-          // For cashout, we need to show providers from payout config
-          // For now, show saved methods grouped by provider
+          final allProviders = _getProviders();
           final groupedMethods = <String, List<UserPaymentMethod>>{};
           for (final method in methods) {
             groupedMethods.putIfAbsent(method.paymentCode.toLowerCase(), () => []).add(method);
           }
 
-          if (groupedMethods.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.account_balance_wallet_outlined,
-                    size: 64,
-                    color: Colors.grey.shade400,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No payment methods configured',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Add a payment method to get started',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade500,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: () => _showEditBottomSheet(null),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add Payment Method'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return ListView.builder(
+          return ListView(
             padding: const EdgeInsets.all(20),
-            itemCount: groupedMethods.length,
-            itemBuilder: (context, index) {
-              final paymentCode = groupedMethods.keys.elementAt(index);
-              final providerMethods = groupedMethods[paymentCode]!;
-              final firstMethod = providerMethods.first;
+            children: [
+              // ── Saved methods ──────────────────────────────────────
+              if (groupedMethods.isNotEmpty) ...[
+                Text(
+                  'Saved Methods',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.grey.shade600,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ...groupedMethods.entries.map((entry) {
+                  final providerObj = allProviders
+                      .where((p) => p.paymentCode.toLowerCase() == entry.key)
+                      .firstOrNull;
+                  return _buildMethodCard(entry.value.first, providerObj);
+                }),
+                const SizedBox(height: 24),
+              ],
 
-              return _buildMethodCard(firstMethod, providerMethods.length);
-            },
+              // ── Available providers to add ─────────────────────────
+              if (allProviders.isNotEmpty) ...[
+                Text(
+                  'Add a Payment Method',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.grey.shade600,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ...allProviders.map((p) => _buildProviderTile(p)),
+              ],
+
+              if (allProviders.isEmpty && groupedMethods.isEmpty)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 80),
+                    child: Column(
+                      children: [
+                        Icon(Icons.account_balance_wallet_outlined, size: 64, color: Colors.grey.shade400),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No payment providers available',
+                          style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
           );
         },
       ),
     );
   }
 
-  Widget _buildMethodCard(UserPaymentMethod method, int count) {
+  Widget _buildProviderTile(PaymentProvider provider) {
+    return GestureDetector(
+      onTap: () => _showEditBottomSheet(null, preselectedCode: provider.paymentCode),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Row(
+          children: [
+            _buildProviderLogo(provider.imageUrl, size: 40),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                provider.providerName,
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87),
+              ),
+            ),
+            Icon(Icons.add_circle_outline_rounded, color: AppColors.primary, size: 22),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMethodCard(UserPaymentMethod method, PaymentProvider? provider) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 3)),
         ],
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.primaryLight.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              Icons.phone_android,
-              color: AppColors.primary,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 16),
+          _buildProviderLogo(provider?.imageUrl, size: 44),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -223,11 +229,7 @@ class _PaymentMethodsSetupScreenState extends State<PaymentMethodsSetupScreen> {
                       child: Text(
                         method.providerName,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87),
                       ),
                     ),
                     if (method.isDefault) ...[
@@ -240,43 +242,25 @@ class _PaymentMethodsSetupScreenState extends State<PaymentMethodsSetupScreen> {
                         ),
                         child: Text(
                           'Default',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: TextStyle(fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.w600),
                         ),
                       ),
                     ],
                   ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  method.maskedAccountNumber,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-                if (method.accountName != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    method.accountName!,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey.shade500,
-                    ),
-                  ),
-                ],
+                const SizedBox(height: 3),
+                Text(method.maskedAccountNumber, style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+                if (method.accountName != null)
+                  Text(method.accountName!, style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
               ],
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.edit_outlined),
+            icon: const Icon(Icons.edit_outlined, size: 20),
             onPressed: () => _showEditBottomSheet(method),
           ),
           IconButton(
-            icon: const Icon(Icons.delete_outline),
+            icon: const Icon(Icons.delete_outline, size: 20),
             color: Colors.red,
             onPressed: () => _showDeleteDialog(method),
           ),
@@ -285,178 +269,206 @@ class _PaymentMethodsSetupScreenState extends State<PaymentMethodsSetupScreen> {
     );
   }
 
-  void _showEditBottomSheet(UserPaymentMethod? method) {
+  Widget _buildProviderLogo(String? imageUrl, {double size = 40}) {
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: CachedNetworkImage(
+          imageUrl: imageUrl,
+          width: size,
+          height: size,
+          fit: BoxFit.contain,
+          placeholder: (_, __) => _logoPlaceholder(size),
+          errorWidget: (_, __, ___) => _logoPlaceholder(size),
+        ),
+      );
+    }
+    return _logoPlaceholder(size);
+  }
+
+  Widget _logoPlaceholder(double size) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: AppColors.primaryLight.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Icon(Icons.phone_android, color: AppColors.primary, size: size * 0.55),
+    );
+  }
+
+  void _showEditBottomSheet(UserPaymentMethod? method, {String? preselectedCode}) {
     final accountNumberController = TextEditingController(text: method?.accountNumber ?? '');
     final accountNameController = TextEditingController(text: method?.accountName ?? '');
     bool isDefault = method?.isDefault ?? false;
-    String? selectedPaymentCode = method?.paymentCode;
-    // providers are read inside the builder so they update if appConfig loads while sheet is open
+    String? selectedPaymentCode = method?.paymentCode ?? preselectedCode;
+    bool isSaving = false;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setSheetState) {
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) {
           final providers = _getProviders();
           return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  method == null ? 'Add Payment Method' : 'Edit Payment Method',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
+            padding: EdgeInsets.only(bottom: MediaQuery.of(sheetContext).viewInsets.bottom),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Handle bar
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                if (method == null) ...[
-                  if (providers.isEmpty)
-                    Consumer<SubscriptionProvider>(
-                      builder: (context, sub, _) {
-                        if (sub.isPricingLoading) {
-                          return const Padding(
-                            padding: EdgeInsets.only(bottom: 16),
-                            child: Row(
-                              children: [
-                                SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                ),
-                                SizedBox(width: 10),
-                                Text('Loading payment providers...'),
-                              ],
-                            ),
-                          );
-                        }
-                        return const Padding(
-                          padding: EdgeInsets.only(bottom: 16),
-                          child: Text(
-                            'No payment providers available. Please try again later.',
-                            style: TextStyle(color: Colors.red, fontSize: 13),
-                          ),
-                        );
-                      },
-                    )
-                  else ...[
+                  Text(
+                    method == null ? 'Add Payment Method' : 'Edit Payment Method',
+                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Provider selector (only when adding new and not preselected)
+                  if (method == null && preselectedCode == null && providers.isNotEmpty) ...[
                     DropdownButtonFormField<String>(
                       value: selectedPaymentCode,
-                      decoration: const InputDecoration(
-                        labelText: 'Payment Provider',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: providers.map((provider) {
-                        return DropdownMenuItem<String>(
-                          value: provider.paymentCode,
-                          child: Text(provider.providerName),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setSheetState(() => selectedPaymentCode = value);
-                      },
+                      decoration: const InputDecoration(labelText: 'Payment Provider', border: OutlineInputBorder()),
+                      items: providers.map((p) => DropdownMenuItem(value: p.paymentCode, child: Text(p.providerName))).toList(),
+                      onChanged: (value) => setSheetState(() => selectedPaymentCode = value),
                     ),
                     const SizedBox(height: 16),
                   ],
-                ],
-                TextField(
-                  controller: accountNumberController,
-                  decoration: const InputDecoration(
-                    labelText: 'Account Number',
-                    hintText: '+237 6XX XXX XXX',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.phone,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: accountNameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Account Name (optional)',
-                    hintText: 'John Doe',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                SwitchListTile(
-                  title: const Text('Set as default'),
-                  value: isDefault,
-                  onChanged: (value) {
-                    setSheetState(() => isDefault = value);
-                  },
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Cancel'),
-                      ),
+
+                  // Show selected provider name when preselected
+                  if (preselectedCode != null && method == null) ...[
+                    Row(
+                      children: [
+                        _buildProviderLogo(
+                          providers.where((p) => p.paymentCode == preselectedCode).firstOrNull?.imageUrl,
+                          size: 32,
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          providers.where((p) => p.paymentCode == preselectedCode).firstOrNull?.providerName ?? preselectedCode,
+                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          if (method == null && selectedPaymentCode == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Please select a payment provider')),
-                            );
-                            return;
-                          }
-                          final scaffoldMessenger = ScaffoldMessenger.of(context);
-                          Navigator.pop(context);
-                          try {
-                            if (method == null) {
-                              // Add new method
-                              await context.read<UserPaymentMethodsProvider>().addMethod(
-                                paymentCode: selectedPaymentCode!,
-                                accountNumber: accountNumberController.text,
-                                accountName: accountNumberController.text.isEmpty ? null : accountNameController.text,
-                                isDefault: isDefault,
-                              );
-                            } else {
-                              // Update existing
-                              await context.read<UserPaymentMethodsProvider>().updateMethod(
-                                method.id,
-                                accountNumber: accountNumberController.text.isEmpty ? null : accountNumberController.text,
-                                accountName: accountNumberController.text.isEmpty ? null : accountNumberController.text,
-                              );
-                              if (isDefault) {
-                                await context.read<UserPaymentMethodsProvider>().setDefault(
-                                  method.id,
-                                  _mode == PaymentMethodMode.cashin ? 'CASHIN' : 'CASHOUT',
-                                );
-                              }
-                            }
-                            if (mounted) {
-                              scaffoldMessenger.showSnackBar(
-                                const SnackBar(content: Text('Payment method saved')),
-                              );
-                            }
-                          } catch (e) {
-                            if (mounted) {
-                              scaffoldMessenger.showSnackBar(
-                                SnackBar(content: Text('Error: $e')),
-                              );
-                            }
-                          }
-                        },
-                        child: const Text('Save'),
-                      ),
-                    ),
+                    const SizedBox(height: 16),
                   ],
-                ),
-              ],
+
+                  TextField(
+                    controller: accountNumberController,
+                    decoration: const InputDecoration(
+                      labelText: 'Account Number',
+                      hintText: '+237 6XX XXX XXX',
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.phone,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: accountNameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Account Name (optional)',
+                      hintText: 'John Doe',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Set as default'),
+                    value: isDefault,
+                    onChanged: (value) => setSheetState(() => isDefault = value),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: isSaving ? null : () => Navigator.pop(sheetContext),
+                          child: const Text('Cancel'),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: isSaving
+                              ? null
+                              : () async {
+                                  if (method == null && selectedPaymentCode == null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Please select a payment provider')),
+                                    );
+                                    return;
+                                  }
+                                  setSheetState(() => isSaving = true);
+                                  try {
+                                    if (method == null) {
+                                      await context.read<UserPaymentMethodsProvider>().addMethod(
+                                        paymentCode: selectedPaymentCode!,
+                                        accountNumber: accountNumberController.text,
+                                        accountName: accountNameController.text.isEmpty ? null : accountNameController.text,
+                                        isDefault: isDefault,
+                                      );
+                                    } else {
+                                      await context.read<UserPaymentMethodsProvider>().updateMethod(
+                                        method.id,
+                                        accountNumber: accountNumberController.text.isEmpty ? null : accountNumberController.text,
+                                        accountName: accountNameController.text.isEmpty ? null : accountNameController.text,
+                                      );
+                                      if (isDefault) {
+                                        await context.read<UserPaymentMethodsProvider>().setDefault(
+                                          method.id,
+                                          _mode == PaymentMethodMode.cashin ? 'CASHIN' : 'CASHOUT',
+                                        );
+                                      }
+                                    }
+                                    if (mounted) Navigator.pop(sheetContext);
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Payment method saved')),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    setSheetState(() => isSaving = false);
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Failed to save. Please try again.')),
+                                      );
+                                    }
+                                  }
+                                },
+                          child: isSaving
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Text('Save'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        );
+          );
         },
       ),
     );
@@ -486,7 +498,7 @@ class _PaymentMethodsSetupScreenState extends State<PaymentMethodsSetupScreen> {
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: $e')),
+                    const SnackBar(content: Text('Failed to delete. Please try again.')),
                   );
                 }
               }

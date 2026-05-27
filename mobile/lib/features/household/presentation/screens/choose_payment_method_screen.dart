@@ -194,9 +194,16 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
     return Column(
       children: cashinMethods.map((method) {
         final isSelected = flowProvider.selectedProviderId == method.id;
-        
-        // Determine mode based on appConfig
-        final mode = appConfig?.paymentIntegrationEnabled == true
+
+        // Match against the provider config to get per-provider flags
+        final providerConfig = appConfig?.cashinProviders
+            .where((p) => p.paymentCode.toUpperCase() == method.paymentCode.toUpperCase())
+            .firstOrNull;
+
+        // Use per-provider integrationEnabled; fall back to global flag only if no provider config found
+        final integrationOn = providerConfig?.integrationEnabled
+            ?? (appConfig?.paymentIntegrationEnabled == true);
+        final mode = integrationOn
             ? PaymentProviderMode.integrated
             : PaymentProviderMode.manual;
 

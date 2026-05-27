@@ -102,6 +102,7 @@ export class WalletService {
         manualProofRequired: p.manualProofRequired,
         supportsCashin: p.supportsCashin,
         supportsCashout: p.supportsCashout,
+        imageUrl: p.imageUrl,
       })),
       minAdvanceHours,
       maxAdvanceDays,
@@ -183,6 +184,7 @@ export class WalletService {
         supportsCashout: p.supportsCashout,
         minWithdrawal: p.minWithdrawal !== null ? Number(p.minWithdrawal) : null,
         maxWithdrawal: p.maxWithdrawal !== null ? Number(p.maxWithdrawal) : null,
+        imageUrl: p.imageUrl,
       })),
     };
   }
