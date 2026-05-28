@@ -82,54 +82,91 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
                 builder: (context, flowProvider, subProvider, userPaymentProvider, _) {
                   final amount = flowProvider.amountDue;
                   final appConfig = subProvider.appConfig;
+                  final hasSelectedMethod = flowProvider.selectedProviderId != null;
 
-                  return SingleChildScrollView(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Amount card
-                        _buildAmountCard(amount),
-                        const SizedBox(height: 24),
+                  return Column(
+                    children: [
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Amount card
+                              _buildAmountCard(amount),
+                              const SizedBox(height: 24),
 
-                        // Payment methods
-                        Text(
-                          'Select Payment Method',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.grey.shade800,
+                              // Payment methods
+                              Text(
+                                'Select Payment Method',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.grey.shade800,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+
+                              // Provider methods (MTN/Orange)
+                              if (userPaymentProvider.loading)
+                                const Center(child: CircularProgressIndicator())
+                              else if (userPaymentProvider.error != null)
+                                _buildErrorState(userPaymentProvider.error!)
+                              else
+                                _buildPaymentMethods(userPaymentProvider, flowProvider, appConfig),
+
+                              const SizedBox(height: 24),
+
+                              // Cash option (hidden for subscription context)
+                              if ((appConfig?.cashEnabled ?? false) &&
+                                  !_hideCash &&
+                                  !flowProvider.isSubscriptionContext) ...[
+                                Text(
+                                  'Or pay with',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.grey.shade800,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                _buildCashOption(flowProvider),
+                              ],
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 16),
-
-                        // Provider methods (MTN/Orange)
-                        if (userPaymentProvider.loading)
-                          const Center(child: CircularProgressIndicator())
-                        else if (userPaymentProvider.error != null)
-                          _buildErrorState(userPaymentProvider.error!)
-                        else
-                          _buildPaymentMethods(userPaymentProvider, flowProvider, appConfig),
-
-                        const SizedBox(height: 24),
-
-                        // Cash option (hidden for subscription context)
-                        if ((appConfig?.cashEnabled ?? false) &&
-                            !_hideCash &&
-                            !flowProvider.isSubscriptionContext) ...[
-                          Text(
-                            'Or pay with',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.grey.shade800,
+                      ),
+                      // Continue button
+                      if (hasSelectedMethod)
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            border: Border(top: BorderSide(color: Color(0xFFE5E7EB))),
+                          ),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: () => _navigateToPaymentScreen(flowProvider.selectedProviderMode),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF10B981),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: const Text(
+                                'Continue',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 12),
-                          _buildCashOption(flowProvider),
-                        ],
-                      ],
-                    ),
+                        ),
+                    ],
                   );
                 },
               ),
@@ -222,7 +259,6 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
                 mode: mode,
                 paymentMethodCode: method.paymentCode,
               );
-              _navigateToPaymentScreen(mode);
             },
           ),
         );

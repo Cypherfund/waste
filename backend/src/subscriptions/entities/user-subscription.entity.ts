@@ -58,8 +58,8 @@ export class UserSubscription {
   @Column({ type: 'varchar', length: 50, nullable: true, name: 'payment_mode' })
   paymentMode: string | null;
 
-  @Column({ type: 'enum', enum: PaymentStatus, nullable: true, name: 'payment_status' })
-  paymentStatus: PaymentStatus | null;
+  @Column({ type: 'varchar', length: 30, nullable: true, name: 'payment_status' })
+  paymentStatus: string | null;
 
   @Column({ type: 'varchar', length: 255, nullable: true, name: 'payment_ref' })
   paymentRef: string | null;
