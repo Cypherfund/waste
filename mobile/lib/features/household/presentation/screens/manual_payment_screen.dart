@@ -89,7 +89,7 @@ class _ManualPaymentScreenState extends State<ManualPaymentScreen> {
                   final requiresScreenshot = selectedMethod.supportsCashin;
 
                   return SingleChildScrollView(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
