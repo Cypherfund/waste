@@ -87,8 +87,8 @@ export class Job {
   @Column({ type: 'boolean', default: false, name: 'is_covered_by_subscription' })
   isCoveredBySubscription: boolean;
 
-  @Column({ type: 'enum', enum: PaymentStatus, default: PaymentStatus.NOT_REQUIRED, name: 'payment_status' })
-  paymentStatus: PaymentStatus;
+  @Column({ type: 'varchar', length: 30, default: PaymentStatus.NOT_REQUIRED, name: 'payment_status' })
+  paymentStatus: string;
 
   @Column({ type: 'varchar', length: 50, nullable: true, name: 'payment_method' })
   paymentMethod: string | null;
