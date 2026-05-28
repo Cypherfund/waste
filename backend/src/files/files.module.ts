@@ -6,6 +6,7 @@ import { FilesService } from './files.service';
 import { FilesController } from './files.controller';
 import { ImgbbProvider } from './providers/imgbb.provider';
 import { LocalProvider } from './providers/local.provider';
+import { CloudinaryProvider } from './providers/cloudinary.provider';
 import { STORAGE_PROVIDER } from './providers/storage.provider';
 
 @Module({
@@ -17,7 +18,15 @@ import { STORAGE_PROVIDER } from './providers/storage.provider';
       provide: STORAGE_PROVIDER,
       useFactory: (configService: ConfigService) => {
         const storageType = configService.get('STORAGE_TYPE', 'local');
-        return storageType === 'imgbb' ? new ImgbbProvider(configService) : new LocalProvider(configService);
+        switch (storageType) {
+          case 'imgbb':
+            return new ImgbbProvider(configService);
+          case 'cloudinary':
+            return new CloudinaryProvider(configService);
+          case 'local':
+          default:
+            return new LocalProvider(configService);
+        }
       },
       inject: [ConfigService],
     },
