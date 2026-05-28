@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../providers/subscription_provider.dart';
 import '../../../../providers/job_provider.dart';
+import '../../../../providers/app_config_provider.dart';
 import '../../providers/payment_flow_provider.dart';
 import '../../providers/payment_flow_enums.dart';
 import '../widgets/payment_method_card.dart';
@@ -50,10 +51,19 @@ class _IntegratedPaymentScreenState extends State<IntegratedPaymentScreen> {
         centerTitle: true,
       ),
       body: SafeArea(
-        child: Consumer<PaymentFlowProvider>(
-          builder: (context, flowProvider, _) {
+        child: Consumer2<PaymentFlowProvider, AppConfigProvider>(
+          builder: (context, flowProvider, appConfig, _) {
             final amount = flowProvider.amountDue;
             final providerName = flowProvider.selectedProviderName ?? 'Payment Provider';
+            final paymentCode = flowProvider.selectedPaymentMethodCode;
+
+            // Get provider image URL from app config
+            final providerConfig = paymentCode != null
+                ? appConfig.appConfig?.cashinProviders
+                    .where((p) => p.paymentCode.toUpperCase() == paymentCode.toUpperCase())
+                    .firstOrNull
+                : null;
+            final imageUrl = providerConfig?.imageUrl;
 
             return SingleChildScrollView(
               padding: const EdgeInsets.all(20),
@@ -66,6 +76,7 @@ class _IntegratedPaymentScreenState extends State<IntegratedPaymentScreen> {
                     providerName: providerName,
                     mode: PaymentProviderMode.integrated,
                     isSelected: true,
+                    imageUrl: imageUrl,
                     onTap: () {},
                   ),
 

@@ -98,7 +98,7 @@ class _SubmittedVariant extends StatelessWidget {
         children: [
           _buildDetailRow('Amount', '${job.quotedPrice?.toStringAsFixed(0) ?? '0'} XAF'),
           const Divider(height: 16, color: Color(0xFFE5E7EB)),
-          _buildDetailRow('Method', job.paymentMethod ?? 'Mobile Money'),
+          _buildDetailRow('Method', job.paymentMethodName ?? job.paymentMethod ?? 'Mobile Money'),
           const Divider(height: 16, color: Color(0xFFE5E7EB)),
           _buildDetailRow('Reference', job.paymentRef ?? '-'),
           const Divider(height: 16, color: Color(0xFFE5E7EB)),
@@ -186,7 +186,7 @@ class _SuccessVariant extends StatelessWidget {
         children: [
           _buildDetailRow('Amount', '${job.quotedPrice?.toStringAsFixed(0) ?? '0'} XAF'),
           const Divider(height: 16, color: Color(0xFFE5E7EB)),
-          _buildDetailRow('Payment Method', job.paymentMethod ?? 'Mobile Money'),
+          _buildDetailRow('Payment Method', job.paymentMethodName ?? job.paymentMethod ?? 'Mobile Money'),
           const Divider(height: 16, color: Color(0xFFE5E7EB)),
           _buildDetailRowWithBadge(
             'Status', 
@@ -274,7 +274,7 @@ class _FailedVariant extends StatelessWidget {
         children: [
           _buildDetailRow('Amount', '${job.quotedPrice?.toStringAsFixed(0) ?? '0'} XAF'),
           const Divider(height: 16, color: Color(0xFFE5E7EB)),
-          _buildDetailRow('Method', job.paymentMethod ?? 'Mobile Money'),
+          _buildDetailRow('Method', job.paymentMethodName ?? job.paymentMethod ?? 'Mobile Money'),
           const Divider(height: 16, color: Color(0xFFE5E7EB)),
           _buildDetailRowWithBadge(
             'Status', 

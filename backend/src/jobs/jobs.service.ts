@@ -741,6 +741,15 @@ export class JobsService {
     return Math.min(earningsCalc.totalAmount, Number(job.quotedPrice));
   }
 
+  private async getPaymentMethodName(paymentCode: string): Promise<string | null> {
+    try {
+      const provider = await this.paymentService.getProviderByCode(paymentCode);
+      return provider?.providerName ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   async toResponseDto(job: Job): Promise<JobResponseDto> {
     return {
       id: job.id,
@@ -760,6 +769,7 @@ export class JobsService {
       notes: job.notes,
       paymentMode: job.paymentMode,
       paymentMethod: job.paymentMethod,
+      paymentMethodName: job.paymentMethod ? await this.getPaymentMethodName(job.paymentMethod) : null,
       paymentRef: job.paymentRef,
       paymentProofUrl: job.paymentProofUrl,
       paymentStatus: job.paymentStatus,

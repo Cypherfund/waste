@@ -12,6 +12,7 @@ class PaymentMethodCard extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onTap;
   final IconData? customIcon;
+  final String? imageUrl;
 
   const PaymentMethodCard({
     super.key,
@@ -21,6 +22,7 @@ class PaymentMethodCard extends StatelessWidget {
     required this.isSelected,
     required this.onTap,
     this.customIcon,
+    this.imageUrl,
   });
 
   @override
@@ -44,19 +46,36 @@ class PaymentMethodCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Provider icon
+            // Provider icon or image
             Container(
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: _getIconBackgroundColor(),
+                color: imageUrl != null ? Colors.white : _getIconBackgroundColor(),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(
-                customIcon ?? _getProviderIcon(),
-                color: _getIconColor(),
-                size: 24,
-              ),
+              child: imageUrl != null && imageUrl!.isNotEmpty
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.network(
+                        imageUrl!,
+                        width: 48,
+                        height: 48,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(
+                            customIcon ?? _getProviderIcon(),
+                            color: _getIconColor(),
+                            size: 24,
+                          );
+                        },
+                      ),
+                    )
+                  : Icon(
+                      customIcon ?? _getProviderIcon(),
+                      color: _getIconColor(),
+                      size: 24,
+                    ),
             ),
             const SizedBox(width: 16),
             

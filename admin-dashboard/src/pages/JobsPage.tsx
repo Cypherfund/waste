@@ -91,6 +91,7 @@ export default function JobsPage() {
 
   const handleCancel = async () => {
     if (!selectedJob) return;
+    if (!confirm(`Are you sure you want to cancel job ${selectedJob.id.slice(0, 8)}? This action cannot be undone.`)) return;
     setCancelLoading(true);
     setCancelError('');
     try {

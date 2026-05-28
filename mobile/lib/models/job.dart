@@ -51,6 +51,7 @@ class Job {
   final String? notes;
   final String? paymentMode;
   final String? paymentMethod;
+  final String? paymentMethodName;
   final String? paymentRef;
   final String? paymentProofUrl;
   final String? paymentStatus;
@@ -88,6 +89,7 @@ class Job {
     this.notes,
     this.paymentMode,
     this.paymentMethod,
+    this.paymentMethodName,
     this.paymentRef,
     this.paymentProofUrl,
     this.paymentStatus,
@@ -131,6 +133,7 @@ class Job {
       notes: json['notes'] as String?,
       paymentMode: json['paymentMode'] as String?,
       paymentMethod: json['paymentMethod'] as String?,
+      paymentMethodName: json['paymentMethodName'] as String?,
       paymentRef: json['paymentRef'] as String?,
       paymentProofUrl: json['paymentProofUrl'] as String?,
       paymentStatus: json['paymentStatus'] as String?,
