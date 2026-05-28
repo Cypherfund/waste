@@ -265,12 +265,12 @@ export default function CommissionsPage() {
               <p className="text-gray-500">No commission transactions found.</p>
             </div>
           ) : (
-            <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+            <div className="overflow-x-auto rounded-lg border bg-white shadow-sm">
               <div className="flex items-center justify-between border-b bg-gray-50 px-4 py-2 text-xs text-gray-500">
                 <span>{total} transaction{total !== 1 ? 's' : ''}</span>
                 <span>Page {page} of {Math.ceil(total / PAGE_SIZE) || 1}</span>
               </div>
-              <table className="w-full text-left text-sm">
+              <table className="w-full min-w-[800px] text-left text-sm">
                 <thead className="border-b bg-gray-50 text-xs uppercase text-gray-500">
                   <tr>
                     <th className="px-4 py-3">Marketer</th>
