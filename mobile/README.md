@@ -259,3 +259,5 @@ firebase appdistribution:distribute build/app/outputs/flutter-apk/app-release.ap
 shorebird patch android --release-version 1.0.0+1 --artifact apk -- --dart-define=API_BASE_URL=https://om-combined.onrender.com/api/v1 --dart-define=WS_BASE_URL=wss://om-combined.onrender.com/waste
 
 flutter run --no-pub --dart-define=API_BASE_URL=https://om-combined.onrender.com/waste/api/v1 --dart-define=WS_BASE_URL=wss://om-combined.onrender.com
+
+flutter run --no-pub --dart-define=API_BASE_URL=https://api.kmertrash.com/waste/api/v1 --dart-define=WS_BASE_URL=wss://api.kmertrash.com
