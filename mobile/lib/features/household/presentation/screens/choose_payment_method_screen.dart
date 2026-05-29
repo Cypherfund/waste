@@ -119,8 +119,7 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
 
                               // Cash option (hidden for subscription context)
                               if ((appConfig?.cashEnabled ?? false) &&
-                                  !_hideCash &&
-                                  !flowProvider.isSubscriptionContext) ...[
+                                  !_hideCash) ...[
                                 Text(
                                   'Or pay with',
                                   style: TextStyle(
