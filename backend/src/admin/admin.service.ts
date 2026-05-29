@@ -282,7 +282,7 @@ export class AdminService {
         .where('id = :id', { id: transaction.userId })
         .execute();
 
-      transaction.status = TransactionStatus.SUCCESS;
+      transaction.status = TransactionStatus.VERIFIED;
       await em.save(transaction);
 
       this.logger.log(
@@ -293,9 +293,12 @@ export class AdminService {
 
   async rejectWalletTopUp(transactionId: string, adminId: string, reason?: string): Promise<void> {
     await this.dataSource.transaction(async (em) => {
-      const transaction = await em.findOne(PaymentTransaction, {
-        where: { id: transactionId },
-      });
+      const transaction = await em
+        .getRepository(PaymentTransaction)
+        .createQueryBuilder('t')
+        .where('t.id = :id', { id: transactionId })
+        .setLock('pessimistic_write')
+        .getOne();
 
       if (!transaction) {
         throw new NotFoundException('Transaction not found');

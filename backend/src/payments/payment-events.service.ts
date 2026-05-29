@@ -3,7 +3,7 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { TransactionType } from './entities/payment-transaction.entity';
+import { TransactionType, TransactionStatus, PaymentTransaction } from './entities/payment-transaction.entity';
 import { Job } from '../jobs/entities/job.entity';
 import { JobStatus } from '../common/enums/job-status.enum';
 import { PaymentStatus } from '../common/enums/payment-status.enum';
@@ -37,7 +37,7 @@ export class PaymentEventsService {
 
     // Handle wallet top-up via integrated provider
     if (payload.type === TransactionType.WALLET_TOPUP) {
-      await this.handleWalletTopUpSuccess(payload.userId, payload.amount);
+      await this.handleWalletTopUpSuccess(payload.transactionId, payload.userId, payload.amount);
     }
     // Handle job payments via integrated provider
     else if (payload.type === TransactionType.CASHIN && payload.jobId) {
@@ -85,8 +85,27 @@ export class PaymentEventsService {
   }
 
   // ── Wallet top-up success ───────────────────────────────────────
-  private async handleWalletTopUpSuccess(userId: string, amount: number): Promise<void> {
+  private async handleWalletTopUpSuccess(transactionId: string, userId: string, amount: number): Promise<void> {
     return this.dataSource.transaction(async (em) => {
+      // Lock transaction for idempotency
+      const transaction = await em
+        .getRepository(PaymentTransaction)
+        .createQueryBuilder('t')
+        .where('t.id = :id', { id: transactionId })
+        .setLock('pessimistic_write')
+        .getOne();
+
+      if (!transaction) {
+        this.logger.warn(`Transaction not found for wallet top-up success: ${transactionId}`);
+        return;
+      }
+
+      // Idempotency: only process if still pending
+      if (transaction.status !== TransactionStatus.PENDING) {
+        this.logger.log(`Transaction ${transactionId} already processed (status: ${transaction.status})`);
+        return;
+      }
+
       // Get user with lock
       const user = await em
         .getRepository(User)
@@ -108,7 +127,11 @@ export class PaymentEventsService {
         .where('id = :id', { id: userId })
         .execute();
 
-      this.logger.log(`Wallet credited for user ${userId}: +${amount} XAF`);
+      // Mark transaction as verified
+      transaction.status = TransactionStatus.VERIFIED;
+      await em.save(transaction);
+
+      this.logger.log(`Wallet credited for user ${userId}: +${amount} XAF, transaction ${transactionId}`);
     });
   }
 

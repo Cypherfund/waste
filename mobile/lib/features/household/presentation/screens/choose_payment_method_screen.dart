@@ -589,7 +589,7 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
     );
 
     try {
-      final walletApi = WalletApi();
+      final walletApi = WalletApi(ApiClient());
 
       if (flowProvider.isSubscriptionContext) {
         // Subscription payment with wallet

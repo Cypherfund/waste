@@ -8,12 +8,14 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In, IsNull } from 'typeorm';
 import { OnEvent } from '@nestjs/event-emitter';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { User } from '../users/entities/user.entity';
 import { PayoutRequest, PayoutRequestStatus } from './entities/payout-request.entity';
 import { CollectorFloatLedger, FloatLedgerType } from './entities/collector-float-ledger.entity';
 import { UserPaymentMethod, UserPaymentMethodUsageType } from './entities/user-payment-method.entity';
 import { SystemConfigService } from '../config/system-config.service';
 import { EarningsEvents, EarningsConfirmedPayload } from '../events/events.types';
+import { SubscriptionEvents } from '../events/events.types';
 import { PaymentProviderEntity } from '../payments/entities/payment-provider.entity';
 import { PaymentTransaction, TransactionType, TransactionStatus, PaymentSource } from '../payments/entities/payment-transaction.entity';
 import { PaymentMode } from '../common/enums/payment-mode.enum';
@@ -39,6 +41,7 @@ export class WalletService {
     private readonly systemConfigService: SystemConfigService,
     private readonly dataSource: DataSource,
     private readonly paymentService: PaymentService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   // ── EVENT: earnings confirmed → credit wallet ─────────────────
@@ -443,6 +446,16 @@ export class WalletService {
         });
         await em.getRepository(UserSubscription).save(newSubscription);
       }
+
+      // Emit subscription paid event for commission and notifications
+      this.eventEmitter.emit(SubscriptionEvents.PAID, {
+        subscriptionId: existingSubscription?.id ?? (await em.getRepository(UserSubscription).findOne({ where: { userId } }))?.id,
+        userId,
+        planId,
+        planName: plan.name,
+        amount,
+        timestamp: new Date(),
+      });
 
       this.logger.log(
         `Subscription paid with wallet: plan ${planId}, amount ${amount} XAF, transaction ${saved.id}`,
