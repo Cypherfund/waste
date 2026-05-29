@@ -154,7 +154,9 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
                           child: SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
-                              onPressed: () => _navigateToPaymentScreen(flowProvider.selectedProviderMode),
+                              onPressed: flowProvider.selectedProviderMode != null
+                                  ? () => _navigateToPaymentScreen(flowProvider.selectedProviderMode!)
+                                  : null,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF10B981),
                                 foregroundColor: Colors.white,

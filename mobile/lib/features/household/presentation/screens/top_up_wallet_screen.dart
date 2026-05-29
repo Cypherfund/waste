@@ -221,23 +221,25 @@ class _TopUpWalletScreenState extends State<TopUpWalletScreen> {
                   ),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.all(20),
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedAmount = 0;
+                  });
+                },
+              ),
             ),
-            onChanged: (value) {
-              setState(() {
-                _selectedAmount = 0;
-              });
-            },
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Min: ${effectiveMin.toStringAsFixed(0)} XAF • Max: ${effectiveMax.toStringAsFixed(0)} XAF',
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey.shade500,
-          ),
-        ),
-      ],
+            const SizedBox(height: 8),
+            Text(
+              'Min: ${effectiveMin.toStringAsFixed(0)} XAF • Max: ${effectiveMax.toStringAsFixed(0)} XAF',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey.shade500,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
   
