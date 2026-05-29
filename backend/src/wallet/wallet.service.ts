@@ -3,6 +3,7 @@ import {
   Logger,
   BadRequestException,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In, IsNull } from 'typeorm';
@@ -15,6 +16,7 @@ import { SystemConfigService } from '../config/system-config.service';
 import { EarningsEvents, EarningsConfirmedPayload } from '../events/events.types';
 import { PaymentProviderEntity } from '../payments/entities/payment-provider.entity';
 import { PaymentTransaction, TransactionType, TransactionStatus, PaymentSource } from '../payments/entities/payment-transaction.entity';
+import { PaymentMode } from '../common/enums/payment-mode.enum';
 import { PaymentService } from '../payments/payment.service';
 
 @Injectable()
@@ -243,7 +245,9 @@ export class WalletService {
         paymentSource: PaymentSource.WALLET_TOPUP,
         jobId: null,
         payoutRequestId: null,
-        failureReason: dto.paymentRef, // Store reference in failureReason for manual flow
+        paymentRef: dto.paymentRef,
+        paymentProofUrl: dto.paymentProofUrl,
+        failureReason: null,
       });
 
       const saved = await this.transactionRepo.save(transaction);
@@ -275,8 +279,19 @@ export class WalletService {
 
       if (!job) throw new NotFoundException('Job not found');
 
+      // Verify job ownership
+      if (job.householdId !== userId) {
+        throw new ForbiddenException('You cannot pay for this job');
+      }
+
       const amount = job.quotedPrice;
       if (!amount) throw new BadRequestException('Job has no quoted price');
+
+      // Check if job is already paid
+      const { PaymentStatus } = await import('../common/enums/payment-status.enum');
+      if (job.paymentStatus === PaymentStatus.VERIFIED) {
+        throw new BadRequestException('Job is already paid');
+      }
 
       // Check wallet balance
       const balance = Number(user.walletBalance);
@@ -312,12 +327,18 @@ export class WalletService {
 
       const saved = await em.getRepository(PaymentTransaction).save(transaction);
 
+      // Update job payment fields
+      job.paymentStatus = PaymentStatus.VERIFIED;
+      job.paymentMethod = 'WALLET';
+      job.paymentMode = PaymentMode.WALLET;
+
       // Update job status if needed
       const { JobStatus } = await import('../common/enums/job-status.enum');
       if (job.status === JobStatus.PAYMENT_PENDING) {
         job.status = JobStatus.REQUESTED;
-        await em.getRepository(Job).save(job);
       }
+
+      await em.getRepository(Job).save(job);
 
       this.logger.log(
         `Job paid with wallet: job ${jobId}, amount ${amount} XAF, transaction ${saved.id}`,
@@ -383,11 +404,13 @@ export class WalletService {
 
       const saved = await em.getRepository(PaymentTransaction).save(transaction);
 
-      // Activate subscription (simplified - actual activation logic may be in SubscriptionService)
+      // Activate subscription using shared activation logic
       const { UserSubscription } = await import('../subscriptions/entities/user-subscription.entity');
       const { SubscriptionStatus } = await import('../common/enums/subscription-status.enum');
+      const { PaymentStatus } = await import('../common/enums/payment-status.enum');
       const existingSubscription = await em.getRepository(UserSubscription).findOne({
         where: { userId },
+        relations: ['plan'],
       });
 
       const now = new Date();
@@ -398,16 +421,25 @@ export class WalletService {
       if (existingSubscription) {
         existingSubscription.planId = planId;
         existingSubscription.status = SubscriptionStatus.ACTIVE;
+        existingSubscription.paymentStatus = PaymentStatus.VERIFIED;
         existingSubscription.startDate = startDateStr;
         existingSubscription.endDate = endDateStr;
+        existingSubscription.remainingPickupsThisWeek = plan.pickupsPerWeek;
+        
+        const monday = this.getMondayOfWeek(now);
+        existingSubscription.weekResetDate = monday.toISOString().split('T')[0];
+        
         await em.getRepository(UserSubscription).save(existingSubscription);
       } else {
         const newSubscription = em.getRepository(UserSubscription).create({
           userId,
           planId,
           status: SubscriptionStatus.ACTIVE,
+          paymentStatus: PaymentStatus.VERIFIED,
           startDate: startDateStr,
           endDate: endDateStr,
+          remainingPickupsThisWeek: plan.pickupsPerWeek,
+          weekResetDate: this.getMondayOfWeek(now).toISOString().split('T')[0],
         });
         await em.getRepository(UserSubscription).save(newSubscription);
       }
@@ -418,6 +450,15 @@ export class WalletService {
 
       return { success: true, transactionId: saved.id };
     });
+  }
+
+  private getMondayOfWeek(date: Date): Date {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    d.setHours(0, 0, 0, 0);
+    return d;
   }
 
   // ── GET payout config ─────────────────────────────────────────

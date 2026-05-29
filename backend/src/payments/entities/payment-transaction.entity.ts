@@ -51,13 +51,13 @@ export class PaymentTransaction {
   type: TransactionType;
 
   @Column({
-    type: 'enum',
-    enum: PaymentSource,
+    type: 'varchar',
+    length: 50,
     nullable: true,
     default: 'JOB_PAYMENT',
     name: 'payment_source',
   })
-  paymentSource: PaymentSource;
+  paymentSource: string;
 
   @Column({ type: 'decimal', precision: 12, scale: 2 })
   amount: number;
@@ -99,6 +99,12 @@ export class PaymentTransaction {
 
   @Column({ type: 'text', nullable: true, name: 'failure_reason' })
   failureReason: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true, name: 'payment_ref' })
+  paymentRef: string | null;
+
+  @Column({ type: 'varchar', length: 500, nullable: true, name: 'payment_proof_url' })
+  paymentProofUrl: string | null;
 
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt: Date;

@@ -252,10 +252,13 @@ export class AdminService {
 
   async approveWalletTopUp(transactionId: string, adminId: string): Promise<void> {
     await this.dataSource.transaction(async (em) => {
-      const transaction = await em.findOne(PaymentTransaction, {
-        where: { id: transactionId },
-        relations: ['user'],
-      });
+      const transaction = await em
+        .getRepository(PaymentTransaction)
+        .createQueryBuilder('t')
+        .where('t.id = :id', { id: transactionId })
+        .setLock('pessimistic_write')
+        .leftJoinAndSelect('t.user', 'user')
+        .getOne();
 
       if (!transaction) {
         throw new NotFoundException('Transaction not found');

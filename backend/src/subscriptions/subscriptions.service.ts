@@ -192,16 +192,21 @@ export class SubscriptionsService {
       throw new BadRequestException(`Subscription is not pending payment (status: ${sub.status})`);
     }
 
+    return this.activateSubscription(sub);
+  }
+
+  // Shared activation logic for both admin verification and wallet payment
+  async activateSubscription(subscription: UserSubscription): Promise<UserSubscription> {
     const monday = this.getMondayOfWeek(new Date());
     const mondayStr = monday.toISOString().split('T')[0];
 
-    sub.status = SubscriptionStatus.ACTIVE;
-    sub.paymentStatus = PaymentStatus.VERIFIED;
-    sub.remainingPickupsThisWeek = sub.plan.pickupsPerWeek;
-    sub.weekResetDate = mondayStr;
-    const saved = await this.subRepo.save(sub);
+    subscription.status = SubscriptionStatus.ACTIVE;
+    subscription.paymentStatus = PaymentStatus.VERIFIED;
+    subscription.remainingPickupsThisWeek = subscription.plan.pickupsPerWeek;
+    subscription.weekResetDate = mondayStr;
+    const saved = await this.subRepo.save(subscription);
 
-    this.logger.log(`Admin verified subscription ${subscriptionId} → ACTIVE`);
+    this.logger.log(`Subscription ${subscription.id} activated → ACTIVE`);
 
     // Emit commission event now that payment is verified
     this.eventEmitter.emit(SubscriptionEvents.PAID, {

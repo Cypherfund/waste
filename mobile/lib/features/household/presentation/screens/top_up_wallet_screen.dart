@@ -160,12 +160,16 @@ class _TopUpWalletScreenState extends State<TopUpWalletScreen> {
 
         // Get provider min/max limits from available cashin providers
         final cashinProviders = config?.cashinProviders ?? [];
-        final providerMin = cashinProviders.isNotEmpty
-            ? cashinProviders.map((p) => p.minDeposit).where((v) => v != null).reduce((a, b) => a! < b! ? a : b) ?? systemMin
-            : systemMin;
-        final providerMax = cashinProviders.isNotEmpty
-            ? cashinProviders.map((p) => p.maxDeposit).where((v) => v != null).reduce((a, b) => a! > b! ? a : b) ?? systemMax
-            : systemMax;
+        final mins = cashinProviders
+            .map((p) => p.minDeposit)
+            .whereType<double>()
+            .toList();
+        final maxs = cashinProviders
+            .map((p) => p.maxDeposit)
+            .whereType<double>()
+            .toList();
+        final providerMin = mins.isNotEmpty ? mins.reduce((a, b) => a < b ? a : b) : systemMin;
+        final providerMax = maxs.isNotEmpty ? maxs.reduce((a, b) => a > b ? a : b) : systemMax;
 
         // Use the more restrictive limits
         final effectiveMin = systemMin > providerMin ? systemMin : providerMin;
@@ -245,14 +249,18 @@ class _TopUpWalletScreenState extends State<TopUpWalletScreen> {
         final systemMin = config?.topupMinAmount ?? 500;
         final systemMax = config?.topupMaxAmount ?? 500000;
 
-        // Get provider min/max limits from the first available cashin provider
+        // Get provider min/max limits from available cashin providers
         final cashinProviders = config?.cashinProviders ?? [];
-        final providerMin = cashinProviders.isNotEmpty
-            ? cashinProviders.map((p) => p.minDeposit).where((v) => v != null).reduce((a, b) => a! < b! ? a : b) ?? systemMin
-            : systemMin;
-        final providerMax = cashinProviders.isNotEmpty
-            ? cashinProviders.map((p) => p.maxDeposit).where((v) => v != null).reduce((a, b) => a! > b! ? a : b) ?? systemMax
-            : systemMax;
+        final mins = cashinProviders
+            .map((p) => p.minDeposit)
+            .whereType<double>()
+            .toList();
+        final maxs = cashinProviders
+            .map((p) => p.maxDeposit)
+            .whereType<double>()
+            .toList();
+        final providerMin = mins.isNotEmpty ? mins.reduce((a, b) => a < b ? a : b) : systemMin;
+        final providerMax = maxs.isNotEmpty ? maxs.reduce((a, b) => a > b ? a : b) : systemMax;
 
         // Use the more restrictive limits
         final effectiveMin = systemMin > providerMin ? systemMin : providerMin;
