@@ -5,9 +5,11 @@ import { UserSubscription } from './entities/user-subscription.entity';
 import { SubscriptionsService } from './subscriptions.service';
 import { SubscriptionsController } from './subscriptions.controller';
 import { PricingService } from './pricing.service';
+import { Job } from '../jobs/entities/job.entity';
+import { SystemConfigModule } from '../config/system-config.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([SubscriptionPlan, UserSubscription])],
+  imports: [TypeOrmModule.forFeature([SubscriptionPlan, UserSubscription, Job]), SystemConfigModule],
   controllers: [SubscriptionsController],
   providers: [SubscriptionsService, PricingService],
   exports: [SubscriptionsService, PricingService],

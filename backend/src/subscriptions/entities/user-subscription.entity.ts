@@ -12,6 +12,7 @@ import { User } from '../../users/entities/user.entity';
 import { SubscriptionPlan } from './subscription-plan.entity';
 import { SubscriptionStatus } from '../../common/enums/subscription-status.enum';
 import { PaymentStatus } from '../../common/enums/payment-status.enum';
+import { Job } from '../../jobs/entities/job.entity';
 
 @Entity('user_subscriptions')
 export class UserSubscription {
@@ -32,6 +33,14 @@ export class UserSubscription {
   @ManyToOne(() => SubscriptionPlan)
   @JoinColumn({ name: 'plan_id' })
   plan: SubscriptionPlan;
+
+  @Index()
+  @Column({ type: 'uuid', nullable: true, name: 'linked_first_job_id' })
+  linkedFirstJobId: string | null;
+
+  @ManyToOne(() => Job)
+  @JoinColumn({ name: 'linked_first_job_id' })
+  linkedFirstJob: Job | null;
 
   @Column({ type: 'date', name: 'start_date' })
   startDate: string;

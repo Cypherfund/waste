@@ -10,6 +10,8 @@ import {
 } from '../entities';
 import { User } from '../../users/entities/user.entity';
 import { UserRole } from '../../common/enums/role.enum';
+import { SmsProvider } from '../../notifications/providers/sms.provider';
+import { EmailProvider } from '../../notifications/providers/email.provider';
 
 describe('MarketerService', () => {
   let service: MarketerService;
@@ -99,6 +101,8 @@ describe('MarketerService', () => {
         { provide: getRepositoryToken(User), useValue: userRepo },
         { provide: getRepositoryToken(CommissionScheme), useValue: schemeRepo },
         { provide: getRepositoryToken(MarketerSchemeAssignment), useValue: assignmentRepo },
+        { provide: SmsProvider, useValue: {} },
+        { provide: EmailProvider, useValue: {} },
       ],
     }).compile();
 

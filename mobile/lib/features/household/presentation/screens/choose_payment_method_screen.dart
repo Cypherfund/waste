@@ -22,6 +22,7 @@ class ChoosePaymentMethodScreen extends StatefulWidget {
 class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
   bool _hideCash = false;
   String? _subtitle;
+  bool _isCashOnFirstPickup = false;
 
   @override
   void initState() {
@@ -32,6 +33,7 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
       setState(() {
         _hideCash = (args?['hideCash'] as bool?) ?? false;
         _subtitle = args?['subtitle'] as String?;
+        _isCashOnFirstPickup = (args?['cashOnFirstPickup'] as bool?) ?? false;
       });
     });
   }
@@ -43,6 +45,11 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Cash on First Pickup flow - show confirmation instead of payment methods
+    if (_isCashOnFirstPickup) {
+      return _buildCashOnFirstPickupConfirmation();
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
@@ -660,6 +667,259 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
               child: const Text('OK'),
             ),
           ],
+        ),
+      );
+    }
+  }
+
+  Widget _buildCashOnFirstPickupConfirmation() {
+    return Consumer<PaymentFlowProvider>(
+      builder: (context, flowProvider, _) {
+        final amount = flowProvider.amountDue;
+
+        return Scaffold(
+          backgroundColor: const Color(0xFFF9FAFB),
+          appBar: AppBar(
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.white,
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            leadingWidth: 44,
+            leading: IconButton(
+              icon: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: Color(0xFF111827),
+                size: 16,
+              ),
+              onPressed: () => Navigator.pop(context),
+            ),
+            title: const Text(
+              'Cash on First Pickup',
+              style: TextStyle(
+                color: Color(0xFF111827),
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            centerTitle: true,
+          ),
+          body: SafeArea(
+            child: Column(
+              children: [
+                const Divider(height: 1, thickness: 1, color: Color(0xFFE5E7EB)),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Info card
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF8E1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFFFA000)),
+                          ),
+                          child: Column(
+                            children: [
+                              Icon(Icons.info_outline, color: Colors.amber.shade700, size: 32),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'How it works',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF111827),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Pay ${amount.toStringAsFixed(0)} XAF in cash to the collector during your first pickup. Your subscription will be activated after payment is confirmed.',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF6B7280),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        // Amount card
+                        _buildAmountCard(amount),
+                        const SizedBox(height: 24),
+                        // Steps
+                        const Text(
+                          'What happens next',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF111827),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _buildStep(
+                          icon: Icons.calendar_today_outlined,
+                          title: '1. Schedule your first pickup',
+                          description: 'We\'ll create your subscription and schedule your first pickup.',
+                        ),
+                        const SizedBox(height: 12),
+                        _buildStep(
+                          icon: Icons.local_shipping_outlined,
+                          title: '2. Collector arrives',
+                          description: 'A collector will come to your location at the scheduled time.',
+                        ),
+                        const SizedBox(height: 12),
+                        _buildStep(
+                          icon: Icons.payments_outlined,
+                          title: '3. Pay in cash',
+                          description: 'Pay ${amount.toStringAsFixed(0)} XAF directly to the collector.',
+                        ),
+                        const SizedBox(height: 12),
+                        _buildStep(
+                          icon: Icons.check_circle_outline,
+                          title: '4. Subscription activated',
+                          description: 'Your subscription becomes active after payment confirmation.',
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // Confirm button
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border(top: BorderSide(color: Color(0xFFE5E7EB))),
+                  ),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => _confirmCashOnFirstPickup(flowProvider),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.amber.shade700,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Confirm & Schedule Pickup',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStep({
+    required IconData icon,
+    required String title,
+    required String description,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF3F4F6),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 20, color: const Color(0xFF6B7280)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF111827),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                description,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF6B7280),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _confirmCashOnFirstPickup(PaymentFlowProvider flowProvider) async {
+    final planId = flowProvider.cashFirstPickupPlanId;
+    if (planId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Subscription plan not found')),
+      );
+      return;
+    }
+
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    try {
+      // Call the backend API to subscribe with cash on first pickup
+      final apiClient = context.read<SubscriptionProvider>().apiClient;
+      final result = await apiClient.post('/subscriptions/subscribe-cash-first-pickup', data: {
+        'planId': planId,
+        'scheduledDate': flowProvider.scheduledDate?.toIso8601String().split('T')[0],
+        'scheduledTime': flowProvider.scheduledTime,
+        'locationAddress': flowProvider.locationAddress,
+        'locationLat': flowProvider.locationLat,
+        'locationLng': flowProvider.locationLng,
+        'notes': 'Cash on First Pickup subscription',
+      });
+
+      Navigator.pop(context); // Close loading
+
+      // Show success and navigate
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/payment-result',
+        (route) => route.settings.name == '/home',
+        arguments: {
+          'isSuccess': true,
+          'isSubscription': true,
+          'title': 'Subscription Created',
+          'message': 'Your subscription has been created. Pay ${flowProvider.amountDue.toStringAsFixed(0)} XAF in cash to the collector during your first pickup.',
+        },
+      );
+    } catch (e) {
+      Navigator.pop(context); // Close loading
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to create subscription: ${e.toString()}'),
+          backgroundColor: Colors.red,
         ),
       );
     }

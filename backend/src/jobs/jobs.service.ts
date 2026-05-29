@@ -31,6 +31,7 @@ import {
   JobCompletedPayload,
   JobRejectedPayload,
   ProofEvents,
+  SubscriptionEvents,
 } from '../events/events.types';
 import { FilesService } from '../files/files.service';
 import { PricingService } from '../subscriptions/pricing.service';
@@ -38,6 +39,9 @@ import { PaymentService } from '../payments/payment.service';
 import { TransactionType } from '../payments/entities/payment-transaction.entity';
 import { SystemConfigService } from '../config/system-config.service';
 import { EarningsService } from '../earnings/earnings.service';
+import { UserSubscription } from '../subscriptions/entities/user-subscription.entity';
+import { SubscriptionStatus } from '../common/enums/subscription-status.enum';
+import { CashCollectionType } from '../common/enums/cash-collection-type.enum';
 
 @Injectable()
 export class JobsService {
@@ -48,6 +52,8 @@ export class JobsService {
     private readonly jobRepo: Repository<Job>,
     @InjectRepository(Proof)
     private readonly proofRepo: Repository<Proof>,
+    @InjectRepository(UserSubscription)
+    private readonly subscriptionRepo: Repository<UserSubscription>,
     private readonly eventEmitter: EventEmitter2,
     private readonly filesService: FilesService,
     private readonly pricingService: PricingService,
@@ -431,6 +437,187 @@ export class JobsService {
       }
     }
 
+    // Cash on First Pickup: require exact cash confirmation, deduct platform share, activate subscription
+    if (job.paymentMode === PaymentMode.CASH_ON_FIRST_PICKUP) {
+      if (dto.cashCollectedAmount === undefined) {
+        throw new BadRequestException('cashCollectedAmount is required for CASH_ON_FIRST_PICKUP jobs');
+      }
+      if (job.cashToCollectAmount === null) {
+        throw new BadRequestException('cashToCollectAmount is not set for this job');
+      }
+      if (dto.cashCollectedAmount !== Number(job.cashToCollectAmount)) {
+        throw new BadRequestException(
+          `cashCollectedAmount (${dto.cashCollectedAmount}) must equal cashToCollectAmount (${job.cashToCollectAmount})`,
+        );
+      }
+      if (job.cashCollectionType !== CashCollectionType.SUBSCRIPTION_FIRST_PICKUP) {
+        throw new BadRequestException('Invalid cash collection type for CASH_ON_FIRST_PICKUP job');
+      }
+
+      // Full atomic transaction for CASH_ON_FIRST_PICKUP completion
+      const result = await this.dataSource.transaction(async (em) => {
+        // Lock job for idempotency
+        const lockedJob = await em
+          .getRepository(Job)
+          .createQueryBuilder('j')
+          .where('j.id = :id', { id: jobId })
+          .setLock('pessimistic_write')
+          .getOne();
+        if (!lockedJob) throw new NotFoundException('Job not found');
+
+        // Idempotency check: if already completed, return early
+        if (lockedJob.status === JobStatus.COMPLETED) {
+          this.logger.log(`Job ${jobId} already completed, skipping float deduction`);
+          return { alreadyCompleted: true, savedJob: lockedJob, savedProof: null };
+        }
+
+        // Lock collector float
+        const collector = await em
+          .getRepository(User)
+          .createQueryBuilder('u')
+          .where('u.id = :id', { id: collectorId })
+          .setLock('pessimistic_write')
+          .getOne();
+        if (!collector) throw new NotFoundException('Collector not found');
+
+        // Lock subscription
+        if (!job.subscriptionId) {
+          throw new BadRequestException('Subscription ID is required for CASH_ON_FIRST_PICKUP job');
+        }
+        const subscription = await em
+          .getRepository(UserSubscription)
+          .createQueryBuilder('s')
+          .where('s.id = :id', { id: job.subscriptionId })
+          .setLock('pessimistic_write')
+          .leftJoinAndSelect('s.plan', 'plan')
+          .getOne();
+        if (!subscription) throw new NotFoundException('Subscription not found');
+
+        // Calculate collector earning using locked job
+        const earningsCalc = await this.earningsService.calculateEarnings(lockedJob);
+        const collectorEarning = Math.min(earningsCalc.totalAmount, Number(lockedJob.cashToCollectAmount));
+        const platformShare = Math.max(Number(lockedJob.cashToCollectAmount) - collectorEarning, 0);
+        const currentFloat = Number(collector.collectorFloatBalance);
+
+        // Re-check collector float at completion (not just assignment estimate)
+        if (currentFloat < platformShare) {
+          throw new BadRequestException(
+            `Insufficient float balance. Required: ${platformShare} XAF, Available: ${currentFloat} XAF`,
+          );
+        }
+
+        // Deduct platform share from collector float
+        const newFloat = currentFloat - platformShare;
+        await em
+          .createQueryBuilder()
+          .update(User)
+          .set({ collectorFloatBalance: () => `collector_float_balance - ${platformShare}` })
+          .where('id = :id', { id: collectorId })
+          .execute();
+
+        // Create float ledger entry for platform share deduction
+        const ledgerEntry = em.getRepository(CollectorFloatLedger).create({
+          collectorId,
+          jobId: lockedJob.id,
+          subscriptionId: subscription.id,
+          type: FloatLedgerType.CASH_SUBSCRIPTION_PLATFORM_SHARE,
+          amount: -platformShare,
+          balanceBefore: currentFloat,
+          balanceAfter: newFloat,
+          createdBy: null,
+        });
+        await em.getRepository(CollectorFloatLedger).save(ledgerEntry);
+
+        // Activate subscription with week reset date
+        const monday = this.getMondayOfWeek(new Date());
+        const mondayStr = monday.toISOString().split('T')[0];
+        subscription.status = SubscriptionStatus.ACTIVE;
+        subscription.paymentStatus = PaymentStatus.VERIFIED;
+        subscription.remainingPickupsThisWeek = subscription.plan.pickupsPerWeek - 1; // First pickup consumed
+        subscription.weekResetDate = mondayStr;
+        await em.getRepository(UserSubscription).save(subscription);
+
+        this.logger.log(
+          `Activated subscription ${subscription.id} after cash collection, remaining pickups: ${subscription.remainingPickupsThisWeek}`,
+        );
+
+        // Update job status and payment status atomically
+        lockedJob.paymentStatus = PaymentStatus.VERIFIED;
+        lockedJob.status = JobStatus.COMPLETED;
+        lockedJob.completedAt = new Date();
+        const savedJob = await em.getRepository(Job).save(lockedJob);
+
+        // Create proof record
+        const proof = em.getRepository(Proof).create({
+          jobId: savedJob.id,
+          imageUrl: dto.proofImageUrl,
+          collectorLat: dto.collectorLat ?? null,
+          collectorLng: dto.collectorLng ?? null,
+        });
+        const savedProof = await em.getRepository(Proof).save(proof);
+
+        return { alreadyCompleted: false, savedJob, savedProof, activatedSubscription: subscription };
+      });
+
+      // If already completed, fetch existing proof and return
+      if (result.alreadyCompleted) {
+        const existingProof = await this.proofRepo.findOne({ where: { jobId: result.savedJob.id } });
+        return await this.toResponseDto(result.savedJob);
+      }
+
+      const saved = result.savedJob;
+      const savedProof = result.savedProof;
+
+      if (!savedProof) {
+        throw new BadRequestException('Proof creation failed');
+      }
+
+      // Mark file as used in Files module (outside transaction as it's external service)
+      try {
+        await this.filesService.markUsed(dto.proofImageUrl);
+      } catch (error) {
+        this.logger.error(`Failed to mark file as used: ${error.message}`);
+        // Don't fail the request - job is already complete
+      }
+
+      this.logger.log(`Job ${jobId} completed by collector ${collectorId}, proof ${savedProof.id}`);
+
+      // Emit proof uploaded event
+      this.eventEmitter.emit(ProofEvents.UPLOADED, {
+        proofId: savedProof.id,
+        jobId: saved.id,
+        householdId: saved.householdId,
+        collectorId,
+        timestamp: new Date(),
+      });
+
+      const payload: JobCompletedPayload = {
+        jobId: saved.id,
+        householdId: saved.householdId,
+        collectorId: saved.collectorId,
+        status: saved.status,
+        timestamp: new Date(),
+        proofId: savedProof.id,
+      };
+      this.eventEmitter.emit(JobEvents.COMPLETED, payload);
+
+      // Emit subscription paid event for cash-on-first-pickup activation
+      if (result.activatedSubscription) {
+        const subscription = result.activatedSubscription;
+        this.eventEmitter.emit(SubscriptionEvents.PAID, {
+          subscriptionId: subscription.id,
+          userId: saved.householdId,
+          planId: subscription.planId,
+          planName: subscription.plan.name,
+          amount: Number(saved.cashToCollectAmount),
+          timestamp: new Date(),
+        });
+      }
+
+      return await this.toResponseDto(saved);
+    }
+
+    // Normal completion flow for non-CASH_ON_FIRST_PICKUP jobs
     this.transition(job, JobStatus.COMPLETED);
     job.completedAt = new Date();
 
@@ -446,7 +633,12 @@ export class JobsService {
     const savedProof = await this.proofRepo.save(proof);
 
     // Mark file as used in Files module
-    await this.filesService.markUsed(dto.proofImageUrl);
+    try {
+      await this.filesService.markUsed(dto.proofImageUrl);
+    } catch (error) {
+      this.logger.error(`Failed to mark file as used: ${error.message}`);
+      // Don't fail the request - job is already complete
+    }
 
     this.logger.log(`Job ${jobId} completed by collector ${collectorId}, proof ${savedProof.id}`);
 
@@ -748,6 +940,14 @@ export class JobsService {
     } catch {
       return null;
     }
+  }
+
+  private getMondayOfWeek(date: Date): Date {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    return d;
   }
 
   async toResponseDto(job: Job): Promise<JobResponseDto> {

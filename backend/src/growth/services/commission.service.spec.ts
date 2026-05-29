@@ -1,12 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { CommissionService } from './commission.service';
+import { BudgetService } from './budget.service';
 import {
   CommissionScheme,
   CommissionTransaction,
   CommissionStatus,
   MarketerProfile,
   MarketerSchemeAssignment,
+  MarketingCampaign,
 } from '../entities';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 
@@ -16,6 +18,7 @@ describe('CommissionService', () => {
   let transactionRepo: any;
   let profileRepo: any;
   let assignmentRepo: any;
+  let campaignRepo: any;
 
   beforeEach(async () => {
     schemeRepo = {
@@ -46,6 +49,11 @@ describe('CommissionService', () => {
       update: jest.fn(),
     };
 
+    campaignRepo = {
+      findOne: jest.fn(),
+      save: jest.fn((entity) => Promise.resolve(entity)),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CommissionService,
@@ -53,6 +61,8 @@ describe('CommissionService', () => {
         { provide: getRepositoryToken(CommissionTransaction), useValue: transactionRepo },
         { provide: getRepositoryToken(MarketerProfile), useValue: profileRepo },
         { provide: getRepositoryToken(MarketerSchemeAssignment), useValue: assignmentRepo },
+        { provide: getRepositoryToken(MarketingCampaign), useValue: campaignRepo },
+        { provide: BudgetService, useValue: { reserveBudget: jest.fn() } },
       ],
     }).compile();
 
@@ -67,13 +77,21 @@ describe('CommissionService', () => {
         approvedAmount: 3000,
         totalEarned: 5000,
       };
+      const campaign = {
+        id: 'campaign-1',
+        status: 'ACTIVE',
+        committedAmount: 0,
+        budgetPeriod: { remainingBudget: 10000, status: 'ACTIVE' },
+      };
       const tx = {
         id: 'tx-1',
         status: CommissionStatus.PENDING,
         amount: 500,
         marketerProfile: profile,
+        campaignId: 'campaign-1',
       };
       transactionRepo.findOne.mockResolvedValue(tx);
+      campaignRepo.findOne.mockResolvedValue(campaign);
 
       const result = await service.approveTransaction('tx-1', 'admin-1');
 

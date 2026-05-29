@@ -30,4 +30,10 @@ export class CompleteJobDto {
   @IsNumber()
   @Min(0)
   collectedAmount?: number;
+
+  @ApiPropertyOptional({ example: 3500, description: 'Required for CASH_ON_FIRST_PICKUP jobs: exact subscription cash amount collected' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  cashCollectedAmount?: number;
 }

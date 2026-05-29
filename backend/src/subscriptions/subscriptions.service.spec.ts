@@ -1,13 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { SubscriptionsService } from './subscriptions.service';
 import { SubscriptionPlan } from './entities/subscription-plan.entity';
 import { UserSubscription } from './entities/user-subscription.entity';
+import { Job } from '../jobs/entities/job.entity';
 import { SubscriptionStatus } from '../common/enums/subscription-status.enum';
 import { PaymentStatus } from '../common/enums/payment-status.enum';
 import { SubscriptionEvents } from '../events/events.types';
+import { SystemConfigService } from '../config/system-config.service';
 
 describe('SubscriptionsService', () => {
   let service: SubscriptionsService;
@@ -67,7 +70,10 @@ describe('SubscriptionsService', () => {
         SubscriptionsService,
         { provide: getRepositoryToken(SubscriptionPlan), useValue: planRepo },
         { provide: getRepositoryToken(UserSubscription), useValue: subRepo },
+        { provide: getRepositoryToken(Job), useValue: {} },
         { provide: EventEmitter2, useValue: eventEmitter },
+        { provide: DataSource, useValue: { transaction: jest.fn() } },
+        { provide: SystemConfigService, useValue: { getNumber: jest.fn().mockResolvedValue(24) } },
       ],
     }).compile();
 
@@ -337,7 +343,7 @@ describe('SubscriptionsService', () => {
       expect(subRepo.find).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { status: SubscriptionStatus.PENDING_PAYMENT },
-          relations: ['plan', 'user'],
+          relations: ['plan', 'user', 'linkedFirstJob'],
         }),
       );
       expect(result).toHaveLength(1);

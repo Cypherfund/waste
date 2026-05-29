@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { MarketerPayoutService } from './marketer-payout.service';
 import { MarketerNotificationService } from './marketer-notification.service';
 import { MarketerPayoutRequest, PayoutStatus, PayoutMethod, MarketerProfile, CommissionTransaction } from '../entities';
@@ -56,6 +57,7 @@ describe('MarketerPayoutService', () => {
         { provide: getRepositoryToken(CommissionTransaction), useValue: transactionRepo },
         { provide: MarketerNotificationService, useValue: notificationService },
         { provide: DataSource, useValue: dataSource },
+        { provide: EventEmitter2, useValue: { emit: jest.fn(), emitAsync: jest.fn() } },
       ],
     }).compile();
 

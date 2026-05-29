@@ -62,6 +62,24 @@ export class SubscriptionsController {
     return this.subscriptionsService.cancel(userId);
   }
 
+  @Post('subscribe-cash-first-pickup')
+  @Roles(UserRole.HOUSEHOLD)
+  subscribeCashOnFirstPickup(
+    @CurrentUser('sub') userId: string,
+    @Body() body: {
+      planId: string;
+      scheduledDate: string;
+      scheduledTime: string;
+      locationAddress: string;
+      locationLat?: number;
+      locationLng?: number;
+      notes?: string;
+    },
+  ) {
+    const { planId, ...jobDetails } = body;
+    return this.subscriptionsService.subscribeWithCashOnFirstPickup(userId, planId, jobDetails);
+  }
+
   @Get('pricing-quote')
   @Roles(UserRole.HOUSEHOLD)
   getPricingQuote(@CurrentUser('sub') userId: string) {

@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { CommissionEngineService } from './commission-engine.service';
 import { CommissionService } from './commission.service';
 import { LeadService } from './lead.service';
@@ -76,6 +77,7 @@ describe('CommissionEngineService', () => {
     subscriptionId: 'sub-1',
     userId: 'hh-user-1',
     planId: 'plan-1',
+    planName: 'Basic Plan',
     amount: 3000,
     timestamp: new Date(),
   };
@@ -106,6 +108,7 @@ describe('CommissionEngineService', () => {
         { provide: CommissionService, useValue: commissionService },
         { provide: LeadService, useValue: leadService },
         { provide: MarketerNotificationService, useValue: notificationService },
+        { provide: EventEmitter2, useValue: { emit: jest.fn(), emitAsync: jest.fn() } },
       ],
     }).compile();
 

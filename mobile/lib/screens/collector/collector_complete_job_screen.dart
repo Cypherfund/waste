@@ -21,6 +21,7 @@ class _CollectorCompleteJobScreenState
     extends State<CollectorCompleteJobScreen> {
   XFile? _proofImage;
   bool _cashConfirmed = false;
+  double? _cashCollectedAmount;
 
   @override
   Widget build(BuildContext context) {
@@ -122,17 +123,106 @@ class _CollectorCompleteJobScreenState
 
   bool _requiresCashConfirmation() {
     final j = widget.job;
-    return j.paymentMode == 'CASH' &&
-        j.quotedPrice != null &&
-        j.quotedPrice! > 0;
+    return (j.paymentMode == 'CASH' && j.quotedPrice != null && j.quotedPrice! > 0) ||
+           (j.paymentMode == 'CASH_ON_FIRST_PICKUP' && j.cashToCollectAmount != null);
   }
 
   bool _canSubmit() {
-    if (_requiresCashConfirmation()) return _cashConfirmed;
+    if (_requiresCashConfirmation()) {
+      if (widget.job.paymentMode == 'CASH_ON_FIRST_PICKUP') {
+        return _cashConfirmed && _cashCollectedAmount != null;
+      }
+      return _cashConfirmed;
+    }
     return true;
   }
 
   Widget _buildCashConfirmation() {
+    final isCashOnFirstPickup = widget.job.paymentMode == 'CASH_ON_FIRST_PICKUP';
+    final requiredAmount = isCashOnFirstPickup
+        ? widget.job.cashToCollectAmount
+        : widget.job.quotedPrice;
+
+    if (isCashOnFirstPickup) {
+      // Cash on First Pickup: require exact amount input
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF8E1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFFFA000), width: 1.5),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.payments_outlined, color: Colors.amber.shade700, size: 20),
+                const SizedBox(width: 8),
+                const Text(
+                  'Cash on First Pickup',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF92400E),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Enter the exact amount collected: ${requiredAmount?.toStringAsFixed(0)} XAF',
+              style: const TextStyle(
+                fontSize: 12,
+                color: Color(0xFF6B7280),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                hintText: 'Enter amount',
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.amber.shade300),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.amber.shade300),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.amber.shade700, width: 2),
+                ),
+                suffixText: 'XAF',
+              ),
+              onChanged: (value) {
+                final amount = double.tryParse(value);
+                setState(() {
+                  _cashCollectedAmount = amount;
+                  _cashConfirmed = amount != null && amount == requiredAmount;
+                });
+              },
+            ),
+            if (_cashCollectedAmount != null && _cashCollectedAmount != requiredAmount) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Amount must equal ${requiredAmount?.toStringAsFixed(0)} XAF',
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: Colors.red,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
+    // Regular CASH job: simple checkbox
     return GestureDetector(
       onTap: () => setState(() => _cashConfirmed = !_cashConfirmed),
       child: AnimatedContainer(
@@ -346,11 +436,15 @@ class _CollectorCompleteJobScreenState
   Future<void> _handleSubmitProof(CollectorJobsProvider provider) async {
     if (_proofImage == null) return;
 
+    final isCashOnFirstPickup = widget.job.paymentMode == 'CASH_ON_FIRST_PICKUP';
+    final isRegularCash = widget.job.paymentMode == 'CASH';
+
     final success = await provider.completeJob(
       widget.job.id,
       proofImage: _proofImage!,
-      cashCollected: widget.job.paymentMode == 'CASH' ? (_requiresCashConfirmation() ? _cashConfirmed : true) : null,
-      collectedAmount: _requiresCashConfirmation() ? widget.job.quotedPrice : null,
+      cashCollected: isRegularCash ? (_requiresCashConfirmation() ? _cashConfirmed : true) : null,
+      collectedAmount: isRegularCash && _requiresCashConfirmation() ? widget.job.quotedPrice : null,
+      cashCollectedAmount: isCashOnFirstPickup ? _cashCollectedAmount : null,
     );
 
     if (success && mounted) {

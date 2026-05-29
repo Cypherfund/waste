@@ -43,6 +43,10 @@ class PaymentFlowProvider extends ChangeNotifier {
   bool isSubscriptionContext = false;
   String? subscriptionPlanId;
 
+  // Cash on First Pickup context
+  bool isCashOnFirstPickup = false;
+  String? cashFirstPickupPlanId;
+
   // Wallet top-up context
   bool isWalletTopUpContext = false;
   double? walletTopUpAmount;
@@ -206,6 +210,25 @@ class PaymentFlowProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Set cash on first pickup context
+  void setCashOnFirstPickupContext(String planId, {double? planPrice}) {
+    isCashOnFirstPickup = true;
+    cashFirstPickupPlanId = planId;
+    _subscriptionAmountDue = planPrice;
+    createdJob = null;
+    resultType = null;
+    error = null;
+    notifyListeners();
+  }
+
+  /// Clear cash on first pickup context
+  void clearCashOnFirstPickupContext() {
+    isCashOnFirstPickup = false;
+    cashFirstPickupPlanId = null;
+    _subscriptionAmountDue = null;
+    notifyListeners();
+  }
+
   /// Set wallet top-up context
   void setWalletTopUpContext(double amount) {
     isWalletTopUpContext = true;
@@ -260,6 +283,8 @@ class PaymentFlowProvider extends ChangeNotifier {
     isSubscriptionContext = false;
     subscriptionPlanId = null;
     _subscriptionAmountDue = null;
+    isCashOnFirstPickup = false;
+    cashFirstPickupPlanId = null;
     isWalletTopUpContext = false;
     walletTopUpAmount = null;
     _isCreatingJob = false;

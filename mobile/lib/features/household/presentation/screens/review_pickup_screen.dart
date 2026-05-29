@@ -594,7 +594,7 @@ class _ReviewPickupScreenState extends State<ReviewPickupScreen> {
           ),
         ),
         const SizedBox(height: 24),
-        // Two action buttons
+        // Three action buttons
         SizedBox(
           width: double.infinity,
           height: 54,
@@ -615,6 +615,29 @@ class _ReviewPickupScreenState extends State<ReviewPickupScreen> {
               style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          height: 54,
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(color: Colors.amber.shade700),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: _isCreatingJob ? null : () => _navigateToCashOnFirstPickup(),
+            icon: Icon(Icons.payments_outlined, color: Colors.amber.shade700),
+            label: Text(
+              'Cash on First Pickup',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: Colors.amber.shade700,
               ),
             ),
           ),
@@ -728,6 +751,10 @@ class _ReviewPickupScreenState extends State<ReviewPickupScreen> {
 
   void _navigateToSubscriptionPlans() {
     Navigator.pushNamed(context, '/subscription-plans');
+  }
+
+  void _navigateToCashOnFirstPickup() {
+    Navigator.pushNamed(context, '/subscription-plans', arguments: {'cashOnFirstPickup': true});
   }
 
   /// Extracts the savings amount string from a message like
