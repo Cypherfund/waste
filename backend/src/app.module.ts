@@ -38,6 +38,11 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
 
+// Load .env.test file if in test environment
+if (process.env.NODE_ENV === 'test') {
+  require('dotenv').config({ path: '.env.test' });
+}
+
 @Module({
   imports: [
     // Configuration — loaded first, globally available

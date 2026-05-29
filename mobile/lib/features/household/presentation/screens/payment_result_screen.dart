@@ -26,8 +26,25 @@ class PaymentResultScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final resultType = arguments['resultType'] as PaymentResultType;
     final isSubscription = arguments['isSubscription'] as bool? ?? false;
+    final isWalletTopUp = arguments['isWalletTopUp'] as bool? ?? false;
     final subscription = arguments['subscription'] as UserSubscription?;
     final job = arguments['job'] as Job?;
+    final amount = arguments['amount'] as double?;
+
+    // Wallet top-up result variants
+    if (isWalletTopUp) {
+      switch (resultType) {
+        case PaymentResultType.submitted:
+          return _WalletTopUpSubmittedVariant(amount: amount);
+        case PaymentResultType.success:
+          return _WalletTopUpSuccessVariant(amount: amount);
+        case PaymentResultType.failed:
+          final reason = arguments['failureReason'] as String?;
+          return _WalletTopUpFailedVariant(amount: amount, reason: reason);
+        default:
+          break;
+      }
+    }
 
     // Subscription result variants (no Job required)
     if (isSubscription) {
@@ -813,6 +830,206 @@ class _SubscriptionActivatedVariant extends StatelessWidget {
               TextButton(
                 onPressed: () {
                   context.read<PaymentFlowProvider>().clearSubscriptionContext();
+                  Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false);
+                },
+                child: Text('Back to Home', style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Wallet Top-Up Submitted Variant
+class _WalletTopUpSubmittedVariant extends StatelessWidget {
+  final double? amount;
+
+  const _WalletTopUpSubmittedVariant({this.amount});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF8E1),
+                  borderRadius: BorderRadius.circular(40),
+                ),
+                child: const Icon(Icons.schedule, size: 40, color: Color(0xFFFFA000)),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Top-Up Submitted',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF111827)),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Your wallet top-up of ${amount?.toStringAsFixed(0) ?? '0'} XAF has been submitted for verification. An admin will verify shortly.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade600, height: 1.5),
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 52),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    elevation: 0,
+                  ),
+                  onPressed: () {
+                    context.read<PaymentFlowProvider>().clearWalletTopUpContext();
+                    Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false);
+                  },
+                  child: const Text('Back to Home', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Wallet Top-Up Success Variant
+class _WalletTopUpSuccessVariant extends StatelessWidget {
+  final double? amount;
+
+  const _WalletTopUpSuccessVariant({this.amount});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F5E9),
+                  borderRadius: BorderRadius.circular(40),
+                ),
+                child: const Icon(Icons.check_circle, size: 40, color: Color(0xFF2E7D32)),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Wallet Credited!',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF111827)),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Your wallet has been credited with ${amount?.toStringAsFixed(0) ?? '0'} XAF.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade600, height: 1.5),
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 52),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    elevation: 0,
+                  ),
+                  onPressed: () {
+                    context.read<PaymentFlowProvider>().clearWalletTopUpContext();
+                    Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false);
+                  },
+                  child: const Text('Back to Home', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Wallet Top-Up Failed Variant
+class _WalletTopUpFailedVariant extends StatelessWidget {
+  final double? amount;
+  final String? reason;
+
+  const _WalletTopUpFailedVariant({this.amount, this.reason});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFEBEE),
+                  borderRadius: BorderRadius.circular(40),
+                ),
+                child: const Icon(Icons.error_outline, size: 40, color: Color(0xFFC62828)),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Top-Up Failed',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF111827)),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                reason != null
+                    ? 'Your wallet top-up could not be processed.\nReason: $reason'
+                    : 'Your wallet top-up could not be processed. Please try again or contact support.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade600, height: 1.5),
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 52),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    elevation: 0,
+                  ),
+                  onPressed: () {
+                    context.read<PaymentFlowProvider>().clearWalletTopUpContext();
+                    Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false);
+                  },
+                  child: const Text('Try Again', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () {
+                  context.read<PaymentFlowProvider>().clearWalletTopUpContext();
                   Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false);
                 },
                 child: Text('Back to Home', style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),

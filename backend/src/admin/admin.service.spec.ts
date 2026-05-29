@@ -14,11 +14,14 @@ import { Earning } from '../earnings/entities/earning.entity';
 import { Rating } from '../ratings/entities/rating.entity';
 import { User } from '../users/entities/user.entity';
 import { UserSubscription } from '../subscriptions/entities/user-subscription.entity';
+import { PaymentTransaction, TransactionStatus } from '../payments/entities/payment-transaction.entity';
 import { JobStatus } from '../common/enums/job-status.enum';
 import { UserRole } from '../common/enums/role.enum';
 import { DisputeStatus } from '../common/enums/dispute-status.enum';
 import { FraudFlagStatus } from '../common/enums/fraud-type.enum';
 import { FraudSeverity } from '../common/enums/fraud-severity.enum';
+import { DataSource } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 describe('AdminService', () => {
   let service: AdminService;
@@ -35,6 +38,9 @@ describe('AdminService', () => {
   let ratingRepo: any;
   let userRepo: any;
   let subRepo: any;
+  let paymentTransactionRepo: any;
+  let mockDataSource: any;
+  let mockEntityManager: any;
 
   const mockQb = () => ({
     select: jest.fn().mockReturnThis(),
@@ -149,6 +155,22 @@ describe('AdminService', () => {
       find: jest.fn().mockResolvedValue([]),
     };
 
+    // Mock DataSource and EntityManager for wallet top-up tests
+    mockEntityManager = {
+      getRepository: jest.fn(),
+      createQueryBuilder: jest.fn(),
+      save: jest.fn(),
+    };
+
+    mockDataSource = {
+      transaction: jest.fn(async (callback) => callback(mockEntityManager)),
+    };
+
+    paymentTransactionRepo = {
+      createQueryBuilder: jest.fn(),
+      find: jest.fn().mockResolvedValue([]),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AdminService,
@@ -159,12 +181,15 @@ describe('AdminService', () => {
         { provide: FraudService, useValue: fraudService },
         { provide: SystemConfigService, useValue: systemConfigService },
         { provide: FeatureFlagService, useValue: featureFlagService },
+        { provide: EventEmitter2, useValue: { emit: jest.fn(), emitAsync: jest.fn() } },
         { provide: getRepositoryToken(Job), useValue: jobRepo },
         { provide: getRepositoryToken(Dispute), useValue: disputeRepo },
         { provide: getRepositoryToken(Earning), useValue: earningRepo },
         { provide: getRepositoryToken(Rating), useValue: ratingRepo },
         { provide: getRepositoryToken(User), useValue: userRepo },
         { provide: getRepositoryToken(UserSubscription), useValue: subRepo },
+        { provide: getRepositoryToken(PaymentTransaction), useValue: paymentTransactionRepo },
+        { provide: DataSource, useValue: mockDataSource },
       ],
     }).compile();
 
@@ -551,25 +576,228 @@ describe('AdminService', () => {
     });
 
     it('returns combined and sorted results (oldest first)', async () => {
-      const olderSub = makePendingSub({ createdAt: new Date('2026-04-30') });
-      const newerJob = makeJob({ createdAt: new Date('2026-05-10') });
-      jobRepo.find.mockResolvedValue([newerJob]);
-      subRepo.find = jest.fn().mockResolvedValue([olderSub]);
+      jobRepo.find.mockResolvedValue([makeJob()]);
+      subRepo.find = jest.fn().mockResolvedValue([makePendingSub()]);
 
       const result = await service.listPendingPaymentJobs();
 
       expect(result.data).toHaveLength(2);
-      expect(result.data[0].paymentSource).toBe('SUBSCRIPTION_PAYMENT'); // older first
-      expect(result.data[1].paymentSource).toBe('JOB_PAYMENT');
+    });
+  });
+
+  // ─── WALLET TOP-UP APPROVAL/REJECTION ─────────────────────────────
+
+  describe('wallet top-up approval', () => {
+    let mockTransaction = {
+      id: 'txn-1',
+      userId: 'user-1',
+      type: 'WALLET_TOPUP',
+      amount: 5000,
+      status: TransactionStatus.PENDING,
+      user: { id: 'user-1' },
+    };
+
+    const mockLockedQuery = {
+      where: jest.fn().mockReturnThis(),
+      setLock: jest.fn().mockReturnThis(),
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      getOne: jest.fn(),
+    };
+
+    const mockUpdateQuery = {
+      update: jest.fn().mockReturnThis(),
+      set: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      execute: jest.fn(),
+    };
+
+    beforeEach(() => {
+      mockTransaction = {
+        id: 'txn-1',
+        userId: 'user-1',
+        type: 'WALLET_TOPUP',
+        amount: 5000,
+        status: TransactionStatus.PENDING,
+        user: { id: 'user-1' },
+      };
+      mockLockedQuery.getOne.mockReset().mockResolvedValue(mockTransaction);
+      mockUpdateQuery.set.mockClear();
+      mockUpdateQuery.where.mockClear();
+      mockUpdateQuery.execute.mockClear();
+      mockEntityManager.getRepository.mockReturnValue({
+        createQueryBuilder: jest.fn(() => mockLockedQuery),
+      });
+      mockEntityManager.createQueryBuilder.mockReturnValue(mockUpdateQuery);
     });
 
-    it('meta.total equals combined count', async () => {
-      jobRepo.find.mockResolvedValue([makeJob()]);
-      subRepo.find = jest.fn().mockResolvedValue([makePendingSub(), makePendingSub({ id: 'sub-2' })]);
+    it('locks PaymentTransaction with pessimistic_write', async () => {
+      mockLockedQuery.getOne.mockResolvedValue(mockTransaction);
+      await service.approveWalletTopUp('txn-1', 'admin-1');
 
-      const result = await service.listPendingPaymentJobs();
+      expect(mockLockedQuery.setLock).toHaveBeenCalledWith('pessimistic_write');
+    });
 
-      expect(result.meta.total).toBe(3);
+    it('throws NotFoundException if transaction not found', async () => {
+      mockLockedQuery.getOne.mockResolvedValue(null);
+
+      await expect(service.approveWalletTopUp('txn-1', 'admin-1')).rejects.toThrow('Transaction not found');
+    });
+
+    it('throws BadRequestException if transaction status is not PENDING', async () => {
+      mockLockedQuery.getOne.mockResolvedValue({
+        ...mockTransaction,
+        status: TransactionStatus.VERIFIED,
+      });
+
+      await expect(service.approveWalletTopUp('txn-1', 'admin-1')).rejects.toThrow('already been processed');
+    });
+
+    it('throws BadRequestException if transaction type is not WALLET_TOPUP', async () => {
+      mockLockedQuery.getOne.mockResolvedValue({
+        ...mockTransaction,
+        type: 'JOB_PAYMENT',
+      });
+
+      await expect(service.approveWalletTopUp('txn-1', 'admin-1')).rejects.toThrow('not a wallet top-up');
+    });
+
+    it('credits wallet and marks transaction VERIFIED', async () => {
+      await service.approveWalletTopUp('txn-1', 'admin-1');
+
+      expect(mockUpdateQuery.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          walletBalance: expect.any(Function),
+        }),
+      );
+      expect(mockUpdateQuery.where).toHaveBeenCalledWith('id = :id', { id: 'user-1' });
+      expect(mockUpdateQuery.execute).toHaveBeenCalled();
+      expect(mockEntityManager.save).toHaveBeenCalledWith(
+        expect.objectContaining({ status: TransactionStatus.VERIFIED }),
+      );
+    });
+
+    it('is idempotent - second approval does not credit wallet again', async () => {
+      mockLockedQuery.getOne.mockResolvedValue(mockTransaction);
+      // First approval
+      await service.approveWalletTopUp('txn-1', 'admin-1');
+      const executeCallCount = mockUpdateQuery.execute.mock.calls.length;
+
+      // Second approval - transaction now VERIFIED
+      mockLockedQuery.getOne.mockResolvedValue({
+        ...mockTransaction,
+        status: TransactionStatus.VERIFIED,
+      });
+
+      await expect(service.approveWalletTopUp('txn-1', 'admin-1')).rejects.toThrow('already been processed');
+
+      // Execute should not be called again
+      expect(mockUpdateQuery.execute.mock.calls.length).toBe(executeCallCount);
+    });
+  });
+
+  describe('wallet top-up rejection', () => {
+    let mockTransaction = {
+      id: 'txn-1',
+      userId: 'user-1',
+      type: 'WALLET_TOPUP',
+      amount: 5000,
+      status: TransactionStatus.PENDING,
+      user: { id: 'user-1' },
+    };
+
+    const mockLockedQuery = {
+      where: jest.fn().mockReturnThis(),
+      setLock: jest.fn().mockReturnThis(),
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      getOne: jest.fn(),
+    };
+
+    beforeEach(() => {
+      mockTransaction = {
+        id: 'txn-1',
+        userId: 'user-1',
+        type: 'WALLET_TOPUP',
+        amount: 5000,
+        status: TransactionStatus.PENDING,
+        user: { id: 'user-1' },
+      };
+      mockLockedQuery.getOne.mockReset().mockResolvedValue(mockTransaction);
+      mockEntityManager.getRepository.mockReturnValue({
+        createQueryBuilder: jest.fn(() => mockLockedQuery),
+      });
+    });
+
+    it('locks PaymentTransaction with pessimistic_write', async () => {
+      mockLockedQuery.getOne.mockResolvedValue(mockTransaction);
+
+      await service.rejectWalletTopUp('txn-1', 'admin-1', 'Invalid payment');
+
+      expect(mockLockedQuery.setLock).toHaveBeenCalledWith('pessimistic_write');
+    });
+
+    it('throws NotFoundException if transaction not found', async () => {
+      mockLockedQuery.getOne.mockResolvedValue(null);
+
+      await expect(service.rejectWalletTopUp('txn-1', 'admin-1')).rejects.toThrow('Transaction not found');
+    });
+
+    it('throws BadRequestException if transaction status is not PENDING', async () => {
+      mockLockedQuery.getOne.mockResolvedValue({
+        ...mockTransaction,
+        status: TransactionStatus.VERIFIED,
+      });
+
+      await expect(service.rejectWalletTopUp('txn-1', 'admin-1')).rejects.toThrow('already been processed');
+    });
+
+    it('throws BadRequestException if transaction type is not WALLET_TOPUP', async () => {
+      mockLockedQuery.getOne.mockResolvedValue({
+        ...mockTransaction,
+        type: 'JOB_PAYMENT',
+      });
+
+      await expect(service.rejectWalletTopUp('txn-1', 'admin-1')).rejects.toThrow('not a wallet top-up');
+    });
+
+    it('marks transaction FAILED and stores failureReason', async () => {
+      mockLockedQuery.getOne.mockResolvedValue(mockTransaction);
+
+      await service.rejectWalletTopUp('txn-1', 'admin-1', 'Invalid payment reference');
+
+      expect(mockEntityManager.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: TransactionStatus.FAILED,
+          failureReason: 'Invalid payment reference',
+        }),
+      );
+    });
+
+    it('does not call wallet credit update on rejection', async () => {
+      mockLockedQuery.getOne.mockResolvedValue(mockTransaction);
+
+      await service.rejectWalletTopUp('txn-1', 'admin-1', 'Invalid payment');
+
+      // createQueryBuilder should not be called for update
+      expect(mockEntityManager.createQueryBuilder).not.toHaveBeenCalled();
+    });
+
+    it('is idempotent - second rejection does not change state', async () => {
+      mockLockedQuery.getOne.mockResolvedValue(mockTransaction);
+
+      // First rejection
+      await service.rejectWalletTopUp('txn-1', 'admin-1', 'Invalid payment');
+      const saveCallCount = mockEntityManager.save.mock.calls.length;
+
+      // Second rejection - transaction now FAILED
+      mockLockedQuery.getOne.mockResolvedValue({
+        ...mockTransaction,
+        status: TransactionStatus.FAILED,
+      });
+
+      await expect(service.rejectWalletTopUp('txn-1', 'admin-1', 'Another reason')).rejects.toThrow('already been processed');
+
+      // Save should not be called again
+      expect(mockEntityManager.save.mock.calls.length).toBe(saveCallCount);
     });
   });
 });

@@ -170,6 +170,10 @@ class AppConfig {
   final List<PaymentProvider> cashinProviders;
   final int minAdvanceHours;
   final int maxAdvanceDays;
+  final bool topupEnabled;
+  final double topupMinAmount;
+  final double topupMaxAmount;
+  final List<int> topupQuickAmounts;
 
   AppConfig({
     required this.paymentIntegrationEnabled,
@@ -180,6 +184,10 @@ class AppConfig {
     this.cashinProviders = const [],
     this.minAdvanceHours = 24,
     this.maxAdvanceDays = 30,
+    this.topupEnabled = true,
+    this.topupMinAmount = 500,
+    this.topupMaxAmount = 500000,
+    this.topupQuickAmounts = const [1000, 3500, 5000, 10000],
   });
 
   factory AppConfig.fromJson(Map<String, dynamic> j) => AppConfig(
@@ -197,6 +205,13 @@ class AppConfig {
             [],
         minAdvanceHours: j['minAdvanceHours'] as int? ?? 24,
         maxAdvanceDays: j['maxAdvanceDays'] as int? ?? 30,
+        topupEnabled: j['topupEnabled'] as bool? ?? true,
+        topupMinAmount: (j['topupMinAmount'] as num?)?.toDouble() ?? 500,
+        topupMaxAmount: (j['topupMaxAmount'] as num?)?.toDouble() ?? 500000,
+        topupQuickAmounts: (j['topupQuickAmounts'] as List<dynamic>?)
+                ?.map((a) => (a as num).toInt())
+                .toList() ??
+            [1000, 3500, 5000, 10000],
       );
 
   /// Get providers that have manual instructions enabled or manual payment details configured
@@ -353,5 +368,33 @@ class WalletApi {
       queryParameters: {'usage': usage},
     );
     return UserPaymentMethod.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<void> topUp({
+    required double amount,
+    required String paymentMethodId,
+    String? paymentRef,
+    String? paymentProofUrl,
+  }) async {
+    await _client.dio.post('/wallet/top-up', data: {
+      'amount': amount,
+      'paymentMethodId': paymentMethodId,
+      if (paymentRef != null) 'paymentRef': paymentRef,
+      if (paymentProofUrl != null) 'paymentProofUrl': paymentProofUrl,
+    });
+  }
+
+  Future<Map<String, dynamic>> payJobWithWallet({required String jobId}) async {
+    final response = await _client.dio.post('/wallet/pay-job', data: {
+      'jobId': jobId,
+    });
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> paySubscriptionWithWallet({required String planId}) async {
+    final response = await _client.dio.post('/wallet/pay-subscription', data: {
+      'planId': planId,
+    });
+    return response.data as Map<String, dynamic>;
   }
 }

@@ -186,6 +186,8 @@ class PaymentMethodCard extends StatelessWidget {
         return 'Instant payment confirmation';
       case PaymentProviderMode.cash:
         return 'Pay when collector arrives';
+      case PaymentProviderMode.wallet:
+        return 'Instant payment from wallet';
     }
   }
 }

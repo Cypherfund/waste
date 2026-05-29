@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../providers/subscription_provider.dart';
 import '../../../../providers/job_provider.dart';
+import '../../../../services/api/wallet_api.dart';
 import '../../providers/payment_flow_provider.dart';
 import '../../providers/payment_flow_enums.dart';
 import '../widgets/payment_method_card.dart';
@@ -139,46 +140,65 @@ class _IntegratedPaymentScreenState extends State<IntegratedPaymentScreen> {
   }
 
   Widget _buildAmountCard(double amount) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
-      child: Column(
-        children: [
-          const Text(
-            'Amount to pay',
-            style: TextStyle(
-              fontSize: 14,
-              color: Color(0xFF6B7280),
-            ),
+    return Consumer<PaymentFlowProvider>(
+      builder: (context, flowProvider, _) {
+        final subtitle = flowProvider.isWalletTopUpContext
+            ? 'Wallet top-up'
+            : flowProvider.isSubscriptionContext
+                ? 'Subscription payment'
+                : 'For one waste pickup';
+
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE5E7EB)),
           ),
-          const SizedBox(height: 8),
-          Text(
-            '${amount.toStringAsFixed(0)} XAF',
-            style: const TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF111827),
-            ),
+          child: Column(
+            children: [
+              const Text(
+                'Amount to pay',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF6B7280),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${amount.toStringAsFixed(0)} XAF',
+                style: const TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF111827),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            'For one waste pickup',
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.grey.shade600,
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   Widget _buildPaymentDetailsCard(String providerName, double amount, PaymentFlowProvider flowProvider) {
+    String paymentType;
+    if (flowProvider.isWalletTopUpContext) {
+      paymentType = 'Wallet top-up';
+    } else if (flowProvider.isSubscriptionContext) {
+      paymentType = 'Subscription payment';
+    } else {
+      paymentType = 'One-time payment';
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -203,7 +223,7 @@ class _IntegratedPaymentScreenState extends State<IntegratedPaymentScreen> {
           const SizedBox(height: 12),
           _buildDetailRow('Amount', '${amount.toStringAsFixed(0)} XAF'),
           const SizedBox(height: 12),
-          _buildDetailRow('Type', flowProvider.isSubscriptionContext ? 'Subscription payment' : 'One-time payment'),
+          _buildDetailRow('Type', paymentType),
         ],
       ),
     );
@@ -268,6 +288,31 @@ class _IntegratedPaymentScreenState extends State<IntegratedPaymentScreen> {
 
     try {
       final flowProvider = context.read<PaymentFlowProvider>();
+
+      // ── Wallet top-up integrated payment branch ───────────────────
+      if (flowProvider.isWalletTopUpContext) {
+        final walletApi = context.read<WalletApi>();
+        await walletApi.topUp(
+          amount: flowProvider.walletTopUpAmount!,
+          paymentMethodId: flowProvider.selectedProviderId!,
+        );
+
+        if (!mounted) return;
+
+        flowProvider.setResultType(PaymentResultType.submitted);
+
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/payment-result',
+          (route) => route.settings.name == '/home',
+          arguments: {
+            'resultType': PaymentResultType.submitted,
+            'isWalletTopUp': true,
+            'amount': flowProvider.walletTopUpAmount,
+          },
+        );
+        return;
+      }
 
       // ── Subscription integrated payment branch ───────────────────
       if (flowProvider.isSubscriptionContext) {

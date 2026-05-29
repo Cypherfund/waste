@@ -22,7 +22,7 @@
   },
   "collectCoverageFrom": ["../src/**/*.(t|j)s"],
   "coverageDirectory": "../coverage/e2e",
-  "setupFiles": ["dotenv/config"],
+  "setupFiles": [],
   "setupFilesAfterEnv": ["./test-setup.ts"],
   "testTimeout": 60000,
   "maxWorkers": 1

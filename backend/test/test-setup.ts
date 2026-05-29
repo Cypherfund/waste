@@ -7,6 +7,10 @@ import { DataSource } from 'typeorm';
 import { INestApplication } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import * as request from 'supertest';
+import * as dotenv from 'dotenv';
+
+// Load test environment variables
+dotenv.config({ path: './.env.test' });
 
 let app: INestApplication;
 let dataSource: DataSource;
@@ -45,10 +49,11 @@ beforeAll(async () => {
   
   // Clean database before tests - handle missing tables gracefully
   const tables = [
-    'ratings', 'earnings', 'notifications', 
+    'ratings', 'earnings', 'notifications',
     'fraud_flags', 'disputes', 'jobs', 'users',
     'files', 'proofs', 'location_updates', 'collector_availability', 'system_config',
-    'user_subscriptions', 'subscription_plans',
+    'user_subscriptions', 'subscription_plans', 'payment_transactions',
+    'payout_requests', 'collector_float_ledger', 'user_payment_methods', 'payment_providers',
   ];
   
   for (const table of tables) {
@@ -84,10 +89,11 @@ afterAll(async () => {
   // Clean database after tests
   if (dataSource) {
     const tables = [
-      'ratings', 'earnings', 'notifications', 
+      'ratings', 'earnings', 'notifications',
       'fraud_flags', 'disputes', 'jobs', 'users',
       'files', 'proofs', 'location_updates', 'collector_availability', 'system_config',
-      'user_subscriptions', 'subscription_plans',
+      'user_subscriptions', 'subscription_plans', 'payment_transactions',
+      'payout_requests', 'collector_float_ledger', 'user_payment_methods', 'payment_providers',
     ];
     
     for (const table of tables) {

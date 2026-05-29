@@ -1,13 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { TransactionType } from './entities/payment-transaction.entity';
+import { TransactionType, TransactionStatus, PaymentTransaction } from './entities/payment-transaction.entity';
 import { Job } from '../jobs/entities/job.entity';
 import { JobStatus } from '../common/enums/job-status.enum';
 import { PaymentStatus } from '../common/enums/payment-status.enum';
 import { PaymentEvents, PaymentFailedPayload } from '../events/events.types';
+import { User } from '../users/entities/user.entity';
 
 @Injectable()
 export class PaymentEventsService {
@@ -16,7 +17,10 @@ export class PaymentEventsService {
   constructor(
     @InjectRepository(Job)
     private readonly jobRepo: Repository<Job>,
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
     private readonly eventEmitter: EventEmitter2,
+    private readonly dataSource: DataSource,
   ) {}
 
   // ── HANDLE payment success ─────────────────────────────────────
@@ -31,9 +35,12 @@ export class PaymentEventsService {
   }): Promise<void> {
     this.logger.log(`Processing payment success: ${payload.transactionId}`);
 
-    // Currently only CASHIN (job payments) is implemented via gateway
-    // CASHOUT (payouts) is admin-only until cashout API is available
-    if (payload.type === TransactionType.CASHIN && payload.jobId) {
+    // Handle wallet top-up via integrated provider
+    if (payload.type === TransactionType.WALLET_TOPUP) {
+      await this.handleWalletTopUpSuccess(payload.transactionId, payload.userId, payload.amount);
+    }
+    // Handle job payments via integrated provider
+    else if (payload.type === TransactionType.CASHIN && payload.jobId) {
       await this.handleJobPaymentSuccess(payload.jobId);
     }
   }
@@ -75,6 +82,57 @@ export class PaymentEventsService {
     await this.jobRepo.save(job);
 
     this.logger.log(`Job ${jobId} payment verified, status changed to REQUESTED`);
+  }
+
+  // ── Wallet top-up success ───────────────────────────────────────
+  private async handleWalletTopUpSuccess(transactionId: string, userId: string, amount: number): Promise<void> {
+    return this.dataSource.transaction(async (em) => {
+      // Lock transaction for idempotency
+      const transaction = await em
+        .getRepository(PaymentTransaction)
+        .createQueryBuilder('t')
+        .where('t.id = :id', { id: transactionId })
+        .setLock('pessimistic_write')
+        .getOne();
+
+      if (!transaction) {
+        this.logger.warn(`Transaction not found for wallet top-up success: ${transactionId}`);
+        return;
+      }
+
+      // Idempotency: only process if still pending
+      if (transaction.status !== TransactionStatus.PENDING) {
+        this.logger.log(`Transaction ${transactionId} already processed (status: ${transaction.status})`);
+        return;
+      }
+
+      // Get user with lock
+      const user = await em
+        .getRepository(User)
+        .createQueryBuilder('u')
+        .where('u.id = :id', { id: userId })
+        .setLock('pessimistic_write')
+        .getOne();
+
+      if (!user) {
+        this.logger.warn(`User not found for wallet top-up success: ${userId}`);
+        return;
+      }
+
+      // Credit wallet
+      await em
+        .createQueryBuilder()
+        .update(User)
+        .set({ walletBalance: () => `wallet_balance + ${amount}` })
+        .where('id = :id', { id: userId })
+        .execute();
+
+      // Mark transaction as verified
+      transaction.status = TransactionStatus.VERIFIED;
+      await em.save(transaction);
+
+      this.logger.log(`Wallet credited for user ${userId}: +${amount} XAF, transaction ${transactionId}`);
+    });
   }
 
   // ── Job payment failure ────────────────────────────────────────

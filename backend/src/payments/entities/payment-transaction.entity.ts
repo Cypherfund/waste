@@ -10,15 +10,25 @@ import {
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 
+export enum PaymentSource {
+  JOB_PAYMENT = 'JOB_PAYMENT',
+  SUBSCRIPTION_PAYMENT = 'SUBSCRIPTION_PAYMENT',
+  WALLET_TOPUP = 'WALLET_TOPUP',
+}
+
 export enum TransactionType {
   CASHIN = 'CASHIN',
   CASHOUT = 'CASHOUT',
+  WALLET_TOPUP = 'WALLET_TOPUP',
+  JOB_PAYMENT = 'JOB_PAYMENT',
+  SUBSCRIPTION_PAYMENT = 'SUBSCRIPTION_PAYMENT',
 }
 
 export enum TransactionStatus {
   PENDING = 'PENDING',
   SUCCESS = 'SUCCESS',
   FAILED = 'FAILED',
+  VERIFIED = 'VERIFIED',
 }
 
 @Entity('payment_transactions')
@@ -40,6 +50,15 @@ export class PaymentTransaction {
   })
   type: TransactionType;
 
+  @Column({
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+    default: 'JOB_PAYMENT',
+    name: 'payment_source',
+  })
+  paymentSource: string;
+
   @Column({ type: 'decimal', precision: 12, scale: 2 })
   amount: number;
 
@@ -52,8 +71,8 @@ export class PaymentTransaction {
   @Column({ type: 'varchar', length: 100, name: 'provider_name' })
   providerName: string;
 
-  @Column({ type: 'varchar', length: 20, name: 'phone' })
-  phone: string;
+  @Column({ type: 'varchar', length: 20, name: 'phone', nullable: true })
+  phone: string | null;
 
   @Index({ unique: true })
   @Column({ type: 'varchar', length: 100, name: 'internal_ref' })
@@ -80,6 +99,12 @@ export class PaymentTransaction {
 
   @Column({ type: 'text', nullable: true, name: 'failure_reason' })
   failureReason: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true, name: 'payment_ref' })
+  paymentRef: string | null;
+
+  @Column({ type: 'varchar', length: 500, nullable: true, name: 'payment_proof_url' })
+  paymentProofUrl: string | null;
 
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt: Date;

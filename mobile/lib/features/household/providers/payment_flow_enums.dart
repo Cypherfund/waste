@@ -3,6 +3,14 @@ enum PaymentProviderMode {
   manual,
   integrated,
   cash,
+  wallet,
+}
+
+/// Payment source - what the payment is for
+enum PaymentSource {
+  jobPayment,
+  subscriptionPayment,
+  walletTopup,
 }
 
 /// Payment result types for PaymentResultScreen
