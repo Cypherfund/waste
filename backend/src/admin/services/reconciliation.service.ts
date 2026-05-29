@@ -127,29 +127,57 @@ export class ReconciliationService {
 
   async saveDailySummary(date: string): Promise<ReconciliationSummary> {
     const metrics = await this.calculateDailySummary(date);
+    const repo = this.dataSource.getRepository(ReconciliationSummary);
 
-    const summary = this.dataSource.getRepository(ReconciliationSummary).create({
-      summaryDate: date,
-      integratedProviderPayments: metrics.moneyIn.integratedProviderPayments,
-      manualProviderPayments: metrics.moneyIn.manualProviderPayments,
-      walletTopups: metrics.moneyIn.walletTopups,
-      cashCollected: metrics.moneyIn.cashCollected,
-      collectorEarnings: metrics.moneyOut.collectorEarnings,
-      marketerCommissions: metrics.moneyOut.marketerCommissions,
-      approvedPayouts: metrics.moneyOut.approvedPayouts,
-      walletBalanceLiabilities: metrics.moneyOut.walletBalanceLiabilities,
-      walletDebits: metrics.internalMovements.walletDebits,
-      collectorFloatDeductions: metrics.internalMovements.collectorFloatDeductions,
-      platformShareCashJobs: metrics.internalMovements.platformShareCashJobs,
-      platformShareCashFirstPickup: metrics.internalMovements.platformShareCashFirstPickup,
-      manualPaymentsPending: metrics.pendingRisk.manualPaymentsPending,
-      manualPaymentsPendingAmount: metrics.pendingRisk.manualPaymentsPendingAmount,
-      failedProviderPayments: metrics.pendingRisk.failedProviderPayments,
-      failedProviderPaymentsAmount: metrics.pendingRisk.failedProviderPaymentsAmount,
-      unreconciledItems: metrics.pendingRisk.unreconciledItems,
-    });
+    // Check if summary already exists for this date
+    const existing = await repo.findOne({ where: { summaryDate: date } });
 
-    return await this.dataSource.getRepository(ReconciliationSummary).save(summary);
+    if (existing) {
+      // Update existing summary
+      existing.integratedProviderPayments = metrics.moneyIn.integratedProviderPayments;
+      existing.manualProviderPayments = metrics.moneyIn.manualProviderPayments;
+      existing.walletTopups = metrics.moneyIn.walletTopups;
+      existing.cashCollected = metrics.moneyIn.cashCollected;
+      existing.collectorEarnings = metrics.moneyOut.collectorEarnings;
+      existing.marketerCommissions = metrics.moneyOut.marketerCommissions;
+      existing.approvedPayouts = metrics.moneyOut.approvedPayouts;
+      existing.walletBalanceLiabilities = metrics.moneyOut.walletBalanceLiabilities;
+      existing.walletDebits = metrics.internalMovements.walletDebits;
+      existing.collectorFloatDeductions = metrics.internalMovements.collectorFloatDeductions;
+      existing.platformShareCashJobs = metrics.internalMovements.platformShareCashJobs;
+      existing.platformShareCashFirstPickup = metrics.internalMovements.platformShareCashFirstPickup;
+      existing.manualPaymentsPending = metrics.pendingRisk.manualPaymentsPending;
+      existing.manualPaymentsPendingAmount = metrics.pendingRisk.manualPaymentsPendingAmount;
+      existing.failedProviderPayments = metrics.pendingRisk.failedProviderPayments;
+      existing.failedProviderPaymentsAmount = metrics.pendingRisk.failedProviderPaymentsAmount;
+      existing.unreconciledItems = metrics.pendingRisk.unreconciledItems;
+
+      return await repo.save(existing);
+    } else {
+      // Create new summary
+      const summary = repo.create({
+        summaryDate: date,
+        integratedProviderPayments: metrics.moneyIn.integratedProviderPayments,
+        manualProviderPayments: metrics.moneyIn.manualProviderPayments,
+        walletTopups: metrics.moneyIn.walletTopups,
+        cashCollected: metrics.moneyIn.cashCollected,
+        collectorEarnings: metrics.moneyOut.collectorEarnings,
+        marketerCommissions: metrics.moneyOut.marketerCommissions,
+        approvedPayouts: metrics.moneyOut.approvedPayouts,
+        walletBalanceLiabilities: metrics.moneyOut.walletBalanceLiabilities,
+        walletDebits: metrics.internalMovements.walletDebits,
+        collectorFloatDeductions: metrics.internalMovements.collectorFloatDeductions,
+        platformShareCashJobs: metrics.internalMovements.platformShareCashJobs,
+        platformShareCashFirstPickup: metrics.internalMovements.platformShareCashFirstPickup,
+        manualPaymentsPending: metrics.pendingRisk.manualPaymentsPending,
+        manualPaymentsPendingAmount: metrics.pendingRisk.manualPaymentsPendingAmount,
+        failedProviderPayments: metrics.pendingRisk.failedProviderPayments,
+        failedProviderPaymentsAmount: metrics.pendingRisk.failedProviderPaymentsAmount,
+        unreconciledItems: metrics.pendingRisk.unreconciledItems,
+      });
+
+      return await repo.save(summary);
+    }
   }
 
   async getSummaryRange(fromDate: string, toDate: string): Promise<ReconciliationSummary[]> {
@@ -166,29 +194,8 @@ export class ReconciliationService {
     const unreconciled: UnreconciledItem[] = [];
 
     // 1. Provider payments verified but wallet not credited
-    const verifiedButNotCredited = await this.dataSource.query(`
-      SELECT pt.id, pt.amount, pt.user_id, pt.created_at
-      FROM payment_transactions pt
-      WHERE pt.status = 'VERIFIED'
-      AND pt.type = 'WALLET_TOPUP'
-      AND pt.created_at >= $1 AND pt.created_at <= $2
-      AND NOT EXISTS (
-        SELECT 1 FROM wallet_transactions wt
-        WHERE wt.payment_transaction_id = pt.id
-      )
-    `, [fromDate, toDate]);
-
-    for (const item of verifiedButNotCredited) {
-      unreconciled.push({
-        type: 'PAYMENT_VERIFIED_NO_WALLET_CREDIT',
-        description: 'Provider payment verified but wallet not credited',
-        amount: Number(item.amount),
-        entityId: item.id,
-        entityType: 'payment_transaction',
-        date: item.created_at,
-        reason: 'Payment verified but wallet transaction missing',
-      });
-    }
+    // Note: wallet_transactions table doesn't exist yet, skip this check
+    // TODO: Add this check when wallet_transactions table is implemented
 
     // 2. Jobs completed with cash but no float deduction
     const cashJobsNoFloat = await this.dataSource.query(`
@@ -217,26 +224,8 @@ export class ReconciliationService {
     }
 
     // 3. Duplicate wallet credits (same amount, same user, same day)
-    const duplicateCredits = await this.dataSource.query(`
-      SELECT user_id, amount, COUNT(*) as count
-      FROM wallet_transactions
-      WHERE type = 'CREDIT'
-      AND created_at >= $1 AND created_at <= $2
-      GROUP BY user_id, amount, DATE(created_at)
-      HAVING COUNT(*) > 1
-    `, [fromDate, toDate]);
-
-    for (const item of duplicateCredits) {
-      unreconciled.push({
-        type: 'DUPLICATE_WALLET_CREDIT',
-        description: `Duplicate wallet credits for user ${item.user_id}`,
-        amount: Number(item.amount) * item.count,
-        entityId: item.user_id,
-        entityType: 'user',
-        date: fromDate,
-        reason: `Multiple credits of same amount on same day`,
-      });
-    }
+    // Note: wallet_transactions table doesn't exist yet, skip this check
+    // TODO: Add this check when wallet_transactions table is implemented
 
     return unreconciled;
   }
@@ -327,10 +316,12 @@ export class ReconciliationService {
   }
 
   private async getWalletDebits(fromDate: Date, toDate: Date): Promise<number> {
+    // Note: wallet_transactions table doesn't exist yet
+    // Use collector float ledger deductions as proxy for wallet debits
     const result = await this.dataSource.query(`
-      SELECT COALESCE(SUM(amount), 0) as total
-      FROM wallet_transactions
-      WHERE type = 'DEBIT'
+      SELECT COALESCE(SUM(ABS(amount)), 0) as total
+      FROM collector_float_ledger
+      WHERE type IN ('CASH_SETTLEMENT_DEDUCTION', 'CASH_SUBSCRIPTION_PLATFORM_SHARE')
       AND created_at >= $1 AND created_at <= $2
     `, [fromDate, toDate]);
     return Number(result[0].total);
@@ -347,24 +338,24 @@ export class ReconciliationService {
   }
 
   private async getPlatformShareCashJobs(fromDate: Date, toDate: Date): Promise<number> {
+    // Platform share from normal cash jobs (CASH_SETTLEMENT_DEDUCTION)
     const result = await this.dataSource.query(`
       SELECT COALESCE(SUM(ABS(amount)), 0) as total
       FROM collector_float_ledger
-      WHERE type = 'CASH_SUBSCRIPTION_PLATFORM_SHARE'
+      WHERE type = 'CASH_SETTLEMENT_DEDUCTION'
       AND created_at >= $1 AND created_at <= $2
     `, [fromDate, toDate]);
     return Number(result[0].total);
   }
 
   private async getPlatformShareCashFirstPickup(fromDate: Date, toDate: Date): Promise<number> {
-    // For cash-on-first-pickup, platform share is calculated as a percentage
-    // This is a simplified calculation - adjust based on actual business logic
+    // Platform share from cash-on-first-pickup (CASH_SUBSCRIPTION_PLATFORM_SHARE)
+    // Use actual ledger values, not estimated percentage
     const result = await this.dataSource.query(`
-      SELECT COALESCE(SUM(cash_to_collect_amount * 0.1), 0) as total
-      FROM jobs
-      WHERE status = 'COMPLETED'
-      AND payment_mode = 'CASH_ON_FIRST_PICKUP'
-      AND completed_at >= $1 AND completed_at <= $2
+      SELECT COALESCE(SUM(ABS(amount)), 0) as total
+      FROM collector_float_ledger
+      WHERE type = 'CASH_SUBSCRIPTION_PLATFORM_SHARE'
+      AND created_at >= $1 AND created_at <= $2
     `, [fromDate, toDate]);
     return Number(result[0].total);
   }
@@ -409,5 +400,61 @@ export class ReconciliationService {
       AND created_at >= $1 AND created_at <= $2
     `, [fromDate, toDate]);
     return Number(result[0].total);
+  }
+
+  async exportToCsv(fromDate: string, toDate: string): Promise<Buffer> {
+    const summaries = await this.getSummaryRange(fromDate, toDate);
+
+    // CSV header
+    const headers = [
+      'Date',
+      'Integrated Provider Payments',
+      'Manual Provider Payments',
+      'Wallet Topups',
+      'Cash Collected',
+      'Collector Earnings',
+      'Marketer Commissions',
+      'Approved Payouts',
+      'Wallet Balance Liabilities',
+      'Wallet Debits',
+      'Collector Float Deductions',
+      'Platform Share Cash Jobs',
+      'Platform Share Cash First Pickup',
+      'Manual Payments Pending (count)',
+      'Manual Payments Pending (amount)',
+      'Failed Provider Payments (count)',
+      'Failed Provider Payments (amount)',
+      'Unreconciled Items',
+    ];
+
+    // CSV rows
+    const rows = summaries.map((s) => [
+      s.summaryDate,
+      s.integratedProviderPayments,
+      s.manualProviderPayments,
+      s.walletTopups,
+      s.cashCollected,
+      s.collectorEarnings,
+      s.marketerCommissions,
+      s.approvedPayouts,
+      s.walletBalanceLiabilities,
+      s.walletDebits,
+      s.collectorFloatDeductions,
+      s.platformShareCashJobs,
+      s.platformShareCashFirstPickup,
+      s.manualPaymentsPending,
+      s.manualPaymentsPendingAmount,
+      s.failedProviderPayments,
+      s.failedProviderPaymentsAmount,
+      s.unreconciledItems,
+    ]);
+
+    // Build CSV string
+    const csvContent = [
+      headers.join(','),
+      ...rows.map((row) => row.join(',')),
+    ].join('\n');
+
+    return Buffer.from(csvContent, 'utf-8');
   }
 }

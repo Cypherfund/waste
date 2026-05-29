@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Query, UseGuards, HttpCode, HttpStatus, StreamableFile } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { ReconciliationService, ReconciliationMetrics, UnreconciledItem } from '../services/reconciliation.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -70,7 +70,7 @@ export class ReconciliationController {
     };
   }
 
-  @Get('save-daily')
+  @Post('daily/save')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Save daily reconciliation summary to database' })
   @ApiQuery({ name: 'date', required: true, description: 'Date (YYYY-MM-DD)' })
@@ -84,5 +84,22 @@ export class ReconciliationController {
       success: true,
       data: summary,
     };
+  }
+
+  @Get('export')
+  @ApiOperation({ summary: 'Export reconciliation data as CSV' })
+  @ApiQuery({ name: 'from', required: true, description: 'Start date (YYYY-MM-DD)' })
+  @ApiQuery({ name: 'to', required: true, description: 'End date (YYYY-MM-DD)' })
+  @ApiResponse({ status: 200, description: 'CSV file generated successfully' })
+  async exportReconciliation(
+    @Query('from') fromDate: string,
+    @Query('to') toDate: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    const csvBuffer = await this.reconciliationService.exportToCsv(fromDate, toDate);
+    return new StreamableFile(csvBuffer, {
+      type: 'text/csv',
+      disposition: `attachment; filename="reconciliation_${fromDate}_to_${toDate}.csv"`,
+    });
   }
 }
