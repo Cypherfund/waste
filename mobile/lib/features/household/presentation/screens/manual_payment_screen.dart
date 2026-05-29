@@ -631,7 +631,7 @@ class _ManualPaymentScreenState extends State<ManualPaymentScreen> {
     try {
       // ── Wallet top-up branch ─────────────────────────────────────
       if (flowProvider.isWalletTopUpContext) {
-        final walletApi = WalletApi(ApiClient());
+        final walletApi = context.read<WalletApi>();
         await walletApi.topUp(
           amount: flowProvider.walletTopUpAmount!,
           paymentMethodId: flowProvider.selectedProviderId!,

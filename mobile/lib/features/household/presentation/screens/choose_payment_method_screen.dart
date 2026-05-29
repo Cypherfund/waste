@@ -571,6 +571,9 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
       case PaymentProviderMode.cash:
         Navigator.pushNamed(context, '/cash-confirmation');
         break;
+      case PaymentProviderMode.wallet:
+        // Wallet payment is handled directly via _payWithWallet
+        break;
     }
   }
 
@@ -589,7 +592,7 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
     );
 
     try {
-      final walletApi = WalletApi(ApiClient());
+      final walletApi = context.read<WalletApi>();
 
       if (flowProvider.isSubscriptionContext) {
         // Subscription payment with wallet

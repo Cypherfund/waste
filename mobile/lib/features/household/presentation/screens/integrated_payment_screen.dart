@@ -291,7 +291,7 @@ class _IntegratedPaymentScreenState extends State<IntegratedPaymentScreen> {
 
       // ── Wallet top-up integrated payment branch ───────────────────
       if (flowProvider.isWalletTopUpContext) {
-        final walletApi = WalletApi(ApiClient());
+        final walletApi = context.read<WalletApi>();
         await walletApi.topUp(
           amount: flowProvider.walletTopUpAmount!,
           paymentMethodId: flowProvider.selectedProviderId!,
