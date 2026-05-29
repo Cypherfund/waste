@@ -556,7 +556,7 @@ export class JobsService {
         });
         const savedProof = await em.getRepository(Proof).save(proof);
 
-        return { alreadyCompleted: false, savedJob, savedProof };
+        return { alreadyCompleted: false, savedJob, savedProof, activatedSubscription: subscription };
       });
 
       // If already completed, fetch existing proof and return
@@ -597,13 +597,14 @@ export class JobsService {
       this.eventEmitter.emit(JobEvents.COMPLETED, payload);
 
       // Emit subscription paid event for cash-on-first-pickup activation
-      if (job.subscriptionId) {
+      if (result.activatedSubscription) {
+        const subscription = result.activatedSubscription;
         this.eventEmitter.emit(SubscriptionEvents.PAID, {
-          subscriptionId: job.subscriptionId,
+          subscriptionId: subscription.id,
           userId: saved.householdId,
-          planId: job.subscriptionId, // Will be resolved by event listener
-          planName: 'Subscription',
-          amount: Number(job.cashToCollectAmount),
+          planId: subscription.planId,
+          planName: subscription.plan.name,
+          amount: Number(saved.cashToCollectAmount),
           timestamp: new Date(),
         });
       }
