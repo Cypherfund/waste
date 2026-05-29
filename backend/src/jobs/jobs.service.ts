@@ -573,7 +573,12 @@ export class JobsService {
       }
 
       // Mark file as used in Files module (outside transaction as it's external service)
-      await this.filesService.markUsed(dto.proofImageUrl);
+      try {
+        await this.filesService.markUsed(dto.proofImageUrl);
+      } catch (error) {
+        this.logger.error(`Failed to mark file as used: ${error.message}`);
+        // Don't fail the request - job is already complete
+      }
 
       this.logger.log(`Job ${jobId} completed by collector ${collectorId}, proof ${savedProof.id}`);
 
@@ -628,7 +633,12 @@ export class JobsService {
     const savedProof = await this.proofRepo.save(proof);
 
     // Mark file as used in Files module
-    await this.filesService.markUsed(dto.proofImageUrl);
+    try {
+      await this.filesService.markUsed(dto.proofImageUrl);
+    } catch (error) {
+      this.logger.error(`Failed to mark file as used: ${error.message}`);
+      // Don't fail the request - job is already complete
+    }
 
     this.logger.log(`Job ${jobId} completed by collector ${collectorId}, proof ${savedProof.id}`);
 
