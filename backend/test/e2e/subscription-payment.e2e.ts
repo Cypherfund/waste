@@ -8,6 +8,32 @@
  *   Guard: PENDING_PAYMENT subscription blocks second subscription
  *   Guard: PENDING_PAYMENT subscription excluded from pickup coverage
  *   Admin unified pending payments list (jobs + subscriptions)
+ *
+ * Specific test coverage:
+ *   - Manual payment subscription creation (PENDING_PAYMENT status)
+ *   - Payment reference and proof URL storage
+ *   - Immediate ACTIVE subscription creation (no payment fields)
+ *   - Second subscription rejection when PENDING_PAYMENT exists
+ *   - Second subscription rejection when ACTIVE exists
+ *   - Authentication requirement for subscription
+ *   - Admin verification sets status to ACTIVE and paymentStatus to VERIFIED
+ *   - Admin verification assigns remainingPickupsThisWeek from plan
+ *   - Admin verification rejection when already ACTIVE
+ *   - Admin verification 404 for non-existent subscription
+ *   - Admin verification role requirement (household gets 403)
+ *   - Admin rejection sets status to PAYMENT_FAILED and paymentStatus to REJECTED
+ *   - Admin rejection does not grant pickups
+ *   - Admin rejection when already rejected
+ *   - Admin rejection 404 for non-existent subscription
+ *   - Admin rejection role requirement
+ *   - PENDING_PAYMENT subscription visibility in /subscriptions/my
+ *   - Empty/null response when no subscription exists
+ *   - PENDING_PAYMENT excluded from pickup coverage (PAY_PER_PICKUP)
+ *   - SUBSCRIPTION coverage after admin verification
+ *   - Admin unified pending payments list includes subscription rows
+ *   - Subscription row includes planName
+ *   - Admin unified list excludes ACTIVE and PAYMENT_FAILED subscriptions
+ *   - Admin unified list role requirement
  */
 import { app, httpServer, dataSource, baseUrl } from '../test-setup';
 import * as request from 'supertest';
@@ -33,7 +59,7 @@ describe('E2E: Subscription Payment Flow', () => {
   const cleanupPlans = async () => {
     try {
       await dataSource.query(
-        `UPDATE "subscription_plans" SET "isActive" = false WHERE id = $1`,
+        `UPDATE "subscription_plans" SET "is_active" = false WHERE id = $1`,
         [planId],
       );
     } catch (_) {}

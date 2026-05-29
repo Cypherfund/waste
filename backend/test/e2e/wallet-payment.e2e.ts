@@ -8,6 +8,23 @@
  *   Pay subscription with wallet (sufficient balance)
  *   Pay subscription with wallet (insufficient balance)
  *   Manual wallet top-up creates pending transaction
+ *
+ * Specific test coverage:
+ *   - Job payment with wallet when balance is sufficient
+ *   - Job status changes to REQUESTED and payment_status to VERIFIED
+ *   - Job payment_mode and payment_method set to WALLET
+ *   - Wallet balance decreases after job payment
+ *   - Job payment rejection when wallet balance is insufficient
+ *   - Job status unchanged when payment rejected
+ *   - Job ownership verification before payment (403 for non-owner)
+ *   - Subscription payment with wallet when balance is sufficient
+ *   - Subscription status becomes ACTIVE and payment_status VERIFIED
+ *   - Subscription remainingPickupsThisWeek assigned from plan
+ *   - Wallet balance decreases after subscription payment
+ *   - Subscription payment rejection when wallet balance is insufficient
+ *   - Manual wallet top-up creates PENDING transaction
+ *   - Manual top-up stores paymentRef and paymentProofUrl
+ *   - Manual top-up requires paymentRef
  */
 import { app, httpServer, dataSource, baseUrl } from '../test-setup';
 import * as request from 'supertest';
@@ -38,7 +55,7 @@ describe('E2E: Wallet Payment Flow', () => {
   const cleanupPlans = async () => {
     try {
       await dataSource.query(
-        `UPDATE "subscription_plans" SET "isActive" = false WHERE id = $1`,
+        `UPDATE "subscription_plans" SET "is_active" = false WHERE id = $1`,
         [planId],
       );
     } catch (_) {}

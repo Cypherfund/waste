@@ -6,6 +6,27 @@
  *   Complete (with proof) → Validate → Rate
  *
  * Also verifies WebSocket real-time updates at each stage.
+ *
+ * Specific test coverage:
+ *   - Job creation by household
+ *   - Job visibility in household job list
+ *   - Job retrieval by ID
+ *   - Admin manual assignment of collector
+ *   - WebSocket events for job assignment
+ *   - Collector acceptance of assigned job
+ *   - Collector starting the job
+ *   - WebSocket events for job start
+ *   - Collector completing job with proof image
+ *   - WebSocket events for job completion
+ *   - Household validation of completed job
+ *   - Household rating of validated job
+ *   - Duplicate rating prevention
+ *   - Unauthenticated job creation rejection
+ *   - Collector job creation rejection (role-based)
+ *   - Household cancellation of RATED job rejection
+ *   - Completion of already rated job rejection
+ *   - Household cancellation of REQUESTED job
+ *   - CANCELLED status verification
  */
 import { app, httpServer, dataSource, baseUrl } from '../test-setup';
 import * as request from 'supertest';
