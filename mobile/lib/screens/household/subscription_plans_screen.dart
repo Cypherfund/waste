@@ -14,6 +14,8 @@ class SubscriptionPlansScreen extends StatefulWidget {
 }
 
 class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
+  bool _isCashOnFirstPickup = false;
+
   @override
   void initState() {
     super.initState();
@@ -21,6 +23,14 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
       final sub = context.read<SubscriptionProvider>();
       sub.loadPlans();
       if (sub.pricingQuote == null) sub.loadPricingQuote();
+
+      // Check if opened with cash on first pickup flag
+      final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      if (args != null && args['cashOnFirstPickup'] == true) {
+        setState(() {
+          _isCashOnFirstPickup = true;
+        });
+      }
     });
   }
 
@@ -334,18 +344,36 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
 
   void _subscribe(SubscriptionPlan plan) {
     final flowProvider = context.read<PaymentFlowProvider>();
-    flowProvider.setSubscriptionContext(
-      plan.id,
-      planPrice: plan.price.toDouble(),
-    );
-    Navigator.pushNamed(
-      context,
-      '/choose-payment-method',
-      arguments: {
-        'hideCash': true,
-        'subtitle': 'for ${plan.name} subscription',
-      },
-    );
+
+    if (_isCashOnFirstPickup) {
+      // Cash on First Pickup flow
+      flowProvider.setCashOnFirstPickupContext(
+        plan.id,
+        planPrice: plan.price.toDouble(),
+      );
+      Navigator.pushNamed(
+        context,
+        '/choose-payment-method',
+        arguments: {
+          'cashOnFirstPickup': true,
+          'subtitle': 'for ${plan.name} subscription',
+        },
+      );
+    } else {
+      // Normal subscription flow
+      flowProvider.setSubscriptionContext(
+        plan.id,
+        planPrice: plan.price.toDouble(),
+      );
+      Navigator.pushNamed(
+        context,
+        '/choose-payment-method',
+        arguments: {
+          'hideCash': true,
+          'subtitle': 'for ${plan.name} subscription',
+        },
+      );
+    }
   }
 
   Widget _buildPlansError(SubscriptionProvider sub) {

@@ -130,6 +130,7 @@ class JobApi {
     double? collectorLng,
     bool? cashCollected,
     double? collectedAmount,
+    double? cashCollectedAmount,
   }) async {
     final response = await _client.dio.post('/jobs/$id/complete', data: {
       'proofImageUrl': proofImageUrl,
@@ -137,6 +138,7 @@ class JobApi {
       if (collectorLng != null) 'collectorLng': collectorLng,
       if (cashCollected != null) 'cashCollected': cashCollected,
       if (collectedAmount != null) 'collectedAmount': collectedAmount,
+      if (cashCollectedAmount != null) 'cashCollectedAmount': cashCollectedAmount,
     });
     return Job.fromJson(response.data as Map<String, dynamic>);
   }

@@ -38,6 +38,9 @@ import { PaymentService } from '../payments/payment.service';
 import { TransactionType } from '../payments/entities/payment-transaction.entity';
 import { SystemConfigService } from '../config/system-config.service';
 import { EarningsService } from '../earnings/earnings.service';
+import { UserSubscription } from '../subscriptions/entities/user-subscription.entity';
+import { SubscriptionStatus } from '../common/enums/subscription-status.enum';
+import { CashCollectionType } from '../common/enums/cash-collection-type.enum';
 
 @Injectable()
 export class JobsService {
@@ -48,6 +51,8 @@ export class JobsService {
     private readonly jobRepo: Repository<Job>,
     @InjectRepository(Proof)
     private readonly proofRepo: Repository<Proof>,
+    @InjectRepository(UserSubscription)
+    private readonly subscriptionRepo: Repository<UserSubscription>,
     private readonly eventEmitter: EventEmitter2,
     private readonly filesService: FilesService,
     private readonly pricingService: PricingService,
@@ -429,6 +434,110 @@ export class JobsService {
 
         job.paymentStatus = PaymentStatus.VERIFIED;
       }
+    }
+
+    // Cash on First Pickup: require exact cash confirmation, deduct platform share, activate subscription
+    if (job.paymentMode === PaymentMode.CASH_ON_FIRST_PICKUP) {
+      if (dto.cashCollectedAmount === undefined) {
+        throw new BadRequestException('cashCollectedAmount is required for CASH_ON_FIRST_PICKUP jobs');
+      }
+      if (job.cashToCollectAmount === null) {
+        throw new BadRequestException('cashToCollectAmount is not set for this job');
+      }
+      if (dto.cashCollectedAmount !== Number(job.cashToCollectAmount)) {
+        throw new BadRequestException(
+          `cashCollectedAmount (${dto.cashCollectedAmount}) must equal cashToCollectAmount (${job.cashToCollectAmount})`,
+        );
+      }
+      if (job.cashCollectionType !== CashCollectionType.SUBSCRIPTION_FIRST_PICKUP) {
+        throw new BadRequestException('Invalid cash collection type for CASH_ON_FIRST_PICKUP job');
+      }
+
+      await this.dataSource.transaction(async (em) => {
+        // Lock job for idempotency
+        const lockedJob = await em
+          .getRepository(Job)
+          .createQueryBuilder('j')
+          .where('j.id = :id', { id: jobId })
+          .setLock('pessimistic_write')
+          .getOne();
+        if (!lockedJob) throw new NotFoundException('Job not found');
+
+        // Idempotency check: if already completed, skip float deduction
+        if (lockedJob.status === JobStatus.COMPLETED) {
+          this.logger.log(`Job ${jobId} already completed, skipping float deduction`);
+          return;
+        }
+
+        // Lock collector float
+        const collector = await em
+          .getRepository(User)
+          .createQueryBuilder('u')
+          .where('u.id = :id', { id: collectorId })
+          .setLock('pessimistic_write')
+          .getOne();
+        if (!collector) throw new NotFoundException('Collector not found');
+
+        // Lock subscription
+        if (!job.subscriptionId) {
+          throw new BadRequestException('Subscription ID is required for CASH_ON_FIRST_PICKUP job');
+        }
+        const subscription = await em
+          .getRepository(UserSubscription)
+          .createQueryBuilder('s')
+          .where('s.id = :id', { id: job.subscriptionId })
+          .setLock('pessimistic_write')
+          .leftJoinAndSelect('s.plan', 'plan')
+          .getOne();
+        if (!subscription) throw new NotFoundException('Subscription not found');
+
+        // Calculate collector earning using existing formula
+        const earningsCalc = await this.earningsService.calculateEarnings(job);
+        const collectorEarning = Math.min(earningsCalc.totalAmount, Number(job.cashToCollectAmount));
+        const platformShare = Math.max(Number(job.cashToCollectAmount) - collectorEarning, 0);
+        const currentFloat = Number(collector.collectorFloatBalance);
+
+        // Re-check collector float at completion (not just assignment estimate)
+        if (currentFloat < platformShare) {
+          throw new BadRequestException(
+            `Insufficient float balance. Required: ${platformShare} XAF, Available: ${currentFloat} XAF`,
+          );
+        }
+
+        // Deduct platform share from collector float
+        const newFloat = currentFloat - platformShare;
+        await em
+          .createQueryBuilder()
+          .update(User)
+          .set({ collectorFloatBalance: () => `collector_float_balance - ${platformShare}` })
+          .where('id = :id', { id: collectorId })
+          .execute();
+
+        // Create float ledger entry for platform share deduction
+        const ledgerEntry = em.getRepository(CollectorFloatLedger).create({
+          collectorId,
+          jobId: job.id,
+          subscriptionId: subscription.id,
+          type: FloatLedgerType.CASH_SUBSCRIPTION_PLATFORM_SHARE,
+          amount: -platformShare,
+          balanceBefore: currentFloat,
+          balanceAfter: newFloat,
+          createdBy: null,
+        });
+        await em.getRepository(CollectorFloatLedger).save(ledgerEntry);
+
+        // Activate subscription
+        subscription.status = SubscriptionStatus.ACTIVE;
+        subscription.paymentStatus = PaymentStatus.VERIFIED;
+        subscription.remainingPickupsThisWeek = subscription.plan.pickupsPerWeek - 1; // First pickup consumed
+        await em.getRepository(UserSubscription).save(subscription);
+
+        this.logger.log(
+          `Activated subscription ${subscription.id} after cash collection, remaining pickups: ${subscription.remainingPickupsThisWeek}`,
+        );
+      });
+
+      job.paymentStatus = PaymentStatus.VERIFIED;
     }
 
     this.transition(job, JobStatus.COMPLETED);

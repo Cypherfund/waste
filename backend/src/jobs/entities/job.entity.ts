@@ -13,6 +13,8 @@ import { JobStatus } from '../../common/enums/job-status.enum';
 import { PricingType } from '../../common/enums/pricing-type.enum';
 import { PaymentStatus } from '../../common/enums/payment-status.enum';
 import { PaymentMode } from '../../common/enums/payment-mode.enum';
+import { UserSubscription } from '../../subscriptions/entities/user-subscription.entity';
+import { CashCollectionType } from '../../common/enums/cash-collection-type.enum';
 
 @Entity('jobs')
 export class Job {
@@ -34,6 +36,14 @@ export class Job {
   @ManyToOne(() => User)
   @JoinColumn({ name: 'collector_id' })
   collector: User | null;
+
+  @Index()
+  @Column({ type: 'uuid', nullable: true, name: 'subscription_id' })
+  subscriptionId: string | null;
+
+  @ManyToOne(() => UserSubscription)
+  @JoinColumn({ name: 'subscription_id' })
+  subscription: UserSubscription | null;
 
   @Index()
   @Column({ type: 'enum', enum: JobStatus, default: JobStatus.REQUESTED })
@@ -116,6 +126,12 @@ export class Job {
 
   @Column({ type: 'varchar', length: 100, nullable: true, name: 'provider_transaction_id' })
   providerTransactionId: string | null;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true, name: 'cash_to_collect_amount' })
+  cashToCollectAmount: number | null;
+
+  @Column({ type: 'varchar', length: 50, nullable: true, name: 'cash_collection_type' })
+  cashCollectionType: CashCollectionType | null;
 
   @Column({ type: 'int', default: 1 })
   version: number;

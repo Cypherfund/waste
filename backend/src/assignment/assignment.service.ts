@@ -410,6 +410,20 @@ export class AssignmentService {
         }
       }
 
+      // Filter: float balance for CASH_ON_FIRST_PICKUP jobs
+      if (job.paymentMode === PaymentMode.CASH_ON_FIRST_PICKUP && job.cashToCollectAmount) {
+        const earningsCalc = await this.earningsService.calculateEarnings(job);
+        const collectorEarning = Math.min(earningsCalc.totalAmount, Number(job.cashToCollectAmount));
+        const platformShare = Math.max(Number(job.cashToCollectAmount) - collectorEarning, 0);
+        const floatBalance = Number(raw.collectorFloatBalance ?? 0);
+        if (floatBalance < platformShare) {
+          this.logger.debug(
+            `Skipping collector ${raw.id} for CASH_ON_FIRST_PICKUP job ${job.id}: insufficient float (${floatBalance} < ${platformShare} XAF)`,
+          );
+          continue;
+        }
+      }
+
       // Filter: timeslot availability
       const available = await this.timeslotsService.isCollectorAvailable(
         raw.id,

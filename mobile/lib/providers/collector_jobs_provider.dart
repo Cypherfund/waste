@@ -170,6 +170,7 @@ class CollectorJobsProvider extends ChangeNotifier {
     required XFile proofImage,
     bool? cashCollected,
     double? collectedAmount,
+    double? cashCollectedAmount,
   }) async {
     _isActioning = true;
     _error = null;
@@ -195,6 +196,7 @@ class CollectorJobsProvider extends ChangeNotifier {
         collectorLng: lng,
         cashCollected: cashCollected,
         collectedAmount: collectedAmount,
+        cashCollectedAmount: cashCollectedAmount,
       );
 
       _locationService.stopTracking();

@@ -5,13 +5,16 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SubscriptionPlan } from './entities/subscription-plan.entity';
 import { UserSubscription } from './entities/user-subscription.entity';
 import { SubscriptionStatus } from '../common/enums/subscription-status.enum';
 import { PaymentStatus } from '../common/enums/payment-status.enum';
 import { SubscriptionEvents } from '../events/events.types';
+import { Job } from '../jobs/entities/job.entity';
+import { PaymentMode } from '../common/enums/payment-mode.enum';
+import { CashCollectionType } from '../common/enums/cash-collection-type.enum';
 
 @Injectable()
 export class SubscriptionsService {
@@ -22,7 +25,10 @@ export class SubscriptionsService {
     private readonly planRepo: Repository<SubscriptionPlan>,
     @InjectRepository(UserSubscription)
     private readonly subRepo: Repository<UserSubscription>,
+    @InjectRepository(Job)
+    private readonly jobRepo: Repository<Job>,
     private readonly eventEmitter: EventEmitter2,
+    private readonly dataSource: DataSource,
   ) {}
 
   async listPlans(): Promise<SubscriptionPlan[]> {
@@ -140,6 +146,122 @@ export class SubscriptionsService {
     return saved;
   }
 
+  async cancelPendingCashSubscription(userId: string): Promise<UserSubscription> {
+    const sub = await this.subRepo.findOne({
+      where: { userId, status: SubscriptionStatus.PENDING_PAYMENT, paymentMode: PaymentMode.CASH_ON_FIRST_PICKUP },
+      relations: ['plan', 'linkedFirstJob'],
+    });
+    if (!sub) throw new NotFoundException('No pending cash subscription found');
+
+    // Cancel linked job if it hasn't started yet
+    if (sub.linkedFirstJobId && sub.linkedFirstJob) {
+      const job = sub.linkedFirstJob;
+      if (job.status === 'REQUESTED' || job.status === 'ASSIGNED') {
+        await this.jobRepo.update(job.id, {
+          status: 'CANCELLED' as any,
+          cancelledAt: new Date(),
+          cancellationReason: 'Cash subscription cancelled before pickup',
+        });
+        this.logger.log(`Cancelled linked job ${job.id} for cash subscription ${sub.id}`);
+      }
+    }
+
+    sub.status = SubscriptionStatus.CANCELLED;
+    sub.cancelledAt = new Date();
+    const saved = await this.subRepo.save(sub);
+    this.logger.log(`User ${userId} cancelled pending cash subscription ${sub.id}`);
+    return saved;
+  }
+
+  async subscribeWithCashOnFirstPickup(
+    userId: string,
+    planId: string,
+    jobDetails: {
+      scheduledDate: string;
+      scheduledTime: string;
+      locationAddress: string;
+      locationLat?: number;
+      locationLng?: number;
+      notes?: string;
+    },
+  ): Promise<{ subscription: UserSubscription; job: Job }> {
+    const plan = await this.getPlan(planId);
+
+    // Check for existing subscriptions
+    const existing = await this.subRepo.findOne({
+      where: [
+        { userId, status: SubscriptionStatus.ACTIVE },
+        { userId, status: SubscriptionStatus.PENDING_PAYMENT },
+      ],
+    });
+    if (existing) {
+      throw new BadRequestException(
+        existing.status === SubscriptionStatus.PENDING_PAYMENT
+          ? 'You already have a subscription awaiting payment verification.'
+          : 'You already have an active subscription. Cancel it before subscribing to a new plan.',
+      );
+    }
+
+    // Create subscription and job in a single transaction
+    const result = await this.dataSource.transaction(async (manager) => {
+      const subRepo = manager.getRepository(UserSubscription);
+      const jobRepo = manager.getRepository(Job);
+
+      const today = new Date();
+      const endDate = new Date(today);
+      endDate.setMonth(endDate.getMonth() + 1);
+
+      // Create subscription
+      const subscription = subRepo.create({
+        userId,
+        planId: plan.id,
+        startDate: today.toISOString().split('T')[0],
+        endDate: endDate.toISOString().split('T')[0],
+        remainingPickupsThisWeek: 0, // Will be set to plan.pickupsPerWeek - 1 after cash collection
+        weekResetDate: null,
+        status: SubscriptionStatus.PENDING_PAYMENT,
+        paymentMode: PaymentMode.CASH_ON_FIRST_PICKUP,
+        paymentStatus: PaymentStatus.PENDING,
+      });
+
+      const savedSubscription = await subRepo.save(subscription);
+
+      // Create first job
+      const job = jobRepo.create({
+        householdId: userId,
+        status: 'REQUESTED' as any,
+        scheduledDate: jobDetails.scheduledDate,
+        scheduledTime: jobDetails.scheduledTime,
+        locationAddress: jobDetails.locationAddress,
+        locationLat: jobDetails.locationLat ?? null,
+        locationLng: jobDetails.locationLng ?? null,
+        notes: jobDetails.notes ?? null,
+        paymentMode: PaymentMode.CASH_ON_FIRST_PICKUP,
+        paymentStatus: PaymentStatus.PENDING,
+        quotedPrice: plan.price,
+        pricingType: 'SUBSCRIPTION' as any,
+        isCoveredBySubscription: false,
+        subscriptionId: savedSubscription.id,
+        cashToCollectAmount: plan.price,
+        cashCollectionType: CashCollectionType.SUBSCRIPTION_FIRST_PICKUP,
+      });
+
+      const savedJob = await jobRepo.save(job);
+
+      // Link subscription to job
+      savedSubscription.linkedFirstJobId = savedJob.id;
+      await subRepo.save(savedSubscription);
+
+      return { subscription: savedSubscription, job: savedJob };
+    });
+
+    this.logger.log(
+      `User ${userId} subscribed to plan ${plan.name} with Cash on First Pickup — subscription: ${result.subscription.id}, job: ${result.job.id}`,
+    );
+
+    return result;
+  }
+
   private getMondayOfWeek(date: Date): Date {
     const d = new Date(date);
     const day = d.getDay();
@@ -241,7 +363,7 @@ export class SubscriptionsService {
   async adminListPendingSubscriptionPayments(): Promise<UserSubscription[]> {
     return this.subRepo.find({
       where: { status: SubscriptionStatus.PENDING_PAYMENT },
-      relations: ['plan', 'user'],
+      relations: ['plan', 'user', 'linkedFirstJob'],
       order: { createdAt: 'ASC' },
     });
   }

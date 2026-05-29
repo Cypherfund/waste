@@ -9,6 +9,7 @@ import {
 export enum FloatLedgerType {
   TOP_UP = 'TOP_UP',
   CASH_SETTLEMENT_DEDUCTION = 'CASH_SETTLEMENT_DEDUCTION',
+  CASH_SUBSCRIPTION_PLATFORM_SHARE = 'CASH_SUBSCRIPTION_PLATFORM_SHARE',
   ADJUSTMENT = 'ADJUSTMENT',
 }
 
@@ -23,6 +24,9 @@ export class CollectorFloatLedger {
 
   @Column({ type: 'uuid', nullable: true, name: 'job_id' })
   jobId: string | null;
+
+  @Column({ type: 'uuid', nullable: true, name: 'subscription_id' })
+  subscriptionId: string | null;
 
   @Column({ type: 'enum', enum: FloatLedgerType })
   type: FloatLedgerType;
