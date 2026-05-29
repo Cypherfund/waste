@@ -317,14 +317,9 @@ export class ReconciliationService {
 
   private async getWalletDebits(fromDate: Date, toDate: Date): Promise<number> {
     // Note: wallet_transactions table doesn't exist yet
-    // Use collector float ledger deductions as proxy for wallet debits
-    const result = await this.dataSource.query(`
-      SELECT COALESCE(SUM(ABS(amount)), 0) as total
-      FROM collector_float_ledger
-      WHERE type IN ('CASH_SETTLEMENT_DEDUCTION', 'CASH_SUBSCRIPTION_PLATFORM_SHARE')
-      AND created_at >= $1 AND created_at <= $2
-    `, [fromDate, toDate]);
-    return Number(result[0].total);
+    // TODO: Implement when wallet ledger is added
+    // Return 0 for now to avoid double-counting collector float deductions
+    return 0;
   }
 
   private async getCollectorFloatDeductions(fromDate: Date, toDate: Date): Promise<number> {
