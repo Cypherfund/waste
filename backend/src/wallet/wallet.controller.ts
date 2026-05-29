@@ -62,6 +62,33 @@ class UpdatePaymentMethodDto {
   accountName?: string;
 }
 
+class TopUpWalletDto {
+  @IsNumber()
+  @Min(1)
+  amount: number;
+
+  @IsString()
+  paymentMethodId: string;
+
+  @IsOptional()
+  @IsString()
+  paymentRef?: string;
+
+  @IsOptional()
+  @IsString()
+  paymentProofUrl?: string;
+}
+
+class PayJobWithWalletDto {
+  @IsString()
+  jobId: string;
+}
+
+class PaySubscriptionWithWalletDto {
+  @IsString()
+  planId: string;
+}
+
 @ApiTags('Wallet')
 @ApiBearerAuth()
 @Controller('wallet')
@@ -101,6 +128,39 @@ export class WalletController {
       throw new ForbiddenException('Only collectors can view their payouts');
     }
     return this.walletService.getMyPayoutRequests(user.sub);
+  }
+
+  @Post('top-up')
+  async topUpWallet(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: TopUpWalletDto,
+  ) {
+    if (user.role !== UserRole.HOUSEHOLD) {
+      throw new ForbiddenException('Only households can top up their wallet');
+    }
+    return this.walletService.topUp(user.sub, dto);
+  }
+
+  @Post('pay-job')
+  async payJobWithWallet(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: PayJobWithWalletDto,
+  ) {
+    if (user.role !== UserRole.HOUSEHOLD) {
+      throw new ForbiddenException('Only households can pay for jobs');
+    }
+    return this.walletService.payJobWithWallet(user.sub, dto.jobId);
+  }
+
+  @Post('pay-subscription')
+  async paySubscriptionWithWallet(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: PaySubscriptionWithWalletDto,
+  ) {
+    if (user.role !== UserRole.HOUSEHOLD) {
+      throw new ForbiddenException('Only households can pay for subscriptions');
+    }
+    return this.walletService.paySubscriptionWithWallet(user.sub, dto.planId);
   }
 
   // ── USER PAYMENT METHODS ────────────────────────────────────────

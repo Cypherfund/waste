@@ -227,7 +227,8 @@ export interface PaymentProvider {
 export interface PendingPayment {
   jobId: string | null;
   subscriptionId?: string | null;
-  paymentSource: 'JOB_PAYMENT' | 'SUBSCRIPTION_PAYMENT';
+  transactionId?: string | null;
+  paymentSource: 'JOB_PAYMENT' | 'SUBSCRIPTION_PAYMENT' | 'WALLET_TOPUP';
   householdId: string;
   householdName: string | null;
   planName?: string | null;

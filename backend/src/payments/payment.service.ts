@@ -10,7 +10,7 @@ import { Repository, LessThan } from 'typeorm';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { AxiosResponse } from 'axios';
-import { PaymentTransaction, TransactionStatus, TransactionType } from './entities/payment-transaction.entity';
+import { PaymentTransaction, TransactionStatus, TransactionType, PaymentSource } from './entities/payment-transaction.entity';
 import { PaymentProviderEntity } from './entities/payment-provider.entity';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import { PaymentCallbackDto } from './dto/payment-callback.dto';
@@ -215,6 +215,7 @@ export class PaymentService {
       internalRef,
       gatewayTransactionId: null,
       status: TransactionStatus.PENDING,
+      paymentSource: dto.paymentSource || PaymentSource.JOB_PAYMENT,
       jobId: dto.jobId || null,
       payoutRequestId: dto.payoutRequestId || null,
     });
@@ -457,6 +458,9 @@ export class PaymentService {
   }
 
   private buildDescription(dto: InitiatePaymentDto): string {
+    if (dto.paymentSource === PaymentSource.WALLET_TOPUP) {
+      return 'Wallet top-up';
+    }
     if (dto.jobId) {
       return `Waste pickup payment - Job ${dto.jobId}`;
     }

@@ -193,8 +193,8 @@ export default function CommissionsPage() {
       {tab === 'transactions' && (
         <>
           {/* Status Filter */}
-          <div className="mb-4 flex items-center justify-between gap-2">
-            <div className="flex gap-2">
+          <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex flex-wrap gap-2">
               {['', 'PENDING', 'APPROVED', 'REJECTED', 'PAID'].map((s) => (
                 <button
                   key={s}
@@ -209,7 +209,7 @@ export default function CommissionsPage() {
                 </button>
               ))}
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={async () => {
                   if (!confirm('Reconcile missing household job commissions?')) return;

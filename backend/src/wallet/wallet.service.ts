@@ -14,6 +14,8 @@ import { UserPaymentMethod, UserPaymentMethodUsageType } from './entities/user-p
 import { SystemConfigService } from '../config/system-config.service';
 import { EarningsEvents, EarningsConfirmedPayload } from '../events/events.types';
 import { PaymentProviderEntity } from '../payments/entities/payment-provider.entity';
+import { PaymentTransaction, TransactionType, TransactionStatus, PaymentSource } from '../payments/entities/payment-transaction.entity';
+import { PaymentService } from '../payments/payment.service';
 
 @Injectable()
 export class WalletService {
@@ -30,8 +32,11 @@ export class WalletService {
     private readonly floatLedgerRepo: Repository<CollectorFloatLedger>,
     @InjectRepository(UserPaymentMethod)
     private readonly userPaymentMethodRepo: Repository<UserPaymentMethod>,
+    @InjectRepository(PaymentTransaction)
+    private readonly transactionRepo: Repository<PaymentTransaction>,
     private readonly systemConfigService: SystemConfigService,
     private readonly dataSource: DataSource,
+    private readonly paymentService: PaymentService,
   ) {}
 
   // ── EVENT: earnings confirmed → credit wallet ─────────────────
@@ -60,7 +65,7 @@ export class WalletService {
   // ── GET app config (payment integration + support + providers) ───────────
   async getAppConfig(countryCode: string) {
     countryCode = countryCode.toUpperCase();
-    const [paymentEnabled, manualInstructions, whatsapp, minAdvanceHours, cashEnabledStr, maxAdvanceDays] = await Promise.all([
+    const [paymentEnabled, manualInstructions, whatsapp, minAdvanceHours, cashEnabledStr, maxAdvanceDays, topupEnabled, topupMinAmount, topupMaxAmount, topupQuickAmountsStr] = await Promise.all([
       this.systemConfigService.getBoolean('feature.payment_integration', false),
       this.systemConfigService.getString(
         'payment.manual_instructions',
@@ -70,6 +75,10 @@ export class WalletService {
       this.systemConfigService.getNumber('booking.min_advance_hours', 24),
       this.systemConfigService.getString('payments.cash_enabled', 'false'),
       this.systemConfigService.getNumber('booking.max_advance_days', 30),
+      this.systemConfigService.getBoolean('wallet.topup_enabled', true),
+      this.systemConfigService.getNumber('wallet.topup_min_amount', 500),
+      this.systemConfigService.getNumber('wallet.topup_max_amount', 500000),
+      this.systemConfigService.getString('wallet.topup_quick_amounts', '1000,3500,5000,10000'),
     ]);
 
     // Get enabled payment providers for manual payment
@@ -84,6 +93,9 @@ export class WalletService {
       },
       order: { providerName: 'ASC' },
     });
+
+    // Parse quick amounts
+    const topupQuickAmounts = topupQuickAmountsStr.split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n));
 
     return {
       paymentIntegrationEnabled: paymentEnabled,
@@ -106,6 +118,10 @@ export class WalletService {
       })),
       minAdvanceHours,
       maxAdvanceDays,
+      topupEnabled,
+      topupMinAmount,
+      topupMaxAmount,
+      topupQuickAmounts,
     };
   }
 
@@ -141,6 +157,267 @@ export class WalletService {
       manualInstructionsEnabled: p.manualInstructionsEnabled,
       manualProofRequired: p.manualProofRequired,
     }));
+  }
+
+  // ── WALLET TOP-UP ───────────────────────────────────────────────
+  async topUp(
+    userId: string,
+    dto: { amount: number; paymentMethodId: string; paymentRef?: string; paymentProofUrl?: string },
+  ): Promise<PaymentTransaction> {
+    // Check if top-up is enabled
+    const topupEnabled = await this.systemConfigService.getBoolean('wallet.topup_enabled', true);
+    if (!topupEnabled) {
+      throw new BadRequestException('Wallet top-up is currently disabled');
+    }
+
+    // Validate amount against limits
+    const minAmount = await this.systemConfigService.getNumber('wallet.topup_min_amount', 500);
+    const maxAmount = await this.systemConfigService.getNumber('wallet.topup_max_amount', 500000);
+
+    if (dto.amount < minAmount) {
+      throw new BadRequestException(`Minimum top-up amount is ${minAmount} XAF`);
+    }
+    if (dto.amount > maxAmount) {
+      throw new BadRequestException(`Maximum top-up amount is ${maxAmount} XAF`);
+    }
+
+    // Get user's payment method
+    const userPaymentMethod = await this.userPaymentMethodRepo.findOne({
+      where: { id: dto.paymentMethodId, userId },
+    });
+
+    if (!userPaymentMethod) {
+      throw new NotFoundException('Payment method not found');
+    }
+
+    if (userPaymentMethod.usageType !== UserPaymentMethodUsageType.CASHIN &&
+        userPaymentMethod.usageType !== UserPaymentMethodUsageType.BOTH) {
+      throw new BadRequestException('This payment method does not support top-up');
+    }
+
+    // Get provider config
+    const provider = await this.paymentProviderRepo.findOne({
+      where: { paymentCode: userPaymentMethod.paymentCode, isEnabled: true },
+    });
+
+    if (!provider) {
+      throw new BadRequestException('Payment provider not found or disabled');
+    }
+
+    // Check if provider has integration enabled
+    const integrationEnabled = provider.integrationEnabled &&
+      await this.paymentService.isPaymentIntegrationEnabled();
+
+    if (integrationEnabled) {
+      // Integrated provider flow - call PaymentService
+      return this.paymentService.initiatePayment(userId, {
+        type: TransactionType.WALLET_TOPUP,
+        amount: dto.amount,
+        paymentCode: provider.paymentCode,
+        phone: userPaymentMethod.accountNumber,
+        paymentSource: PaymentSource.WALLET_TOPUP,
+      });
+    } else {
+      // Manual provider flow - create pending transaction
+      if (!dto.paymentRef) {
+        throw new BadRequestException('Payment reference is required for manual top-up');
+      }
+
+      // Check if proof is required
+      if (provider.manualProofRequired && !dto.paymentProofUrl) {
+        throw new BadRequestException('Payment proof is required for this provider');
+      }
+
+      // Create transaction with AWAITING_ADMIN_VERIFICATION status
+      const transaction = this.transactionRepo.create({
+        userId,
+        type: TransactionType.WALLET_TOPUP,
+        amount: dto.amount,
+        currency: 'XAF',
+        paymentCode: provider.paymentCode,
+        providerName: provider.providerName,
+        phone: userPaymentMethod.accountNumber,
+        internalRef: `WLT-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`,
+        gatewayTransactionId: null,
+        status: TransactionStatus.PENDING,
+        paymentSource: PaymentSource.WALLET_TOPUP,
+        jobId: null,
+        payoutRequestId: null,
+        failureReason: dto.paymentRef, // Store reference in failureReason for manual flow
+      });
+
+      const saved = await this.transactionRepo.save(transaction);
+
+      this.logger.log(
+        `Manual wallet top-up created: ${saved.id} for user ${userId}, amount ${dto.amount} XAF`,
+      );
+
+      return saved;
+    }
+  }
+
+  // ── PAY JOB WITH WALLET ─────────────────────────────────────────
+  async payJobWithWallet(userId: string, jobId: string): Promise<{ success: boolean; transactionId: string }> {
+    return this.dataSource.transaction(async (em) => {
+      // Get user with lock
+      const user = await em
+        .getRepository(User)
+        .createQueryBuilder('u')
+        .where('u.id = :id', { id: userId })
+        .setLock('pessimistic_write')
+        .getOne();
+
+      if (!user) throw new NotFoundException('User not found');
+
+      // Get job to determine amount
+      const { Job } = await import('../jobs/entities/job.entity');
+      const job = await em.getRepository(Job).findOne({ where: { id: jobId } });
+
+      if (!job) throw new NotFoundException('Job not found');
+
+      const amount = job.quotedPrice;
+      if (!amount) throw new BadRequestException('Job has no quoted price');
+
+      // Check wallet balance
+      const balance = Number(user.walletBalance);
+      if (balance < amount) {
+        throw new BadRequestException('INSUFFICIENT_WALLET_BALANCE');
+      }
+
+      // Debit wallet
+      await em
+        .createQueryBuilder()
+        .update(User)
+        .set({ walletBalance: () => `wallet_balance - ${amount}` })
+        .where('id = :id', { id: userId })
+        .execute();
+
+      // Create verified payment transaction
+      const transaction = em.getRepository(PaymentTransaction).create({
+        userId,
+        type: TransactionType.JOB_PAYMENT,
+        amount,
+        currency: 'XAF',
+        paymentCode: 'WALLET',
+        providerName: 'Wallet Balance',
+        phone: null,
+        internalRef: `JOB-${jobId}-${Date.now()}`,
+        gatewayTransactionId: null,
+        status: TransactionStatus.VERIFIED,
+        paymentSource: PaymentSource.JOB_PAYMENT,
+        jobId,
+        payoutRequestId: null,
+        failureReason: null,
+      });
+
+      const saved = await em.getRepository(PaymentTransaction).save(transaction);
+
+      // Update job status if needed
+      const { JobStatus } = await import('../common/enums/job-status.enum');
+      if (job.status === JobStatus.PAYMENT_PENDING) {
+        job.status = JobStatus.REQUESTED;
+        await em.getRepository(Job).save(job);
+      }
+
+      this.logger.log(
+        `Job paid with wallet: job ${jobId}, amount ${amount} XAF, transaction ${saved.id}`,
+      );
+
+      return { success: true, transactionId: saved.id };
+    });
+  }
+
+  // ── PAY SUBSCRIPTION WITH WALLET ─────────────────────────────────
+  async paySubscriptionWithWallet(userId: string, planId: string): Promise<{ success: boolean; transactionId: string }> {
+    return this.dataSource.transaction(async (em) => {
+      // Get user with lock
+      const user = await em
+        .getRepository(User)
+        .createQueryBuilder('u')
+        .where('u.id = :id', { id: userId })
+        .setLock('pessimistic_write')
+        .getOne();
+
+      if (!user) throw new NotFoundException('User not found');
+
+      // Get plan to determine amount
+      const { SubscriptionPlan } = await import('../subscriptions/entities/subscription-plan.entity');
+      const plan = await em.getRepository(SubscriptionPlan).findOne({ where: { id: planId } });
+
+      if (!plan) throw new NotFoundException('Subscription plan not found');
+
+      const amount = plan.price;
+      if (!amount) throw new BadRequestException('Plan has no price');
+
+      // Check wallet balance
+      const balance = Number(user.walletBalance);
+      if (balance < amount) {
+        throw new BadRequestException('INSUFFICIENT_WALLET_BALANCE');
+      }
+
+      // Debit wallet
+      await em
+        .createQueryBuilder()
+        .update(User)
+        .set({ walletBalance: () => `wallet_balance - ${amount}` })
+        .where('id = :id', { id: userId })
+        .execute();
+
+      // Create verified payment transaction
+      const transaction = em.getRepository(PaymentTransaction).create({
+        userId,
+        type: TransactionType.SUBSCRIPTION_PAYMENT,
+        amount,
+        currency: 'XAF',
+        paymentCode: 'WALLET',
+        providerName: 'Wallet Balance',
+        phone: null,
+        internalRef: `SUB-${planId}-${Date.now()}`,
+        gatewayTransactionId: null,
+        status: TransactionStatus.VERIFIED,
+        paymentSource: PaymentSource.SUBSCRIPTION_PAYMENT,
+        jobId: null,
+        payoutRequestId: null,
+        failureReason: null,
+      });
+
+      const saved = await em.getRepository(PaymentTransaction).save(transaction);
+
+      // Activate subscription (simplified - actual activation logic may be in SubscriptionService)
+      const { UserSubscription } = await import('../subscriptions/entities/user-subscription.entity');
+      const { SubscriptionStatus } = await import('../common/enums/subscription-status.enum');
+      const existingSubscription = await em.getRepository(UserSubscription).findOne({
+        where: { userId },
+      });
+
+      const now = new Date();
+      const thirtyDaysLater = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      const startDateStr = now.toISOString().split('T')[0];
+      const endDateStr = thirtyDaysLater.toISOString().split('T')[0];
+
+      if (existingSubscription) {
+        existingSubscription.planId = planId;
+        existingSubscription.status = SubscriptionStatus.ACTIVE;
+        existingSubscription.startDate = startDateStr;
+        existingSubscription.endDate = endDateStr;
+        await em.getRepository(UserSubscription).save(existingSubscription);
+      } else {
+        const newSubscription = em.getRepository(UserSubscription).create({
+          userId,
+          planId,
+          status: SubscriptionStatus.ACTIVE,
+          startDate: startDateStr,
+          endDate: endDateStr,
+        });
+        await em.getRepository(UserSubscription).save(newSubscription);
+      }
+
+      this.logger.log(
+        `Subscription paid with wallet: plan ${planId}, amount ${amount} XAF, transaction ${saved.id}`,
+      );
+
+      return { success: true, transactionId: saved.id };
+    });
   }
 
   // ── GET payout config ─────────────────────────────────────────

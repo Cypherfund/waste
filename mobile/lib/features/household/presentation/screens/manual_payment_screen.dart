@@ -10,6 +10,7 @@ import '../../../../providers/subscription_provider.dart';
 import '../../../../models/subscription.dart';
 import '../../../../providers/user_payment_methods_provider.dart';
 import '../../../../services/api/files_api.dart';
+import '../../../../services/api/wallet_api.dart';
 import '../../providers/payment_flow_provider.dart';
 import '../../providers/payment_flow_enums.dart';
 
@@ -54,13 +55,20 @@ class _ManualPaymentScreenState extends State<ManualPaymentScreen> {
           ),
           onPressed: _isCreatingJob ? null : () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Manual Payment',
-          style: TextStyle(
-            color: Color(0xFF111827),
-            fontSize: 13,
-            fontWeight: FontWeight.w800,
-          ),
+        title: Consumer<PaymentFlowProvider>(
+          builder: (context, flowProvider, _) {
+            final title = flowProvider.isWalletTopUpContext
+                ? 'Wallet Top-Up'
+                : 'Manual Payment';
+            return Text(
+              title,
+              style: const TextStyle(
+                color: Color(0xFF111827),
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+              ),
+            );
+          },
         ),
         centerTitle: true,
       ),
@@ -421,9 +429,17 @@ class _ManualPaymentScreenState extends State<ManualPaymentScreen> {
   }
 
   Widget _buildWarningBanner(bool isSubscription) {
-    final message = isSubscription
-        ? 'Your subscription will become active after admin verifies your payment. This may take a few minutes.'
-        : 'Your pickup will start after admin verifies your payment. This may take a few minutes.';
+    final flowProvider = context.read<PaymentFlowProvider>();
+    String message;
+
+    if (flowProvider.isWalletTopUpContext) {
+      message = 'Your wallet will be credited after admin verifies your payment. This may take a few minutes.';
+    } else if (isSubscription) {
+      message = 'Your subscription will become active after admin verifies your payment. This may take a few minutes.';
+    } else {
+      message = 'Your pickup will start after admin verifies your payment. This may take a few minutes.';
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -613,6 +629,37 @@ class _ManualPaymentScreenState extends State<ManualPaymentScreen> {
     setState(() => _isCreatingJob = true);
 
     try {
+      // ── Wallet top-up branch ─────────────────────────────────────
+      if (flowProvider.isWalletTopUpContext) {
+        final walletApi = WalletApi(ApiClient());
+        await walletApi.topUp(
+          amount: flowProvider.walletTopUpAmount!,
+          paymentMethodId: flowProvider.selectedProviderId!,
+          paymentRef: paymentRef,
+          paymentProofUrl: _uploadedProofUrl,
+        );
+
+        if (mounted) {
+          flowProvider.setManualPaymentDetails(
+            paymentRef: paymentRef,
+            paymentProofUrl: _uploadedProofUrl,
+          );
+          flowProvider.setResultType(PaymentResultType.submitted);
+
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/payment-result',
+            (route) => route.settings.name == '/home',
+            arguments: {
+              'resultType': PaymentResultType.submitted,
+              'isWalletTopUp': true,
+              'amount': flowProvider.walletTopUpAmount,
+            },
+          );
+        }
+        return;
+      }
+
       // ── Subscription payment branch ──────────────────────────────
       if (flowProvider.isSubscriptionContext) {
         final subProvider = context.read<SubscriptionProvider>();

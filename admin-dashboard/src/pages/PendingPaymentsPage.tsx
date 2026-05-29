@@ -7,7 +7,7 @@ import HelpGuide from '../components/HelpGuide';
 import type { PendingPayment } from '../types';
 import { CheckCircle, XCircle, ExternalLink, RefreshCw } from 'lucide-react';
 
-type FilterTab = 'all' | 'job' | 'subscription';
+type FilterTab = 'all' | 'job' | 'subscription' | 'wallet';
 
 const MODE_LABEL: Record<string, string> = {
   MANUAL_PROVIDER: 'Manual Provider',
@@ -24,11 +24,17 @@ const STATUS_BADGE: Record<string, string> = {
   FAILED: 'bg-red-100 text-red-700',
 };
 
-const rowKey = (p: PendingPayment) =>
-  p.paymentSource === 'SUBSCRIPTION_PAYMENT' ? `sub-${p.subscriptionId}` : `job-${p.jobId}`;
+const rowKey = (p: PendingPayment) => {
+  if (p.paymentSource === 'SUBSCRIPTION_PAYMENT') return `sub-${p.subscriptionId}`;
+  if (p.paymentSource === 'WALLET_TOPUP') return `wallet-${p.transactionId}`;
+  return `job-${p.jobId}`;
+};
 
-const rowId = (p: PendingPayment) =>
-  p.paymentSource === 'SUBSCRIPTION_PAYMENT' ? p.subscriptionId! : p.jobId!;
+const rowId = (p: PendingPayment) => {
+  if (p.paymentSource === 'SUBSCRIPTION_PAYMENT') return p.subscriptionId!;
+  if (p.paymentSource === 'WALLET_TOPUP') return p.transactionId!;
+  return p.jobId!;
+};
 
 export default function PendingPaymentsPage() {
   const [actionId, setActionId] = useState<string | null>(null);
@@ -43,6 +49,7 @@ export default function PendingPaymentsPage() {
   const filtered = (payments ?? []).filter((p) => {
     if (activeTab === 'job') return p.paymentSource === 'JOB_PAYMENT';
     if (activeTab === 'subscription') return p.paymentSource === 'SUBSCRIPTION_PAYMENT';
+    if (activeTab === 'wallet') return p.paymentSource === 'WALLET_TOPUP';
     return true;
   });
 
@@ -51,7 +58,14 @@ export default function PendingPaymentsPage() {
     setActionId(id);
     try {
       await pendingPaymentsApi.verify(p);
-      const label = p.paymentSource === 'SUBSCRIPTION_PAYMENT' ? 'subscription' : `job ${id.slice(0, 8)}`;
+      let label: string;
+      if (p.paymentSource === 'SUBSCRIPTION_PAYMENT') {
+        label = 'subscription';
+      } else if (p.paymentSource === 'WALLET_TOPUP') {
+        label = 'wallet top-up';
+      } else {
+        label = `job ${id.slice(0, 8)}`;
+      }
       setFeedback(`Payment verified for ${label}`);
       run();
     } catch (e: unknown) {
@@ -67,7 +81,14 @@ export default function PendingPaymentsPage() {
     setActionId(id);
     try {
       await pendingPaymentsApi.reject(rejectItem, rejectReason || 'Rejected by admin');
-      const label = rejectItem.paymentSource === 'SUBSCRIPTION_PAYMENT' ? 'subscription' : `job ${id.slice(0, 8)}`;
+      let label: string;
+      if (rejectItem.paymentSource === 'SUBSCRIPTION_PAYMENT') {
+        label = 'subscription';
+      } else if (rejectItem.paymentSource === 'WALLET_TOPUP') {
+        label = 'wallet top-up';
+      } else {
+        label = `job ${id.slice(0, 8)}`;
+      }
       setFeedback(`Payment rejected for ${label}`);
       setRejectItem(null);
       setRejectReason('');
@@ -83,6 +104,7 @@ export default function PendingPaymentsPage() {
     all: (payments ?? []).length,
     job: (payments ?? []).filter((p) => p.paymentSource === 'JOB_PAYMENT').length,
     subscription: (payments ?? []).filter((p) => p.paymentSource === 'SUBSCRIPTION_PAYMENT').length,
+    wallet: (payments ?? []).filter((p) => p.paymentSource === 'WALLET_TOPUP').length,
   };
 
   return (
@@ -104,14 +126,15 @@ export default function PendingPaymentsPage() {
         title="How to Review Pending Payments"
         description="Review manual payment submissions from households before processing payouts."
         steps={[
-          "Review the payment type (Job Payment or Subscription Payment)",
+          "Review the payment type (Job Payment, Subscription Payment, or Wallet Top-Up)",
           "Check the payment mode (Manual Provider or Integrated)",
           "Check the payment proof image for validity",
-          "Verify the amount matches the job or subscription price",
+          "Verify the amount matches the job, subscription price, or top-up amount",
           "Click Verify to approve or Reject to decline with a reason",
         ]}
         tips={[
           "Subscription payments must be verified before the subscription becomes active",
+          "Wallet top-ups credit the user's wallet after verification",
           "Manual Provider payments need confirmation from the payment provider",
           "Always verify the proof image before approving",
         ]}
@@ -125,7 +148,7 @@ export default function PendingPaymentsPage() {
 
       {/* Filter tabs */}
       <div className="flex gap-1 rounded-lg border bg-gray-50 p-1">
-        {(['all', 'job', 'subscription'] as FilterTab[]).map((tab) => (
+        {(['all', 'job', 'subscription', 'wallet'] as FilterTab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -135,7 +158,7 @@ export default function PendingPaymentsPage() {
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            {tab === 'all' ? 'All' : tab === 'job' ? 'Job Payments' : 'Subscription Payments'}
+            {tab === 'all' ? 'All' : tab === 'job' ? 'Job Payments' : tab === 'subscription' ? 'Subscription Payments' : 'Wallet Top-Ups'}
             {' '}
             <span className="ml-1 rounded-full bg-gray-200 px-1.5 text-xs">
               {tabCounts[tab]}
@@ -175,15 +198,18 @@ export default function PendingPaymentsPage() {
               {filtered.map((p) => {
                 const id = rowId(p);
                 const isSubscription = p.paymentSource === 'SUBSCRIPTION_PAYMENT';
+                const isWalletTopUp = p.paymentSource === 'WALLET_TOPUP';
                 return (
                   <tr key={rowKey(p)} className="hover:bg-gray-50">
                     <td className="px-4 py-3">
                       <span className={`rounded px-2 py-0.5 text-xs font-medium ${
                         isSubscription
                           ? 'bg-purple-100 text-purple-700'
-                          : 'bg-gray-100 text-gray-600'
+                          : isWalletTopUp
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-gray-100 text-gray-600'
                       }`}>
-                        {isSubscription ? 'Subscription' : 'Job'}
+                        {isSubscription ? 'Subscription' : isWalletTopUp ? 'Wallet Top-Up' : 'Job'}
                       </span>
                     </td>
                     <td className="px-4 py-3 font-mono text-xs text-gray-500">
@@ -195,7 +221,9 @@ export default function PendingPaymentsPage() {
                     <td className="px-4 py-3 text-xs text-gray-600">
                       {isSubscription && p.planName
                         ? <span className="font-medium text-purple-700">{p.planName}</span>
-                        : p.scheduledDate}
+                        : isWalletTopUp
+                          ? <span className="font-medium text-green-700">Wallet Top-Up</span>
+                          : p.scheduledDate}
                     </td>
                     <td className="px-4 py-3 text-xs">
                       <span className="rounded bg-gray-100 px-2 py-0.5">
@@ -264,7 +292,9 @@ export default function PendingPaymentsPage() {
             <p className="mb-3 text-sm text-gray-500">
               {rejectItem.paymentSource === 'SUBSCRIPTION_PAYMENT'
                 ? <>Subscription <span className="font-medium text-purple-700">{rejectItem.planName}</span></>
-                : <>Job <span className="font-mono">{rejectItem.jobId?.slice(0, 8)}</span></>
+                : rejectItem.paymentSource === 'WALLET_TOPUP'
+                  ? <>Wallet Top-Up <span className="font-medium text-green-700">{rejectItem.quotedPrice?.toLocaleString()} XAF</span></>
+                  : <>Job <span className="font-mono">{rejectItem.jobId?.slice(0, 8)}</span></>
               }
             </p>
             <textarea

@@ -43,6 +43,10 @@ class PaymentFlowProvider extends ChangeNotifier {
   bool isSubscriptionContext = false;
   String? subscriptionPlanId;
 
+  // Wallet top-up context
+  bool isWalletTopUpContext = false;
+  double? walletTopUpAmount;
+
   // Override amountDue for subscription context (plan price)
   double? _subscriptionAmountDue;
 
@@ -113,6 +117,15 @@ class PaymentFlowProvider extends ChangeNotifier {
     selectedProviderName = 'Cash to Collector';
     selectedProviderMode = PaymentProviderMode.cash;
     selectedPaymentMethodCode = 'CASH';
+    notifyListeners();
+  }
+
+  /// Select wallet payment
+  void selectWallet() {
+    selectedProviderId = 'WALLET';
+    selectedProviderName = 'Wallet Balance';
+    selectedProviderMode = PaymentProviderMode.wallet;
+    selectedPaymentMethodCode = 'WALLET';
     notifyListeners();
   }
 
@@ -193,6 +206,25 @@ class PaymentFlowProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Set wallet top-up context
+  void setWalletTopUpContext(double amount) {
+    isWalletTopUpContext = true;
+    walletTopUpAmount = amount;
+    createdJob = null;
+    scheduledDate = null;
+    scheduledTime = null;
+    resultType = null;
+    error = null;
+    notifyListeners();
+  }
+
+  /// Clear wallet top-up context
+  void clearWalletTopUpContext() {
+    isWalletTopUpContext = false;
+    walletTopUpAmount = null;
+    notifyListeners();
+  }
+
   /// Set the amount due directly (used for subscription plan price)
   void setAmountDue(double amount) {
     _subscriptionAmountDue = amount;
@@ -228,6 +260,8 @@ class PaymentFlowProvider extends ChangeNotifier {
     isSubscriptionContext = false;
     subscriptionPlanId = null;
     _subscriptionAmountDue = null;
+    isWalletTopUpContext = false;
+    walletTopUpAmount = null;
     _isCreatingJob = false;
     _isUploadingProof = false;
     _isInitiatingPayment = false;

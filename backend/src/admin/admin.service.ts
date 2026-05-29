@@ -6,7 +6,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindOptionsWhere, Between, MoreThanOrEqual, LessThanOrEqual, In } from 'typeorm';
+import { Repository, FindOptionsWhere, Between, MoreThanOrEqual, LessThanOrEqual, In, DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { UsersService } from '../users/users.service';
 import { JobsService } from '../jobs/jobs.service';
@@ -22,6 +22,7 @@ import { Dispute } from '../disputes/entities/dispute.entity';
 import { Earning } from '../earnings/entities/earning.entity';
 import { Rating } from '../ratings/entities/rating.entity';
 import { User } from '../users/entities/user.entity';
+import { PaymentTransaction, TransactionStatus } from '../payments/entities/payment-transaction.entity';
 import { AdminJobFilterDto } from './dto/admin-job-filter.dto';
 import { ResolveDisputeDto } from '../disputes/dto/resolve-dispute.dto';
 import { ReviewFraudFlagDto } from '../fraud/dto/review-fraud-flag.dto';
@@ -49,6 +50,7 @@ export class AdminService {
     private readonly systemConfigService: SystemConfigService,
     private readonly featureFlagService: FeatureFlagService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly dataSource: DataSource,
     @InjectRepository(Job)
     private readonly jobRepo: Repository<Job>,
     @InjectRepository(Dispute)
@@ -61,6 +63,8 @@ export class AdminService {
     private readonly userRepo: Repository<User>,
     @InjectRepository(UserSubscription)
     private readonly subRepo: Repository<UserSubscription>,
+    @InjectRepository(PaymentTransaction)
+    private readonly paymentTransactionRepo: Repository<PaymentTransaction>,
   ) {}
 
   // ─── USERS ────────────────────────────────────────────────────
@@ -128,7 +132,7 @@ export class AdminService {
   // ─── JOBS ─────────────────────────────────────────────────────
 
   async listPendingPaymentJobs(): Promise<{ data: any[]; meta: any }> {
-    const [jobs, pendingSubs] = await Promise.all([
+    const [jobs, pendingSubs, walletTopups] = await Promise.all([
       this.jobRepo.find({
         where: {
           paymentStatus: In([PaymentStatus.PENDING, PaymentStatus.AWAITING_ADMIN_VERIFICATION]) as any,
@@ -142,16 +146,25 @@ export class AdminService {
         relations: ['plan', 'user'],
         order: { createdAt: 'ASC' },
       }),
+      this.paymentTransactionRepo.find({
+        where: {
+          type: 'WALLET_TOPUP' as any,
+          status: 'PENDING' as any,
+        },
+        relations: ['user'],
+        order: { createdAt: 'DESC' },
+        take: 100,
+      }),
     ]);
 
     const jobRows = await Promise.all(
-      jobs.map(async (j) => {
+      jobs.map(async (j: Job) => {
         const dto = await this.jobsService.toResponseDto(j);
         return { ...dto, paymentSource: 'JOB_PAYMENT' };
       }),
     );
 
-    const subRows = pendingSubs.map((s) => ({
+    const subRows = pendingSubs.map((s: UserSubscription) => ({
       jobId: null,
       subscriptionId: s.id,
       paymentSource: 'SUBSCRIPTION_PAYMENT',
@@ -168,7 +181,25 @@ export class AdminService {
       createdAt: s.createdAt,
     }));
 
-    const combined = [...jobRows, ...subRows].sort(
+    const walletTopupRows = walletTopups.map((t: PaymentTransaction) => ({
+      jobId: null,
+      subscriptionId: null,
+      transactionId: t.id,
+      paymentSource: 'WALLET_TOPUP',
+      householdId: t.userId,
+      householdName: (t as any).user?.name ?? null,
+      householdPhone: (t as any).user?.phone ?? null,
+      amount: t.amount,
+      provider: t.providerName,
+      paymentMethod: t.paymentCode,
+      paymentRef: t.failureReason, // Stored in failureReason for manual flow
+      paymentProofUrl: null, // Will be added later if proof is stored separately
+      paymentStatus: 'AWAITING_ADMIN_VERIFICATION',
+      quotedPrice: t.amount,
+      createdAt: t.createdAt,
+    }));
+
+    const combined = [...jobRows, ...subRows, ...walletTopupRows].sort(
       (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
     );
     return { data: combined, meta: { total: combined.length, page: 1, limit: 200 } };
@@ -215,6 +246,77 @@ export class AdminService {
   async manualAssign(jobId: string, collectorId: string): Promise<void> {
     await this.assignmentService.manualAssign(jobId, collectorId);
     this.logger.log(`Admin manually assigned job ${jobId} to collector ${collectorId}`);
+  }
+
+  // ─── WALLET TOP-UP APPROVAL/REJECTION ─────────────────────────────
+
+  async approveWalletTopUp(transactionId: string, adminId: string): Promise<void> {
+    await this.dataSource.transaction(async (em) => {
+      const transaction = await em.findOne(PaymentTransaction, {
+        where: { id: transactionId },
+        relations: ['user'],
+      });
+
+      if (!transaction) {
+        throw new NotFoundException('Transaction not found');
+      }
+
+      // Idempotency check: only process PENDING transactions
+      if (transaction.status !== TransactionStatus.PENDING) {
+        throw new BadRequestException('This top-up has already been processed');
+      }
+
+      // Verify it's a wallet top-up
+      if (transaction.type !== 'WALLET_TOPUP') {
+        throw new BadRequestException('This is not a wallet top-up transaction');
+      }
+
+      // Credit wallet balance and update transaction status in one transaction
+      await em
+        .createQueryBuilder()
+        .update(User)
+        .set({ walletBalance: () => `wallet_balance + ${transaction.amount}` })
+        .where('id = :id', { id: transaction.userId })
+        .execute();
+
+      transaction.status = TransactionStatus.SUCCESS;
+      await em.save(transaction);
+
+      this.logger.log(
+        `Admin ${adminId} approved wallet top-up ${transactionId}, credited ${transaction.amount} XAF to user ${transaction.userId}`,
+      );
+    });
+  }
+
+  async rejectWalletTopUp(transactionId: string, adminId: string, reason?: string): Promise<void> {
+    await this.dataSource.transaction(async (em) => {
+      const transaction = await em.findOne(PaymentTransaction, {
+        where: { id: transactionId },
+      });
+
+      if (!transaction) {
+        throw new NotFoundException('Transaction not found');
+      }
+
+      // Idempotency check: only process PENDING transactions
+      if (transaction.status !== TransactionStatus.PENDING) {
+        throw new BadRequestException('This top-up has already been processed');
+      }
+
+      // Verify it's a wallet top-up
+      if (transaction.type !== 'WALLET_TOPUP') {
+        throw new BadRequestException('This is not a wallet top-up transaction');
+      }
+
+      // Update transaction status to FAILED
+      transaction.status = TransactionStatus.FAILED;
+      transaction.failureReason = reason || 'Rejected by admin';
+      await em.save(transaction);
+
+      this.logger.log(
+        `Admin ${adminId} rejected wallet top-up ${transactionId} for user ${transaction.userId}. Reason: ${reason}`,
+      );
+    });
   }
 
   async manualReassign(jobId: string, collectorId: string): Promise<void> {

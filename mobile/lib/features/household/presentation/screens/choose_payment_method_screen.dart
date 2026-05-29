@@ -96,6 +96,12 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
                               _buildAmountCard(amount),
                               const SizedBox(height: 24),
 
+                              // Wallet Balance section (hidden for wallet top-up)
+                              if (!flowProvider.isWalletTopUpContext) ...[
+                                _buildWalletBalanceSection(flowProvider, subProvider, amount),
+                                const SizedBox(height: 24),
+                              ],
+
                               // Payment methods
                               Text(
                                 'Select Payment Method',
@@ -117,9 +123,11 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
 
                               const SizedBox(height: 24),
 
-                              // Cash option (hidden for subscription context)
+                              // Cash option (hidden for wallet top-up and subscription contexts)
                               if ((appConfig?.cashEnabled ?? false) &&
-                                  !_hideCash) ...[
+                                  !_hideCash &&
+                                  !flowProvider.isWalletTopUpContext &&
+                                  !flowProvider.isSubscriptionContext) ...[
                                 Text(
                                   'Or pay with',
                                   style: TextStyle(
@@ -216,6 +224,188 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
     );
   }
 
+  Widget _buildWalletBalanceSection(
+    PaymentFlowProvider flowProvider,
+    SubscriptionProvider subProvider,
+    double amount,
+  ) {
+    final walletBalance = subProvider.walletBalance ?? 0;
+    final isSufficient = walletBalance >= amount;
+    final isZero = walletBalance == 0;
+    final isSelected = flowProvider.selectedProviderId == 'WALLET';
+
+    return GestureDetector(
+      onTap: isSufficient ? () => _payWithWallet(flowProvider, subProvider, amount) : null,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSufficient
+              ? const Color(0xFFECFDF5)
+              : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSufficient
+                ? const Color(0xFF10B981)
+                : Colors.grey.shade300,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.account_balance_wallet_outlined,
+                  color: isSufficient
+                      ? const Color(0xFF10B981)
+                      : Colors.grey.shade600,
+                  size: 24,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Wallet Balance',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: isSufficient
+                        ? const Color(0xFF10B981)
+                        : Colors.grey.shade800,
+                  ),
+                ),
+                const Spacer(),
+                if (isSufficient)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Text(
+                      'Recommended',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (isSufficient) ...[
+              Text(
+                'Pay instantly from your wallet',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Text(
+                    '${walletBalance.toStringAsFixed(0)} XAF',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF111827),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'available',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ] else if (isZero) ...[
+              Text(
+                '0 XAF available',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: () => Navigator.pushNamed(context, '/top-up-wallet'),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'Top up wallet',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ] else ...[
+              Text(
+                'Insufficient balance',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Text(
+                    'Balance: ${walletBalance.toStringAsFixed(0)} XAF',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Need: ${(amount - walletBalance).toStringAsFixed(0)} XAF more',
+                    style: TextStyle(
+                      fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFFEF4444),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: () => Navigator.pushNamed(context, '/top-up-wallet'),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'Top up wallet',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildPaymentMethods(
     UserPaymentMethodsProvider userPaymentProvider,
     PaymentFlowProvider flowProvider,
@@ -227,8 +417,17 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
       return _buildEmptyState();
     }
 
+    // Hide Wallet payment method for wallet top-up context
+    final isWalletTopUp = flowProvider.isWalletTopUpContext;
+
     return Column(
-      children: cashinMethods.map((method) {
+      children: cashinMethods.where((method) {
+        // Hide wallet payment method for top-up
+        if (isWalletTopUp && method.paymentCode.toLowerCase() == 'wallet') {
+          return false;
+        }
+        return true;
+      }).map((method) {
         final isSelected = flowProvider.selectedProviderId == method.id;
 
         // Match against the provider config to get per-provider flags
@@ -372,6 +571,92 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
       case PaymentProviderMode.cash:
         Navigator.pushNamed(context, '/cash-confirmation');
         break;
+    }
+  }
+
+  Future<void> _payWithWallet(
+    PaymentFlowProvider flowProvider,
+    SubscriptionProvider subProvider,
+    double amount,
+  ) async {
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    try {
+      final walletApi = WalletApi();
+
+      if (flowProvider.isSubscriptionContext) {
+        // Subscription payment with wallet
+        final planId = flowProvider.subscriptionPlanId;
+        if (planId == null) {
+          throw Exception('Subscription plan ID not found');
+        }
+
+        await walletApi.paySubscriptionWithWallet(planId: planId);
+
+        Navigator.pop(context); // Close loading
+        Navigator.pushNamed(
+          context,
+          '/payment-result',
+          arguments: {
+            'isSuccess': true,
+            'isSubscription': true,
+            'title': 'Subscription Activated',
+            'message': 'Your subscription has been activated successfully.',
+          },
+        );
+      } else {
+        // Job payment with wallet
+        final job = flowProvider.createdJob;
+        if (job == null) {
+          throw Exception('Job not found in payment flow');
+        }
+
+        await walletApi.payJobWithWallet(jobId: job.id);
+
+        Navigator.pop(context); // Close loading
+        Navigator.pushNamed(
+          context,
+          '/payment-result',
+          arguments: {
+            'isSuccess': true,
+            'isJob': true,
+            'title': 'Payment Successful',
+            'message': 'Your payment has been processed successfully.',
+          },
+        );
+      }
+    } catch (e) {
+      Navigator.pop(context); // Close loading
+
+      // Show error dialog
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Payment Failed'),
+          content: Text(
+            e.toString().contains('INSUFFICIENT_WALLET_BALANCE')
+                ? 'Insufficient wallet balance. Please top up your wallet and try again.'
+                : 'Payment failed. Please try again.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                // Refresh wallet balance on error
+                subProvider.loadWalletBalance();
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
     }
   }
 }
