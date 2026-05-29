@@ -174,6 +174,7 @@ class AppConfig {
   final double topupMinAmount;
   final double topupMaxAmount;
   final List<int> topupQuickAmounts;
+  final int acceptTimeoutMinutes;
 
   AppConfig({
     required this.paymentIntegrationEnabled,
@@ -188,6 +189,7 @@ class AppConfig {
     this.topupMinAmount = 500,
     this.topupMaxAmount = 500000,
     this.topupQuickAmounts = const [1000, 3500, 5000, 10000],
+    this.acceptTimeoutMinutes = 25,
   });
 
   factory AppConfig.fromJson(Map<String, dynamic> j) => AppConfig(
@@ -212,6 +214,7 @@ class AppConfig {
                 ?.map((a) => (a as num).toInt())
                 .toList() ??
             [1000, 3500, 5000, 10000],
+        acceptTimeoutMinutes: j['acceptTimeoutMinutes'] as int? ?? 25,
       );
 
   /// Get providers that have manual instructions enabled or manual payment details configured

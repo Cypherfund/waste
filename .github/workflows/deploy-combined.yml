@@ -1,20 +1,20 @@
-name: Deploy Combined Service
+# name: Deploy Combined Service
 
-on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'backend/**'
+# on:
+#   push:
+#     branches:
+#       - main
+#     paths:
+#       - 'backend/**'
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger Render deploy
-        run: |
-          curl -s -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" \
-            -H "Content-Type: application/json" \
-            --fail
-        env:
-          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Trigger Render deploy
+#         run: |
+#           curl -s -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" \
+#             -H "Content-Type: application/json" \
+#             --fail
+#         env:
+#           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}

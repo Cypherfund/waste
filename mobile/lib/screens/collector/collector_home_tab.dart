@@ -6,6 +6,7 @@ import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/collector_jobs_provider.dart';
 import '../../providers/collector_earnings_provider.dart';
+import '../../providers/subscription_provider.dart';
 import '../../models/job.dart';
 import '../../services/offline/connectivity_service.dart';
 
@@ -815,7 +816,7 @@ class _NewJobCard extends StatefulWidget {
 
 class _NewJobCardState extends State<_NewJobCard>
     with SingleTickerProviderStateMixin {
-  static const int _totalSeconds = 25 * 60;
+  late int _totalSeconds;
   late int _remainingSeconds;
   Timer? _countdownTimer;
   late AnimationController _pulseController;
@@ -824,6 +825,9 @@ class _NewJobCardState extends State<_NewJobCard>
   @override
   void initState() {
     super.initState();
+    // Get accept timeout from app config, default to 25 minutes
+    final appConfig = context.read<SubscriptionProvider>().appConfig;
+    _totalSeconds = (appConfig?.acceptTimeoutMinutes ?? 25) * 60;
     _remainingSeconds = _totalSeconds;
 
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {

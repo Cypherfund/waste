@@ -70,7 +70,7 @@ export class WalletService {
   // ── GET app config (payment integration + support + providers) ───────────
   async getAppConfig(countryCode: string) {
     countryCode = countryCode.toUpperCase();
-    const [paymentEnabled, manualInstructions, whatsapp, minAdvanceHours, cashEnabledStr, maxAdvanceDays, topupEnabled, topupMinAmount, topupMaxAmount, topupQuickAmountsStr] = await Promise.all([
+    const [paymentEnabled, manualInstructions, whatsapp, minAdvanceHours, cashEnabledStr, maxAdvanceDays, topupEnabled, topupMinAmount, topupMaxAmount, topupQuickAmountsStr, acceptTimeoutMinutes] = await Promise.all([
       this.systemConfigService.getBoolean('feature.payment_integration', false),
       this.systemConfigService.getString(
         'payment.manual_instructions',
@@ -84,6 +84,7 @@ export class WalletService {
       this.systemConfigService.getNumber('wallet.topup_min_amount', 500),
       this.systemConfigService.getNumber('wallet.topup_max_amount', 500000),
       this.systemConfigService.getString('wallet.topup_quick_amounts', '1000,3500,5000,10000'),
+      this.systemConfigService.getNumber('assignment.accept_timeout_minutes', 25),
     ]);
 
     // Get enabled payment providers for manual payment
@@ -126,6 +127,7 @@ export class WalletService {
       topupEnabled,
       topupMinAmount,
       topupMaxAmount,
+      acceptTimeoutMinutes,
       topupQuickAmounts,
     };
   }
