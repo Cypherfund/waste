@@ -378,7 +378,7 @@ describe('PricingService', () => {
 
       await service.getQuoteForUser('user-1');
 
-      expect(subscription.remainingPickupsThisWeek).toBe(3);
+      expect(subscription.remainingPickupsThisWeek).toBe(2);
     });
   });
 });

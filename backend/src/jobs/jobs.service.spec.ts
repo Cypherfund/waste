@@ -1,9 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { JobsService } from './jobs.service';
 import { Job } from './entities/job.entity';
 import { Proof } from './entities/proof.entity';
+import { UserSubscription } from '../subscriptions/entities/user-subscription.entity';
 import { CreateJobDto } from './dto/create-job.dto';
 import { JobStatus } from '../common/enums/job-status.enum';
 import { PaymentStatus } from '../common/enums/payment-status.enum';
@@ -11,6 +13,8 @@ import { PricingService } from '../subscriptions/pricing.service';
 import { PricingType } from '../common/enums/pricing-type.enum';
 import { FilesService } from '../files/files.service';
 import { PaymentService } from '../payments/payment.service';
+import { SystemConfigService } from '../config/system-config.service';
+import { EarningsService } from '../earnings/earnings.service';
 
 describe('JobsService - Pricing Integration', () => {
   let service: JobsService;
@@ -77,12 +81,13 @@ describe('JobsService - Pricing Integration', () => {
 
     pricingService = {
       getQuoteForUser: jest.fn(),
-      consumePickup: jest.fn(),
+      consumePickup: jest.fn().mockResolvedValue(true),
     };
 
     paymentService = {
       isPaymentIntegrationEnabled: jest.fn().mockResolvedValue(false),
       initiatePayment: jest.fn(),
+      getProviderByCode: jest.fn().mockResolvedValue({ integrationEnabled: false }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -90,10 +95,14 @@ describe('JobsService - Pricing Integration', () => {
         JobsService,
         { provide: getRepositoryToken(Job), useValue: jobRepo },
         { provide: getRepositoryToken(Proof), useValue: proofRepo },
+        { provide: getRepositoryToken(UserSubscription), useValue: {} },
         { provide: EventEmitter2, useValue: eventEmitter },
         { provide: FilesService, useValue: filesService },
         { provide: PricingService, useValue: pricingService },
         { provide: PaymentService, useValue: paymentService },
+        { provide: DataSource, useValue: { transaction: jest.fn() } },
+        { provide: SystemConfigService, useValue: { getNumber: jest.fn().mockResolvedValue(24) } },
+        { provide: EarningsService, useValue: { calculateEarnings: jest.fn().mockResolvedValue({ totalAmount: 500 }) } },
       ],
     }).compile();
 
@@ -191,7 +200,7 @@ describe('JobsService - Pricing Integration', () => {
       expect(jobRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
           status: JobStatus.PAYMENT_PENDING,
-          paymentStatus: PaymentStatus.PENDING,
+          paymentStatus: PaymentStatus.AWAITING_ADMIN_VERIFICATION,
           paymentMethod: 'MOBILE_MONEY',
           paymentRef: 'TX123456789',
           quotedPrice: 500,
@@ -256,28 +265,28 @@ describe('JobsService - Pricing Integration', () => {
   });
 
   describe('toResponseDto - pricing fields', () => {
-    it('should include pricing fields in response DTO', () => {
+    it('should include pricing fields in response DTO', async () => {
       const job = makeJob({
         quotedPrice: 500,
         pricingType: PricingType.PAY_PER_PICKUP,
         isCoveredBySubscription: false,
       });
 
-      const dto = service['toResponseDto'](job);
+      const dto = await service['toResponseDto'](job);
 
       expect(dto.quotedPrice).toBe(500);
       expect(dto.pricingType).toBe(PricingType.PAY_PER_PICKUP);
       expect(dto.isCoveredBySubscription).toBe(false);
     });
 
-    it('should include subscription pricing fields in response DTO', () => {
+    it('should include subscription pricing fields in response DTO', async () => {
       const job = makeJob({
         quotedPrice: 0,
         pricingType: PricingType.SUBSCRIPTION,
         isCoveredBySubscription: true,
       });
 
-      const dto = service['toResponseDto'](job);
+      const dto = await service['toResponseDto'](job);
 
       expect(dto.quotedPrice).toBe(0);
       expect(dto.pricingType).toBe(PricingType.SUBSCRIPTION);

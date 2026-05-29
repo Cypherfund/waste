@@ -4,6 +4,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { AssignmentService } from './assignment.service';
 import { JobsService } from '../jobs/jobs.service';
+import { EarningsService } from '../earnings/earnings.service';
 import { TimeslotsService } from '../timeslots/timeslots.service';
 import { SystemConfigService } from '../config/system-config.service';
 import { FeatureFlagService } from '../config/feature-flags';
@@ -114,6 +115,7 @@ describe('AssignmentService', () => {
         { provide: DataSource, useValue: dataSource },
         { provide: getRepositoryToken(User), useValue: userRepo },
         { provide: getRepositoryToken(Job), useValue: jobRepo },
+        { provide: EarningsService, useValue: { calculateEarnings: jest.fn() } },
       ],
     }).compile();
 

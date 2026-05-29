@@ -568,6 +568,10 @@ export class JobsService {
       const saved = result.savedJob;
       const savedProof = result.savedProof;
 
+      if (!savedProof) {
+        throw new BadRequestException('Proof creation failed');
+      }
+
       // Mark file as used in Files module (outside transaction as it's external service)
       await this.filesService.markUsed(dto.proofImageUrl);
 
@@ -925,6 +929,14 @@ export class JobsService {
     } catch {
       return null;
     }
+  }
+
+  private getMondayOfWeek(date: Date): Date {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    return d;
   }
 
   async toResponseDto(job: Job): Promise<JobResponseDto> {

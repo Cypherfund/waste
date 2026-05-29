@@ -4,7 +4,8 @@ import { DataSource } from 'typeorm';
 import { LeadService } from './lead.service';
 import { SMSService } from './sms.service';
 import { MarketerNotificationService } from './marketer-notification.service';
-import { Lead, LeadStatus, MarketerProfile } from '../entities';
+import { CampaignService } from './campaign.service';
+import { Lead, LeadStatus, MarketerProfile, MarketingCampaign, CampaignMarketerAssignment } from '../entities';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 describe('LeadService', () => {
@@ -52,8 +53,11 @@ describe('LeadService', () => {
         LeadService,
         { provide: getRepositoryToken(Lead), useValue: leadRepo },
         { provide: getRepositoryToken(MarketerProfile), useValue: profileRepo },
+        { provide: getRepositoryToken(MarketingCampaign), useValue: {} },
+        { provide: getRepositoryToken(CampaignMarketerAssignment), useValue: {} },
         { provide: SMSService, useValue: smsService },
         { provide: MarketerNotificationService, useValue: notificationService },
+        { provide: CampaignService, useValue: {} },
         { provide: DataSource, useValue: dataSource },
       ],
     }).compile();

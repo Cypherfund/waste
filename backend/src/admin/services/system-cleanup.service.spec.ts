@@ -28,6 +28,7 @@ import { PayoutRequest } from '../../wallet/entities/payout-request.entity';
 import { CollectorFloatLedger } from '../../wallet/entities/collector-float-ledger.entity';
 import { FileRecord } from '../../files/entities/file.entity';
 import { Notification } from '../../notifications/entities/notification.entity';
+import { CollectorAvailability } from '../../timeslots/entities/collector-availability.entity';
 import { MarketerNotification } from '../../growth/entities/marketer-notification.entity';
 import { CampaignMarketerAssignment } from '../../growth/entities/campaign-marketer-assignment.entity';
 import { CampaignCommissionScheme } from '../../growth/entities/campaign-commission-scheme.entity';
@@ -108,6 +109,7 @@ describe('SystemCleanupService', () => {
         { provide: getRepositoryToken(CollectorFloatLedger), useValue: { count: jest.fn(), delete: jest.fn() } },
         { provide: getRepositoryToken(FileRecord), useValue: { count: jest.fn(), delete: jest.fn() } },
         { provide: getRepositoryToken(Notification), useValue: { count: jest.fn(), delete: jest.fn() } },
+        { provide: getRepositoryToken(CollectorAvailability), useValue: { count: jest.fn(), delete: jest.fn() } },
         { provide: getRepositoryToken(MarketerNotification), useValue: { count: jest.fn(), delete: jest.fn() } },
         { provide: getRepositoryToken(CampaignMarketerAssignment), useValue: { count: jest.fn(), delete: jest.fn() } },
         { provide: getRepositoryToken(CampaignCommissionScheme), useValue: { count: jest.fn(), delete: jest.fn() } },
