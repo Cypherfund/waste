@@ -423,7 +423,7 @@ class _BookingsListScreenState extends State<BookingsListScreen>
       case JobStatus.paymentPending:
         return 'Payment Pending';
       case JobStatus.requested:
-        return 'Assigned';
+        return 'Searching';
       case JobStatus.assigned:
         return 'Assigned';
       case JobStatus.inProgress:

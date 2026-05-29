@@ -180,7 +180,9 @@ class _ManageSubscriptionScreenState extends State<ManageSubscriptionScreen> {
   }
 
   Widget _buildPickupUsage(subscription) {
-    final remaining = subscription.remainingPickupsThisWeek as int;
+    final remaining = subscription.remainingPickupsThisWeek is int
+        ? subscription.remainingPickupsThisWeek as int
+        : (subscription.remainingPickupsThisWeek ?? 0).toInt();
     final total = subscription.plan?.pickupsPerWeek ?? 2;
     final used = total - remaining;
     final resetDay = subscription.weekResetDate ?? 'Monday';

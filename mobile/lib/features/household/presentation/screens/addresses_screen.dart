@@ -513,21 +513,19 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
             const SizedBox(height: 14),
 
             // Address + GPS button
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(
-                  child: _field(
-                    controller: _addressCtrl,
-                    label: 'Address',
-                    hint: 'Street, area, city',
-                    maxLines: 2,
-                  ),
+                _field(
+                  controller: _addressCtrl,
+                  label: 'Address',
+                  hint: 'Street, area, city',
+                  maxLines: 2,
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(height: 10),
                 SizedBox(
-                  height: 54,
-                  child: ElevatedButton(
+                  height: 48,
+                  child: ElevatedButton.icon(
                     onPressed: _loadingGps ? null : _useCurrentLocation,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primarySurface,
@@ -535,13 +533,14 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10)),
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
                     ),
-                    child: _loadingGps
+                    icon: _loadingGps
                         ? const SizedBox(
                             width: 18, height: 18,
                             child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Icon(Icons.my_location_rounded, size: 22),
+                        : const Icon(Icons.my_location_rounded, size: 20),
+                    label: const Text('Use Current Location',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                   ),
                 ),
               ],
