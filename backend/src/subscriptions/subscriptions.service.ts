@@ -2,10 +2,11 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ConflictException,
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, In } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SubscriptionPlan } from './entities/subscription-plan.entity';
 import { UserSubscription } from './entities/user-subscription.entity';
@@ -15,6 +16,8 @@ import { SubscriptionEvents } from '../events/events.types';
 import { Job } from '../jobs/entities/job.entity';
 import { PaymentMode } from '../common/enums/payment-mode.enum';
 import { CashCollectionType } from '../common/enums/cash-collection-type.enum';
+import { JobStatus } from '../common/enums/job-status.enum';
+import { SystemConfigService } from '../config/system-config.service';
 
 @Injectable()
 export class SubscriptionsService {
@@ -29,6 +32,7 @@ export class SubscriptionsService {
     private readonly jobRepo: Repository<Job>,
     private readonly eventEmitter: EventEmitter2,
     private readonly dataSource: DataSource,
+    private readonly systemConfigService: SystemConfigService,
   ) {}
 
   async listPlans(): Promise<SubscriptionPlan[]> {
@@ -134,10 +138,28 @@ export class SubscriptionsService {
 
   async cancel(userId: string): Promise<UserSubscription> {
     const sub = await this.subRepo.findOne({
-      where: { userId, status: SubscriptionStatus.ACTIVE },
-      relations: ['plan'],
+      where: [
+        { userId, status: SubscriptionStatus.ACTIVE },
+        { userId, status: SubscriptionStatus.PENDING_PAYMENT, paymentMode: PaymentMode.CASH_ON_FIRST_PICKUP },
+      ],
+      relations: ['plan', 'linkedFirstJob'],
     });
-    if (!sub) throw new NotFoundException('No active subscription found');
+    if (!sub) throw new NotFoundException('No active or pending cash subscription found');
+
+    // For pending cash subscriptions, cancel linked job if it hasn't started
+    if (sub.status === SubscriptionStatus.PENDING_PAYMENT && sub.paymentMode === PaymentMode.CASH_ON_FIRST_PICKUP) {
+      if (sub.linkedFirstJobId && sub.linkedFirstJob) {
+        const job = sub.linkedFirstJob;
+        if (job.status === JobStatus.REQUESTED || job.status === JobStatus.ASSIGNED) {
+          await this.jobRepo.update(job.id, {
+            status: JobStatus.CANCELLED,
+            cancelledAt: new Date(),
+            cancellationReason: 'Cash subscription cancelled before pickup',
+          });
+          this.logger.log(`Cancelled linked job ${job.id} for cash subscription ${sub.id}`);
+        }
+      }
+    }
 
     sub.status = SubscriptionStatus.CANCELLED;
     sub.cancelledAt = new Date();
@@ -156,9 +178,9 @@ export class SubscriptionsService {
     // Cancel linked job if it hasn't started yet
     if (sub.linkedFirstJobId && sub.linkedFirstJob) {
       const job = sub.linkedFirstJob;
-      if (job.status === 'REQUESTED' || job.status === 'ASSIGNED') {
+      if (job.status === JobStatus.REQUESTED || job.status === JobStatus.ASSIGNED) {
         await this.jobRepo.update(job.id, {
-          status: 'CANCELLED' as any,
+          status: JobStatus.CANCELLED,
           cancelledAt: new Date(),
           cancellationReason: 'Cash subscription cancelled before pickup',
         });
@@ -186,6 +208,34 @@ export class SubscriptionsService {
     },
   ): Promise<{ subscription: UserSubscription; job: Job }> {
     const plan = await this.getPlan(planId);
+
+    // Validate scheduled date is at least booking.min_advance_hours from now
+    const scheduledDate = new Date(jobDetails.scheduledDate);
+    const minAdvanceHours = await this.systemConfigService.getNumber('booking.min_advance_hours', 24);
+    const earliest = new Date(Date.now() + minAdvanceHours * 60 * 60 * 1000);
+    earliest.setHours(0, 0, 0, 0);
+
+    if (scheduledDate < earliest) {
+      throw new BadRequestException(
+        `Booking must be scheduled at least ${minAdvanceHours} hours in advance`,
+      );
+    }
+
+    // Duplicate check: prevent duplicate active job for same date
+    const activeStatuses = [JobStatus.REQUESTED, JobStatus.ASSIGNED, JobStatus.IN_PROGRESS, JobStatus.PAYMENT_PENDING];
+    const existingJob = await this.jobRepo.findOne({
+      where: {
+        householdId: userId,
+        scheduledDate: jobDetails.scheduledDate,
+        status: In(activeStatuses),
+      },
+    });
+
+    if (existingJob) {
+      throw new ConflictException(
+        'You already have an active job scheduled for this date',
+      );
+    }
 
     // Check for existing subscriptions
     const existing = await this.subRepo.findOne({

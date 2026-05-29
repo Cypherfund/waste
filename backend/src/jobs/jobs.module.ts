@@ -10,10 +10,11 @@ import { DisputesModule } from '../disputes/disputes.module';
 import { FilesModule } from '../files/files.module';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { PaymentsModule } from '../payments/payments.module';
+import { UserSubscription } from '../subscriptions/entities/user-subscription.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Job, Proof]),
+    TypeOrmModule.forFeature([Job, Proof, UserSubscription]),
     forwardRef(() => RatingsModule),
     forwardRef(() => EarningsModule),
     forwardRef(() => DisputesModule),

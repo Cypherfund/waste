@@ -31,6 +31,7 @@ import {
   JobCompletedPayload,
   JobRejectedPayload,
   ProofEvents,
+  SubscriptionEvents,
 } from '../events/events.types';
 import { FilesService } from '../files/files.service';
 import { PricingService } from '../subscriptions/pricing.service';
@@ -453,7 +454,8 @@ export class JobsService {
         throw new BadRequestException('Invalid cash collection type for CASH_ON_FIRST_PICKUP job');
       }
 
-      await this.dataSource.transaction(async (em) => {
+      // Full atomic transaction for CASH_ON_FIRST_PICKUP completion
+      const result = await this.dataSource.transaction(async (em) => {
         // Lock job for idempotency
         const lockedJob = await em
           .getRepository(Job)
@@ -463,10 +465,10 @@ export class JobsService {
           .getOne();
         if (!lockedJob) throw new NotFoundException('Job not found');
 
-        // Idempotency check: if already completed, skip float deduction
+        // Idempotency check: if already completed, return early
         if (lockedJob.status === JobStatus.COMPLETED) {
           this.logger.log(`Job ${jobId} already completed, skipping float deduction`);
-          return;
+          return { alreadyCompleted: true, savedJob: lockedJob, savedProof: null };
         }
 
         // Lock collector float
@@ -491,10 +493,10 @@ export class JobsService {
           .getOne();
         if (!subscription) throw new NotFoundException('Subscription not found');
 
-        // Calculate collector earning using existing formula
-        const earningsCalc = await this.earningsService.calculateEarnings(job);
-        const collectorEarning = Math.min(earningsCalc.totalAmount, Number(job.cashToCollectAmount));
-        const platformShare = Math.max(Number(job.cashToCollectAmount) - collectorEarning, 0);
+        // Calculate collector earning using locked job
+        const earningsCalc = await this.earningsService.calculateEarnings(lockedJob);
+        const collectorEarning = Math.min(earningsCalc.totalAmount, Number(lockedJob.cashToCollectAmount));
+        const platformShare = Math.max(Number(lockedJob.cashToCollectAmount) - collectorEarning, 0);
         const currentFloat = Number(collector.collectorFloatBalance);
 
         // Re-check collector float at completion (not just assignment estimate)
@@ -516,7 +518,7 @@ export class JobsService {
         // Create float ledger entry for platform share deduction
         const ledgerEntry = em.getRepository(CollectorFloatLedger).create({
           collectorId,
-          jobId: job.id,
+          jobId: lockedJob.id,
           subscriptionId: subscription.id,
           type: FloatLedgerType.CASH_SUBSCRIPTION_PLATFORM_SHARE,
           amount: -platformShare,
@@ -526,20 +528,86 @@ export class JobsService {
         });
         await em.getRepository(CollectorFloatLedger).save(ledgerEntry);
 
-        // Activate subscription
+        // Activate subscription with week reset date
+        const monday = this.getMondayOfWeek(new Date());
+        const mondayStr = monday.toISOString().split('T')[0];
         subscription.status = SubscriptionStatus.ACTIVE;
         subscription.paymentStatus = PaymentStatus.VERIFIED;
         subscription.remainingPickupsThisWeek = subscription.plan.pickupsPerWeek - 1; // First pickup consumed
+        subscription.weekResetDate = mondayStr;
         await em.getRepository(UserSubscription).save(subscription);
 
         this.logger.log(
           `Activated subscription ${subscription.id} after cash collection, remaining pickups: ${subscription.remainingPickupsThisWeek}`,
         );
+
+        // Update job status and payment status atomically
+        lockedJob.paymentStatus = PaymentStatus.VERIFIED;
+        lockedJob.status = JobStatus.COMPLETED;
+        lockedJob.completedAt = new Date();
+        const savedJob = await em.getRepository(Job).save(lockedJob);
+
+        // Create proof record
+        const proof = em.getRepository(Proof).create({
+          jobId: savedJob.id,
+          imageUrl: dto.proofImageUrl,
+          collectorLat: dto.collectorLat ?? null,
+          collectorLng: dto.collectorLng ?? null,
+        });
+        const savedProof = await em.getRepository(Proof).save(proof);
+
+        return { alreadyCompleted: false, savedJob, savedProof };
       });
 
-      job.paymentStatus = PaymentStatus.VERIFIED;
+      // If already completed, fetch existing proof and return
+      if (result.alreadyCompleted) {
+        const existingProof = await this.proofRepo.findOne({ where: { jobId: result.savedJob.id } });
+        return await this.toResponseDto(result.savedJob);
+      }
+
+      const saved = result.savedJob;
+      const savedProof = result.savedProof;
+
+      // Mark file as used in Files module (outside transaction as it's external service)
+      await this.filesService.markUsed(dto.proofImageUrl);
+
+      this.logger.log(`Job ${jobId} completed by collector ${collectorId}, proof ${savedProof.id}`);
+
+      // Emit proof uploaded event
+      this.eventEmitter.emit(ProofEvents.UPLOADED, {
+        proofId: savedProof.id,
+        jobId: saved.id,
+        householdId: saved.householdId,
+        collectorId,
+        timestamp: new Date(),
+      });
+
+      const payload: JobCompletedPayload = {
+        jobId: saved.id,
+        householdId: saved.householdId,
+        collectorId: saved.collectorId,
+        status: saved.status,
+        timestamp: new Date(),
+        proofId: savedProof.id,
+      };
+      this.eventEmitter.emit(JobEvents.COMPLETED, payload);
+
+      // Emit subscription paid event for cash-on-first-pickup activation
+      if (job.subscriptionId) {
+        this.eventEmitter.emit(SubscriptionEvents.PAID, {
+          subscriptionId: job.subscriptionId,
+          userId: saved.householdId,
+          planId: job.subscriptionId, // Will be resolved by event listener
+          planName: 'Subscription',
+          amount: Number(job.cashToCollectAmount),
+          timestamp: new Date(),
+        });
+      }
+
+      return await this.toResponseDto(saved);
     }
 
+    // Normal completion flow for non-CASH_ON_FIRST_PICKUP jobs
     this.transition(job, JobStatus.COMPLETED);
     job.completedAt = new Date();
 
