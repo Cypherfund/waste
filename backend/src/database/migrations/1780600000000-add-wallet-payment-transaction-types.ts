@@ -6,18 +6,18 @@ export class AddWalletPaymentTransactionTypes1780600000000 implements MigrationI
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Add new transaction types for wallet payments
     await queryRunner.query(`
-      ALTER TYPE "payment_transactions_type_enum" 
+      ALTER TYPE "transaction_type_enum" 
       ADD VALUE IF NOT EXISTS 'JOB_PAYMENT'
     `);
 
     await queryRunner.query(`
-      ALTER TYPE "payment_transactions_type_enum" 
+      ALTER TYPE "transaction_type_enum" 
       ADD VALUE IF NOT EXISTS 'SUBSCRIPTION_PAYMENT'
     `);
 
     // Add VERIFIED status for wallet payments
     await queryRunner.query(`
-      ALTER TYPE "payment_transactions_status_enum" 
+      ALTER TYPE "transaction_status_enum" 
       ADD VALUE IF NOT EXISTS 'VERIFIED'
     `);
   }
