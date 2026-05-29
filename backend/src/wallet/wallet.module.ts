@@ -8,9 +8,13 @@ import { UserPaymentMethod } from './entities/user-payment-method.entity';
 import { PaymentTransaction } from '../payments/entities/payment-transaction.entity';
 import { WalletService } from './wallet.service';
 import { WalletController } from './wallet.controller';
+import { PaymentsModule } from '../payments/payments.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, PayoutRequest, CollectorFloatLedger, PaymentProviderEntity, UserPaymentMethod, PaymentTransaction])],
+  imports: [
+    TypeOrmModule.forFeature([User, PayoutRequest, CollectorFloatLedger, PaymentProviderEntity, UserPaymentMethod, PaymentTransaction]),
+    PaymentsModule,
+  ],
   providers: [WalletService],
   controllers: [WalletController],
   exports: [WalletService],

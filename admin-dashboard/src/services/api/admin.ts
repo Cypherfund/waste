@@ -145,10 +145,30 @@ export const pendingPaymentsApi = {
       .then((r) => {
         const items = (r.data as unknown as { data: any[] }).data;
         return items.map((item): PendingPayment => {
+          if (item.paymentSource === 'WALLET_TOPUP') {
+            return {
+              jobId: null,
+              subscriptionId: null,
+              transactionId: item.transactionId ?? null,
+              paymentSource: 'WALLET_TOPUP',
+              householdId: item.householdId,
+              householdName: item.householdName ?? null,
+              planName: null,
+              scheduledDate: item.createdAt,
+              paymentMode: item.paymentMode ?? 'MANUAL_PROVIDER',
+              paymentMethod: item.paymentMethod ?? null,
+              paymentRef: item.paymentRef ?? null,
+              paymentProofUrl: item.paymentProofUrl ?? null,
+              paymentStatus: item.paymentStatus ?? 'PENDING',
+              quotedPrice: item.amount ?? null,
+              createdAt: item.createdAt,
+            };
+          }
           if (item.paymentSource === 'SUBSCRIPTION_PAYMENT') {
             return {
               jobId: null,
               subscriptionId: item.subscriptionId ?? null,
+              transactionId: null,
               paymentSource: 'SUBSCRIPTION_PAYMENT',
               householdId: item.householdId,
               householdName: item.householdName ?? null,
@@ -166,6 +186,7 @@ export const pendingPaymentsApi = {
           return {
             jobId: item.id ?? item.jobId,
             subscriptionId: null,
+            transactionId: null,
             paymentSource: 'JOB_PAYMENT',
             householdId: item.householdId,
             householdName: item.householdName ?? null,
@@ -183,6 +204,9 @@ export const pendingPaymentsApi = {
       }),
 
   verify: (item: PendingPayment) => {
+    if (item.paymentSource === 'WALLET_TOPUP' && item.transactionId) {
+      return client.post(`/admin/wallet-top-up/${item.transactionId}/approve`).then((r) => r.data);
+    }
     if (item.paymentSource === 'SUBSCRIPTION_PAYMENT' && item.subscriptionId) {
       return client.patch(`/subscriptions/admin/${item.subscriptionId}/verify-payment`).then((r) => r.data);
     }
@@ -190,6 +214,9 @@ export const pendingPaymentsApi = {
   },
 
   reject: (item: PendingPayment, reason: string) => {
+    if (item.paymentSource === 'WALLET_TOPUP' && item.transactionId) {
+      return client.post(`/admin/wallet-top-up/${item.transactionId}/reject`, { reason }).then((r) => r.data);
+    }
     if (item.paymentSource === 'SUBSCRIPTION_PAYMENT' && item.subscriptionId) {
       return client.patch(`/subscriptions/admin/${item.subscriptionId}/reject-payment`, { reason }).then((r) => r.data);
     }

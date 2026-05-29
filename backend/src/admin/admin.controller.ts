@@ -304,6 +304,25 @@ export class AdminController {
     return this.walletService.adminFloatTopUp(id, body.amount, adminId, body.note);
   }
 
+  // ─── WALLET TOP-UP APPROVAL ───────────────────────────────────
+
+  @Post('wallet-top-up/:id/approve')
+  approveWalletTopUp(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('sub') adminId: string,
+  ) {
+    return this.adminService.approveWalletTopUp(id, adminId);
+  }
+
+  @Post('wallet-top-up/:id/reject')
+  rejectWalletTopUp(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('sub') adminId: string,
+    @Body() body: { reason?: string },
+  ) {
+    return this.adminService.rejectWalletTopUp(id, adminId, body.reason);
+  }
+
   // ─── STATS & PERFORMANCE ──────────────────────────────────────
 
   @Get('stats')
