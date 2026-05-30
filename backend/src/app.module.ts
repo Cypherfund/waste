@@ -30,6 +30,8 @@ import { CountriesModule } from './countries/countries.module';
 import { GrowthModule } from './growth/growth.module';
 import { AppUpdatesModule } from './app-updates/app-updates.module';
 import { AppVersionMiddleware } from './app-updates/middleware/app-version.middleware';
+import { SentryModule } from './sentry/sentry.module';
+import { CommonServicesModule } from './common/common-services.module';
 
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -54,6 +56,10 @@ if (process.env.NODE_ENV === 'test') {
         abortEarly: true,
       },
     }),
+
+    // Observability
+    SentryModule,
+    CommonServicesModule,
 
     // Infrastructure
     DatabaseModule,

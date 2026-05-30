@@ -15,6 +15,8 @@ import { FilesService } from '../files/files.service';
 import { PaymentService } from '../payments/payment.service';
 import { SystemConfigService } from '../config/system-config.service';
 import { EarningsService } from '../earnings/earnings.service';
+import { SentryService } from '../sentry/sentry.service';
+import { BusinessLoggerService } from '../common/services/business-logger.service';
 
 describe('JobsService - Pricing Integration', () => {
   let service: JobsService;
@@ -105,6 +107,24 @@ describe('JobsService - Pricing Integration', () => {
         {
           provide: EarningsService,
           useValue: { calculateEarnings: jest.fn().mockResolvedValue({ totalAmount: 500 }) },
+        },
+        {
+          provide: SentryService,
+          useValue: {
+            isEnabled: jest.fn().mockReturnValue(false),
+            captureException: jest.fn(),
+            addBreadcrumb: jest.fn(),
+            setContext: jest.fn(),
+          },
+        },
+        {
+          provide: BusinessLoggerService,
+          useValue: {
+            logFailure: jest.fn(),
+            logWarning: jest.fn(),
+            logInfo: jest.fn(),
+            extractRequestContext: jest.fn(),
+          },
         },
       ],
     }).compile();

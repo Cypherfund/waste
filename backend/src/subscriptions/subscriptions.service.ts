@@ -20,6 +20,8 @@ import { CashCollectionType } from '../common/enums/cash-collection-type.enum';
 import { JobStatus } from '../common/enums/job-status.enum';
 import { SystemConfigService } from '../config/system-config.service';
 import { AdminAuditService, AdminAuditAction, AdminAuditEntityType, AuditRequestContext } from '../admin/services/admin-audit.service';
+import { SentryService } from '../sentry/sentry.service';
+import { BusinessLoggerService, BusinessEventType } from '../common/services/business-logger.service';
 
 @Injectable()
 export class SubscriptionsService {
@@ -35,6 +37,8 @@ export class SubscriptionsService {
     private readonly eventEmitter: EventEmitter2,
     private readonly dataSource: DataSource,
     private readonly systemConfigService: SystemConfigService,
+    private readonly sentryService: SentryService,
+    private readonly businessLogger: BusinessLoggerService,
     @Optional()
     private readonly adminAuditService?: AdminAuditService,
   ) {}
@@ -60,6 +64,21 @@ export class SubscriptionsService {
       providerTransactionId?: string;
     },
   ): Promise<UserSubscription> {
+    this.sentryService.setContext('subscription', {
+      userId,
+      planId,
+      paymentMode: paymentFields?.paymentMode,
+    });
+
+    this.sentryService.addBreadcrumb({
+      category: 'subscription',
+      message: 'Creating new subscription',
+      level: 'info',
+      data: {
+        userId,
+        planId,
+      },
+    });
     const plan = await this.getPlan(planId);
 
     const existing = await this.subRepo.findOne({

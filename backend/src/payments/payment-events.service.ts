@@ -18,6 +18,8 @@ import {
   WalletLedgerDirection,
   WalletLedgerType,
 } from '../wallet/entities/wallet-ledger.entity';
+import { SentryService } from '../sentry/sentry.service';
+import { BusinessLoggerService, BusinessEventType } from '../common/services/business-logger.service';
 
 @Injectable()
 export class PaymentEventsService {
@@ -32,6 +34,8 @@ export class PaymentEventsService {
     private readonly walletLedgerRepo: Repository<WalletLedger>,
     private readonly eventEmitter: EventEmitter2,
     private readonly dataSource: DataSource,
+    private readonly sentryService: SentryService,
+    private readonly businessLogger: BusinessLoggerService,
   ) {}
 
   // ── HANDLE payment success ─────────────────────────────────────
@@ -45,6 +49,27 @@ export class PaymentEventsService {
     payoutRequestId?: string | null;
   }): Promise<void> {
     this.logger.log(`Processing payment success: ${payload.transactionId}`);
+
+    this.sentryService.addBreadcrumb({
+      category: 'payment',
+      message: 'Processing payment success event',
+      level: 'info',
+      data: {
+        transactionId: payload.transactionId,
+        userId: payload.userId,
+        type: payload.type,
+        amount: payload.amount,
+      },
+    });
+
+    this.sentryService.setContext('payment_event', {
+      transactionId: payload.transactionId,
+      userId: payload.userId,
+      type: payload.type,
+      amount: payload.amount,
+      jobId: payload.jobId,
+      payoutRequestId: payload.payoutRequestId,
+    });
 
     // Handle wallet top-up via integrated provider
     if (payload.type === TransactionType.WALLET_TOPUP) {
@@ -68,6 +93,29 @@ export class PaymentEventsService {
     reason?: string;
   }): Promise<void> {
     this.logger.log(`Processing payment failure: ${payload.transactionId}`);
+
+    this.sentryService.addBreadcrumb({
+      category: 'payment',
+      message: 'Processing payment failure event',
+      level: 'warning',
+      data: {
+        transactionId: payload.transactionId,
+        userId: payload.userId,
+        type: payload.type,
+        amount: payload.amount,
+        reason: payload.reason,
+      },
+    });
+
+    this.sentryService.setContext('payment_event_failed', {
+      transactionId: payload.transactionId,
+      userId: payload.userId,
+      type: payload.type,
+      amount: payload.amount,
+      jobId: payload.jobId,
+      payoutRequestId: payload.payoutRequestId,
+      reason: payload.reason,
+    });
 
     // Currently only CASHIN (job payments) is implemented via gateway
     if (payload.type === TransactionType.CASHIN && payload.jobId) {

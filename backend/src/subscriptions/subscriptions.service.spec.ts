@@ -12,6 +12,8 @@ import { SubscriptionStatus } from '../common/enums/subscription-status.enum';
 import { PaymentStatus } from '../common/enums/payment-status.enum';
 import { SubscriptionEvents } from '../events/events.types';
 import { SystemConfigService } from '../config/system-config.service';
+import { SentryService } from '../sentry/sentry.service';
+import { BusinessLoggerService } from '../common/services/business-logger.service';
 
 describe('SubscriptionsService', () => {
   let service: SubscriptionsService;
@@ -76,6 +78,24 @@ describe('SubscriptionsService', () => {
         { provide: DataSource, useValue: { transaction: jest.fn() } },
         { provide: SystemConfigService, useValue: { getNumber: jest.fn().mockResolvedValue(24) } },
         { provide: AdminAuditService, useValue: { log: jest.fn() } },
+        {
+          provide: SentryService,
+          useValue: {
+            isEnabled: jest.fn().mockReturnValue(false),
+            captureException: jest.fn(),
+            addBreadcrumb: jest.fn(),
+            setContext: jest.fn(),
+          },
+        },
+        {
+          provide: BusinessLoggerService,
+          useValue: {
+            logFailure: jest.fn(),
+            logWarning: jest.fn(),
+            logInfo: jest.fn(),
+            extractRequestContext: jest.fn(),
+          },
+        },
       ],
     }).compile();
 

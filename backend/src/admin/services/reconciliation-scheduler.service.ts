@@ -6,6 +6,8 @@ import { ReconciliationService } from './reconciliation.service';
 import { SystemConfigService } from '../../config/system-config.service';
 import { ReconciliationRun, ReconciliationRunStatus, ReconciliationRunTrigger } from '../entities/reconciliation-run.entity';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { SentryService } from '../../sentry/sentry.service';
+import { BusinessLoggerService, BusinessEventType } from '../../common/services/business-logger.service';
 
 @Injectable()
 export class ReconciliationSchedulerService {
@@ -18,6 +20,8 @@ export class ReconciliationSchedulerService {
     private readonly systemConfigService: SystemConfigService,
     private readonly eventEmitter: EventEmitter2,
     private readonly dataSource: DataSource,
+    private readonly sentryService: SentryService,
+    private readonly businessLogger: BusinessLoggerService,
   ) {}
 
   @Cron('15 0 * * *', {
@@ -58,6 +62,21 @@ export class ReconciliationSchedulerService {
     trigger: ReconciliationRunTrigger = ReconciliationRunTrigger.MANUAL,
     adminId?: string,
   ): Promise<ReconciliationRun> {
+    this.sentryService.setContext('reconciliation', {
+      date,
+      trigger,
+      adminId,
+    });
+
+    this.sentryService.addBreadcrumb({
+      category: 'reconciliation',
+      message: 'Running reconciliation for date',
+      level: 'info',
+      data: {
+        date,
+        trigger,
+      },
+    });
     const retryAttempts = await this.systemConfigService.getNumber('reconciliation.retry_attempts', 3);
     const retryDelayMinutes = await this.systemConfigService.getNumber('reconciliation.retry_delay_minutes', 5);
 

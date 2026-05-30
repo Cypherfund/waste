@@ -17,6 +17,8 @@ import {
   PayoutEvents,
 } from '../events/events.types';
 import { JobStatus } from '../common/enums/job-status.enum';
+import { SentryService } from '../sentry/sentry.service';
+import { BusinessLoggerService } from '../common/services/business-logger.service';
 
 // ─── Helpers ────────────────────────────────────────────────────
 
@@ -94,6 +96,24 @@ describe('NotificationsService', () => {
         { provide: SmsProvider, useValue: smsProvider },
         { provide: FeatureFlagService, useValue: featureFlagService },
         { provide: UsersService, useValue: usersService },
+        {
+          provide: SentryService,
+          useValue: {
+            isEnabled: jest.fn().mockReturnValue(false),
+            captureException: jest.fn(),
+            addBreadcrumb: jest.fn(),
+            setContext: jest.fn(),
+          },
+        },
+        {
+          provide: BusinessLoggerService,
+          useValue: {
+            logFailure: jest.fn(),
+            logWarning: jest.fn(),
+            logInfo: jest.fn(),
+            extractRequestContext: jest.fn(),
+          },
+        },
       ],
     }).compile();
 

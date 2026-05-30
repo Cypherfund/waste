@@ -45,6 +45,8 @@ import {
   DisputeEvents,
   DisputeResolvedPayload,
 } from '../events/events.types';
+import { SentryService } from '../sentry/sentry.service';
+import { BusinessLoggerService, BusinessEventType } from '../common/services/business-logger.service';
 
 @Injectable()
 export class NotificationsService {
@@ -57,6 +59,8 @@ export class NotificationsService {
     private readonly smsProvider: SmsProvider,
     private readonly featureFlagService: FeatureFlagService,
     private readonly usersService: UsersService,
+    private readonly sentryService: SentryService,
+    private readonly businessLogger: BusinessLoggerService,
   ) {}
 
   // ─── EVENT LISTENERS ──────────────────────────────────────────
@@ -300,6 +304,21 @@ export class NotificationsService {
    * Create a notification, persist it, and dispatch via appropriate channels.
    */
   async createAndDispatch(userId: string, type: string, context: TemplateContext): Promise<void> {
+    this.sentryService.setContext('notification', {
+      userId,
+      type,
+    });
+
+    this.sentryService.addBreadcrumb({
+      category: 'notification',
+      message: 'Creating and dispatching notification',
+      level: 'info',
+      data: {
+        userId,
+        type,
+      },
+    });
+
     try {
       const template = getTemplate(type, context);
 
