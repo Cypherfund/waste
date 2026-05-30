@@ -55,11 +55,21 @@ jobs:
           DATABASE_USERNAME=waste_user
           DATABASE_PASSWORD=waste_dev_pass
           DATABASE_NAME=waste_management_test
+          REDIS_HOST=localhost
+          REDIS_PORT=6379
+          REDIS_PASSWORD=
           JWT_SECRET=test_secret_key_for_testing
           JWT_REFRESH_SECRET=test_refresh_secret_for_testing_only
+          JWT_ACCESS_EXPIRATION=3600
+          JWT_REFRESH_EXPIRATION=604800
           JWT_EXPIRATION=1d
           PORT=3001
+          API_PREFIX=api/v1
           NODE_ENV=test
+          CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+          THROTTLE_TTL=60000
+          THROTTLE_LIMIT=100
+          IMGBB_API_KEY=test-api-key
           EOF
 
       - name: Run database migrations
