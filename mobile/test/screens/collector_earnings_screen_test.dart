@@ -5,16 +5,20 @@ import 'package:mocktail/mocktail.dart';
 import 'package:wastewise/models/earning.dart';
 import 'package:wastewise/providers/collector_earnings_provider.dart';
 import 'package:wastewise/services/api/earnings_api.dart';
+import 'package:wastewise/services/api/wallet_api.dart';
 import 'package:wastewise/screens/collector/collector_earnings_screen.dart';
 
 class MockEarningsApi extends Mock implements EarningsApi {}
+class MockWalletApi extends Mock implements WalletApi {}
 
 void main() {
   late MockEarningsApi mockEarningsApi;
+  late MockWalletApi mockWalletApi;
   late CollectorEarningsProvider provider;
 
   setUp(() {
     mockEarningsApi = MockEarningsApi();
+    mockWalletApi = MockWalletApi();
 
     when(() => mockEarningsApi.getEarningsSummary())
         .thenAnswer((_) async => EarningsQuickSummary(
@@ -59,7 +63,10 @@ void main() {
           ],
         ));
 
-    provider = CollectorEarningsProvider(earningsApi: mockEarningsApi);
+    provider = CollectorEarningsProvider(
+      earningsApi: mockEarningsApi,
+      walletApi: mockWalletApi,
+    );
   });
 
   Widget buildTestWidget() {
@@ -114,8 +121,10 @@ void main() {
             to: any(named: 'to'),
           )).thenThrow(Exception('Network error'));
 
-      final errorProvider =
-          CollectorEarningsProvider(earningsApi: mockEarningsApi);
+      final errorProvider = CollectorEarningsProvider(
+        earningsApi: mockEarningsApi,
+        walletApi: mockWalletApi,
+      );
 
       await tester.pumpWidget(
         ChangeNotifierProvider.value(

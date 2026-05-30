@@ -84,6 +84,8 @@ class PaymentProvider {
   final bool supportsCashout;
   final double? minWithdrawal;
   final double? maxWithdrawal;
+  final double? minDeposit;
+  final double? maxDeposit;
   final String? imageUrl;
 
   PaymentProvider({
@@ -99,6 +101,8 @@ class PaymentProvider {
     this.supportsCashout = false,
     this.minWithdrawal,
     this.maxWithdrawal,
+    this.minDeposit,
+    this.maxDeposit,
     this.imageUrl,
   });
 
@@ -115,6 +119,8 @@ class PaymentProvider {
         supportsCashout: j['supportsCashout'] as bool? ?? false,
         minWithdrawal: (j['minWithdrawal'] as num?)?.toDouble(),
         maxWithdrawal: (j['maxWithdrawal'] as num?)?.toDouble(),
+        minDeposit: (j['minDeposit'] as num?)?.toDouble(),
+        maxDeposit: (j['maxDeposit'] as num?)?.toDouble(),
         imageUrl: j['imageUrl'] as String?,
       );
 

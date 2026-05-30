@@ -888,16 +888,24 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
 
     try {
       // Call the backend API to subscribe with cash on first pickup
-      final apiClient = context.read<SubscriptionProvider>().apiClient;
-      final result = await apiClient.post('/subscriptions/subscribe-cash-first-pickup', data: {
-        'planId': planId,
-        'scheduledDate': flowProvider.scheduledDate?.toIso8601String().split('T')[0],
-        'scheduledTime': flowProvider.scheduledTime,
-        'locationAddress': flowProvider.locationAddress,
-        'locationLat': flowProvider.locationLat,
-        'locationLng': flowProvider.locationLng,
-        'notes': 'Cash on First Pickup subscription',
-      });
+      // TODO: Move this to SubscriptionProvider
+      // final apiClient = context.read<ApiClient>();
+      // final result = await apiClient.post('/subscriptions/subscribe-cash-first-pickup', data: {
+      //   'planId': planId,
+      //   'scheduledDate': flowProvider.scheduledDate?.toIso8601String().split('T')[0],
+      //   'scheduledTime': flowProvider.scheduledTime,
+      //   'locationAddress': flowProvider.locationAddress,
+      //   'locationLat': flowProvider.locationLat,
+      //   'locationLng': flowProvider.locationLng,
+      //   'notes': 'Cash on First Pickup subscription',
+      // });
+
+      // For now, use the regular subscribe method
+      final subscriptionProvider = context.read<SubscriptionProvider>();
+      final result = await subscriptionProvider.subscribeWithPayment(
+        planId: planId,
+        paymentMode: 'CASH_FIRST_PICKUP',
+      );
 
       Navigator.pop(context); // Close loading
 

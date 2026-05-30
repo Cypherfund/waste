@@ -7,12 +7,15 @@ import 'package:wastewise/screens/auth/login_screen.dart';
 import 'package:wastewise/services/api/auth_api.dart';
 import 'package:wastewise/services/storage/secure_storage.dart';
 import 'package:wastewise/services/websocket/websocket_service.dart';
+import 'package:wastewise/services/offline/sync_service.dart';
 
 class MockAuthApi extends Mock implements AuthApi {}
 
 class MockSecureStorage extends Mock implements SecureStorageService {}
 
 class MockWebSocketService extends Mock implements WebSocketService {}
+
+class MockSyncService extends Mock implements SyncService {}
 
 Widget buildTestWidget(AuthProvider provider) {
   return MaterialApp(
@@ -30,12 +33,14 @@ void main() {
   late MockAuthApi mockAuthApi;
   late MockSecureStorage mockStorage;
   late MockWebSocketService mockWsService;
+  late MockSyncService mockSyncService;
   late AuthProvider provider;
 
   setUp(() {
     mockAuthApi = MockAuthApi();
     mockStorage = MockSecureStorage();
     mockWsService = MockWebSocketService();
+    mockSyncService = MockSyncService();
     when(() => mockWsService.connect(
           accessToken: any(named: 'accessToken'),
           userId: any(named: 'userId'),
@@ -46,6 +51,7 @@ void main() {
       authApi: mockAuthApi,
       storage: mockStorage,
       wsService: mockWsService,
+      syncService: mockSyncService,
     );
   });
 
@@ -99,6 +105,7 @@ void main() {
         authApi: mockAuthApi,
         storage: mockStorage,
         wsService: mockWsService,
+        syncService: mockSyncService,
       );
 
       // The error banner should show when provider has error

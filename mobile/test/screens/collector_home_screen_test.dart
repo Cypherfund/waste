@@ -14,6 +14,7 @@ import 'package:wastewise/services/api/auth_api.dart';
 import 'package:wastewise/services/api/job_api.dart';
 import 'package:wastewise/services/api/files_api.dart';
 import 'package:wastewise/services/api/earnings_api.dart';
+import 'package:wastewise/services/api/wallet_api.dart';
 import 'package:wastewise/services/storage/secure_storage.dart';
 import 'package:wastewise/services/websocket/websocket_service.dart';
 import 'package:wastewise/services/location/location_tracking_service.dart';
@@ -34,6 +35,8 @@ class MockFilesApi extends Mock implements FilesApi {}
 
 class MockEarningsApi extends Mock implements EarningsApi {}
 
+class MockWalletApi extends Mock implements WalletApi {}
+
 class MockLocationTrackingService extends Mock
     implements LocationTrackingService {}
 
@@ -53,6 +56,7 @@ void main() {
   late MockJobApi mockJobApi;
   late MockFilesApi mockFilesApi;
   late MockEarningsApi mockEarningsApi;
+  late MockWalletApi mockWalletApi;
   late MockLocationTrackingService mockLocationService;
   late StreamController<JobStatusUpdate> statusController;
   late StreamController<CollectorAssignedEvent> assignedController;
@@ -105,6 +109,7 @@ void main() {
     mockJobApi = MockJobApi();
     mockFilesApi = MockFilesApi();
     mockEarningsApi = MockEarningsApi();
+    mockWalletApi = MockWalletApi();
     mockLocationService = MockLocationTrackingService();
     statusController = StreamController<JobStatusUpdate>.broadcast();
     assignedController = StreamController<CollectorAssignedEvent>.broadcast();
@@ -148,6 +153,7 @@ void main() {
       authApi: mockAuthApi,
       storage: mockStorage,
       wsService: mockWsService,
+      syncService: mockSyncService,
     );
 
     jobsProvider = CollectorJobsProvider(
@@ -159,6 +165,7 @@ void main() {
 
     earningsProvider = CollectorEarningsProvider(
       earningsApi: mockEarningsApi,
+      walletApi: mockWalletApi,
     );
 
     mockQueueService = MockOfflineQueueService();

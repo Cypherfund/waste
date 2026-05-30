@@ -3,11 +3,14 @@ import 'package:mocktail/mocktail.dart';
 import 'package:wastewise/models/earning.dart';
 import 'package:wastewise/providers/collector_earnings_provider.dart';
 import 'package:wastewise/services/api/earnings_api.dart';
+import 'package:wastewise/services/api/wallet_api.dart';
 
 class MockEarningsApi extends Mock implements EarningsApi {}
+class MockWalletApi extends Mock implements WalletApi {}
 
 void main() {
   late MockEarningsApi mockEarningsApi;
+  late MockWalletApi mockWalletApi;
   late CollectorEarningsProvider provider;
 
   final testQuickSummary = EarningsQuickSummary(
@@ -40,7 +43,11 @@ void main() {
 
   setUp(() {
     mockEarningsApi = MockEarningsApi();
-    provider = CollectorEarningsProvider(earningsApi: mockEarningsApi);
+    mockWalletApi = MockWalletApi();
+    provider = CollectorEarningsProvider(
+      earningsApi: mockEarningsApi,
+      walletApi: mockWalletApi,
+    );
   });
 
   group('loadQuickSummary', () {
