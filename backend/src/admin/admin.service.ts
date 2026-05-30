@@ -278,6 +278,11 @@ export class AdminService {
   // ─── WALLET TOP-UP APPROVAL/REJECTION ─────────────────────────────
 
   async approveWalletTopUp(transactionId: string, adminId: string, context?: AuditRequestContext): Promise<void> {
+    let balanceBefore: number = 0;
+    let balanceAfter: number = 0;
+    let transactionAmount: number = 0;
+    let transactionUserId: string = '';
+
     await this.dataSource.transaction(async (em) => {
       const transaction = await em
         .getRepository(PaymentTransaction)
@@ -307,8 +312,10 @@ export class AdminService {
         throw new NotFoundException('User not found');
       }
 
-      const balanceBefore = Number(user.walletBalance);
-      const balanceAfter = balanceBefore + transaction.amount;
+      balanceBefore = Number(user.walletBalance);
+      balanceAfter = balanceBefore + transaction.amount;
+      transactionAmount = transaction.amount;
+      transactionUserId = transaction.userId;
 
       // Credit wallet balance and update transaction status in one transaction
       await em
@@ -338,22 +345,26 @@ export class AdminService {
       this.logger.log(
         `Admin ${adminId} approved wallet top-up ${transactionId}, credited ${transaction.amount} XAF to user ${transaction.userId}`,
       );
+    });
 
-      // Log audit (outside transaction to avoid rollback on audit failure)
-      this.adminAuditService.log({
-        adminId,
-        action: AdminAuditAction.WALLET_TOPUP_APPROVED,
-        entityType: AdminAuditEntityType.PAYMENT_TRANSACTION,
-        entityId: transactionId,
-        oldValue: { status: TransactionStatus.PENDING, walletBalance: balanceBefore },
-        newValue: { status: TransactionStatus.VERIFIED, walletBalance: balanceAfter },
-        metadata: { amount: transaction.amount, userId: transaction.userId },
-        context,
-      });
+    // Log audit outside transaction to avoid rollback on audit failure
+    await this.adminAuditService.log({
+      adminId,
+      action: AdminAuditAction.WALLET_TOPUP_APPROVED,
+      entityType: AdminAuditEntityType.PAYMENT_TRANSACTION,
+      entityId: transactionId,
+      oldValue: { status: TransactionStatus.PENDING, walletBalance: balanceBefore },
+      newValue: { status: TransactionStatus.VERIFIED, walletBalance: balanceAfter },
+      metadata: { amount: transactionAmount, userId: transactionUserId },
+      context,
     });
   }
 
   async rejectWalletTopUp(transactionId: string, adminId: string, reason?: string, context?: AuditRequestContext): Promise<void> {
+    let oldStatus: string = '';
+    let transactionAmount: number = 0;
+    let transactionUserId: string = '';
+
     await this.dataSource.transaction(async (em) => {
       const transaction = await em
         .getRepository(PaymentTransaction)
@@ -376,7 +387,9 @@ export class AdminService {
         throw new BadRequestException('This is not a wallet top-up transaction');
       }
 
-      const oldStatus = transaction.status;
+      oldStatus = transaction.status;
+      transactionAmount = transaction.amount;
+      transactionUserId = transaction.userId;
 
       // Update transaction status to FAILED
       transaction.status = TransactionStatus.FAILED;
@@ -386,18 +399,18 @@ export class AdminService {
       this.logger.log(
         `Admin ${adminId} rejected wallet top-up ${transactionId} for user ${transaction.userId}. Reason: ${reason}`,
       );
+    });
 
-      // Log audit (outside transaction to avoid rollback on audit failure)
-      this.adminAuditService.log({
-        adminId,
-        action: AdminAuditAction.WALLET_TOPUP_REJECTED,
-        entityType: AdminAuditEntityType.PAYMENT_TRANSACTION,
-        entityId: transactionId,
-        oldValue: { status: oldStatus },
-        newValue: { status: TransactionStatus.FAILED },
-        metadata: { reason, amount: transaction.amount, userId: transaction.userId },
-        context,
-      });
+    // Log audit outside transaction to avoid rollback on audit failure
+    await this.adminAuditService.log({
+      adminId,
+      action: AdminAuditAction.WALLET_TOPUP_REJECTED,
+      entityType: AdminAuditEntityType.PAYMENT_TRANSACTION,
+      entityId: transactionId,
+      oldValue: { status: oldStatus },
+      newValue: { status: TransactionStatus.FAILED },
+      metadata: { reason, amount: transactionAmount, userId: transactionUserId },
+      context,
     });
   }
 

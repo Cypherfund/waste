@@ -4,53 +4,61 @@ export class AddAdminAuditLogs1781500000000 implements MigrationInterface {
   name = 'AddAdminAuditLogs1781500000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // Create admin_audit_action enum
+    // Create admin_audit_action enum (idempotent)
     await queryRunner.query(`
-      CREATE TYPE "admin_audit_action_enum" AS ENUM (
-        'PAYMENT_APPROVED',
-        'PAYMENT_REJECTED',
-        'WALLET_TOPUP_APPROVED',
-        'WALLET_TOPUP_REJECTED',
-        'SUBSCRIPTION_PAYMENT_VERIFIED',
-        'SUBSCRIPTION_PAYMENT_REJECTED',
-        'COLLECTOR_PAYOUT_APPROVED',
-        'COLLECTOR_PAYOUT_REJECTED',
-        'COLLECTOR_PAYOUT_MARKED_PAID',
-        'MARKETER_PAYOUT_APPROVED',
-        'MARKETER_PAYOUT_REJECTED',
-        'MARKETER_PAYOUT_MARKED_PAID',
-        'SYSTEM_CONFIG_UPDATED',
-        'PAYMENT_PROVIDER_CREATED',
-        'PAYMENT_PROVIDER_UPDATED',
-        'PAYMENT_PROVIDER_DELETED',
-        'COLLECTOR_FLOAT_TOPPED_UP',
-        'COLLECTOR_FLOAT_ADJUSTED',
-        'SYSTEM_CLEANUP_ANALYZED',
-        'SYSTEM_CLEANUP_EXECUTED'
-      )
+      DO $$ BEGIN
+        CREATE TYPE "admin_audit_action_enum" AS ENUM (
+          'PAYMENT_APPROVED',
+          'PAYMENT_REJECTED',
+          'WALLET_TOPUP_APPROVED',
+          'WALLET_TOPUP_REJECTED',
+          'SUBSCRIPTION_PAYMENT_VERIFIED',
+          'SUBSCRIPTION_PAYMENT_REJECTED',
+          'COLLECTOR_PAYOUT_APPROVED',
+          'COLLECTOR_PAYOUT_REJECTED',
+          'COLLECTOR_PAYOUT_MARKED_PAID',
+          'MARKETER_PAYOUT_APPROVED',
+          'MARKETER_PAYOUT_REJECTED',
+          'MARKETER_PAYOUT_MARKED_PAID',
+          'SYSTEM_CONFIG_UPDATED',
+          'PAYMENT_PROVIDER_CREATED',
+          'PAYMENT_PROVIDER_UPDATED',
+          'PAYMENT_PROVIDER_DELETED',
+          'COLLECTOR_FLOAT_TOPPED_UP',
+          'COLLECTOR_FLOAT_ADJUSTED',
+          'SYSTEM_CLEANUP_ANALYZED',
+          'SYSTEM_CLEANUP_EXECUTED'
+        );
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$
     `);
 
-    // Create admin_audit_entity_type enum
+    // Create admin_audit_entity_type enum (idempotent)
     await queryRunner.query(`
-      CREATE TYPE "admin_audit_entity_type_enum" AS ENUM (
-        'JOB',
-        'PAYMENT_TRANSACTION',
-        'WALLET_TOPUP',
-        'SUBSCRIPTION',
-        'PAYOUT_REQUEST',
-        'MARKETER_PAYOUT_REQUEST',
-        'SYSTEM_CONFIG',
-        'PAYMENT_PROVIDER',
-        'COLLECTOR_FLOAT_LEDGER',
-        'SYSTEM_CLEANUP'
-      )
+      DO $$ BEGIN
+        CREATE TYPE "admin_audit_entity_type_enum" AS ENUM (
+          'JOB',
+          'PAYMENT_TRANSACTION',
+          'WALLET_TOPUP',
+          'SUBSCRIPTION',
+          'PAYOUT_REQUEST',
+          'MARKETER_PAYOUT_REQUEST',
+          'SYSTEM_CONFIG',
+          'PAYMENT_PROVIDER',
+          'COLLECTOR_FLOAT_LEDGER',
+          'SYSTEM_CLEANUP'
+        );
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$
     `);
 
     // Create admin_audit_logs table
     await queryRunner.query(`
       CREATE TABLE "admin_audit_logs" (
         "id" uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-        "admin_id" uuid NOT NULL,
+        "admin_id" uuid,
         "action" "admin_audit_action_enum" NOT NULL,
         "entity_type" "admin_audit_entity_type_enum" NOT NULL,
         "entity_id" uuid,
@@ -60,7 +68,7 @@ export class AddAdminAuditLogs1781500000000 implements MigrationInterface {
         "ip_address" varchar(45),
         "user_agent" text,
         "created_at" timestamptz NOT NULL DEFAULT now(),
-        CONSTRAINT "FK_admin_audit_admin" FOREIGN KEY ("admin_id") REFERENCES "users"("id") ON DELETE CASCADE
+        CONSTRAINT "FK_admin_audit_admin" FOREIGN KEY ("admin_id") REFERENCES "users"("id") ON DELETE SET NULL
       )
     `);
 

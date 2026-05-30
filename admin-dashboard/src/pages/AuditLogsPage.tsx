@@ -47,11 +47,10 @@ export default function AuditLogsPage() {
 
   useEffect(() => {
     fetchLogs();
-  }, [page]);
+  }, [page, from, to, adminId, action, entityType, entityId]);
 
   const handleSearch = () => {
     setPage(1);
-    fetchLogs();
   };
 
   const handleClear = () => {
@@ -62,7 +61,6 @@ export default function AuditLogsPage() {
     setEntityType('');
     setEntityId('');
     setPage(1);
-    fetchLogs();
   };
 
   const formatDate = (dateString: string) => {

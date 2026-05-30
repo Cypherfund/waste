@@ -6,6 +6,9 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  NotFoundException,
+  DefaultValuePipe,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { AdminAuditService } from '../services/admin-audit.service';
@@ -47,8 +50,8 @@ export class AdminAuditController {
     @Query('action') action?: AdminAuditAction,
     @Query('entityType') entityType?: AdminAuditEntityType,
     @Query('entityId') entityId?: string,
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 50,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number = 1,
+    @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit: number = 50,
   ) {
     const queryBuilder = this.auditLogRepo.createQueryBuilder('audit');
 
@@ -105,7 +108,7 @@ export class AdminAuditController {
     });
 
     if (!auditLog) {
-      throw new Error('Audit log not found');
+      throw new NotFoundException('Audit log not found');
     }
 
     return {

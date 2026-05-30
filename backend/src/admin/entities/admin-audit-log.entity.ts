@@ -55,9 +55,9 @@ export class AdminAuditLog {
   @ApiProperty({ description: 'Unique identifier' })
   id: string;
 
-  @Column({ type: 'uuid', name: 'admin_id' })
-  @ApiProperty({ description: 'Admin who performed the action' })
-  adminId: string;
+  @Column({ type: 'uuid', name: 'admin_id', nullable: true })
+  @ApiProperty({ description: 'Admin who performed the action', required: false })
+  adminId: string | null;
 
   @Column({
     type: 'enum',
