@@ -3,6 +3,7 @@ import { GrowthLead } from '../types';
 import { growthLeadsApi } from '../services/api/growth';
 import Pagination from '../components/Pagination';
 import HelpGuide from '../components/HelpGuide';
+import ConfirmDialog from '../components/ConfirmDialog';
 import { usePagination } from '../hooks/usePagination';
 
 const PAGE_SIZE = 20;
@@ -15,6 +16,8 @@ export default function GrowthLeadsPage() {
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [showExpireConfirm, setShowExpireConfirm] = useState(false);
+  const [expireLeadId, setExpireLeadId] = useState<string | null>(null);
   const { page, setPage, resetPage } = usePagination();
 
   const load = async () => {
@@ -83,10 +86,17 @@ export default function GrowthLeadsPage() {
   };
 
   const handleExpire = async (leadId: string) => {
-    if (!confirm('Are you sure you want to expire this lead?')) return;
-    setActionLoading(leadId);
+    setExpireLeadId(leadId);
+    setShowExpireConfirm(true);
+  };
+
+  const handleExpireConfirmed = async () => {
+    if (!expireLeadId) return;
+    setActionLoading(expireLeadId);
     try {
-      await growthLeadsApi.expire(leadId);
+      await growthLeadsApi.expire(expireLeadId);
+      setShowExpireConfirm(false);
+      setExpireLeadId(null);
       await load();
     } catch (e: any) {
       console.error(e);
@@ -219,6 +229,19 @@ export default function GrowthLeadsPage() {
           />
         </div>
       )}
+
+      {/* Expire Lead Confirmation Dialog */}
+      <ConfirmDialog
+        open={showExpireConfirm}
+        title="Expire Lead"
+        message="Are you sure you want to expire this lead?"
+        confirmLabel="Expire"
+        cancelLabel="Cancel"
+        variant="danger"
+        loading={actionLoading !== null}
+        onConfirm={handleExpireConfirmed}
+        onCancel={() => setShowExpireConfirm(false)}
+      />
     </div>
   );
 }

@@ -1,12 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:provider/provider.dart';
 import '../../../../config/app_theme.dart';
+import '../../../../config/app_config.dart';
+import '../../../../providers/subscription_provider.dart';
 
-class SupportScreen extends StatelessWidget {
+class SupportScreen extends StatefulWidget {
   const SupportScreen({super.key});
 
   @override
+  State<SupportScreen> createState() => _SupportScreenState();
+}
+
+class _SupportScreenState extends State<SupportScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<SubscriptionProvider>().loadPricingQuote();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final subProvider = context.watch<SubscriptionProvider>();
+    final appConfig = subProvider.appConfig;
+    
+    // Use backend config if available, otherwise fall back to static config
+    final supportPhone = appConfig?.supportPhone.isNotEmpty == true 
+        ? appConfig!.supportPhone 
+        : AppConfig.supportPhone;
+    final supportWhatsApp = appConfig?.supportWhatsapp.isNotEmpty == true 
+        ? appConfig!.supportWhatsapp 
+        : AppConfig.supportWhatsApp;
+    final supportEmail = appConfig?.supportEmail.isNotEmpty == true 
+        ? appConfig!.supportEmail 
+        : AppConfig.supportEmail;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7F4),
       appBar: AppBar(
@@ -66,17 +96,17 @@ class SupportScreen extends StatelessWidget {
         _buildContactCard(
           icon: Icons.phone,
           title: 'Call Us',
-          subtitle: '+237 6 70 00 00 00',
+          subtitle: supportPhone,
           color: AppColors.primary,
-          onTap: () => _makePhoneCall('+237670000000'),
+          onTap: () => _makePhoneCall(supportPhone),
         ),
         const SizedBox(height: 12),
         _buildContactCard(
           icon: Icons.message,
           title: 'WhatsApp',
-          subtitle: '+237 6 70 00 00 00',
+          subtitle: supportWhatsApp,
           color: Colors.green,
-          onTap: () => _openWhatsApp('+237670000000'),
+          onTap: () => _openWhatsApp(supportWhatsApp),
         ),
         
         const SizedBox(height: 12),
@@ -84,9 +114,9 @@ class SupportScreen extends StatelessWidget {
         _buildContactCard(
           icon: Icons.email,
           title: 'Email',
-          subtitle: 'support@hysacam.cm',
+          subtitle: supportEmail,
           color: Colors.blue,
-          onTap: () => _sendEmail('support@hysacam.cm'),
+          onTap: () => _sendEmail(supportEmail),
         ),
       ],
     );

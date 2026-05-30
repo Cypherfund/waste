@@ -20,9 +20,14 @@ class PaymentFlowProvider extends ChangeNotifier {
 
   // Pricing
   PricingQuote? pricingQuote;
-  double get amountDue => isSubscriptionContext
-      ? (_subscriptionAmountDue ?? 0)
-      : (pricingQuote?.quotedPrice ?? 0);
+  double get amountDue {
+    if (isWalletTopUpContext) {
+      return walletTopUpAmount ?? 0;
+    }
+    return isSubscriptionContext
+        ? (_subscriptionAmountDue ?? 0)
+        : (pricingQuote?.quotedPrice ?? 0);
+  }
   bool get isFree => pricingQuote?.isCoveredBySubscription ?? false;
 
   // Payment method selection

@@ -15,6 +15,9 @@ class MarketerProvider extends ChangeNotifier {
   MarketerDashboard? _dashboard;
   MarketerDashboard? get dashboard => _dashboard;
 
+  bool _hasLoadedBefore = false;
+  bool get hasLoadedBefore => _hasLoadedBefore;
+
   List<GrowthLead> _leads = [];
   List<GrowthLead> get leads => _leads;
 
@@ -36,7 +39,7 @@ class MarketerProvider extends ChangeNotifier {
   PayoutConfig? _payoutConfig;
   PayoutConfig? get payoutConfig => _payoutConfig;
 
-  bool _loading = false;
+  bool _loading = true;
   bool get loading => _loading;
 
   String? _error;
@@ -52,6 +55,7 @@ class MarketerProvider extends ChangeNotifier {
     notifyListeners();
     try {
       _dashboard = await _api.getDashboard();
+      _hasLoadedBefore = true;
     } catch (e) {
       _error = ApiClient.extractErrorMessage(e);
     } finally {

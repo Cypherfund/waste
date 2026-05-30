@@ -25,4 +25,9 @@ class AppConfig {
 
   static const String socketIoPath = '/waste/socket.io';
   static const String wsNamespace = '';
+
+  // Contact Information
+  static const String supportPhone = '+237670000000';
+  static const String supportWhatsApp = '+237670000000';
+  static const String supportEmail = 'support@kmertrash.com';
 }

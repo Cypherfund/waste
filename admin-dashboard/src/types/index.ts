@@ -56,6 +56,9 @@ export interface Job {
   householdName?: string | null;
   collectorId: string | null;
   collectorName?: string | null;
+  collectorPhone?: string | null;
+  collectorRating?: string | null;
+  collectorAvatarUrl?: string | null;
   status: string;
   wasteType?: string;
   estimatedWeight?: number | null;
@@ -68,13 +71,19 @@ export interface Job {
   notes: string | null;
   paymentMode: string | null;
   paymentMethod: string | null;
+  paymentMethodName?: string | null;
   paymentRef: string | null;
   paymentProofUrl: string | null;
   paymentStatus: string | null;
-  quotedPrice: number | null;
+  quotedPrice: string | null;
+  pricingType?: string | null;
+  isCoveredBySubscription?: boolean;
+  collectorEarnings?: number;
   assignedAt: string | null;
   startedAt: string | null;
   completedAt: string | null;
+  validatedAt: string | null;
+  cancelledAt: string | null;
   createdAt: string;
   updatedAt: string;
 }

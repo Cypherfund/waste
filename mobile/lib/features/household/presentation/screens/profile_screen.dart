@@ -344,13 +344,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             // Navigate to edit profile
           },
         ),
-        _buildMenuItem(
-          icon: Icons.location_on_outlined,
-          title: 'Saved Addresses',
-          onTap: () {
-            Navigator.pushNamed(context, '/addresses');
-          },
-        ),
+        // _buildMenuItem(
+        //   icon: Icons.location_on_outlined,
+        //   title: 'Saved Addresses',
+        //   onTap: () {
+        //     Navigator.pushNamed(context, '/addresses');
+        //   },
+        // ),
         _buildMenuItem(
           icon: Icons.payment,
           title: 'Payment Methods',

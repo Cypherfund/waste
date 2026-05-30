@@ -3,6 +3,7 @@ import { Plus, X, Users, Target, Play, Pause, Square, Ban, Settings } from 'luci
 import { MarketingCampaign, MarketingBudgetPeriod, Marketer, CommissionScheme } from '../types';
 import { growthCampaignsApi, growthBudgetsApi, growthMarketersApi, growthSchemesApi } from '../services/api/growth';
 import HelpGuide from '../components/HelpGuide';
+import ConfirmDialog from '../components/ConfirmDialog';
 import { useAlert } from '../contexts/AlertContext';
 
 export default function MarketingCampaignsPage() {
@@ -39,6 +40,11 @@ export default function MarketingCampaignsPage() {
   const [assignSchemesForm, setAssignSchemesForm] = useState({
     schemeIds: [] as string[],
   });
+
+  const [showEndConfirm, setShowEndConfirm] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [selectedCampaignForAction, setSelectedCampaignForAction] = useState<MarketingCampaign | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -114,24 +120,44 @@ export default function MarketingCampaignsPage() {
   };
 
   const handleEnd = async (campaign: MarketingCampaign) => {
-    if (!confirm(`End campaign "${campaign.name}"?`)) return;
+    setSelectedCampaignForAction(campaign);
+    setShowEndConfirm(true);
+  };
+
+  const handleEndConfirmed = async () => {
+    if (!selectedCampaignForAction) return;
+    setActionLoading(true);
     try {
-      await growthCampaignsApi.end(campaign.id);
+      await growthCampaignsApi.end(selectedCampaignForAction.id);
       showSuccess('Campaign ended');
+      setShowEndConfirm(false);
+      setSelectedCampaignForAction(null);
       load();
     } catch (err: any) {
       showError(err.response?.data?.message || 'Error ending campaign');
+    } finally {
+      setActionLoading(false);
     }
   };
 
   const handleCancel = async (campaign: MarketingCampaign) => {
-    if (!confirm(`Cancel campaign "${campaign.name}"?`)) return;
+    setSelectedCampaignForAction(campaign);
+    setShowCancelConfirm(true);
+  };
+
+  const handleCancelConfirmed = async () => {
+    if (!selectedCampaignForAction) return;
+    setActionLoading(true);
     try {
-      await growthCampaignsApi.cancel(campaign.id);
+      await growthCampaignsApi.cancel(selectedCampaignForAction.id);
       showSuccess('Campaign cancelled');
+      setShowCancelConfirm(false);
+      setSelectedCampaignForAction(null);
       load();
     } catch (err: any) {
       showError(err.response?.data?.message || 'Error cancelling campaign');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -507,6 +533,32 @@ export default function MarketingCampaignsPage() {
           )}
         </>
       )}
+
+      {/* End Campaign Confirmation Dialog */}
+      <ConfirmDialog
+        open={showEndConfirm}
+        title="End Campaign"
+        message={`Are you sure you want to end campaign "${selectedCampaignForAction?.name}"?`}
+        confirmLabel="End"
+        cancelLabel="Cancel"
+        variant="danger"
+        loading={actionLoading}
+        onConfirm={handleEndConfirmed}
+        onCancel={() => setShowEndConfirm(false)}
+      />
+
+      {/* Cancel Campaign Confirmation Dialog */}
+      <ConfirmDialog
+        open={showCancelConfirm}
+        title="Cancel Campaign"
+        message={`Are you sure you want to cancel campaign "${selectedCampaignForAction?.name}"?`}
+        confirmLabel="Cancel"
+        cancelLabel="Go Back"
+        variant="danger"
+        loading={actionLoading}
+        onConfirm={handleCancelConfirmed}
+        onCancel={() => setShowCancelConfirm(false)}
+      />
     </div>
   );
 }

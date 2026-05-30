@@ -3,6 +3,7 @@ import { CheckCircle, XCircle, Plus, Pencil, Power } from 'lucide-react';
 import { CommissionScheme, CommissionTransaction } from '../types';
 import { growthSchemesApi, growthCommissionsApi } from '../services/api/growth';
 import Pagination from '../components/Pagination';
+import ConfirmDialog from '../components/ConfirmDialog';
 import { usePagination } from '../hooks/usePagination';
 import { useAlert } from '../contexts/AlertContext';
 
@@ -24,6 +25,13 @@ export default function CommissionsPage() {
   const [schemeForm, setSchemeForm] = useState({ name: '', type: 'HOUSEHOLD_ONBOARDING', description: '', commissionType: 'FIXED', amount: '' });
   const [editingScheme, setEditingScheme] = useState<CommissionScheme | null>(null);
   const [editAmount, setEditAmount] = useState('');
+  const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false);
+  const [deactivateId, setDeactivateId] = useState<string | null>(null);
+  const [deactivateLoading, setDeactivateLoading] = useState(false);
+  const [showReconcileJobsConfirm, setShowReconcileJobsConfirm] = useState(false);
+  const [showReconcileSubsConfirm, setShowReconcileSubsConfirm] = useState(false);
+  const [showReconcileAllConfirm, setShowReconcileAllConfirm] = useState(false);
+  const [reconcileLoading, setReconcileLoading] = useState(false);
 
   const loadSchemes = async () => {
     try { setSchemes(await growthSchemesApi.list()); } catch (e) { console.error(e); }
@@ -99,13 +107,65 @@ export default function CommissionsPage() {
   };
 
   const handleDeactivateScheme = async (id: string) => {
-    if (!confirm('Deactivate this commission scheme?')) return;
+    setDeactivateId(id);
+    setShowDeactivateConfirm(true);
+  };
+
+  const handleDeactivateConfirmed = async () => {
+    if (!deactivateId) return;
+    setDeactivateLoading(true);
     try {
-      await growthSchemesApi.deactivate(id);
+      await growthSchemesApi.deactivate(deactivateId);
       showSuccess('Scheme deactivated');
+      setShowDeactivateConfirm(false);
+      setDeactivateId(null);
       loadSchemes();
     } catch (err: any) {
       showError(err.response?.data?.message || 'Error deactivating scheme');
+    } finally {
+      setDeactivateLoading(false);
+    }
+  };
+
+  const handleReconcileJobs = async () => {
+    setReconcileLoading(true);
+    try {
+      const result = await growthCommissionsApi.reconcileHouseholdJobs();
+      showSuccess(`Reconciled: ${result.created} commissions created, ${result.errors} errors`);
+      setShowReconcileJobsConfirm(false);
+      loadTransactions();
+    } catch (err: any) {
+      showError(err.response?.data?.message || 'Error reconciling');
+    } finally {
+      setReconcileLoading(false);
+    }
+  };
+
+  const handleReconcileSubs = async () => {
+    setReconcileLoading(true);
+    try {
+      const result = await growthCommissionsApi.reconcileSubscriptions();
+      showSuccess(`Reconciled: ${result.created} commissions created, ${result.errors} errors`);
+      setShowReconcileSubsConfirm(false);
+      loadTransactions();
+    } catch (err: any) {
+      showError(err.response?.data?.message || 'Error reconciling');
+    } finally {
+      setReconcileLoading(false);
+    }
+  };
+
+  const handleReconcileAll = async () => {
+    setReconcileLoading(true);
+    try {
+      const result = await growthCommissionsApi.reconcileAll();
+      showSuccess(`Reconciled: ${result.householdJobs.created} jobs, ${result.subscriptions.created} subscriptions`);
+      setShowReconcileAllConfirm(false);
+      loadTransactions();
+    } catch (err: any) {
+      showError(err.response?.data?.message || 'Error reconciling');
+    } finally {
+      setReconcileLoading(false);
     }
   };
 
@@ -211,46 +271,19 @@ export default function CommissionsPage() {
             </div>
             <div className="flex flex-wrap gap-2">
               <button
-                onClick={async () => {
-                  if (!confirm('Reconcile missing household job commissions?')) return;
-                  try {
-                    const result = await growthCommissionsApi.reconcileHouseholdJobs();
-                    showSuccess(`Reconciled: ${result.created} commissions created, ${result.errors} errors`);
-                    loadTransactions();
-                  } catch (err: any) {
-                    showError(err.response?.data?.message || 'Error reconciling');
-                  }
-                }}
+                onClick={() => setShowReconcileJobsConfirm(true)}
                 className="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700"
               >
                 Reconcile Jobs
               </button>
               <button
-                onClick={async () => {
-                  if (!confirm('Reconcile missing subscription commissions?')) return;
-                  try {
-                    const result = await growthCommissionsApi.reconcileSubscriptions();
-                    showSuccess(`Reconciled: ${result.created} commissions created, ${result.errors} errors`);
-                    loadTransactions();
-                  } catch (err: any) {
-                    showError(err.response?.data?.message || 'Error reconciling');
-                  }
-                }}
+                onClick={() => setShowReconcileSubsConfirm(true)}
                 className="rounded bg-purple-600 px-3 py-1 text-xs font-medium text-white hover:bg-purple-700"
               >
                 Reconcile Subscriptions
               </button>
               <button
-                onClick={async () => {
-                  if (!confirm('Reconcile all missing commissions?')) return;
-                  try {
-                    const result = await growthCommissionsApi.reconcileAll();
-                    showSuccess(`Reconciled: ${result.householdJobs.created} jobs, ${result.subscriptions.created} subscriptions`);
-                    loadTransactions();
-                  } catch (err: any) {
-                    showError(err.response?.data?.message || 'Error reconciling');
-                  }
-                }}
+                onClick={() => setShowReconcileAllConfirm(true)}
                 className="rounded bg-orange-600 px-3 py-1 text-xs font-medium text-white hover:bg-orange-700"
               >
                 Reconcile All
@@ -389,6 +422,58 @@ export default function CommissionsPage() {
           </div>
         </div>
       )}
+
+      {/* Deactivate Scheme Confirmation Dialog */}
+      <ConfirmDialog
+        open={showDeactivateConfirm}
+        title="Deactivate Commission Scheme"
+        message="Are you sure you want to deactivate this commission scheme?"
+        confirmLabel="Deactivate"
+        cancelLabel="Cancel"
+        variant="danger"
+        loading={deactivateLoading}
+        onConfirm={handleDeactivateConfirmed}
+        onCancel={() => setShowDeactivateConfirm(false)}
+      />
+
+      {/* Reconcile Jobs Confirmation Dialog */}
+      <ConfirmDialog
+        open={showReconcileJobsConfirm}
+        title="Reconcile Household Job Commissions"
+        message="Are you sure you want to reconcile missing household job commissions?"
+        confirmLabel="Reconcile"
+        cancelLabel="Cancel"
+        variant="default"
+        loading={reconcileLoading}
+        onConfirm={handleReconcileJobs}
+        onCancel={() => setShowReconcileJobsConfirm(false)}
+      />
+
+      {/* Reconcile Subscriptions Confirmation Dialog */}
+      <ConfirmDialog
+        open={showReconcileSubsConfirm}
+        title="Reconcile Subscription Commissions"
+        message="Are you sure you want to reconcile missing subscription commissions?"
+        confirmLabel="Reconcile"
+        cancelLabel="Cancel"
+        variant="default"
+        loading={reconcileLoading}
+        onConfirm={handleReconcileSubs}
+        onCancel={() => setShowReconcileSubsConfirm(false)}
+      />
+
+      {/* Reconcile All Confirmation Dialog */}
+      <ConfirmDialog
+        open={showReconcileAllConfirm}
+        title="Reconcile All Missing Commissions"
+        message="Are you sure you want to reconcile all missing commissions?"
+        confirmLabel="Reconcile"
+        cancelLabel="Cancel"
+        variant="default"
+        loading={reconcileLoading}
+        onConfirm={handleReconcileAll}
+        onCancel={() => setShowReconcileAllConfirm(false)}
+      />
     </div>
   );
 }

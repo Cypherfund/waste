@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/marketer_provider.dart';
 import '../../../../widgets/connectivity_dot.dart';
+import '../../../../widgets/skeleton_loader.dart';
 
 class MarketerDashboardScreen extends StatelessWidget {
   const MarketerDashboardScreen({super.key});
@@ -25,12 +26,91 @@ class MarketerDashboardScreen extends StatelessWidget {
       ),
       body: Consumer<MarketerProvider>(
         builder: (context, provider, _) {
-          if (provider.loading && provider.dashboard == null) {
-            return const Center(child: CircularProgressIndicator());
+          final dash = provider.dashboard;
+
+          // Show skeleton layout on initial load
+          if (provider.loading && dash == null) {
+            return RefreshIndicator(
+              onRefresh: provider.loadDashboard,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  // Welcome + Referral Code skeleton
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SkeletonLoader(width: 120, height: 20, borderRadius: BorderRadius.circular(4)),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              SkeletonLoader(width: 100, height: 16, borderRadius: BorderRadius.circular(4)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Today Stats skeleton
+                  Row(
+                    children: [
+                      _StatCard(title: 'Today Leads', value: null, color: Colors.blue),
+                      const SizedBox(width: 12),
+                      _StatCard(title: 'Today Qualified', value: null, color: Colors.purple),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Totals skeleton
+                  Row(
+                    children: [
+                      _StatCard(title: 'Total Leads', value: null, color: Colors.teal),
+                      const SizedBox(width: 12),
+                      _StatCard(title: 'Conversion', value: null, color: Colors.orange),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Commissions skeleton
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SkeletonLoader(width: 100, height: 16, borderRadius: BorderRadius.circular(4)),
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _CommissionStat(label: 'Pending', amount: null, color: Colors.orange),
+                              _CommissionStat(label: 'Approved', amount: null, color: Colors.blue),
+                              _CommissionStat(label: 'Paid', amount: null, color: Colors.green),
+                            ],
+                          ),
+                          const Divider(height: 24),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              SkeletonLoader(width: 80, height: 14, borderRadius: BorderRadius.circular(4)),
+                              SkeletonLoader(width: 100, height: 16, borderRadius: BorderRadius.circular(4)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
           }
 
-          final dash = provider.dashboard;
-          if (dash == null) {
+          // Only show error if we've successfully loaded data before
+          if (dash == null && provider.hasLoadedBefore) {
             return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -40,6 +120,80 @@ class MarketerDashboardScreen extends StatelessWidget {
                   ElevatedButton(
                     onPressed: provider.loadDashboard,
                     child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          // If no data yet and hasn't loaded before, keep showing skeleton
+          if (dash == null) {
+            return RefreshIndicator(
+              onRefresh: provider.loadDashboard,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SkeletonLoader(width: 120, height: 20, borderRadius: BorderRadius.circular(4)),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              SkeletonLoader(width: 100, height: 16, borderRadius: BorderRadius.circular(4)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      _StatCard(title: 'Today Leads', value: null, color: Colors.blue),
+                      const SizedBox(width: 12),
+                      _StatCard(title: 'Today Qualified', value: null, color: Colors.purple),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      _StatCard(title: 'Total Leads', value: null, color: Colors.teal),
+                      const SizedBox(width: 12),
+                      _StatCard(title: 'Conversion', value: null, color: Colors.orange),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SkeletonLoader(width: 100, height: 16, borderRadius: BorderRadius.circular(4)),
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _CommissionStat(label: 'Pending', amount: null, color: Colors.orange),
+                              _CommissionStat(label: 'Approved', amount: null, color: Colors.blue),
+                              _CommissionStat(label: 'Paid', amount: null, color: Colors.green),
+                            ],
+                          ),
+                          const Divider(height: 24),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              SkeletonLoader(width: 80, height: 14, borderRadius: BorderRadius.circular(4)),
+                              SkeletonLoader(width: 100, height: 16, borderRadius: BorderRadius.circular(4)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -109,13 +263,13 @@ class MarketerDashboardScreen extends StatelessWidget {
                   children: [
                     _StatCard(
                       title: 'Today Leads',
-                      value: '${dash.todayStats.leadsCreated}',
+                      value: provider.loading ? null : '${dash.todayStats.leadsCreated}',
                       color: Colors.blue,
                     ),
                     const SizedBox(width: 12),
                     _StatCard(
                       title: 'Today Qualified',
-                      value: '${dash.todayStats.leadsQualified}',
+                      value: provider.loading ? null : '${dash.todayStats.leadsQualified}',
                       color: Colors.purple,
                     ),
                   ],
@@ -127,13 +281,13 @@ class MarketerDashboardScreen extends StatelessWidget {
                   children: [
                     _StatCard(
                       title: 'Total Leads',
-                      value: '${dash.totals.totalLeads}',
+                      value: provider.loading ? null : '${dash.totals.totalLeads}',
                       color: Colors.teal,
                     ),
                     const SizedBox(width: 12),
                     _StatCard(
                       title: 'Conversion',
-                      value: '${dash.totals.conversionRate.toStringAsFixed(1)}%',
+                      value: provider.loading ? null : '${dash.totals.conversionRate.toStringAsFixed(1)}%',
                       color: Colors.orange,
                     ),
                   ],
@@ -152,9 +306,9 @@ class MarketerDashboardScreen extends StatelessWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            _CommissionStat(label: 'Pending', amount: dash.commissions.pending, color: Colors.orange),
-                            _CommissionStat(label: 'Approved', amount: dash.commissions.approved, color: Colors.blue),
-                            _CommissionStat(label: 'Paid', amount: dash.commissions.paid, color: Colors.green),
+                            _CommissionStat(label: 'Pending', amount: provider.loading ? null : dash.commissions.pending, color: Colors.orange),
+                            _CommissionStat(label: 'Approved', amount: provider.loading ? null : dash.commissions.approved, color: Colors.blue),
+                            _CommissionStat(label: 'Paid', amount: provider.loading ? null : dash.commissions.paid, color: Colors.green),
                           ],
                         ),
                         const Divider(height: 24),
@@ -162,10 +316,13 @@ class MarketerDashboardScreen extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             const Text('Total Earned', style: TextStyle(fontWeight: FontWeight.w600)),
-                            Text(
-                              '${dash.commissions.totalEarned.toStringAsFixed(0)} XAF',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                            ),
+                            if (provider.loading)
+                              SkeletonLoader(width: 100, height: 16, borderRadius: BorderRadius.circular(4))
+                            else
+                              Text(
+                                '${dash.commissions.totalEarned.toStringAsFixed(0)} XAF',
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                              ),
                           ],
                         ),
                       ],
@@ -222,7 +379,7 @@ class MarketerDashboardScreen extends StatelessWidget {
 
 class _StatCard extends StatelessWidget {
   final String title;
-  final String value;
+  final String? value;
   final Color color;
 
   const _StatCard({required this.title, required this.value, required this.color});
@@ -238,7 +395,14 @@ class _StatCard extends StatelessWidget {
             children: [
               Text(title, style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
               const SizedBox(height: 4),
-              Text(value, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color)),
+              if (value != null)
+                Text(value!, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color))
+              else
+                SkeletonLoader(
+                  width: 60,
+                  height: 24,
+                  borderRadius: BorderRadius.circular(4),
+                ),
             ],
           ),
         ),
@@ -249,7 +413,7 @@ class _StatCard extends StatelessWidget {
 
 class _CommissionStat extends StatelessWidget {
   final String label;
-  final double amount;
+  final double? amount;
   final Color color;
 
   const _CommissionStat({required this.label, required this.amount, required this.color});
@@ -260,10 +424,17 @@ class _CommissionStat extends StatelessWidget {
       children: [
         Text(label, style: TextStyle(color: Colors.grey.shade600, fontSize: 11)),
         const SizedBox(height: 2),
-        Text(
-          amount.toStringAsFixed(0),
-          style: TextStyle(fontWeight: FontWeight.bold, color: color),
-        ),
+        if (amount != null)
+          Text(
+            amount!.toStringAsFixed(0),
+            style: TextStyle(fontWeight: FontWeight.bold, color: color),
+          )
+        else
+          SkeletonLoader(
+            width: 40,
+            height: 16,
+            borderRadius: BorderRadius.circular(4),
+          ),
         Text('XAF', style: TextStyle(color: Colors.grey.shade400, fontSize: 10)),
       ],
     );

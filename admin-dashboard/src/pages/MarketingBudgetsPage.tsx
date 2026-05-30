@@ -3,6 +3,7 @@ import { Plus, X, TrendingUp, Wallet, AlertTriangle, CheckCircle, XCircle } from
 import { MarketingBudgetPeriod, BudgetTransaction, Marketer } from '../types';
 import { growthBudgetsApi, growthMarketersApi } from '../services/api/growth';
 import HelpGuide from '../components/HelpGuide';
+import ConfirmDialog from '../components/ConfirmDialog';
 import { useAlert } from '../contexts/AlertContext';
 
 export default function MarketingBudgetsPage() {
@@ -16,6 +17,8 @@ export default function MarketingBudgetsPage() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const [closeLoading, setCloseLoading] = useState(false);
   const limit = 20;
   const { showSuccess, showError } = useAlert();
   
@@ -97,13 +100,23 @@ export default function MarketingBudgetsPage() {
   };
 
   const handleClose = async (budget: MarketingBudgetPeriod) => {
-    if (!confirm(`Close budget period "${budget.name}"?`)) return;
+    setSelectedBudget(budget);
+    setShowCloseConfirm(true);
+  };
+
+  const handleCloseConfirmed = async () => {
+    if (!selectedBudget) return;
+    setCloseLoading(true);
     try {
-      await growthBudgetsApi.close(budget.id);
+      await growthBudgetsApi.close(selectedBudget.id);
       showSuccess('Budget period closed');
+      setShowCloseConfirm(false);
+      setSelectedBudget(null);
       load();
     } catch (err: any) {
       showError(err.response?.data?.message || 'Error closing budget period');
+    } finally {
+      setCloseLoading(false);
     }
   };
 
@@ -443,6 +456,19 @@ export default function MarketingBudgetsPage() {
           )}
         </>
       )}
+
+      {/* Close Budget Confirmation Dialog */}
+      <ConfirmDialog
+        open={showCloseConfirm}
+        title="Close Budget Period"
+        message={`Are you sure you want to close budget period "${selectedBudget?.name}"?`}
+        confirmLabel="Close"
+        cancelLabel="Cancel"
+        variant="danger"
+        loading={closeLoading}
+        onConfirm={handleCloseConfirmed}
+        onCancel={() => setShowCloseConfirm(false)}
+      />
     </div>
   );
 }

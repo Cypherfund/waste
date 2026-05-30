@@ -5,6 +5,7 @@ import Spinner from '../components/Spinner';
 import ErrorBox from '../components/ErrorBox';
 import Pagination from '../components/Pagination';
 import HelpGuide from '../components/HelpGuide';
+import ConfirmDialog from '../components/ConfirmDialog';
 import type { Job, JobListResponse, AdminUser } from '../types';
 
 const JOB_STATUSES = [
@@ -41,6 +42,7 @@ export default function JobsPage() {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelLoading, setCancelLoading] = useState(false);
   const [cancelError, setCancelError] = useState('');
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [reassignCollectorId, setReassignCollectorId] = useState('');
   const [reassignLoading, setReassignLoading] = useState(false);
   const [reassignError, setReassignError] = useState('');
@@ -91,7 +93,11 @@ export default function JobsPage() {
 
   const handleCancel = async () => {
     if (!selectedJob) return;
-    if (!confirm(`Are you sure you want to cancel job ${selectedJob.id.slice(0, 8)}? This action cannot be undone.`)) return;
+    setShowCancelConfirm(true);
+  };
+
+  const handleCancelConfirmed = async () => {
+    if (!selectedJob) return;
     setCancelLoading(true);
     setCancelError('');
     try {
@@ -99,6 +105,7 @@ export default function JobsPage() {
       setFeedback(`Job cancelled successfully.`);
       setSelectedJob(null);
       setCancelReason('');
+      setShowCancelConfirm(false);
       run();
     } catch (err: unknown) {
       const msg =
@@ -272,9 +279,9 @@ export default function JobsPage() {
                 <tr>
                   <th className="px-4 py-3">ID</th>
                   <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Waste Type</th>
-                  <th className="px-4 py-3">Scheduled</th>
+                  <th className="px-4 py-3">Household</th>
                   <th className="px-4 py-3">Collector</th>
+                  <th className="px-4 py-3">Scheduled</th>
                   <th className="px-4 py-3">Actions</th>
                 </tr>
               </thead>
@@ -298,13 +305,13 @@ export default function JobsPage() {
                       <StatusBadge status={job.status} />
                     </td>
                     <td className="px-4 py-3 text-gray-700">
-                      {job.wasteType}
+                      {job.householdName || '—'}
+                    </td>
+                    <td className="px-4 py-3 text-gray-700">
+                      {job.collectorName || '—'}
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500">
                       {job.scheduledDate} {job.scheduledTime}
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs text-gray-500">
-                      {job.collectorId ? `${job.collectorId.slice(0, 8)}...` : '—'}
                     </td>
                     <td className="px-4 py-3">
                       <button
@@ -343,8 +350,27 @@ export default function JobsPage() {
                 </span>
               </div>
               <div>
-                <span className="text-gray-500">Waste Type:</span>
-                <span className="ml-1">{selectedJob.wasteType}</span>
+                <span className="text-gray-500">Household:</span>
+                <div className="ml-1">
+                  <div className="font-medium">{selectedJob.householdName || '—'}</div>
+                  <div className="font-mono text-xs text-gray-500">{selectedJob.householdId}</div>
+                </div>
+              </div>
+              <div>
+                <span className="text-gray-500">Collector:</span>
+                <div className="ml-1">
+                  {selectedJob.collectorName ? (
+                    <>
+                      <div className="font-medium">{selectedJob.collectorName}</div>
+                      <div className="font-mono text-xs text-gray-500">{selectedJob.collectorId}</div>
+                      {selectedJob.collectorPhone && (
+                        <div className="text-xs text-gray-500">{selectedJob.collectorPhone}</div>
+                      )}
+                    </>
+                  ) : (
+                    <span>None</span>
+                  )}
+                </div>
               </div>
               <div>
                 <span className="text-gray-500">Scheduled:</span>
@@ -353,23 +379,13 @@ export default function JobsPage() {
                 </span>
               </div>
               <div>
-                <span className="text-gray-500">Household:</span>
-                <span className="ml-1 font-mono text-xs">
-                  {selectedJob.householdId.slice(0, 8)}...
-                </span>
+                <span className="text-gray-500">Waste Type:</span>
+                <span className="ml-1">{selectedJob.wasteType || '—'}</span>
               </div>
-              <div>
-                <span className="text-gray-500">Collector:</span>
-                <span className="ml-1 font-mono text-xs">
-                  {selectedJob.collectorId
-                    ? `${selectedJob.collectorId.slice(0, 8)}...`
-                    : 'None'}
-                </span>
-              </div>
-              {selectedJob.address && (
+              {selectedJob.locationAddress && (
                 <div className="col-span-2">
                   <span className="text-gray-500">Address:</span>
-                  <span className="ml-1">{selectedJob.address}</span>
+                  <span className="ml-1">{selectedJob.locationAddress}</span>
                 </div>
               )}
               {selectedJob.notes && (
@@ -378,16 +394,43 @@ export default function JobsPage() {
                   <span className="ml-1">{selectedJob.notes}</span>
                 </div>
               )}
-              {selectedJob.paymentMethod && (
+              {selectedJob.paymentMethodName && (
                 <div>
                   <span className="text-gray-500">Payment Method:</span>
-                  <span className="ml-1">{selectedJob.paymentMethod}</span>
+                  <span className="ml-1">{selectedJob.paymentMethodName}</span>
                 </div>
               )}
               {selectedJob.paymentRef && (
                 <div>
                   <span className="text-gray-500">Payment Ref:</span>
                   <span className="ml-1 font-mono text-xs">{selectedJob.paymentRef}</span>
+                </div>
+              )}
+              {selectedJob.paymentProofUrl && (
+                <div className="col-span-2">
+                  <span className="text-gray-500">Payment Proof:</span>
+                  <div className="ml-1">
+                    <a
+                      href={selectedJob.paymentProofUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 underline"
+                    >
+                      View Proof
+                    </a>
+                  </div>
+                </div>
+              )}
+              {selectedJob.quotedPrice && (
+                <div>
+                  <span className="text-gray-500">Price:</span>
+                  <span className="ml-1">{selectedJob.quotedPrice} XAF</span>
+                </div>
+              )}
+              {selectedJob.collectorEarnings !== undefined && (
+                <div>
+                  <span className="text-gray-500">Collector Earnings:</span>
+                  <span className="ml-1">{selectedJob.collectorEarnings} XAF</span>
                 </div>
               )}
             </div>
@@ -566,6 +609,7 @@ export default function JobsPage() {
                   setCancelError('');
                   setReassignCollectorId('');
                   setReassignError('');
+                  setShowCancelConfirm(false);
                 }}
                 className="rounded border px-4 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
               >
@@ -575,6 +619,19 @@ export default function JobsPage() {
           </div>
         </div>
       )}
+
+      {/* Cancel Confirmation Dialog */}
+      <ConfirmDialog
+        open={showCancelConfirm}
+        title="Cancel Job"
+        message={`Are you sure you want to cancel job ${selectedJob?.id.slice(0, 8)}? This action cannot be undone.`}
+        confirmLabel="Cancel Job"
+        cancelLabel="Go Back"
+        variant="danger"
+        loading={cancelLoading}
+        onConfirm={handleCancelConfirmed}
+        onCancel={() => setShowCancelConfirm(false)}
+      />
     </div>
   );
 }

@@ -9,6 +9,7 @@ import '../../providers/collector_earnings_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../models/job.dart';
 import '../../services/offline/connectivity_service.dart';
+import '../../widgets/skeleton_loader.dart';
 
 class CollectorHomeTab extends StatefulWidget {
   const CollectorHomeTab({super.key});
@@ -238,7 +239,7 @@ class _CollectorHomeTabState extends State<CollectorHomeTab>
                 child: _overviewTile(
                   icon: Icons.account_balance_wallet_outlined,
                   title: 'Earnings',
-                  value: '$todayEarnings XAF',
+                  value: earnings.isLoading ? null : '$todayEarnings XAF',
                 ),
               ),
               const SizedBox(width: 9),
@@ -249,7 +250,7 @@ class _CollectorHomeTabState extends State<CollectorHomeTab>
                     return _overviewTile(
                       icon: Icons.check_circle_outline_rounded,
                       title: 'Jobs Completed',
-                      value: '$completedCount',
+                      value: earnings.isLoading ? null : '$completedCount',
                     );
                   },
                 ),
@@ -264,7 +265,7 @@ class _CollectorHomeTabState extends State<CollectorHomeTab>
   Widget _overviewTile({
     required IconData icon,
     required String title,
-    required String value,
+    required String? value,
   }) {
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
@@ -291,14 +292,21 @@ class _CollectorHomeTabState extends State<CollectorHomeTab>
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
-              color: AppColors.primary,
+          if (value != null)
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                color: AppColors.primary,
+              ),
+            )
+          else
+            SkeletonLoader(
+              width: 60,
+              height: 16,
+              borderRadius: BorderRadius.circular(4),
             ),
-          ),
         ],
       ),
     );
@@ -378,14 +386,21 @@ class _CollectorHomeTabState extends State<CollectorHomeTab>
                   ),
                 ),
                 const SizedBox(height: 9),
-                Text(
-                  '${todayEarned.toStringAsFixed(0)} / ${goal.toStringAsFixed(0)} XAF',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF2E7D32),
+                if (earnings.isLoading)
+                  SkeletonLoader(
+                    width: 100,
+                    height: 16,
+                    borderRadius: BorderRadius.circular(4),
+                  )
+                else
+                  Text(
+                    '${todayEarned.toStringAsFixed(0)} / ${goal.toStringAsFixed(0)} XAF',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF2E7D32),
+                    ),
                   ),
-                ),
                 const SizedBox(height: 4),
                 const Text(
                   'Daily earnings goal',
@@ -398,36 +413,47 @@ class _CollectorHomeTabState extends State<CollectorHomeTab>
               ],
             ),
           ),
-          SizedBox(
-            width: 54,
-            height: 54,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: 54,
-                  height: 54,
-                  child: CircularProgressIndicator(
-                    value: progress,
-                    strokeWidth: 5,
-                    backgroundColor: const Color(0xFFE5E7EB),
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      AppColors.primary,
+          if (earnings.isLoading)
+            SizedBox(
+              width: 54,
+              height: 54,
+              child: SkeletonLoader(
+                width: 54,
+                height: 54,
+                borderRadius: BorderRadius.circular(27),
+              ),
+            )
+          else
+            SizedBox(
+              width: 54,
+              height: 54,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  SizedBox(
+                    width: 54,
+                    height: 54,
+                    child: CircularProgressIndicator(
+                      value: progress,
+                      strokeWidth: 5,
+                      backgroundColor: const Color(0xFFE5E7EB),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        AppColors.primary,
+                      ),
+                      strokeCap: StrokeCap.round,
                     ),
-                    strokeCap: StrokeCap.round,
                   ),
-                ),
-                Text(
-                  '$percentage%',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF111827),
+                  Text(
+                    '$percentage%',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF111827),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );

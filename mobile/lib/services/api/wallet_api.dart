@@ -172,6 +172,8 @@ class AppConfig {
   final bool cashEnabled;
   final String manualPaymentInstructions;
   final String supportWhatsapp;
+  final String supportPhone;
+  final String supportEmail;
   final List<PaymentProvider> paymentProviders;
   final List<PaymentProvider> cashinProviders;
   final int minAdvanceHours;
@@ -187,6 +189,8 @@ class AppConfig {
     this.cashEnabled = false,
     required this.manualPaymentInstructions,
     required this.supportWhatsapp,
+    this.supportPhone = '',
+    this.supportEmail = '',
     required this.paymentProviders,
     this.cashinProviders = const [],
     this.minAdvanceHours = 24,
@@ -203,6 +207,8 @@ class AppConfig {
         cashEnabled: j['cashEnabled'] as bool? ?? false,
         manualPaymentInstructions: j['manualPaymentInstructions'] as String? ?? '',
         supportWhatsapp: j['supportWhatsapp'] as String? ?? '',
+        supportPhone: j['supportPhone'] as String? ?? '',
+        supportEmail: j['supportEmail'] as String? ?? '',
         paymentProviders: (j['paymentProviders'] as List<dynamic>?)
                 ?.map((p) => PaymentProvider.fromJson(p as Map<String, dynamic>))
                 .toList() ??

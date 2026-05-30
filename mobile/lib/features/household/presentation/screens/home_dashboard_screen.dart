@@ -12,6 +12,7 @@ import '../../../../providers/subscription_provider.dart';
 import '../../../../models/job.dart';
 import '../../../../widgets/bottom_navigation.dart';
 import '../../../../widgets/connectivity_dot.dart';
+import '../../../../widgets/skeleton_loader.dart';
 
 class HomeDashboardScreen extends StatefulWidget {
   const HomeDashboardScreen({super.key});
@@ -681,6 +682,46 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
   Widget _buildSubscriptionCard() {
     final sub = context.watch<SubscriptionProvider>();
     final subscription = sub.subscription;
+
+    if (sub.isLoading) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEAF5EA),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          children: [
+            SkeletonLoader(
+              width: 38,
+              height: 38,
+              borderRadius: BorderRadius.circular(9),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SkeletonLoader(
+                    width: 100,
+                    height: 12,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  const SizedBox(height: 2),
+                  SkeletonLoader(
+                    width: 140,
+                    height: 11,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     if (subscription != null && subscription.isActive) {
       final remaining = subscription.remainingPickupsThisWeek;
