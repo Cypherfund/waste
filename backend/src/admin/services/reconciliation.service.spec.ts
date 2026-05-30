@@ -202,7 +202,7 @@ describe('ReconciliationService', () => {
       expect(unreconciled[0].amount).toBe(1000);
     });
 
-    it('should return duplicate wallet credits', async () => {
+    it('should return possible duplicate wallet credits', async () => {
       const fromDate = new Date('2024-01-01');
       const toDate = new Date('2024-01-31');
 
@@ -210,6 +210,7 @@ describe('ReconciliationService', () => {
         {
           user_id: 'user-1',
           amount: '1000',
+          payment_transaction_id: 'txn-1',
           created_at: new Date('2024-01-15'),
           count: '2',
         },
@@ -225,8 +226,8 @@ describe('ReconciliationService', () => {
       const unreconciled = await service.getUnreconciledItems(fromDate, toDate);
 
       expect(unreconciled).toHaveLength(1);
-      expect(unreconciled[0].type).toBe('DUPLICATE_WALLET_CREDITS');
-      expect(unreconciled[0].entityId).toBe('user-1');
+      expect(unreconciled[0].type).toBe('POSSIBLE_DUPLICATE_WALLET_CREDITS');
+      expect(unreconciled[0].entityId).toBe('txn-1');
       expect(unreconciled[0].amount).toBe(1000);
     });
 

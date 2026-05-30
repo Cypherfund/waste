@@ -4,20 +4,28 @@ export class AddWalletLedger1781200000000 implements MigrationInterface {
   name = 'AddWalletLedger1781200000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // Create wallet_ledger_direction enum
+    // Create wallet_ledger_direction enum (idempotent)
     await queryRunner.query(`
-      CREATE TYPE "wallet_ledger_direction_enum" AS ENUM ('CREDIT', 'DEBIT')
+      DO $$ BEGIN
+        CREATE TYPE "wallet_ledger_direction_enum" AS ENUM ('CREDIT', 'DEBIT');
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
     `);
 
-    // Create wallet_ledger_type enum
+    // Create wallet_ledger_type enum (idempotent)
     await queryRunner.query(`
-      CREATE TYPE "wallet_ledger_type_enum" AS ENUM (
-        'WALLET_TOPUP',
-        'JOB_PAYMENT',
-        'SUBSCRIPTION_PAYMENT',
-        'COLLECTOR_EARNING',
-        'ADMIN_ADJUSTMENT'
-      )
+      DO $$ BEGIN
+        CREATE TYPE "wallet_ledger_type_enum" AS ENUM (
+          'WALLET_TOPUP',
+          'JOB_PAYMENT',
+          'SUBSCRIPTION_PAYMENT',
+          'COLLECTOR_EARNING',
+          'ADMIN_ADJUSTMENT'
+        );
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
     `);
 
     // Create wallet_ledger table

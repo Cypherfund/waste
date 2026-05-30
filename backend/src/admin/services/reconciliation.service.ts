@@ -254,15 +254,16 @@ export class ReconciliationService {
       });
     }
 
-    // 3. Duplicate wallet credits (same amount, same user, same day)
+    // 3. Possible duplicate wallet credits (same payment_transaction_id)
     const duplicateCredits = await this.dataSource.query(
       `
-      SELECT wl.user_id, wl.amount, wl.created_at, COUNT(*) as count
+      SELECT wl.user_id, wl.amount, wl.payment_transaction_id, wl.created_at, COUNT(*) as count
       FROM wallet_ledger wl
       WHERE wl.direction = 'CREDIT'
       AND wl.type = 'WALLET_TOPUP'
+      AND wl.payment_transaction_id IS NOT NULL
       AND wl.created_at >= $1 AND wl.created_at <= $2
-      GROUP BY wl.user_id, wl.amount, DATE(wl.created_at)
+      GROUP BY wl.user_id, wl.amount, wl.payment_transaction_id, wl.created_at
       HAVING COUNT(*) > 1
     `,
       [fromDate, toDate],
@@ -270,13 +271,13 @@ export class ReconciliationService {
 
     for (const item of duplicateCredits) {
       unreconciled.push({
-        type: 'DUPLICATE_WALLET_CREDITS',
-        description: 'Duplicate wallet credits detected',
+        type: 'POSSIBLE_DUPLICATE_WALLET_CREDITS',
+        description: 'Possible duplicate wallet credit (same payment transaction)',
         amount: Number(item.amount),
-        entityId: item.user_id,
-        entityType: 'user',
+        entityId: item.payment_transaction_id,
+        entityType: 'payment_transaction',
         date: item.created_at,
-        reason: `Found ${item.count} identical wallet credits for same user on same day`,
+        reason: `Payment transaction ${item.payment_transaction_id} appears ${item.count} times in wallet ledger`,
       });
     }
 

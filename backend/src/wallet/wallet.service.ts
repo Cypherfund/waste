@@ -81,24 +81,19 @@ export class WalletService {
         .where('id = :id', { id: payload.collectorId })
         .execute();
 
-      // Write wallet ledger entry (if table exists)
-      try {
-        const ledger = em.getRepository(WalletLedger).create({
-          userId: payload.collectorId,
-          direction: WalletLedgerDirection.CREDIT,
-          type: WalletLedgerType.COLLECTOR_EARNING,
-          amount: payload.amount,
-          balanceBefore,
-          balanceAfter,
-          earningId: payload.earningsId,
-          reference: `Earning ${payload.earningsId}`,
-          metadata: { jobId: payload.jobId },
-        });
-        await em.getRepository(WalletLedger).save(ledger);
-      } catch (e) {
-        // Wallet ledger table may not exist if migration not run
-        this.logger.warn(`Failed to write wallet ledger entry: ${e.message}`);
-      }
+      // Write wallet ledger entry
+      const ledger = em.getRepository(WalletLedger).create({
+        userId: payload.collectorId,
+        direction: WalletLedgerDirection.CREDIT,
+        type: WalletLedgerType.COLLECTOR_EARNING,
+        amount: payload.amount,
+        balanceBefore,
+        balanceAfter,
+        earningId: payload.earningsId,
+        reference: `Earning ${payload.earningsId}`,
+        metadata: { jobId: payload.jobId },
+      });
+      await em.getRepository(WalletLedger).save(ledger);
     });
     this.logger.log(`Wallet credited ${payload.amount} XAF → collector ${payload.collectorId}`);
   }
@@ -341,9 +336,14 @@ export class WalletService {
 
       if (!user) throw new NotFoundException('User not found');
 
-      // Get job to determine amount
+      // Get job to determine amount (with lock to prevent race conditions)
       const { Job } = await import('../jobs/entities/job.entity');
-      const job = await em.getRepository(Job).findOne({ where: { id: jobId } });
+      const job = await em
+        .getRepository(Job)
+        .createQueryBuilder('j')
+        .where('j.id = :id', { id: jobId })
+        .setLock('pessimistic_write')
+        .getOne();
 
       if (!job) throw new NotFoundException('Job not found');
 
@@ -398,24 +398,19 @@ export class WalletService {
 
       const saved = await em.getRepository(PaymentTransaction).save(transaction);
 
-      // Write wallet ledger entry (if table exists)
-      try {
-        const ledger = em.getRepository(WalletLedger).create({
-          userId,
-          direction: WalletLedgerDirection.DEBIT,
-          type: WalletLedgerType.JOB_PAYMENT,
-          amount,
-          balanceBefore,
-          balanceAfter,
-          paymentTransactionId: saved.id,
-          jobId,
-          reference: `Job ${jobId}`,
-        });
-        await em.getRepository(WalletLedger).save(ledger);
-      } catch (e) {
-        // Wallet ledger table may not exist if migration not run
-        this.logger.warn(`Failed to write wallet ledger entry: ${e.message}`);
-      }
+      // Write wallet ledger entry
+      const ledger = em.getRepository(WalletLedger).create({
+        userId,
+        direction: WalletLedgerDirection.DEBIT,
+        type: WalletLedgerType.JOB_PAYMENT,
+        amount,
+        balanceBefore,
+        balanceAfter,
+        paymentTransactionId: saved.id,
+        jobId,
+        reference: `Job ${jobId}`,
+      });
+      await em.getRepository(WalletLedger).save(ledger);
 
       // Update job payment fields
       job.paymentStatus = PaymentStatus.VERIFIED;
@@ -501,20 +496,7 @@ export class WalletService {
 
       const saved = await em.getRepository(PaymentTransaction).save(transaction);
 
-      // Write wallet ledger entry
-      const ledger = em.getRepository(WalletLedger).create({
-        userId,
-        direction: WalletLedgerDirection.DEBIT,
-        type: WalletLedgerType.SUBSCRIPTION_PAYMENT,
-        amount,
-        balanceBefore,
-        balanceAfter,
-        paymentTransactionId: saved.id,
-        reference: `Subscription plan ${planId}`,
-      });
-      await em.getRepository(WalletLedger).save(ledger);
-
-      // Activate subscription using shared activation logic
+      // Activate subscription using shared activation logic and get subscription ID
       const { UserSubscription } =
         await import('../subscriptions/entities/user-subscription.entity');
       const { SubscriptionStatus } = await import('../common/enums/subscription-status.enum');
@@ -529,6 +511,8 @@ export class WalletService {
       const startDateStr = now.toISOString().split('T')[0];
       const endDateStr = thirtyDaysLater.toISOString().split('T')[0];
 
+      let savedSubscription: any;
+
       if (existingSubscription) {
         existingSubscription.planId = planId;
         existingSubscription.status = SubscriptionStatus.ACTIVE;
@@ -536,11 +520,7 @@ export class WalletService {
         existingSubscription.startDate = startDateStr;
         existingSubscription.endDate = endDateStr;
         existingSubscription.remainingPickupsThisWeek = plan.pickupsPerWeek;
-
-        const monday = this.getMondayOfWeek(now);
-        existingSubscription.weekResetDate = monday.toISOString().split('T')[0];
-
-        await em.getRepository(UserSubscription).save(existingSubscription);
+        savedSubscription = await em.getRepository(UserSubscription).save(existingSubscription);
       } else {
         const newSubscription = em.getRepository(UserSubscription).create({
           userId,
@@ -550,16 +530,27 @@ export class WalletService {
           startDate: startDateStr,
           endDate: endDateStr,
           remainingPickupsThisWeek: plan.pickupsPerWeek,
-          weekResetDate: this.getMondayOfWeek(now).toISOString().split('T')[0],
         });
-        await em.getRepository(UserSubscription).save(newSubscription);
+        savedSubscription = await em.getRepository(UserSubscription).save(newSubscription);
       }
+
+      // Write wallet ledger entry with subscriptionId
+      const ledger = em.getRepository(WalletLedger).create({
+        userId,
+        direction: WalletLedgerDirection.DEBIT,
+        type: WalletLedgerType.SUBSCRIPTION_PAYMENT,
+        amount,
+        balanceBefore,
+        balanceAfter,
+        paymentTransactionId: saved.id,
+        subscriptionId: savedSubscription.id,
+        reference: `Subscription ${savedSubscription.id}`,
+      });
+      await em.getRepository(WalletLedger).save(ledger);
 
       // Emit subscription paid event for commission and notifications
       this.eventEmitter.emit(SubscriptionEvents.PAID, {
-        subscriptionId:
-          existingSubscription?.id ??
-          (await em.getRepository(UserSubscription).findOne({ where: { userId } }))?.id,
+        subscriptionId: savedSubscription.id,
         userId,
         planId,
         planName: plan.name,

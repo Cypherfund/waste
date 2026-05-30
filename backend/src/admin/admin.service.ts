@@ -319,24 +319,19 @@ export class AdminService {
       transaction.status = TransactionStatus.VERIFIED;
       await em.save(transaction);
 
-      // Write wallet ledger entry (if table exists)
-      try {
-        const ledger = em.getRepository(WalletLedger).create({
-          userId: transaction.userId,
-          direction: WalletLedgerDirection.CREDIT,
-          type: WalletLedgerType.WALLET_TOPUP,
-          amount: transaction.amount,
-          balanceBefore,
-          balanceAfter,
-          paymentTransactionId: transactionId,
-          reference: `Wallet top-up ${transactionId}`,
-          createdBy: adminId,
-        });
-        await em.getRepository(WalletLedger).save(ledger);
-      } catch (e) {
-        // Wallet ledger table may not exist if migration not run
-        this.logger.warn(`Failed to write wallet ledger entry: ${e.message}`);
-      }
+      // Write wallet ledger entry
+      const ledger = em.getRepository(WalletLedger).create({
+        userId: transaction.userId,
+        direction: WalletLedgerDirection.CREDIT,
+        type: WalletLedgerType.WALLET_TOPUP,
+        amount: transaction.amount,
+        balanceBefore,
+        balanceAfter,
+        paymentTransactionId: transactionId,
+        reference: `Wallet top-up ${transactionId}`,
+        createdBy: adminId,
+      });
+      await em.getRepository(WalletLedger).save(ledger);
 
       this.logger.log(
         `Admin ${adminId} approved wallet top-up ${transactionId}, credited ${transaction.amount} XAF to user ${transaction.userId}`,
