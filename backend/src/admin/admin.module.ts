@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AdminService } from './admin.service';
 import { AdminController } from './admin.controller';
 import { ReconciliationController } from './controllers/reconciliation.controller';
@@ -13,7 +14,9 @@ import { User } from '../users/entities/user.entity';
 import { UserAddress } from '../users/entities/user-address.entity';
 import { SystemCleanupLog } from './entities/system-cleanup-log.entity';
 import { ReconciliationSummary } from './entities/reconciliation-summary.entity';
+import { ReconciliationRun } from './entities/reconciliation-run.entity';
 import { SystemCleanupService } from './services/system-cleanup.service';
+import { ReconciliationSchedulerService } from './services/reconciliation-scheduler.service';
 import { UsersModule } from '../users/users.module';
 import { JobsModule } from '../jobs/jobs.module';
 import { AssignmentModule } from '../assignment/assignment.module';
@@ -52,6 +55,7 @@ import { CollectorAvailability } from '../timeslots/entities/collector-availabil
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     TypeOrmModule.forFeature([
       Job,
       Proof,
@@ -62,6 +66,7 @@ import { CollectorAvailability } from '../timeslots/entities/collector-availabil
       UserAddress,
       SystemCleanupLog,
       ReconciliationSummary,
+      ReconciliationRun,
       FraudFlag,
       PayoutRequest,
       CollectorFloatLedger,
@@ -100,6 +105,6 @@ import { CollectorAvailability } from '../timeslots/entities/collector-availabil
     SubscriptionsModule,
   ],
   controllers: [AdminController, ReconciliationController],
-  providers: [AdminService, SystemCleanupService, ReconciliationService],
+  providers: [AdminService, SystemCleanupService, ReconciliationService, ReconciliationSchedulerService],
 })
 export class AdminModule {}

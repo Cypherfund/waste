@@ -7,13 +7,15 @@ import {
   HttpCode,
   HttpStatus,
   StreamableFile,
+  Body,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiQuery, ApiResponse, ApiBody } from '@nestjs/swagger';
 import {
   ReconciliationService,
   ReconciliationMetrics,
   UnreconciledItem,
 } from '../services/reconciliation.service';
+import { ReconciliationSchedulerService } from '../services/reconciliation-scheduler.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -25,7 +27,10 @@ import { UserRole } from '../../common/enums/role.enum';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN)
 export class ReconciliationController {
-  constructor(private readonly reconciliationService: ReconciliationService) {}
+  constructor(
+    private readonly reconciliationService: ReconciliationService,
+    private readonly reconciliationSchedulerService: ReconciliationSchedulerService,
+  ) {}
 
   @Get('summary')
   @HttpCode(HttpStatus.OK)
@@ -108,5 +113,37 @@ export class ReconciliationController {
       type: 'text/csv',
       disposition: `attachment; filename="reconciliation_${fromDate}_to_${toDate}.csv"`,
     });
+  }
+
+  @Post('run')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Manually trigger reconciliation for a specific date' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        date: {
+          type: 'string',
+          description: 'Date to reconcile (YYYY-MM-DD)',
+          example: '2026-05-29',
+        },
+      },
+      required: ['date'],
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Reconciliation triggered successfully' })
+  async runReconciliation(
+    @Body() body: { date: string },
+    @CurrentUser() user: JwtPayload,
+  ) {
+    const run = await this.reconciliationSchedulerService.runForDate(
+      body.date,
+      'MANUAL' as any,
+      user.userId,
+    );
+    return {
+      success: true,
+      data: run,
+    };
   }
 }
