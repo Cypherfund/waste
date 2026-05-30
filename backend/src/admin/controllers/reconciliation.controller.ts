@@ -132,10 +132,27 @@ export class ReconciliationController {
     },
   })
   @ApiResponse({ status: 200, description: 'Reconciliation triggered successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid date format or date is in the future' })
   async runReconciliation(
     @Body() body: { date: string },
     @CurrentUser() user: JwtPayload,
   ) {
+    // Validate date format (YYYY-MM-DD)
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(body.date)) {
+      throw new Error('Invalid date format. Use YYYY-MM-DD');
+    }
+
+    // Validate date is not in the future
+    const inputDate = new Date(body.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    inputDate.setHours(0, 0, 0, 0);
+
+    if (inputDate > today) {
+      throw new Error('Cannot reconcile future dates');
+    }
+
     const run = await this.reconciliationSchedulerService.runForDate(
       body.date,
       'MANUAL' as any,

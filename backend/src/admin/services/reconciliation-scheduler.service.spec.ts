@@ -139,7 +139,7 @@ describe('ReconciliationSchedulerService', () => {
       }));
     });
 
-    it('should mark as FAILED on error', async () => {
+    it('should mark as FAILED on error and return failed run', async () => {
       systemConfigService.getBoolean.mockImplementation((key: string) => {
         if (key === 'reconciliation.alert_on_failure') return Promise.resolve(true);
         return Promise.resolve(false);
@@ -154,8 +154,9 @@ describe('ReconciliationSchedulerService', () => {
 
       jest.spyOn(service as any, 'sleep').mockResolvedValue(undefined);
 
-      await expect(service.runForDate('2026-05-29', ReconciliationRunTrigger.MANUAL, 'admin-1')).rejects.toThrow();
+      const result = await service.runForDate('2026-05-29', ReconciliationRunTrigger.MANUAL, 'admin-1');
 
+      expect(result.status).toBe(ReconciliationRunStatus.FAILED);
       expect(eventEmitter.emit).toHaveBeenCalledWith('admin.notification', expect.objectContaining({
         type: 'RECONCILIATION_FAILURE',
         severity: 'ERROR',

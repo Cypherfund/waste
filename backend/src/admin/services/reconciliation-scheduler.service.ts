@@ -20,7 +20,9 @@ export class ReconciliationSchedulerService {
     private readonly dataSource: DataSource,
   ) {}
 
-  @Cron(CronExpression.EVERY_DAY_AT_1AM)
+  @Cron('15 0 * * *', {
+    timeZone: 'Africa/Douala',
+  })
   async handleDailyReconciliationCron(): Promise<void> {
     const enabled = await this.systemConfigService.getBoolean('reconciliation.enabled', true);
     if (!enabled) {
@@ -39,11 +41,15 @@ export class ReconciliationSchedulerService {
     );
 
     const now = new Date();
-    const previousDay = new Date(now);
+    const nowInTimezone = new Date(
+      now.toLocaleString('en-US', { timeZone: businessTimezone }),
+    );
+    const previousDay = new Date(nowInTimezone);
     previousDay.setDate(previousDay.getDate() - 1);
     previousDay.setHours(0, 0, 0, 0);
 
     const dateStr = previousDay.toISOString().split('T')[0];
+    this.logger.log(`Reconciling previous business day: ${dateStr} (timezone: ${businessTimezone})`);
     return this.runForDate(dateStr, ReconciliationRunTrigger.SCHEDULED, undefined);
   }
 
@@ -57,6 +63,7 @@ export class ReconciliationSchedulerService {
 
     let attempt = 0;
     let lastError: Error | null = null;
+    let failedRun: ReconciliationRun | null = null;
 
     while (attempt < retryAttempts) {
       attempt++;
@@ -70,6 +77,7 @@ export class ReconciliationSchedulerService {
         }
         
         lastError = new Error(run.errorMessage || 'Reconciliation failed with unknown error');
+        failedRun = run;
       } catch (error) {
         lastError = error as Error;
         this.logger.error(`Reconciliation attempt ${attempt} failed: ${error.message}`);
@@ -81,7 +89,34 @@ export class ReconciliationSchedulerService {
       }
     }
 
-    throw lastError || new Error('Reconciliation failed after all retry attempts');
+    // All retries exhausted - notify admins and return failed run
+    if (failedRun) {
+      await this.notifyAdminsOnFailure(date, retryAttempts, failedRun.errorMessage || 'Unknown error');
+    } else if (lastError) {
+      await this.notifyAdminsOnFailure(date, retryAttempts, lastError.message);
+    }
+
+    return failedRun || (await this.createFailedRun(date, trigger, adminId, retryAttempts, lastError?.message));
+  }
+
+  private async createFailedRun(
+    date: string,
+    trigger: ReconciliationRunTrigger,
+    adminId: string | undefined,
+    attempt: number,
+    errorMessage?: string,
+  ): Promise<ReconciliationRun> {
+    const run = this.reconciliationRunRepo.create({
+      reconciliationDate: date,
+      status: ReconciliationRunStatus.FAILED,
+      errorMessage: errorMessage || 'Reconciliation failed after all retry attempts',
+      triggeredBy: trigger,
+      triggeredByAdminId: adminId,
+      attemptCount: attempt,
+      startedAt: new Date(),
+      finishedAt: new Date(),
+    });
+    return this.reconciliationRunRepo.save(run);
   }
 
   private async executeReconciliation(
@@ -94,11 +129,24 @@ export class ReconciliationSchedulerService {
       where: { reconciliationDate: date },
     });
 
+    // Handle stale RUNNING runs (older than 30 minutes)
     if (existingRun && existingRun.status === ReconciliationRunStatus.RUNNING) {
-      this.logger.warn(`Reconciliation for ${date} is already running`);
-      return existingRun;
+      const staleThreshold = 30 * 60 * 1000; // 30 minutes
+      const isStale = Date.now() - existingRun.startedAt.getTime() > staleThreshold;
+      
+      if (isStale) {
+        this.logger.warn(`Found stale RUNNING run for ${date}, marking as FAILED`);
+        existingRun.status = ReconciliationRunStatus.FAILED;
+        existingRun.errorMessage = 'Run stalled and was marked as stale';
+        existingRun.finishedAt = new Date();
+        await this.reconciliationRunRepo.save(existingRun);
+      } else {
+        this.logger.warn(`Reconciliation for ${date} is already running (started ${Math.floor((Date.now() - existingRun.startedAt.getTime()) / 60000)} minutes ago)`);
+        return existingRun;
+      }
     }
 
+    // Reset metadata for reruns
     const run = existingRun || this.reconciliationRunRepo.create({
       reconciliationDate: date,
       status: ReconciliationRunStatus.RUNNING,
@@ -107,6 +155,15 @@ export class ReconciliationSchedulerService {
       attemptCount: attempt,
       startedAt: new Date(),
     });
+
+    if (existingRun) {
+      run.status = ReconciliationRunStatus.RUNNING;
+      run.errorMessage = null;
+      run.attemptCount = attempt;
+      run.startedAt = new Date();
+      run.triggeredBy = trigger;
+      run.triggeredByAdminId = adminId || null;
+    }
 
     await this.reconciliationRunRepo.save(run);
 
@@ -142,8 +199,6 @@ export class ReconciliationSchedulerService {
       run.finishedAt = new Date();
       run.attemptCount = attempt;
       await this.reconciliationRunRepo.save(run);
-
-      await this.notifyAdminsOnFailure(date, attempt, (error as Error).message);
 
       this.logger.error(`Reconciliation for ${date} failed: ${error.message}`);
       throw error;
