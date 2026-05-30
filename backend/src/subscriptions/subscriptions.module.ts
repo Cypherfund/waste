@@ -9,7 +9,10 @@ import { Job } from '../jobs/entities/job.entity';
 import { SystemConfigModule } from '../config/system-config.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([SubscriptionPlan, UserSubscription, Job]), SystemConfigModule],
+  imports: [
+    TypeOrmModule.forFeature([SubscriptionPlan, UserSubscription, Job]),
+    SystemConfigModule,
+  ],
   controllers: [SubscriptionsController],
   providers: [SubscriptionsService, PricingService],
   exports: [SubscriptionsService, PricingService],

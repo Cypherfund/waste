@@ -111,9 +111,7 @@ describe('DisputesService', () => {
     });
 
     it('should reject dispute if job is not COMPLETED', async () => {
-      jobsService.getJobEntity.mockResolvedValue(
-        makeJob({ status: JobStatus.VALIDATED }),
-      );
+      jobsService.getJobEntity.mockResolvedValue(makeJob({ status: JobStatus.VALIDATED }));
 
       await expect(
         service.createDispute('job-1', 'hh-1', {
@@ -123,9 +121,7 @@ describe('DisputesService', () => {
     });
 
     it('should reject dispute if job is ASSIGNED (wrong state)', async () => {
-      jobsService.getJobEntity.mockResolvedValue(
-        makeJob({ status: JobStatus.ASSIGNED }),
-      );
+      jobsService.getJobEntity.mockResolvedValue(makeJob({ status: JobStatus.ASSIGNED }));
 
       await expect(
         service.createDispute('job-1', 'hh-1', {

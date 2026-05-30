@@ -5,7 +5,13 @@ import { LeadService } from './lead.service';
 import { SMSService } from './sms.service';
 import { MarketerNotificationService } from './marketer-notification.service';
 import { CampaignService } from './campaign.service';
-import { Lead, LeadStatus, MarketerProfile, MarketingCampaign, CampaignMarketerAssignment } from '../entities';
+import {
+  Lead,
+  LeadStatus,
+  MarketerProfile,
+  MarketingCampaign,
+  CampaignMarketerAssignment,
+} from '../entities';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 describe('LeadService', () => {
@@ -69,9 +75,7 @@ describe('LeadService', () => {
     it('should reject if token not found', async () => {
       leadRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.claimReferralToken('bad-token')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.claimReferralToken('bad-token')).rejects.toThrow(NotFoundException);
     });
 
     it('should reject if lead already claimed (REGISTERED)', async () => {
@@ -81,9 +85,7 @@ describe('LeadService', () => {
         expiresAt: new Date(Date.now() + 86400000),
       });
 
-      await expect(service.claimReferralToken('token-1')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(service.claimReferralToken('token-1')).rejects.toThrow(BadRequestException);
     });
 
     it('should reject if token expired', async () => {
@@ -93,9 +95,7 @@ describe('LeadService', () => {
         expiresAt: new Date(Date.now() - 86400000), // expired yesterday
       });
 
-      await expect(service.claimReferralToken('token-1')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(service.claimReferralToken('token-1')).rejects.toThrow(BadRequestException);
     });
 
     it('should return lead if token valid and not expired', async () => {
@@ -119,9 +119,9 @@ describe('LeadService', () => {
         status: LeadStatus.REGISTERED,
       });
 
-      await expect(
-        service.resendInvite('lead-1', 'marketer-1'),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.resendInvite('lead-1', 'marketer-1')).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should reject resend for QUALIFIED leads', async () => {
@@ -131,9 +131,9 @@ describe('LeadService', () => {
         status: LeadStatus.QUALIFIED,
       });
 
-      await expect(
-        service.resendInvite('lead-1', 'marketer-1'),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.resendInvite('lead-1', 'marketer-1')).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -144,9 +144,7 @@ describe('LeadService', () => {
         status: LeadStatus.QUALIFIED,
       });
 
-      await expect(service.expireLead('lead-1')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(service.expireLead('lead-1')).rejects.toThrow(BadRequestException);
     });
 
     it('should expire an INVITED lead and increment totalExpired', async () => {
@@ -165,9 +163,7 @@ describe('LeadService', () => {
       expect(leadRepo.save).toHaveBeenCalledWith(
         expect.objectContaining({ status: LeadStatus.EXPIRED }),
       );
-      expect(profileRepo.save).toHaveBeenCalledWith(
-        expect.objectContaining({ totalExpired: 3 }),
-      );
+      expect(profileRepo.save).toHaveBeenCalledWith(expect.objectContaining({ totalExpired: 3 }));
     });
 
     it('should allow expiring a REGISTERED lead (only QUALIFIED is blocked)', async () => {
@@ -220,9 +216,9 @@ describe('LeadService', () => {
         status: LeadStatus.REGISTERED,
       });
 
-      await expect(
-        service.convertLeadToUser('lead-1', 'user-1'),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.convertLeadToUser('lead-1', 'user-1')).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should update lead status to REGISTERED and increment marketer totalRegistered', async () => {
@@ -258,9 +254,9 @@ describe('LeadService', () => {
     it('should throw NotFoundException if lead does not exist', async () => {
       leadRepo.findOne.mockResolvedValue(null);
 
-      await expect(
-        service.convertLeadToUser('nonexistent', 'user-1'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.convertLeadToUser('nonexistent', 'user-1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -271,9 +267,7 @@ describe('LeadService', () => {
         status: LeadStatus.INVITED,
       });
 
-      await expect(
-        service.markLeadQualified('lead-1'),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.markLeadQualified('lead-1')).rejects.toThrow(BadRequestException);
     });
 
     it('should update status and compute qualificationRate safely when totalRegistered is 0', async () => {

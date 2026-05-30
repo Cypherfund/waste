@@ -93,28 +93,19 @@ export class AdminController {
   // ─── MANUAL ASSIGNMENT ────────────────────────────────────────
 
   @Post('jobs/:id/assign')
-  manualAssign(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: ManualAssignDto,
-  ) {
+  manualAssign(@Param('id', ParseUUIDPipe) id: string, @Body() dto: ManualAssignDto) {
     return this.adminService.manualAssign(id, dto.collectorId);
   }
 
   @Post('jobs/:id/reassign')
-  manualReassign(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: ManualAssignDto,
-  ) {
+  manualReassign(@Param('id', ParseUUIDPipe) id: string, @Body() dto: ManualAssignDto) {
     return this.adminService.manualReassign(id, dto.collectorId);
   }
 
   // ─── PAYMENT VERIFICATION ──────────────────────────────────────
 
   @Patch('jobs/:id/verify-payment')
-  verifyPayment(
-    @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser('sub') adminId: string,
-  ) {
+  verifyPayment(@Param('id', ParseUUIDPipe) id: string, @CurrentUser('sub') adminId: string) {
     return this.adminService.verifyPayment(id, adminId);
   }
 
@@ -155,9 +146,7 @@ export class AdminController {
     if (status) filters.status = status;
     if (severity) filters.severity = severity;
     if (collectorId) filters.collectorId = collectorId;
-    return this.adminService.listFraudFlags(
-      Object.keys(filters).length ? filters : undefined,
-    );
+    return this.adminService.listFraudFlags(Object.keys(filters).length ? filters : undefined);
   }
 
   @Patch('fraud-flags/:id')
@@ -243,7 +232,8 @@ export class AdminController {
 
   @Post('countries')
   createCountry(
-    @Body() body: {
+    @Body()
+    body: {
       countryCode: string;
       countryName: string;
       phonePrefix: string;
@@ -256,10 +246,7 @@ export class AdminController {
   }
 
   @Patch('countries/:code')
-  toggleCountry(
-    @Param('code') code: string,
-    @Body() body: { isActive: boolean },
-  ) {
+  toggleCountry(@Param('code') code: string, @Body() body: { isActive: boolean }) {
     return this.countriesService.setActive(code, body.isActive);
   }
 
@@ -281,10 +268,7 @@ export class AdminController {
   }
 
   @Patch('payments/providers/:id')
-  updateProvider(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() body: Record<string, unknown>,
-  ) {
+  updateProvider(@Param('id', ParseIntPipe) id: number, @Body() body: Record<string, unknown>) {
     return this.paymentService.updateProvider(id, body as any);
   }
 
@@ -307,10 +291,7 @@ export class AdminController {
   // ─── WALLET TOP-UP APPROVAL ───────────────────────────────────
 
   @Post('wallet-top-up/:id/approve')
-  approveWalletTopUp(
-    @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser('sub') adminId: string,
-  ) {
+  approveWalletTopUp(@Param('id', ParseUUIDPipe) id: string, @CurrentUser('sub') adminId: string) {
     return this.adminService.approveWalletTopUp(id, adminId);
   }
 
@@ -331,27 +312,19 @@ export class AdminController {
   }
 
   @Get('collectors/performance')
-  getCollectorPerformance(
-    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
-  ) {
+  getCollectorPerformance(@Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number) {
     return this.adminService.getCollectorPerformance(limit);
   }
 
   // ─── SYSTEM CLEANUP (Developer Tool) ───────────────────────────
 
   @Post('system-cleanup/analyze')
-  analyzeCleanup(
-    @Body() body: any,
-    @CurrentUser('sub') adminId: string,
-  ) {
+  analyzeCleanup(@Body() body: any, @CurrentUser('sub') adminId: string) {
     return this.systemCleanupService.analyzeCleanup(body, adminId);
   }
 
   @Post('system-cleanup/execute')
-  executeCleanup(
-    @Body() body: any,
-    @CurrentUser('sub') adminId: string,
-  ) {
+  executeCleanup(@Body() body: any, @CurrentUser('sub') adminId: string) {
     return this.systemCleanupService.executeCleanup(body, adminId);
   }
 

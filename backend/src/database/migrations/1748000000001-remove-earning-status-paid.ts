@@ -28,7 +28,9 @@ export class RemoveEarningStatusPaid1748000000001 implements MigrationInterface 
 
     // Step 4: Drop old enum and rename new one
     await queryRunner.query(`DROP TYPE "public"."earnings_status_enum"`);
-    await queryRunner.query(`ALTER TYPE "public"."earnings_status_enum_new" RENAME TO "earnings_status_enum"`);
+    await queryRunner.query(
+      `ALTER TYPE "public"."earnings_status_enum_new" RENAME TO "earnings_status_enum"`,
+    );
 
     // Step 5: Drop the paid_at column (no longer needed)
     await queryRunner.query(`ALTER TABLE "earnings" DROP COLUMN IF EXISTS "paid_at"`);
@@ -50,6 +52,8 @@ export class RemoveEarningStatusPaid1748000000001 implements MigrationInterface 
     `);
 
     await queryRunner.query(`DROP TYPE "public"."earnings_status_enum"`);
-    await queryRunner.query(`ALTER TYPE "public"."earnings_status_enum_old" RENAME TO "earnings_status_enum"`);
+    await queryRunner.query(
+      `ALTER TYPE "public"."earnings_status_enum_old" RENAME TO "earnings_status_enum"`,
+    );
   }
 }

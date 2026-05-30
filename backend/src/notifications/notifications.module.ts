@@ -9,10 +9,7 @@ import { EmailProvider } from './providers/email.provider';
 import { UsersModule } from '../users/users.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Notification]),
-    UsersModule,
-  ],
+  imports: [TypeOrmModule.forFeature([Notification]), UsersModule],
   controllers: [NotificationsController],
   providers: [NotificationsService, FcmProvider, SmsProvider, EmailProvider],
   exports: [NotificationsService, FcmProvider, SmsProvider, EmailProvider],

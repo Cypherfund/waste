@@ -30,9 +30,15 @@ export class AddUserPaymentMethods1779100000000 implements MigrationInterface {
     `);
 
     // 3. Create indexes
-    await queryRunner.query(`CREATE INDEX "IDX_user_payment_methods_user_id" ON "user_payment_methods"("user_id")`);
-    await queryRunner.query(`CREATE INDEX "IDX_user_payment_methods_user_payment_code" ON "user_payment_methods"("user_id", "payment_code")`);
-    await queryRunner.query(`CREATE INDEX "IDX_user_payment_methods_user_default" ON "user_payment_methods"("user_id", "is_default") WHERE "deleted_at" IS NULL`);
+    await queryRunner.query(
+      `CREATE INDEX "IDX_user_payment_methods_user_id" ON "user_payment_methods"("user_id")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_user_payment_methods_user_payment_code" ON "user_payment_methods"("user_id", "payment_code")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_user_payment_methods_user_default" ON "user_payment_methods"("user_id", "is_default") WHERE "deleted_at" IS NULL`,
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

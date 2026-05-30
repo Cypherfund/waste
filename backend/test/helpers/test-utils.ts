@@ -22,11 +22,11 @@ export async function createTestUser(
   password: string,
   role: UserRole,
   name: string = 'Test User',
-  phone: string = '+237600000000'
+  phone: string = '+237600000000',
 ): Promise<User> {
   const userRepo = dataSource.getRepository(User);
   const passwordHash = await bcrypt.hash(password, 10);
-  
+
   const user = userRepo.create({
     email,
     passwordHash,
@@ -34,19 +34,19 @@ export async function createTestUser(
     name,
     phone,
   });
-  
+
   return await userRepo.save(user);
 }
 
 export async function createTestJob(
   dataSource: DataSource,
   householdId: string,
-  overrides: Partial<Job> = {}
+  overrides: Partial<Job> = {},
 ): Promise<Job> {
   const jobRepo = dataSource.getRepository(Job);
   const scheduledDate = new Date();
   scheduledDate.setDate(scheduledDate.getDate() + 1);
-  
+
   const job = jobRepo.create({
     householdId,
     status: JobStatus.REQUESTED,
@@ -58,7 +58,7 @@ export async function createTestJob(
     notes: 'Test job for integration testing',
     ...overrides,
   });
-  
+
   return await jobRepo.save(job);
 }
 
@@ -66,10 +66,10 @@ export async function createTestEarning(
   dataSource: DataSource,
   jobId: string,
   collectorId: string,
-  totalAmount: number
+  totalAmount: number,
 ): Promise<Earning> {
   const earningRepo = dataSource.getRepository(Earning);
-  
+
   const earning = earningRepo.create({
     jobId,
     collectorId,
@@ -77,30 +77,39 @@ export async function createTestEarning(
     totalAmount,
     status: EarningStatus.PENDING,
   });
-  
+
   return await earningRepo.save(earning);
 }
 
 export async function loginAndGetToken(
   baseUrl: string,
   phone: string,
-  password: string
+  password: string,
 ): Promise<string> {
   const response = await request(baseUrl)
     .post('/api/v1/auth/login')
     .send({ phone, password })
     .expect(200);
-  
+
   return response.body.accessToken;
 }
 
 export async function cleanupTestData(dataSource: DataSource): Promise<void> {
   const tables = [
-    'ratings', 'earnings', 'notifications', 
-    'fraud_flags', 'disputes', 'jobs', 'users',
-    'files', 'proofs', 'location_updates', 'collector_availability', 'system_config'
+    'ratings',
+    'earnings',
+    'notifications',
+    'fraud_flags',
+    'disputes',
+    'jobs',
+    'users',
+    'files',
+    'proofs',
+    'location_updates',
+    'collector_availability',
+    'system_config',
   ];
-  
+
   for (const table of tables) {
     try {
       await dataSource.query(`TRUNCATE TABLE "${table}" CASCADE`);

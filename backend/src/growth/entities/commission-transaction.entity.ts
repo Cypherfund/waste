@@ -86,7 +86,12 @@ export class CommissionTransaction {
   campaign: MarketingCampaign | null;
 
   @Index()
-  @Column({ type: 'varchar', length: 20, default: BudgetStatus.NOT_RESERVED, name: 'budget_status' })
+  @Column({
+    type: 'varchar',
+    length: 20,
+    default: BudgetStatus.NOT_RESERVED,
+    name: 'budget_status',
+  })
   budgetStatus: BudgetStatus;
 
   @Column({ type: 'text', nullable: true })

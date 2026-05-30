@@ -21,7 +21,10 @@ import { JobStatus, validateTransition } from '../common/enums/job-status.enum';
 import { PaymentStatus } from '../common/enums/payment-status.enum';
 import { PaymentMode } from '../common/enums/payment-mode.enum';
 import { User } from '../users/entities/user.entity';
-import { CollectorFloatLedger, FloatLedgerType } from '../wallet/entities/collector-float-ledger.entity';
+import {
+  CollectorFloatLedger,
+  FloatLedgerType,
+} from '../wallet/entities/collector-float-ledger.entity';
 import { UserRole } from '../common/enums/role.enum';
 import { SubscriptionPlan } from '../subscriptions/entities/subscription-plan.entity';
 import { PaginatedResponse, paginate } from '../common/dto/pagination.dto';
@@ -69,7 +72,10 @@ export class JobsService {
   async create(householdId: string, dto: CreateJobDto): Promise<JobResponseDto> {
     // Validate scheduled date is at least booking.min_advance_hours from now
     const scheduledDate = new Date(dto.scheduledDate);
-    const minAdvanceHours = await this.systemConfigService.getNumber('booking.min_advance_hours', 24);
+    const minAdvanceHours = await this.systemConfigService.getNumber(
+      'booking.min_advance_hours',
+      24,
+    );
     const earliest = new Date(Date.now() + minAdvanceHours * 60 * 60 * 1000);
     earliest.setHours(0, 0, 0, 0);
 
@@ -80,7 +86,12 @@ export class JobsService {
     }
 
     // Duplicate check: mirrors DDL unique partial index idx_jobs_no_duplicate
-    const activeStatuses = [JobStatus.REQUESTED, JobStatus.ASSIGNED, JobStatus.IN_PROGRESS, JobStatus.PAYMENT_PENDING];
+    const activeStatuses = [
+      JobStatus.REQUESTED,
+      JobStatus.ASSIGNED,
+      JobStatus.IN_PROGRESS,
+      JobStatus.PAYMENT_PENDING,
+    ];
     const existingJob = await this.jobRepo.findOne({
       where: {
         householdId,
@@ -90,9 +101,7 @@ export class JobsService {
     });
 
     if (existingJob) {
-      throw new ConflictException(
-        'You already have an active job scheduled for this date',
-      );
+      throw new ConflictException('You already have an active job scheduled for this date');
     }
 
     // Get pricing quote first (server-side, never trusts client amount)
@@ -114,13 +123,17 @@ export class JobsService {
       initialStatus = JobStatus.REQUESTED;
       paymentStatus = PaymentStatus.PENDING;
       if (dto.paymentRef || dto.paymentCode || dto.paymentPhone) {
-        throw new BadRequestException('paymentRef, paymentCode, and paymentPhone must not be provided for CASH payments');
+        throw new BadRequestException(
+          'paymentRef, paymentCode, and paymentPhone must not be provided for CASH payments',
+        );
       }
     } else if (dto.paymentMethod) {
       // 3. Provider-based: look up provider
       const provider = await this.paymentService.getProviderByCode(dto.paymentMethod);
       if (!provider) {
-        throw new BadRequestException(`Payment provider '${dto.paymentMethod}' not found or not enabled`);
+        throw new BadRequestException(
+          `Payment provider '${dto.paymentMethod}' not found or not enabled`,
+        );
       }
 
       if (provider.integrationEnabled && dto.paymentCode && dto.paymentPhone) {
@@ -140,7 +153,9 @@ export class JobsService {
         initialStatus = JobStatus.PAYMENT_PENDING;
         paymentStatus = PaymentStatus.AWAITING_ADMIN_VERIFICATION;
       } else {
-        throw new BadRequestException('Invalid payment configuration: integrated provider requires paymentCode and paymentPhone');
+        throw new BadRequestException(
+          'Invalid payment configuration: integrated provider requires paymentCode and paymentPhone',
+        );
       }
     }
 
@@ -189,7 +204,9 @@ export class JobsService {
         });
         this.logger.log(`Integrated payment initiated for job ${saved.id}: tx ${paymentTx.id}`);
       } catch (error) {
-        this.logger.error(`Failed to initiate integrated payment for job ${saved.id}: ${error.message}`);
+        this.logger.error(
+          `Failed to initiate integrated payment for job ${saved.id}: ${error.message}`,
+        );
       }
     }
 
@@ -441,7 +458,9 @@ export class JobsService {
     // Cash on First Pickup: require exact cash confirmation, deduct platform share, activate subscription
     if (job.paymentMode === PaymentMode.CASH_ON_FIRST_PICKUP) {
       if (dto.cashCollectedAmount === undefined) {
-        throw new BadRequestException('cashCollectedAmount is required for CASH_ON_FIRST_PICKUP jobs');
+        throw new BadRequestException(
+          'cashCollectedAmount is required for CASH_ON_FIRST_PICKUP jobs',
+        );
       }
       if (job.cashToCollectAmount === null) {
         throw new BadRequestException('cashToCollectAmount is not set for this job');
@@ -501,7 +520,10 @@ export class JobsService {
 
         // Calculate collector earning using locked job
         const earningsCalc = await this.earningsService.calculateEarnings(lockedJob);
-        const collectorEarning = Math.min(earningsCalc.totalAmount, Number(lockedJob.cashToCollectAmount));
+        const collectorEarning = Math.min(
+          earningsCalc.totalAmount,
+          Number(lockedJob.cashToCollectAmount),
+        );
         const platformShare = Math.max(Number(lockedJob.cashToCollectAmount) - collectorEarning, 0);
         const currentFloat = Number(collector.collectorFloatBalance);
 
@@ -572,12 +594,19 @@ export class JobsService {
           timestamp: new Date(),
         });
 
-        return { alreadyCompleted: false, savedJob, savedProof, activatedSubscription: subscription };
+        return {
+          alreadyCompleted: false,
+          savedJob,
+          savedProof,
+          activatedSubscription: subscription,
+        };
       });
 
       // If already completed, fetch existing proof and return
       if (result.alreadyCompleted) {
-        const existingProof = await this.proofRepo.findOne({ where: { jobId: result.savedJob.id } });
+        const existingProof = await this.proofRepo.findOne({
+          where: { jobId: result.savedJob.id },
+        });
         return await this.toResponseDto(result.savedJob);
       }
 
@@ -913,9 +942,7 @@ export class JobsService {
     try {
       validateTransition(job.status, to);
     } catch {
-      throw new BadRequestException(
-        `Cannot transition from ${job.status} to ${to}`,
-      );
+      throw new BadRequestException(`Cannot transition from ${job.status} to ${to}`);
     }
     job.status = to;
   }
@@ -972,7 +999,9 @@ export class JobsService {
       notes: job.notes,
       paymentMode: job.paymentMode,
       paymentMethod: job.paymentMethod,
-      paymentMethodName: job.paymentMethod ? await this.getPaymentMethodName(job.paymentMethod) : null,
+      paymentMethodName: job.paymentMethod
+        ? await this.getPaymentMethodName(job.paymentMethod)
+        : null,
       paymentRef: job.paymentRef,
       paymentProofUrl: job.paymentProofUrl,
       paymentStatus: job.paymentStatus,

@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  BadRequestException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { LocationUpdate } from './entities/location-update.entity';
@@ -35,10 +30,7 @@ export class LocationService {
    * Upsert the latest location for a job.
    * Validates: job exists, is IN_PROGRESS, collector owns it, coordinates valid.
    */
-  async updateLocation(
-    collectorId: string,
-    input: LocationUpdateInput,
-  ): Promise<LocationUpdate> {
+  async updateLocation(collectorId: string, input: LocationUpdateInput): Promise<LocationUpdate> {
     // Validate coordinates
     this.validateCoordinates(input.latitude, input.longitude);
 
@@ -108,14 +100,10 @@ export class LocationService {
    */
   private validateCoordinates(lat: number, lng: number): void {
     if (lat < -90 || lat > 90) {
-      throw new BadRequestException(
-        `Invalid latitude: ${lat}. Must be between -90 and 90.`,
-      );
+      throw new BadRequestException(`Invalid latitude: ${lat}. Must be between -90 and 90.`);
     }
     if (lng < -180 || lng > 180) {
-      throw new BadRequestException(
-        `Invalid longitude: ${lng}. Must be between -180 and 180.`,
-      );
+      throw new BadRequestException(`Invalid longitude: ${lng}. Must be between -180 and 180.`);
     }
   }
 }

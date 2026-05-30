@@ -69,7 +69,9 @@ export class AddCashOnFirstPickupFields1780900000000 implements MigrationInterfa
     await queryRunner.query(`ALTER TABLE "jobs" DROP COLUMN "cash_to_collect_amount"`);
     await queryRunner.query(`ALTER TABLE "jobs" DROP CONSTRAINT "FK_jobs_subscription"`);
     await queryRunner.query(`ALTER TABLE "jobs" DROP COLUMN "subscription_id"`);
-    await queryRunner.query(`ALTER TABLE "user_subscriptions" DROP CONSTRAINT "FK_user_subscriptions_linked_first_job"`);
+    await queryRunner.query(
+      `ALTER TABLE "user_subscriptions" DROP CONSTRAINT "FK_user_subscriptions_linked_first_job"`,
+    );
     await queryRunner.query(`ALTER TABLE "user_subscriptions" DROP COLUMN "linked_first_job_id"`);
 
     // Note: PostgreSQL doesn't support removing enum values directly

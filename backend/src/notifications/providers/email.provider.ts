@@ -22,7 +22,7 @@ export class EmailProvider {
    */
   async send(message: EmailMessage): Promise<EmailResult> {
     this.logger.log(`[STUB] Sending email to ${message.to}: ${message.subject}`);
-    
+
     // TODO: Implement with actual email provider
     // Example with SendGrid:
     // await this.sendgrid.send({

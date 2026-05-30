@@ -43,9 +43,9 @@ export class CampaignAdminController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
-    return this.campaignService.findAllCampaigns({ 
-      status, 
-      territory, 
+    return this.campaignService.findAllCampaigns({
+      status,
+      territory,
       budgetPeriodId,
       page: page ? Number(page) : 1,
       limit: limit ? Number(limit) : 20,
@@ -60,10 +60,7 @@ export class CampaignAdminController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update campaign' })
-  async update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateCampaignDto,
-  ) {
+  async update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateCampaignDto) {
     return this.campaignService.updateCampaign(id, dto);
   }
 
@@ -112,10 +109,7 @@ export class CampaignAdminController {
 
   @Post(':id/assign-schemes')
   @ApiOperation({ summary: 'Assign commission schemes to campaign' })
-  async assignSchemes(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: AssignSchemesDto,
-  ) {
+  async assignSchemes(@Param('id', ParseUUIDPipe) id: string, @Body() dto: AssignSchemesDto) {
     return this.campaignService.assignSchemes(id, dto);
   }
 

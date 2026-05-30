@@ -28,7 +28,9 @@ export class AddSubscriptionIdToFloatLedger1780950000000 implements MigrationInt
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_collector_float_ledger_subscription_id"`);
 
     // Drop foreign key
-    await queryRunner.query(`ALTER TABLE "collector_float_ledger" DROP CONSTRAINT "FK_collector_float_ledger_subscription"`);
+    await queryRunner.query(
+      `ALTER TABLE "collector_float_ledger" DROP CONSTRAINT "FK_collector_float_ledger_subscription"`,
+    );
 
     // Drop column
     await queryRunner.query(`ALTER TABLE "collector_float_ledger" DROP COLUMN "subscription_id"`);

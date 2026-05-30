@@ -6,7 +6,15 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindOptionsWhere, Between, MoreThanOrEqual, LessThanOrEqual, In, DataSource } from 'typeorm';
+import {
+  Repository,
+  FindOptionsWhere,
+  Between,
+  MoreThanOrEqual,
+  LessThanOrEqual,
+  In,
+  DataSource,
+} from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { UsersService } from '../users/users.service';
 import { JobsService } from '../jobs/jobs.service';
@@ -22,7 +30,10 @@ import { Dispute } from '../disputes/entities/dispute.entity';
 import { Earning } from '../earnings/entities/earning.entity';
 import { Rating } from '../ratings/entities/rating.entity';
 import { User } from '../users/entities/user.entity';
-import { PaymentTransaction, TransactionStatus } from '../payments/entities/payment-transaction.entity';
+import {
+  PaymentTransaction,
+  TransactionStatus,
+} from '../payments/entities/payment-transaction.entity';
 import { AdminJobFilterDto } from './dto/admin-job-filter.dto';
 import { ResolveDisputeDto } from '../disputes/dto/resolve-dispute.dto';
 import { ReviewFraudFlagDto } from '../fraud/dto/review-fraud-flag.dto';
@@ -30,7 +41,11 @@ import { JobStatus } from '../common/enums/job-status.enum';
 import { PaymentStatus } from '../common/enums/payment-status.enum';
 import { UserRole } from '../common/enums/role.enum';
 import { EarningStatus } from '../common/enums/earning-status.enum';
-import { PaymentEvents, PaymentVerifiedPayload, PaymentRejectedPayload } from '../events/events.types';
+import {
+  PaymentEvents,
+  PaymentVerifiedPayload,
+  PaymentRejectedPayload,
+} from '../events/events.types';
 import { DisputeStatus } from '../common/enums/dispute-status.enum';
 import { FraudFlagStatus } from '../common/enums/fraud-type.enum';
 import { FraudSeverity } from '../common/enums/fraud-severity.enum';
@@ -135,7 +150,10 @@ export class AdminService {
     const [jobs, pendingSubs, walletTopups] = await Promise.all([
       this.jobRepo.find({
         where: {
-          paymentStatus: In([PaymentStatus.PENDING, PaymentStatus.AWAITING_ADMIN_VERIFICATION]) as any,
+          paymentStatus: In([
+            PaymentStatus.PENDING,
+            PaymentStatus.AWAITING_ADMIN_VERIFICATION,
+          ]) as any,
         },
         relations: ['household', 'collector'],
         order: { createdAt: 'DESC' },
@@ -691,21 +709,24 @@ export class AdminService {
 
     const earnings = await qb.getMany();
 
-    const header = 'id,jobId,collectorId,collectorName,collectorPhone,baseAmount,distanceAmount,surgeMultiplier,totalAmount,status,confirmedAt,createdAt';
-    const rows = earnings.map((e) => [
-      e.id,
-      e.jobId,
-      e.collectorId,
-      (e as any).collector?.name ?? '',
-      (e as any).collector?.phone ?? '',
-      e.baseAmount,
-      e.distanceAmount,
-      e.surgeMultiplier,
-      e.totalAmount,
-      e.status,
-      e.confirmedAt?.toISOString() ?? '',
-      e.createdAt.toISOString(),
-    ].join(','));
+    const header =
+      'id,jobId,collectorId,collectorName,collectorPhone,baseAmount,distanceAmount,surgeMultiplier,totalAmount,status,confirmedAt,createdAt';
+    const rows = earnings.map((e) =>
+      [
+        e.id,
+        e.jobId,
+        e.collectorId,
+        (e as any).collector?.name ?? '',
+        (e as any).collector?.phone ?? '',
+        e.baseAmount,
+        e.distanceAmount,
+        e.surgeMultiplier,
+        e.totalAmount,
+        e.status,
+        e.confirmedAt?.toISOString() ?? '',
+        e.createdAt.toISOString(),
+      ].join(','),
+    );
 
     return [header, ...rows].join('\n');
   }

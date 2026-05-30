@@ -102,7 +102,10 @@ describe('JobsService - Pricing Integration', () => {
         { provide: PaymentService, useValue: paymentService },
         { provide: DataSource, useValue: { transaction: jest.fn() } },
         { provide: SystemConfigService, useValue: { getNumber: jest.fn().mockResolvedValue(24) } },
-        { provide: EarningsService, useValue: { calculateEarnings: jest.fn().mockResolvedValue({ totalAmount: 500 }) } },
+        {
+          provide: EarningsService,
+          useValue: { calculateEarnings: jest.fn().mockResolvedValue({ totalAmount: 500 }) },
+        },
       ],
     }).compile();
 

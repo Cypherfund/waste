@@ -114,10 +114,7 @@ describe('SchedulerService', () => {
 
       await service.handleProofAutoValidation();
 
-      expect(systemConfigService.getNumber).toHaveBeenCalledWith(
-        'proof.auto_validate_hours',
-        24,
-      );
+      expect(systemConfigService.getNumber).toHaveBeenCalledWith('proof.auto_validate_hours', 24);
     });
 
     it('should NOT emit for jobs where autoValidateJob returns null (already validated)', async () => {
@@ -238,10 +235,7 @@ describe('SchedulerService', () => {
     it('should use default 24h threshold when config not set', async () => {
       await service.handleFileCleanup();
 
-      expect(systemConfigService.getNumber).toHaveBeenCalledWith(
-        'files.cleanup_hours',
-        24,
-      );
+      expect(systemConfigService.getNumber).toHaveBeenCalledWith('files.cleanup_hours', 24);
       expect(filesService.cleanupUnused).toHaveBeenCalledWith(24);
     });
 

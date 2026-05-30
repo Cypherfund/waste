@@ -20,10 +20,26 @@ export class RemovePlanDerivedPricingConfigKeys1779400000000 implements Migratio
   public async down(queryRunner: QueryRunner): Promise<void> {
     // Re-insert defaults so a rollback doesn't break older code that still reads these keys
     const rows = [
-      { key: 'pricing.subscription_price',         value: '3500',  description: 'Monthly subscription price (XAF) — superseded by subscription_plans.price' },
-      { key: 'pricing.subscription_pickups_per_week', value: '2',  description: 'Pickups per week — superseded by subscription_plans.pickups_per_week' },
-      { key: 'pricing.standard_plan_price',         value: '5000', description: 'Standard plan price (XAF) — superseded by subscription_plans' },
-      { key: 'pricing.premium_plan_price',          value: '10000',description: 'Premium plan price (XAF) — superseded by subscription_plans' },
+      {
+        key: 'pricing.subscription_price',
+        value: '3500',
+        description: 'Monthly subscription price (XAF) — superseded by subscription_plans.price',
+      },
+      {
+        key: 'pricing.subscription_pickups_per_week',
+        value: '2',
+        description: 'Pickups per week — superseded by subscription_plans.pickups_per_week',
+      },
+      {
+        key: 'pricing.standard_plan_price',
+        value: '5000',
+        description: 'Standard plan price (XAF) — superseded by subscription_plans',
+      },
+      {
+        key: 'pricing.premium_plan_price',
+        value: '10000',
+        description: 'Premium plan price (XAF) — superseded by subscription_plans',
+      },
     ];
 
     for (const row of rows) {

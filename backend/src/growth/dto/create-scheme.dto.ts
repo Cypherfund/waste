@@ -1,4 +1,14 @@
-import { IsString, IsEnum, IsOptional, IsBoolean, IsNumber, MaxLength, MinLength, Min, Max } from 'class-validator';
+import {
+  IsString,
+  IsEnum,
+  IsOptional,
+  IsBoolean,
+  IsNumber,
+  MaxLength,
+  MinLength,
+  Min,
+  Max,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { CommissionType, CommissionValueType } from '../entities';
 

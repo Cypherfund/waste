@@ -11,10 +11,10 @@ import {
 import { User } from '../../users/entities/user.entity';
 
 export enum PayoutRequestStatus {
-  PENDING  = 'PENDING',
+  PENDING = 'PENDING',
   APPROVED = 'APPROVED',
   REJECTED = 'REJECTED',
-  PAID     = 'PAID',
+  PAID = 'PAID',
 }
 
 @Entity('payout_requests')

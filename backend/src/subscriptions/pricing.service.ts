@@ -41,7 +41,9 @@ export class PricingService {
   private async getRequiredNumber(key: string): Promise<number> {
     const config = await this.systemConfigService['configRepo'].findOne({ where: { key } });
     if (!config) {
-      throw new Error(`Required configuration '${key}' is not set in system config. Please configure this value in the database.`);
+      throw new Error(
+        `Required configuration '${key}' is not set in system config. Please configure this value in the database.`,
+      );
     }
     const parsed = parseFloat(config.value);
     if (isNaN(parsed)) {
@@ -52,11 +54,11 @@ export class PricingService {
 
   async getQuoteForUser(userId: string): Promise<PricingQuote> {
     const perPickupPrice = await this.getRequiredNumber('pricing.per_pickup_price');
-    
+
     // Get the lowest priced active subscription plan
-    const plans = await this.planRepo.find({ 
-      where: { isActive: true }, 
-      order: { price: 'ASC' } 
+    const plans = await this.planRepo.find({
+      where: { isActive: true },
+      order: { price: 'ASC' },
     });
     const cheapestPlan = plans[0];
     const subscriptionPrice = cheapestPlan?.price;
@@ -64,7 +66,9 @@ export class PricingService {
     const sub = await this.getActiveSubscription(userId);
 
     const buildRecommendedPlan = (plan?: SubscriptionPlan): RecommendedPlan | null =>
-      plan ? { id: plan.id, name: plan.name, price: plan.price, pickupsPerWeek: plan.pickupsPerWeek } : null;
+      plan
+        ? { id: plan.id, name: plan.name, price: plan.price, pickupsPerWeek: plan.pickupsPerWeek }
+        : null;
 
     if (!sub) {
       return {
@@ -75,7 +79,11 @@ export class PricingService {
         planName: null,
         perPickupPrice,
         subscriptionPrice: subscriptionPrice ?? 0,
-        subscriptionSavingsMessage: await this.buildSavingsMessage(perPickupPrice, subscriptionPrice, cheapestPlan?.pickupsPerWeek),
+        subscriptionSavingsMessage: await this.buildSavingsMessage(
+          perPickupPrice,
+          subscriptionPrice,
+          cheapestPlan?.pickupsPerWeek,
+        ),
         recommendedPlan: buildRecommendedPlan(cheapestPlan),
       };
     }
@@ -137,15 +145,17 @@ export class PricingService {
 
   async getActiveSubscription(userId: string): Promise<UserSubscription | null> {
     const today = new Date().toISOString().split('T')[0];
-    return this.subRepo.findOne({
-      where: { userId, status: SubscriptionStatus.ACTIVE },
-      relations: ['plan'],
-      order: { createdAt: 'DESC' },
-    }).then((sub) => {
-      if (!sub) return null;
-      if (sub.endDate < today) return null;
-      return sub;
-    });
+    return this.subRepo
+      .findOne({
+        where: { userId, status: SubscriptionStatus.ACTIVE },
+        relations: ['plan'],
+        order: { createdAt: 'DESC' },
+      })
+      .then((sub) => {
+        if (!sub) return null;
+        if (sub.endDate < today) return null;
+        return sub;
+      });
   }
 
   private async resetWeeklyPickupsIfNeeded(sub: UserSubscription): Promise<void> {
@@ -157,7 +167,9 @@ export class PricingService {
       sub.remainingPickupsThisWeek = sub.plan?.pickupsPerWeek ?? 2;
       sub.weekResetDate = mondayStr;
       await this.subRepo.save(sub);
-      this.logger.log(`Reset weekly pickups for user ${sub.userId} to ${sub.remainingPickupsThisWeek}`);
+      this.logger.log(
+        `Reset weekly pickups for user ${sub.userId} to ${sub.remainingPickupsThisWeek}`,
+      );
     }
   }
 
@@ -170,9 +182,13 @@ export class PricingService {
     return d;
   }
 
-  private async buildSavingsMessage(perPickupPrice: number, subscriptionPrice?: number, pickupsPerWeek?: number): Promise<string | null> {
+  private async buildSavingsMessage(
+    perPickupPrice: number,
+    subscriptionPrice?: number,
+    pickupsPerWeek?: number,
+  ): Promise<string | null> {
     if (!subscriptionPrice) return null;
-    
+
     const defaultPickupsPerWeek = pickupsPerWeek ?? 2;
     const weeksPerMonth = await this.getRequiredNumber('pricing.weeks_per_month');
     const monthlyPickups = defaultPickupsPerWeek * weeksPerMonth;

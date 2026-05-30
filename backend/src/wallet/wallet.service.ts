@@ -12,12 +12,20 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { User } from '../users/entities/user.entity';
 import { PayoutRequest, PayoutRequestStatus } from './entities/payout-request.entity';
 import { CollectorFloatLedger, FloatLedgerType } from './entities/collector-float-ledger.entity';
-import { UserPaymentMethod, UserPaymentMethodUsageType } from './entities/user-payment-method.entity';
+import {
+  UserPaymentMethod,
+  UserPaymentMethodUsageType,
+} from './entities/user-payment-method.entity';
 import { SystemConfigService } from '../config/system-config.service';
 import { EarningsEvents, EarningsConfirmedPayload } from '../events/events.types';
 import { SubscriptionEvents } from '../events/events.types';
 import { PaymentProviderEntity } from '../payments/entities/payment-provider.entity';
-import { PaymentTransaction, TransactionType, TransactionStatus, PaymentSource } from '../payments/entities/payment-transaction.entity';
+import {
+  PaymentTransaction,
+  TransactionType,
+  TransactionStatus,
+  PaymentSource,
+} from '../payments/entities/payment-transaction.entity';
 import { PaymentMode } from '../common/enums/payment-mode.enum';
 import { PaymentService } from '../payments/payment.service';
 
@@ -55,9 +63,7 @@ export class WalletService {
         .where('id = :id', { id: payload.collectorId })
         .execute();
     });
-    this.logger.log(
-      `Wallet credited ${payload.amount} XAF → collector ${payload.collectorId}`,
-    );
+    this.logger.log(`Wallet credited ${payload.amount} XAF → collector ${payload.collectorId}`);
   }
 
   // ── GET wallet balance (any user role) ───────────────────────
@@ -70,7 +76,19 @@ export class WalletService {
   // ── GET app config (payment integration + support + providers) ───────────
   async getAppConfig(countryCode: string) {
     countryCode = countryCode.toUpperCase();
-    const [paymentEnabled, manualInstructions, whatsapp, minAdvanceHours, cashEnabledStr, maxAdvanceDays, topupEnabled, topupMinAmount, topupMaxAmount, topupQuickAmountsStr, acceptTimeoutMinutes] = await Promise.all([
+    const [
+      paymentEnabled,
+      manualInstructions,
+      whatsapp,
+      minAdvanceHours,
+      cashEnabledStr,
+      maxAdvanceDays,
+      topupEnabled,
+      topupMinAmount,
+      topupMaxAmount,
+      topupQuickAmountsStr,
+      acceptTimeoutMinutes,
+    ] = await Promise.all([
       this.systemConfigService.getBoolean('feature.payment_integration', false),
       this.systemConfigService.getString(
         'payment.manual_instructions',
@@ -101,7 +119,10 @@ export class WalletService {
     });
 
     // Parse quick amounts
-    const topupQuickAmounts = topupQuickAmountsStr.split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n));
+    const topupQuickAmounts = topupQuickAmountsStr
+      .split(',')
+      .map((s) => parseInt(s.trim(), 10))
+      .filter((n) => !isNaN(n));
 
     return {
       paymentIntegrationEnabled: paymentEnabled,
@@ -197,8 +218,10 @@ export class WalletService {
       throw new NotFoundException('Payment method not found');
     }
 
-    if (userPaymentMethod.usageType !== UserPaymentMethodUsageType.CASHIN &&
-        userPaymentMethod.usageType !== UserPaymentMethodUsageType.BOTH) {
+    if (
+      userPaymentMethod.usageType !== UserPaymentMethodUsageType.CASHIN &&
+      userPaymentMethod.usageType !== UserPaymentMethodUsageType.BOTH
+    ) {
       throw new BadRequestException('This payment method does not support top-up');
     }
 
@@ -212,8 +235,8 @@ export class WalletService {
     }
 
     // Check if provider has integration enabled
-    const integrationEnabled = provider.integrationEnabled &&
-      await this.paymentService.isPaymentIntegrationEnabled();
+    const integrationEnabled =
+      provider.integrationEnabled && (await this.paymentService.isPaymentIntegrationEnabled());
 
     if (integrationEnabled) {
       // Integrated provider flow - call PaymentService
@@ -266,7 +289,10 @@ export class WalletService {
   }
 
   // ── PAY JOB WITH WALLET ─────────────────────────────────────────
-  async payJobWithWallet(userId: string, jobId: string): Promise<{ success: boolean; transactionId: string }> {
+  async payJobWithWallet(
+    userId: string,
+    jobId: string,
+  ): Promise<{ success: boolean; transactionId: string }> {
     return this.dataSource.transaction(async (em) => {
       // Get user with lock
       const user = await em
@@ -354,7 +380,10 @@ export class WalletService {
   }
 
   // ── PAY SUBSCRIPTION WITH WALLET ─────────────────────────────────
-  async paySubscriptionWithWallet(userId: string, planId: string): Promise<{ success: boolean; transactionId: string }> {
+  async paySubscriptionWithWallet(
+    userId: string,
+    planId: string,
+  ): Promise<{ success: boolean; transactionId: string }> {
     return this.dataSource.transaction(async (em) => {
       // Get user with lock
       const user = await em
@@ -367,7 +396,8 @@ export class WalletService {
       if (!user) throw new NotFoundException('User not found');
 
       // Get plan to determine amount
-      const { SubscriptionPlan } = await import('../subscriptions/entities/subscription-plan.entity');
+      const { SubscriptionPlan } =
+        await import('../subscriptions/entities/subscription-plan.entity');
       const plan = await em.getRepository(SubscriptionPlan).findOne({ where: { id: planId } });
 
       if (!plan) throw new NotFoundException('Subscription plan not found');
@@ -410,7 +440,8 @@ export class WalletService {
       const saved = await em.getRepository(PaymentTransaction).save(transaction);
 
       // Activate subscription using shared activation logic
-      const { UserSubscription } = await import('../subscriptions/entities/user-subscription.entity');
+      const { UserSubscription } =
+        await import('../subscriptions/entities/user-subscription.entity');
       const { SubscriptionStatus } = await import('../common/enums/subscription-status.enum');
       const { PaymentStatus } = await import('../common/enums/payment-status.enum');
       const existingSubscription = await em.getRepository(UserSubscription).findOne({
@@ -430,10 +461,10 @@ export class WalletService {
         existingSubscription.startDate = startDateStr;
         existingSubscription.endDate = endDateStr;
         existingSubscription.remainingPickupsThisWeek = plan.pickupsPerWeek;
-        
+
         const monday = this.getMondayOfWeek(now);
         existingSubscription.weekResetDate = monday.toISOString().split('T')[0];
-        
+
         await em.getRepository(UserSubscription).save(existingSubscription);
       } else {
         const newSubscription = em.getRepository(UserSubscription).create({
@@ -451,7 +482,9 @@ export class WalletService {
 
       // Emit subscription paid event for commission and notifications
       this.eventEmitter.emit(SubscriptionEvents.PAID, {
-        subscriptionId: existingSubscription?.id ?? (await em.getRepository(UserSubscription).findOne({ where: { userId } }))?.id,
+        subscriptionId:
+          existingSubscription?.id ??
+          (await em.getRepository(UserSubscription).findOne({ where: { userId } }))?.id,
         userId,
         planId,
         planName: plan.name,
@@ -538,19 +571,17 @@ export class WalletService {
     }
 
     // Provider-level min/max override system config fallback
-    const provider = config.cashoutProviders.find((p) => p.paymentCode.toUpperCase() === normalizedMethod);
+    const provider = config.cashoutProviders.find(
+      (p) => p.paymentCode.toUpperCase() === normalizedMethod,
+    );
     const effectiveMin = provider?.minWithdrawal ?? config.minWithdrawal;
     const effectiveMax = provider?.maxWithdrawal ?? config.maxWithdrawal;
 
     if (dto.amount < effectiveMin) {
-      throw new BadRequestException(
-        `Minimum withdrawal for this method is ${effectiveMin} XAF`,
-      );
+      throw new BadRequestException(`Minimum withdrawal for this method is ${effectiveMin} XAF`);
     }
     if (dto.amount > effectiveMax) {
-      throw new BadRequestException(
-        `Maximum withdrawal for this method is ${effectiveMax} XAF`,
-      );
+      throw new BadRequestException(`Maximum withdrawal for this method is ${effectiveMax} XAF`);
     }
 
     // Debit wallet atomically, ensuring sufficient balance
@@ -566,9 +597,7 @@ export class WalletService {
 
       const balance = Number(user.walletBalance);
       if (balance < dto.amount) {
-        throw new BadRequestException(
-          `Insufficient balance. Available: ${balance} XAF`,
-        );
+        throw new BadRequestException(`Insufficient balance. Available: ${balance} XAF`);
       }
 
       await em
@@ -678,7 +707,9 @@ export class WalletService {
       request.status = PayoutRequestStatus.REJECTED;
     } else if (action === 'mark_paid') {
       if (request.status !== PayoutRequestStatus.APPROVED) {
-        throw new BadRequestException(`Only APPROVED requests can be marked as paid (current: ${request.status})`);
+        throw new BadRequestException(
+          `Only APPROVED requests can be marked as paid (current: ${request.status})`,
+        );
       }
       request.status = PayoutRequestStatus.PAID;
       request.paidAt = new Date();
@@ -755,9 +786,13 @@ export class WalletService {
       .addOrderBy('upm.createdAt', 'DESC');
 
     if (usage === 'CASHIN') {
-      qb.andWhere('upm.usageType IN (:...types)', { types: [UserPaymentMethodUsageType.CASHIN, UserPaymentMethodUsageType.BOTH] });
+      qb.andWhere('upm.usageType IN (:...types)', {
+        types: [UserPaymentMethodUsageType.CASHIN, UserPaymentMethodUsageType.BOTH],
+      });
     } else if (usage === 'CASHOUT') {
-      qb.andWhere('upm.usageType IN (:...types)', { types: [UserPaymentMethodUsageType.CASHOUT, UserPaymentMethodUsageType.BOTH] });
+      qb.andWhere('upm.usageType IN (:...types)', {
+        types: [UserPaymentMethodUsageType.CASHOUT, UserPaymentMethodUsageType.BOTH],
+      });
     }
 
     const methods = await qb.getMany();
@@ -828,9 +863,10 @@ export class WalletService {
       throw new BadRequestException('You already have this payment method saved');
     }
 
-    const isFirst = await this.userPaymentMethodRepo.count({
-      where: { userId, deletedAt: IsNull() },
-    }) === 0;
+    const isFirst =
+      (await this.userPaymentMethodRepo.count({
+        where: { userId, deletedAt: IsNull() },
+      })) === 0;
 
     const method = this.userPaymentMethodRepo.create({
       userId,
@@ -920,10 +956,18 @@ export class WalletService {
     return this.toPaymentMethodDto(method, provider);
   }
 
-  private async clearOtherDefaults(userId: string, excludeId: string, usageType: UserPaymentMethodUsageType) {
+  private async clearOtherDefaults(
+    userId: string,
+    excludeId: string,
+    usageType: UserPaymentMethodUsageType,
+  ) {
     const relevantTypes =
       usageType === UserPaymentMethodUsageType.BOTH
-        ? [UserPaymentMethodUsageType.CASHIN, UserPaymentMethodUsageType.CASHOUT, UserPaymentMethodUsageType.BOTH]
+        ? [
+            UserPaymentMethodUsageType.CASHIN,
+            UserPaymentMethodUsageType.CASHOUT,
+            UserPaymentMethodUsageType.BOTH,
+          ]
         : usageType === UserPaymentMethodUsageType.CASHIN
           ? [UserPaymentMethodUsageType.CASHIN, UserPaymentMethodUsageType.BOTH]
           : [UserPaymentMethodUsageType.CASHOUT, UserPaymentMethodUsageType.BOTH];

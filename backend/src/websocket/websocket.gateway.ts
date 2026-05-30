@@ -29,9 +29,7 @@ import {
   cors: { origin: '*' },
   namespace: '/ws',
 })
-export class AppWebSocketGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
-{
+export class AppWebSocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
@@ -83,9 +81,7 @@ export class AppWebSocketGateway
     // Authorize channel access
     const authorized = this.authorizeChannel(user, channel);
     if (!authorized) {
-      this.logger.debug(
-        `Unauthorized channel subscription: user=${user.sub} channel=${channel}`,
-      );
+      this.logger.debug(`Unauthorized channel subscription: user=${user.sub} channel=${channel}`);
       return { event: 'error', data: { message: `Not authorized for channel: ${channel}` } };
     }
 
@@ -253,16 +249,18 @@ export class AppWebSocketGateway
     if (channel.startsWith('household:')) {
       const channelUserId = channel.split(':')[1];
       return (
-        user.role === UserRole.HOUSEHOLD && user.sub === channelUserId
-      ) || user.role === UserRole.ADMIN;
+        (user.role === UserRole.HOUSEHOLD && user.sub === channelUserId) ||
+        user.role === UserRole.ADMIN
+      );
     }
 
     // Collector personal channel
     if (channel.startsWith('collector:')) {
       const channelUserId = channel.split(':')[1];
       return (
-        user.role === UserRole.COLLECTOR && user.sub === channelUserId
-      ) || user.role === UserRole.ADMIN;
+        (user.role === UserRole.COLLECTOR && user.sub === channelUserId) ||
+        user.role === UserRole.ADMIN
+      );
     }
 
     // Job channel — household and collector can join their own jobs, admin can join any
@@ -283,23 +281,16 @@ export class AppWebSocketGateway
   /**
    * Broadcast job status to job:{id}, household:{id}, and admin:jobs channels.
    */
-  private broadcastJobStatus(
-    payload: JobEventPayload,
-    data: Record<string, any>,
-  ): void {
+  private broadcastJobStatus(payload: JobEventPayload, data: Record<string, any>): void {
     // Job channel
     this.server.to(`job:${payload.jobId}`).emit('job:status', data);
 
     // Household channel
-    this.server
-      .to(`household:${payload.householdId}`)
-      .emit('job:status', data);
+    this.server.to(`household:${payload.householdId}`).emit('job:status', data);
 
     // Collector channel
     if (payload.collectorId) {
-      this.server
-        .to(`collector:${payload.collectorId}`)
-        .emit('job:status', data);
+      this.server.to(`collector:${payload.collectorId}`).emit('job:status', data);
     }
 
     // Admin jobs channel

@@ -55,7 +55,12 @@ describe('CommissionEngineService', () => {
     paymentStatus,
   });
 
-  const mockScheme = { id: 'scheme-1', commissionType: 'FIXED', amount: 500, type: 'HOUSEHOLD_ONBOARDING' };
+  const mockScheme = {
+    id: 'scheme-1',
+    commissionType: 'FIXED',
+    amount: 500,
+    type: 'HOUSEHOLD_ONBOARDING',
+  };
 
   const jobValidatedPayload: JobEventPayload = {
     jobId: 'job-1',
@@ -138,7 +143,9 @@ describe('CommissionEngineService', () => {
     it('should accumulate correctly when pendingAmount already has a value as DB string', async () => {
       // Simulate profile that already had a commission: DB returns "500.00"
       const profile = makeProfile('500.00');
-      leadRepo.findOne.mockResolvedValue(makeHouseholdLead({ id: 'lead-99', registeredUserId: 'hh-user-1' }));
+      leadRepo.findOne.mockResolvedValue(
+        makeHouseholdLead({ id: 'lead-99', registeredUserId: 'hh-user-1' }),
+      );
       profileRepo.findOne.mockResolvedValue(profile);
       jobRepo.findOne.mockResolvedValue({ ...makeJob(), id: 'job-99' });
       commissionService.getEligibleSchemes.mockResolvedValue([mockScheme]);
@@ -281,7 +288,9 @@ describe('CommissionEngineService', () => {
       leadRepo.findOne.mockResolvedValue(makeCollectorLead());
       profileRepo.findOne.mockResolvedValue(profile);
       jobRepo.findOne.mockResolvedValue(makeJob());
-      commissionService.getEligibleSchemes.mockResolvedValue([{ ...mockScheme, type: 'COLLECTOR_ONBOARDING' }]);
+      commissionService.getEligibleSchemes.mockResolvedValue([
+        { ...mockScheme, type: 'COLLECTOR_ONBOARDING' },
+      ]);
       transactionRepo.findOne.mockResolvedValue(null);
 
       await service.handleJobCompleted(jobCompletedPayload);
@@ -294,7 +303,12 @@ describe('CommissionEngineService', () => {
 
   // ── handleSubscriptionPaid (SUBSCRIPTION commission) ─────────────────────────
   describe('handleSubscriptionPaid', () => {
-    const subScheme = { id: 'scheme-sub', commissionType: 'PERCENTAGE', amount: 10, type: 'SUBSCRIPTION_PAYMENT' };
+    const subScheme = {
+      id: 'scheme-sub',
+      commissionType: 'PERCENTAGE',
+      amount: 10,
+      type: 'SUBSCRIPTION_PAYMENT',
+    };
 
     it('should create commission with correct percentage of subscription amount', async () => {
       leadRepo.findOne.mockResolvedValue(makeHouseholdLead());

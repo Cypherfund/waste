@@ -34,10 +34,7 @@ export class HealthController {
   @Public()
   @Get('ready')
   async readiness() {
-    const checks = await Promise.allSettled([
-      this.checkDatabase(),
-      this.checkRedis(),
-    ]);
+    const checks = await Promise.allSettled([this.checkDatabase(), this.checkRedis()]);
 
     const database = checks[0].status === 'fulfilled' ? 'up' : 'down';
     const redis = checks[1].status === 'fulfilled' ? 'up' : 'down';

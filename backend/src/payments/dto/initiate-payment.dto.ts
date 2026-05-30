@@ -15,7 +15,9 @@ export class InitiatePaymentDto {
 
   @IsString()
   @MaxLength(20)
-  @Matches(/^6[0-9]{8}$/, { message: 'Phone must be a valid Cameroon mobile number (9 digits starting with 6)' })
+  @Matches(/^6[0-9]{8}$/, {
+    message: 'Phone must be a valid Cameroon mobile number (9 digits starting with 6)',
+  })
   phone: string;
 
   @IsOptional()

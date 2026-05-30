@@ -1,7 +1,12 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { MarketingBudgetPeriod, BudgetTransaction, BudgetTransactionType, BudgetPeriodStatus } from '../entities';
+import {
+  MarketingBudgetPeriod,
+  BudgetTransaction,
+  BudgetTransactionType,
+  BudgetPeriodStatus,
+} from '../entities';
 import { CreateBudgetPeriodDto, UpdateBudgetPeriodDto } from '../dto';
 
 @Injectable()
@@ -13,7 +18,10 @@ export class BudgetService {
     private readonly transactionRepo: Repository<BudgetTransaction>,
   ) {}
 
-  async createBudgetPeriod(dto: CreateBudgetPeriodDto, createdBy: string): Promise<MarketingBudgetPeriod> {
+  async createBudgetPeriod(
+    dto: CreateBudgetPeriodDto,
+    createdBy: string,
+  ): Promise<MarketingBudgetPeriod> {
     const period = this.budgetPeriodRepo.create({
       ...dto,
       createdBy,
@@ -23,7 +31,10 @@ export class BudgetService {
     return this.budgetPeriodRepo.save(period);
   }
 
-  async findAllBudgetPeriods(page: number = 1, limit: number = 20): Promise<{ data: MarketingBudgetPeriod[]; total: number; totalPages: number }> {
+  async findAllBudgetPeriods(
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<{ data: MarketingBudgetPeriod[]; total: number; totalPages: number }> {
     const [data, total] = await this.budgetPeriodRepo.findAndCount({
       order: { createdAt: 'DESC' },
       skip: (page - 1) * limit,
@@ -40,7 +51,11 @@ export class BudgetService {
     return period;
   }
 
-  async updateBudgetPeriod(id: string, dto: UpdateBudgetPeriodDto, updatedBy: string): Promise<MarketingBudgetPeriod> {
+  async updateBudgetPeriod(
+    id: string,
+    dto: UpdateBudgetPeriodDto,
+    updatedBy: string,
+  ): Promise<MarketingBudgetPeriod> {
     const period = await this.findBudgetPeriodById(id);
 
     if (period.status !== BudgetPeriodStatus.ACTIVE) {
@@ -50,7 +65,8 @@ export class BudgetService {
     // Validate that new budget is not below already committed + spent
     if (dto.totalBudget !== undefined) {
       const newBudget = dto.totalBudget;
-      const currentUsage = parseFloat(period.committedAmount.toString()) + parseFloat(period.spentAmount.toString());
+      const currentUsage =
+        parseFloat(period.committedAmount.toString()) + parseFloat(period.spentAmount.toString());
       if (newBudget < currentUsage) {
         throw new BadRequestException(
           `Cannot reduce budget below already committed (${period.committedAmount}) + spent (${period.spentAmount})`,
@@ -59,7 +75,9 @@ export class BudgetService {
 
       // Require adjustment reason when budget changes
       if (newBudget !== period.totalBudget && !dto.adjustmentReason) {
-        throw new BadRequestException('Adjustment reason is required when changing the budget amount');
+        throw new BadRequestException(
+          'Adjustment reason is required when changing the budget amount',
+        );
       }
 
       // Create adjustment transaction if budget changed
@@ -98,7 +116,10 @@ export class BudgetService {
 
   async checkBudgetAvailability(budgetPeriodId: string, amount: number): Promise<boolean> {
     const period = await this.findBudgetPeriodById(budgetPeriodId);
-    const remaining = period.totalBudget - parseFloat(period.committedAmount.toString()) - parseFloat(period.spentAmount.toString());
+    const remaining =
+      period.totalBudget -
+      parseFloat(period.committedAmount.toString()) -
+      parseFloat(period.spentAmount.toString());
     return remaining >= amount;
   }
 
@@ -110,7 +131,10 @@ export class BudgetService {
     marketerProfileId: string,
   ): Promise<void> {
     const period = await this.findBudgetPeriodById(budgetPeriodId);
-    const balanceBefore = period.totalBudget - parseFloat(period.committedAmount.toString()) - parseFloat(period.spentAmount.toString());
+    const balanceBefore =
+      period.totalBudget -
+      parseFloat(period.committedAmount.toString()) -
+      parseFloat(period.spentAmount.toString());
 
     if (balanceBefore < amount) {
       throw new BadRequestException('Insufficient budget period balance');
@@ -140,7 +164,7 @@ export class BudgetService {
     marketerProfileId: string,
   ): Promise<void> {
     const period = await this.findBudgetPeriodById(budgetPeriodId);
-    
+
     period.committedAmount = parseFloat(period.committedAmount.toString()) - amount;
     period.spentAmount = parseFloat(period.spentAmount.toString()) + amount;
     await this.budgetPeriodRepo.save(period);
@@ -166,7 +190,7 @@ export class BudgetService {
     marketerProfileId: string,
   ): Promise<void> {
     const period = await this.findBudgetPeriodById(budgetPeriodId);
-    
+
     period.committedAmount = parseFloat(period.committedAmount.toString()) - amount;
     await this.budgetPeriodRepo.save(period);
 

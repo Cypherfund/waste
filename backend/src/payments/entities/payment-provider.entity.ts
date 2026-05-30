@@ -1,10 +1,4 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  Index,
-  UpdateDateColumn,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, Index, UpdateDateColumn } from 'typeorm';
 
 @Entity('payment_providers')
 @Index(['paymentCode', 'countryCode'], { unique: true })

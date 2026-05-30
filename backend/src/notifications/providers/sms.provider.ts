@@ -26,9 +26,7 @@ export class SmsProvider {
 
     try {
       // TODO: Replace with real SMS gateway call
-      this.logger.log(
-        `[STUB] SMS to ${message.phone}: "${message.body.slice(0, 50)}..."`,
-      );
+      this.logger.log(`[STUB] SMS to ${message.phone}: "${message.body.slice(0, 50)}..."`);
 
       return { success: true, messageId: `sms-stub-${Date.now()}` };
     } catch (error) {

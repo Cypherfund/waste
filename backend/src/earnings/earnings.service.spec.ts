@@ -213,9 +213,7 @@ describe('EarningsService', () => {
     });
 
     it('should not confirm if earnings already CONFIRMED', async () => {
-      earningRepo.findOne.mockResolvedValue(
-        makeEarning({ status: EarningStatus.CONFIRMED }),
-      );
+      earningRepo.findOne.mockResolvedValue(makeEarning({ status: EarningStatus.CONFIRMED }));
 
       await service.onJobValidated({
         jobId: 'job-1',
@@ -253,9 +251,7 @@ describe('EarningsService', () => {
       expect(result.baseAmount).toBe(500);
       expect(result.distanceAmount).toBeGreaterThan(0);
       expect(result.surgeMultiplier).toBe(1.0);
-      expect(result.totalAmount).toBe(
-        Math.round((500 + result.distanceAmount) * 1.0 * 100) / 100,
-      );
+      expect(result.totalAmount).toBe(Math.round((500 + result.distanceAmount) * 1.0 * 100) / 100);
     });
 
     it('should apply surge multiplier when surge is enabled', async () => {
@@ -265,9 +261,7 @@ describe('EarningsService', () => {
       const result = await service.calculateEarnings(job);
 
       expect(result.surgeMultiplier).toBe(1.5);
-      expect(result.totalAmount).toBe(
-        Math.round((500 + result.distanceAmount) * 1.5 * 100) / 100,
-      );
+      expect(result.totalAmount).toBe(Math.round((500 + result.distanceAmount) * 1.5 * 100) / 100);
     });
 
     it('should fallback to base-rate-only when coordinates missing', async () => {

@@ -10,10 +10,22 @@ export class ReconciliationSummary {
   summaryDate: string;
 
   // Money In
-  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0, name: 'integrated_provider_payments' })
+  @Column({
+    type: 'decimal',
+    precision: 12,
+    scale: 2,
+    default: 0,
+    name: 'integrated_provider_payments',
+  })
   integratedProviderPayments: number;
 
-  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0, name: 'manual_provider_payments' })
+  @Column({
+    type: 'decimal',
+    precision: 12,
+    scale: 2,
+    default: 0,
+    name: 'manual_provider_payments',
+  })
   manualProviderPayments: number;
 
   @Column({ type: 'decimal', precision: 12, scale: 2, default: 0, name: 'wallet_topups' })
@@ -32,33 +44,69 @@ export class ReconciliationSummary {
   @Column({ type: 'decimal', precision: 12, scale: 2, default: 0, name: 'approved_payouts' })
   approvedPayouts: number;
 
-  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0, name: 'wallet_balance_liabilities' })
+  @Column({
+    type: 'decimal',
+    precision: 12,
+    scale: 2,
+    default: 0,
+    name: 'wallet_balance_liabilities',
+  })
   walletBalanceLiabilities: number;
 
   // Internal Movements
   @Column({ type: 'decimal', precision: 12, scale: 2, default: 0, name: 'wallet_debits' })
   walletDebits: number;
 
-  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0, name: 'collector_float_deductions' })
+  @Column({
+    type: 'decimal',
+    precision: 12,
+    scale: 2,
+    default: 0,
+    name: 'collector_float_deductions',
+  })
   collectorFloatDeductions: number;
 
-  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0, name: 'platform_share_cash_jobs' })
+  @Column({
+    type: 'decimal',
+    precision: 12,
+    scale: 2,
+    default: 0,
+    name: 'platform_share_cash_jobs',
+  })
   platformShareCashJobs: number;
 
-  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0, name: 'platform_share_cash_first_pickup' })
+  @Column({
+    type: 'decimal',
+    precision: 12,
+    scale: 2,
+    default: 0,
+    name: 'platform_share_cash_first_pickup',
+  })
   platformShareCashFirstPickup: number;
 
   // Pending / Risk
   @Column({ type: 'int', default: 0, name: 'manual_payments_pending' })
   manualPaymentsPending: number;
 
-  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0, name: 'manual_payments_pending_amount' })
+  @Column({
+    type: 'decimal',
+    precision: 12,
+    scale: 2,
+    default: 0,
+    name: 'manual_payments_pending_amount',
+  })
   manualPaymentsPendingAmount: number;
 
   @Column({ type: 'int', default: 0, name: 'failed_provider_payments' })
   failedProviderPayments: number;
 
-  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0, name: 'failed_provider_payments_amount' })
+  @Column({
+    type: 'decimal',
+    precision: 12,
+    scale: 2,
+    default: 0,
+    name: 'failed_provider_payments_amount',
+  })
   failedProviderPaymentsAmount: number;
 
   @Column({ type: 'int', default: 0, name: 'unreconciled_items' })

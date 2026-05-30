@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Post,
-  Get,
-  Body,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Controller, Post, Get, Body, ForbiddenException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { TimeslotsService } from './timeslots.service';
 import { SetAvailabilityDto } from './dto/set-availability.dto';
@@ -35,10 +29,12 @@ export class TimeslotsController {
 
   @Get()
   @ApiOperation({ summary: 'Get my availability slots (COLLECTOR only)' })
-  @ApiResponse({ status: 200, description: 'List of availability slots', type: [AvailabilityResponseDto] })
-  async getAvailability(
-    @CurrentUser() user: JwtPayload,
-  ): Promise<AvailabilityResponseDto[]> {
+  @ApiResponse({
+    status: 200,
+    description: 'List of availability slots',
+    type: [AvailabilityResponseDto],
+  })
+  async getAvailability(@CurrentUser() user: JwtPayload): Promise<AvailabilityResponseDto[]> {
     if (user.role !== UserRole.COLLECTOR) {
       throw new ForbiddenException('Only collectors can view availability');
     }

@@ -14,10 +14,7 @@ import { Job } from '../jobs/entities/job.entity';
 import { JobsService } from '../jobs/jobs.service';
 import { EarningsService } from '../earnings/earnings.service';
 import { TimeslotsService } from '../timeslots/timeslots.service';
-import {
-  SystemConfigService,
-  AssignmentConfig,
-} from '../config/system-config.service';
+import { SystemConfigService, AssignmentConfig } from '../config/system-config.service';
 import { FeatureFlagService, FEATURE_FLAGS } from '../config/feature-flags';
 import {
   JobEvents,
@@ -29,11 +26,7 @@ import {
 import { JobStatus } from '../common/enums/job-status.enum';
 import { PaymentMode } from '../common/enums/payment-mode.enum';
 import { UserRole } from '../common/enums/role.enum';
-import {
-  CollectorCandidate,
-  rankCollectors,
-  ScoredCollector,
-} from './assignment.scoring';
+import { CollectorCandidate, rankCollectors, ScoredCollector } from './assignment.scoring';
 
 @Injectable()
 export class AssignmentService {
@@ -65,9 +58,7 @@ export class AssignmentService {
     );
 
     if (!autoEnabled) {
-      this.logger.log(
-        `Auto-assignment disabled, skipping job ${payload.jobId}`,
-      );
+      this.logger.log(`Auto-assignment disabled, skipping job ${payload.jobId}`);
       return;
     }
 
@@ -78,9 +69,7 @@ export class AssignmentService {
 
   @OnEvent(JobEvents.REJECTED)
   async onJobRejected(payload: JobEventPayload): Promise<void> {
-    this.logger.log(
-      `Job ${payload.jobId} rejected, attempting reassignment`,
-    );
+    this.logger.log(`Job ${payload.jobId} rejected, attempting reassignment`);
     await this.autoAssign(payload.jobId);
   }
 
@@ -90,9 +79,7 @@ export class AssignmentService {
     const job = await this.jobsService.getJobEntity(jobId);
 
     if (job.status !== JobStatus.REQUESTED) {
-      this.logger.warn(
-        `Job ${jobId} not in REQUESTED state (${job.status}), skipping assignment`,
-      );
+      this.logger.warn(`Job ${jobId} not in REQUESTED state (${job.status}), skipping assignment`);
       return;
     }
 
@@ -129,15 +116,10 @@ export class AssignmentService {
     const best = ranked[0];
 
     // Atomic assignment via JobsService
-    const assigned = await this.jobsService.assignToCollector(
-      jobId,
-      best.id,
-    );
+    const assigned = await this.jobsService.assignToCollector(jobId, best.id);
 
     if (!assigned) {
-      this.logger.warn(
-        `Failed to assign job ${jobId} (concurrent modification)`,
-      );
+      this.logger.warn(`Failed to assign job ${jobId} (concurrent modification)`);
       return;
     }
 
@@ -173,25 +155,16 @@ export class AssignmentService {
     });
 
     if (!collector) {
-      throw new NotFoundException(
-        'Collector not found or not active',
-      );
+      throw new NotFoundException('Collector not found or not active');
     }
 
-    const assigned = await this.jobsService.assignToCollector(
-      jobId,
-      collectorId,
-    );
+    const assigned = await this.jobsService.assignToCollector(jobId, collectorId);
 
     if (!assigned) {
-      throw new BadRequestException(
-        'Failed to assign job (may have been assigned concurrently)',
-      );
+      throw new BadRequestException('Failed to assign job (may have been assigned concurrently)');
     }
 
-    this.logger.log(
-      `Job ${jobId} manually assigned to collector ${collectorId}`,
-    );
+    this.logger.log(`Job ${jobId} manually assigned to collector ${collectorId}`);
 
     const payload: JobAssignedPayload = {
       jobId: job.id,
@@ -223,16 +196,12 @@ export class AssignmentService {
     });
 
     if (!collector) {
-      throw new NotFoundException(
-        'Collector not found or not active',
-      );
+      throw new NotFoundException('Collector not found or not active');
     }
 
     // Don't allow reassigning to the same collector
     if (job.collectorId === collectorId) {
-      throw new BadRequestException(
-        'Job is already assigned to this collector',
-      );
+      throw new BadRequestException('Job is already assigned to this collector');
     }
 
     const oldCollectorId = job.collectorId;
@@ -256,27 +225,18 @@ export class AssignmentService {
         .execute();
 
       if (updated.affected === 0) {
-        throw new BadRequestException(
-          'Failed to reassign job (concurrent modification)',
-        );
+        throw new BadRequestException('Failed to reassign job (concurrent modification)');
       }
 
       // Then assign to new collector
-      const assigned = await this.jobsService.assignToCollector(
-        jobId,
-        collectorId,
-      );
+      const assigned = await this.jobsService.assignToCollector(jobId, collectorId);
 
       if (!assigned) {
-        throw new BadRequestException(
-          'Failed to assign job to new collector',
-        );
+        throw new BadRequestException('Failed to assign job to new collector');
       }
     });
 
-    this.logger.log(
-      `Job ${jobId} reassigned from collector ${oldCollectorId} to ${collectorId}`,
-    );
+    this.logger.log(`Job ${jobId} reassigned from collector ${oldCollectorId} to ${collectorId}`);
 
     const payload: JobAssignedPayload = {
       jobId: job.id,
@@ -301,9 +261,7 @@ export class AssignmentService {
 
     const collectorId = job.collectorId;
 
-    this.logger.warn(
-      `Assignment timeout for job ${jobId}, collector ${collectorId}`,
-    );
+    this.logger.warn(`Assignment timeout for job ${jobId}, collector ${collectorId}`);
 
     const timeoutPayload: JobAssignmentTimeoutPayload = {
       jobId: job.id,
@@ -328,14 +286,9 @@ export class AssignmentService {
 
   // ─── ELIGIBLE COLLECTOR FILTERING ─────────────────────────────
 
-  async getEligibleCollectors(
-    job: Job,
-    config: AssignmentConfig,
-  ): Promise<CollectorCandidate[]> {
+  async getEligibleCollectors(job: Job, config: AssignmentConfig): Promise<CollectorCandidate[]> {
     const dayOfWeek = this.timeslotsService.getDayOfWeek(job.scheduledDate);
-    const [jobStart, jobEnd] = this.timeslotsService.parseTimeWindow(
-      job.scheduledTime,
-    );
+    const [jobStart, jobEnd] = this.timeslotsService.parseTimeWindow(job.scheduledTime);
 
     // Query active collectors with workload counts and distance
     const rawCollectors = await this.dataSource.query(
@@ -413,7 +366,10 @@ export class AssignmentService {
       // Filter: float balance for CASH_ON_FIRST_PICKUP jobs
       if (job.paymentMode === PaymentMode.CASH_ON_FIRST_PICKUP && job.cashToCollectAmount) {
         const earningsCalc = await this.earningsService.calculateEarnings(job);
-        const collectorEarning = Math.min(earningsCalc.totalAmount, Number(job.cashToCollectAmount));
+        const collectorEarning = Math.min(
+          earningsCalc.totalAmount,
+          Number(job.cashToCollectAmount),
+        );
         const platformShare = Math.max(Number(job.cashToCollectAmount) - collectorEarning, 0);
         const floatBalance = Number(raw.collectorFloatBalance ?? 0);
         if (floatBalance < platformShare) {
@@ -439,9 +395,7 @@ export class AssignmentService {
         activeJobCount: raw.activeJobCount,
         dailyJobCount: raw.dailyJobCount,
         avgRating: Number(raw.avgRating) || 0,
-        lastCompletedAt: raw.lastCompletedAt
-          ? new Date(raw.lastCompletedAt)
-          : null,
+        lastCompletedAt: raw.lastCompletedAt ? new Date(raw.lastCompletedAt) : null,
       });
     }
 
@@ -458,9 +412,7 @@ export class AssignmentService {
       timestamp: new Date(),
     };
     this.eventEmitter.emit(JobEvents.ASSIGNMENT_ESCALATED, payload);
-    this.logger.warn(
-      `Job ${job.id} escalated after ${attempts} assignment attempts`,
-    );
+    this.logger.warn(`Job ${job.id} escalated after ${attempts} assignment attempts`);
   }
 }
 
@@ -469,12 +421,7 @@ export class AssignmentService {
 /**
  * Haversine distance between two lat/lng points in km.
  */
-export function haversineDistance(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number,
-): number {
+export function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371; // Earth radius in km
   const toRad = (deg: number) => (deg * Math.PI) / 180;
 
@@ -483,9 +430,7 @@ export function haversineDistance(
 
   const a =
     Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLng / 2) ** 2;
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;

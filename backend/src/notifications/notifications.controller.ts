@@ -34,7 +34,11 @@ export class NotificationsController {
   @Patch(':id/read')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Mark a single notification as read' })
-  @ApiResponse({ status: 200, description: 'Notification marked as read', type: NotificationResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Notification marked as read',
+    type: NotificationResponseDto,
+  })
   @ApiResponse({ status: 404, description: 'Notification not found' })
   @ApiResponse({ status: 403, description: 'Not your notification' })
   async markAsRead(
@@ -48,9 +52,7 @@ export class NotificationsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Mark all my notifications as read' })
   @ApiResponse({ status: 200, description: 'Count of notifications marked as read' })
-  async markAllAsRead(
-    @CurrentUser() user: JwtPayload,
-  ): Promise<{ count: number }> {
+  async markAllAsRead(@CurrentUser() user: JwtPayload): Promise<{ count: number }> {
     return this.notificationsService.markAllAsRead(user.sub);
   }
 }

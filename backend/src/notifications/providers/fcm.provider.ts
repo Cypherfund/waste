@@ -63,9 +63,7 @@ export class FcmProvider implements OnModuleInit {
     }
 
     if (!this.app) {
-      this.logger.warn(
-        `[FCM STUB] Push to ${message.token.slice(0, 12)}...: "${message.title}"`,
-      );
+      this.logger.warn(`[FCM STUB] Push to ${message.token.slice(0, 12)}...: "${message.title}"`);
       return { success: true, messageId: `stub-${Date.now()}` };
     }
 

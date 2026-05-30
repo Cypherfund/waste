@@ -25,10 +25,7 @@ describe('ReconciliationService', () => {
     dataSource.getRepository.mockReturnValue(reconciliationSummaryRepo);
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        ReconciliationService,
-        { provide: DataSource, useValue: dataSource },
-      ],
+      providers: [ReconciliationService, { provide: DataSource, useValue: dataSource }],
     }).compile();
 
     service = module.get<ReconciliationService>(ReconciliationService);
@@ -130,7 +127,7 @@ describe('ReconciliationService', () => {
 
       expect(dataSource.query).toHaveBeenCalledWith(
         expect.stringContaining('CASH_SETTLEMENT_DEDUCTION'),
-        expect.any(Array)
+        expect.any(Array),
       );
     });
 
@@ -144,7 +141,7 @@ describe('ReconciliationService', () => {
 
       expect(dataSource.query).toHaveBeenCalledWith(
         expect.stringContaining('CASH_SUBSCRIPTION_PLATFORM_SHARE'),
-        expect.any(Array)
+        expect.any(Array),
       );
     });
   });

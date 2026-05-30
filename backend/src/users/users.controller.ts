@@ -1,4 +1,15 @@
-import { Controller, Get, Patch, Put, Post, Delete, Body, Param, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Patch,
+  Put,
+  Post,
+  Delete,
+  Body,
+  Param,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { IsString, IsOptional, IsNumber, IsBoolean } from 'class-validator';
 import { UsersService, CreateAddressDto } from './users.service';
@@ -71,9 +82,7 @@ export class UsersController {
 
   @Get('addresses')
   @ApiOperation({ summary: 'List saved addresses for the current user' })
-  async listAddresses(
-    @CurrentUser('sub') userId: string,
-  ): Promise<UserAddress[]> {
+  async listAddresses(@CurrentUser('sub') userId: string): Promise<UserAddress[]> {
     return this.usersService.listAddresses(userId);
   }
 

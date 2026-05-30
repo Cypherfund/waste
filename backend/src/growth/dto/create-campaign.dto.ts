@@ -1,4 +1,13 @@
-import { IsString, IsEnum, IsNumber, IsOptional, IsUUID, Min, Max, IsDateString } from 'class-validator';
+import {
+  IsString,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsUUID,
+  Min,
+  Max,
+  IsDateString,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { CampaignStatus } from '../entities';
 

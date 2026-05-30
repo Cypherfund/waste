@@ -40,7 +40,12 @@ describe('TimeslotsService', () => {
 
   beforeEach(async () => {
     repo = {
-      create: jest.fn((dto) => ({ ...dto, id: 'new-slot', createdAt: new Date(), updatedAt: new Date() })),
+      create: jest.fn((dto) => ({
+        ...dto,
+        id: 'new-slot',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })),
       save: jest.fn((entity) => Promise.resolve(entity)),
       find: jest.fn().mockResolvedValue([]),
       count: jest.fn().mockResolvedValue(0),
@@ -232,9 +237,7 @@ describe('TimeslotsService', () => {
     it('should return true if no slots defined (flexible collector)', async () => {
       repo.count.mockResolvedValue(0);
 
-      const result = await service.isCollectorAvailable(
-        'col-1', DayOfWeek.MON, '09:00', '11:00',
-      );
+      const result = await service.isCollectorAvailable('col-1', DayOfWeek.MON, '09:00', '11:00');
 
       expect(result).toBe(true);
     });
@@ -244,9 +247,7 @@ describe('TimeslotsService', () => {
       const qb = mockQueryBuilder(makeSlot());
       repo.createQueryBuilder.mockReturnValue(qb);
 
-      const result = await service.isCollectorAvailable(
-        'col-1', DayOfWeek.MON, '09:00', '11:00',
-      );
+      const result = await service.isCollectorAvailable('col-1', DayOfWeek.MON, '09:00', '11:00');
 
       expect(result).toBe(true);
     });
@@ -256,9 +257,7 @@ describe('TimeslotsService', () => {
       const qb = mockQueryBuilder(null);
       repo.createQueryBuilder.mockReturnValue(qb);
 
-      const result = await service.isCollectorAvailable(
-        'col-1', DayOfWeek.MON, '09:00', '11:00',
-      );
+      const result = await service.isCollectorAvailable('col-1', DayOfWeek.MON, '09:00', '11:00');
 
       expect(result).toBe(false);
     });
@@ -268,9 +267,7 @@ describe('TimeslotsService', () => {
       const qb = mockQueryBuilder(null); // no match for WED
       repo.createQueryBuilder.mockReturnValue(qb);
 
-      const result = await service.isCollectorAvailable(
-        'col-1', DayOfWeek.WED, '09:00', '11:00',
-      );
+      const result = await service.isCollectorAvailable('col-1', DayOfWeek.WED, '09:00', '11:00');
 
       expect(result).toBe(false);
     });
@@ -282,9 +279,7 @@ describe('TimeslotsService', () => {
     it('should delegate to isCollectorAvailable with parsed date/time', async () => {
       repo.count.mockResolvedValue(0); // flexible
 
-      const result = await service.isCollectorAvailableForJob(
-        'col-1', '2026-04-20', '09:00-11:00',
-      );
+      const result = await service.isCollectorAvailableForJob('col-1', '2026-04-20', '09:00-11:00');
 
       expect(result).toBe(true);
     });
@@ -294,15 +289,10 @@ describe('TimeslotsService', () => {
 
   describe('getAvailableCollectorsForTime', () => {
     it('should return collector IDs with matching slots', async () => {
-      const qb = mockQueryBuilder([
-        { collectorId: 'col-1' },
-        { collectorId: 'col-2' },
-      ]);
+      const qb = mockQueryBuilder([{ collectorId: 'col-1' }, { collectorId: 'col-2' }]);
       repo.createQueryBuilder.mockReturnValue(qb);
 
-      const result = await service.getAvailableCollectorsForTime(
-        '2026-04-20', '09:00-11:00',
-      );
+      const result = await service.getAvailableCollectorsForTime('2026-04-20', '09:00-11:00');
 
       expect(result).toEqual(['col-1', 'col-2']);
     });
@@ -311,9 +301,7 @@ describe('TimeslotsService', () => {
       const qb = mockQueryBuilder([]);
       repo.createQueryBuilder.mockReturnValue(qb);
 
-      const result = await service.getAvailableCollectorsForTime(
-        '2026-04-20', '09:00-11:00',
-      );
+      const result = await service.getAvailableCollectorsForTime('2026-04-20', '09:00-11:00');
 
       expect(result).toEqual([]);
     });
@@ -324,14 +312,10 @@ describe('TimeslotsService', () => {
   describe('edge cases', () => {
     it('boundary: slot exactly matches job window', async () => {
       repo.count.mockResolvedValue(1);
-      const qb = mockQueryBuilder(
-        makeSlot({ startTime: '09:00', endTime: '11:00' }),
-      );
+      const qb = mockQueryBuilder(makeSlot({ startTime: '09:00', endTime: '11:00' }));
       repo.createQueryBuilder.mockReturnValue(qb);
 
-      const result = await service.isCollectorAvailable(
-        'col-1', DayOfWeek.MON, '09:00', '11:00',
-      );
+      const result = await service.isCollectorAvailable('col-1', DayOfWeek.MON, '09:00', '11:00');
       expect(result).toBe(true);
     });
 

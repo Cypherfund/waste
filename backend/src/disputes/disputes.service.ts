@@ -128,9 +128,7 @@ export class DisputesService {
       await this.jobsService.transitionDisputeResolved(dispute.jobId, JobStatus.VALIDATED);
     }
 
-    this.logger.log(
-      `Dispute ${disputeId} resolved as ${dto.resolution} by admin ${adminId}`,
-    );
+    this.logger.log(`Dispute ${disputeId} resolved as ${dto.resolution} by admin ${adminId}`);
 
     this.eventEmitter.emit(DisputeEvents.RESOLVED, {
       disputeId: saved.id,

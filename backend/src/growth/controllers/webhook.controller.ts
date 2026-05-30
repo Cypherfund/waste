@@ -14,10 +14,7 @@ export class WebhookController {
   ) {}
 
   @Post('sms/delivery')
-  async handleSMSDelivery(
-    @Body() body: any,
-    @Headers('x-sms-provider') provider: string,
-  ) {
+  async handleSMSDelivery(@Body() body: any, @Headers('x-sms-provider') provider: string) {
     this.logger.log(`SMS delivery webhook from ${provider}: ${JSON.stringify(body)}`);
 
     try {
@@ -29,7 +26,7 @@ export class WebhookController {
           await this.leadService.handleSMSDeliveryUpdate(recipient.messageId, status);
         }
       }
-      
+
       // Twilio format
       else if (provider === 'twilio' || body.MessageSid) {
         const status = this.mapTwilioStatus(body.MessageStatus);
@@ -44,10 +41,7 @@ export class WebhookController {
   }
 
   @Post('sms/incoming')
-  async handleIncomingSMS(
-    @Body() body: any,
-    @Headers('x-sms-provider') provider: string,
-  ) {
+  async handleIncomingSMS(@Body() body: any, @Headers('x-sms-provider') provider: string) {
     this.logger.log(`Incoming SMS webhook from ${provider}: ${JSON.stringify(body)}`);
 
     try {
@@ -59,7 +53,7 @@ export class WebhookController {
         phone = body.from;
         message = body.text;
       }
-      
+
       // Twilio format
       else if (provider === 'twilio' || body.From) {
         phone = body.From;

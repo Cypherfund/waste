@@ -109,18 +109,12 @@ describe('SubscriptionsService', () => {
     it('throws BadRequestException when an ACTIVE subscription already exists', async () => {
       subRepo.findOne.mockResolvedValue(makeSub({ status: SubscriptionStatus.ACTIVE }));
 
-      await expect(service.subscribe('user-1', 'plan-1')).rejects.toThrow(
-        BadRequestException,
-      );
-      await expect(service.subscribe('user-1', 'plan-1')).rejects.toThrow(
-        'active subscription',
-      );
+      await expect(service.subscribe('user-1', 'plan-1')).rejects.toThrow(BadRequestException);
+      await expect(service.subscribe('user-1', 'plan-1')).rejects.toThrow('active subscription');
     });
 
     it('throws BadRequestException when a PENDING_PAYMENT subscription already exists', async () => {
-      subRepo.findOne.mockResolvedValue(
-        makeSub({ status: SubscriptionStatus.PENDING_PAYMENT }),
-      );
+      subRepo.findOne.mockResolvedValue(makeSub({ status: SubscriptionStatus.PENDING_PAYMENT }));
 
       await expect(service.subscribe('user-1', 'plan-1')).rejects.toThrow(
         'awaiting payment verification',
@@ -130,9 +124,7 @@ describe('SubscriptionsService', () => {
     it('throws NotFoundException when plan does not exist', async () => {
       planRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.subscribe('user-1', 'plan-1')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.subscribe('user-1', 'plan-1')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -189,7 +181,10 @@ describe('SubscriptionsService', () => {
   describe('adminVerifySubscription()', () => {
     it('sets status to ACTIVE and paymentStatus to VERIFIED', async () => {
       subRepo.findOne.mockResolvedValue(
-        makeSub({ status: SubscriptionStatus.PENDING_PAYMENT, paymentStatus: PaymentStatus.AWAITING_ADMIN_VERIFICATION }),
+        makeSub({
+          status: SubscriptionStatus.PENDING_PAYMENT,
+          paymentStatus: PaymentStatus.AWAITING_ADMIN_VERIFICATION,
+        }),
       );
       subRepo.save.mockImplementation((s: any) => Promise.resolve(s));
 
@@ -231,20 +226,14 @@ describe('SubscriptionsService', () => {
     it('throws NotFoundException when subscription does not exist', async () => {
       subRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.adminVerifySubscription('bad-id')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.adminVerifySubscription('bad-id')).rejects.toThrow(NotFoundException);
     });
 
     it('throws BadRequestException when subscription is not PENDING_PAYMENT', async () => {
       subRepo.findOne.mockResolvedValue(makeSub({ status: SubscriptionStatus.ACTIVE }));
 
-      await expect(service.adminVerifySubscription('sub-1')).rejects.toThrow(
-        BadRequestException,
-      );
-      await expect(service.adminVerifySubscription('sub-1')).rejects.toThrow(
-        'not pending payment',
-      );
+      await expect(service.adminVerifySubscription('sub-1')).rejects.toThrow(BadRequestException);
+      await expect(service.adminVerifySubscription('sub-1')).rejects.toThrow('not pending payment');
     });
   });
 
@@ -252,9 +241,7 @@ describe('SubscriptionsService', () => {
 
   describe('adminRejectSubscription()', () => {
     it('sets status to PAYMENT_FAILED and paymentStatus to REJECTED', async () => {
-      subRepo.findOne.mockResolvedValue(
-        makeSub({ status: SubscriptionStatus.PENDING_PAYMENT }),
-      );
+      subRepo.findOne.mockResolvedValue(makeSub({ status: SubscriptionStatus.PENDING_PAYMENT }));
       subRepo.save.mockImplementation((s: any) => Promise.resolve(s));
 
       await service.adminRejectSubscription('sub-1', 'Fake reference');
@@ -268,9 +255,7 @@ describe('SubscriptionsService', () => {
     });
 
     it('does NOT emit any event after rejection', async () => {
-      subRepo.findOne.mockResolvedValue(
-        makeSub({ status: SubscriptionStatus.PENDING_PAYMENT }),
-      );
+      subRepo.findOne.mockResolvedValue(makeSub({ status: SubscriptionStatus.PENDING_PAYMENT }));
       subRepo.save.mockImplementation((s: any) => Promise.resolve(s));
 
       await service.adminRejectSubscription('sub-1');
@@ -281,17 +266,13 @@ describe('SubscriptionsService', () => {
     it('throws NotFoundException when subscription does not exist', async () => {
       subRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.adminRejectSubscription('bad-id')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.adminRejectSubscription('bad-id')).rejects.toThrow(NotFoundException);
     });
 
     it('throws BadRequestException when subscription is already ACTIVE', async () => {
       subRepo.findOne.mockResolvedValue(makeSub({ status: SubscriptionStatus.ACTIVE }));
 
-      await expect(service.adminRejectSubscription('sub-1')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(service.adminRejectSubscription('sub-1')).rejects.toThrow(BadRequestException);
     });
   });
 

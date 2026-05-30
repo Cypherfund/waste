@@ -1,4 +1,12 @@
-import { IsString, IsEnum, IsOptional, IsPhoneNumber, MaxLength, MinLength, IsUUID } from 'class-validator';
+import {
+  IsString,
+  IsEnum,
+  IsOptional,
+  IsPhoneNumber,
+  MaxLength,
+  MinLength,
+  IsUUID,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { LeadType, LeadSource } from '../entities';
 

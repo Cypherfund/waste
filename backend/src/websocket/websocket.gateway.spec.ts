@@ -222,9 +222,7 @@ describe('AppWebSocketGateway', () => {
     });
 
     it('should return error if location service rejects', async () => {
-      locationService.updateLocation.mockRejectedValue(
-        new Error('Job must be IN_PROGRESS'),
-      );
+      locationService.updateLocation.mockRejectedValue(new Error('Job must be IN_PROGRESS'));
       const socket = makeSocket(collectorUser);
 
       const result = await gateway.handleLocationUpdate(socket, {

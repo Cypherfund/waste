@@ -64,7 +64,10 @@ export class AppUpdatesService {
     const updateAvailable = forceUpdate || dto.buildNumber < record.latestBuild;
 
     const releaseNotes = record.releaseNotes
-      ? record.releaseNotes.split('\n').map((l) => l.trim()).filter(Boolean)
+      ? record.releaseNotes
+          .split('\n')
+          .map((l) => l.trim())
+          .filter(Boolean)
       : null;
 
     return {

@@ -4,8 +4,13 @@ export class AddUserAddressesAndBookingConfig1778900000000 implements MigrationI
   name = 'AddUserAddressesAndBookingConfig1778900000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    const exists = await queryRunner.query(`SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='user_addresses'`);
-    if (exists.length > 0) { console.log('User addresses migration: already applied, skipping.'); return; }
+    const exists = await queryRunner.query(
+      `SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='user_addresses'`,
+    );
+    if (exists.length > 0) {
+      console.log('User addresses migration: already applied, skipping.');
+      return;
+    }
 
     // ── user_addresses table ──────────────────────────────────────────────
     await queryRunner.query(`

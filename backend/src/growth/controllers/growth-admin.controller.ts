@@ -18,8 +18,20 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums/role.enum';
-import { LeadService, MarketerService, CommissionService, MarketerPayoutService, MarketerNotificationService, CommissionReconciliationService } from '../services';
-import { CreateMarketerDto, CreateSchemeDto, ApproveCommissionDto, RejectCommissionDto } from '../dto';
+import {
+  LeadService,
+  MarketerService,
+  CommissionService,
+  MarketerPayoutService,
+  MarketerNotificationService,
+  CommissionReconciliationService,
+} from '../services';
+import {
+  CreateMarketerDto,
+  CreateSchemeDto,
+  ApproveCommissionDto,
+  RejectCommissionDto,
+} from '../dto';
 import { CommissionStatus, PayoutStatus } from '../entities';
 
 @ApiTags('Growth Admin')
@@ -168,10 +180,7 @@ export class GrowthAdminController {
 
   @Post('marketer-payouts/:id/approve')
   @ApiOperation({ summary: 'Approve payout request' })
-  async approvePayout(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Request() req: any,
-  ) {
+  async approvePayout(@Param('id', ParseUUIDPipe) id: string, @Request() req: any) {
     return this.payoutService.approvePayout(id, req.user.sub);
   }
 

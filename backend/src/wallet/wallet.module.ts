@@ -12,7 +12,14 @@ import { PaymentsModule } from '../payments/payments.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, PayoutRequest, CollectorFloatLedger, PaymentProviderEntity, UserPaymentMethod, PaymentTransaction]),
+    TypeOrmModule.forFeature([
+      User,
+      PayoutRequest,
+      CollectorFloatLedger,
+      PaymentProviderEntity,
+      UserPaymentMethod,
+      PaymentTransaction,
+    ]),
     PaymentsModule,
   ],
   providers: [WalletService],

@@ -15,11 +15,20 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         password: configService.get<string>('database.password'),
         database: configService.get<string>('database.name'),
         autoLoadEntities: true,
-        synchronize: configService.get<string>('nodeEnv') === 'development' || configService.get<string>('nodeEnv') === 'test',
-        logging: configService.get<string>('nodeEnv') === 'development' || configService.get<string>('nodeEnv') === 'test' ? ['error', 'warn'] : false,
+        synchronize:
+          configService.get<string>('nodeEnv') === 'development' ||
+          configService.get<string>('nodeEnv') === 'test',
+        logging:
+          configService.get<string>('nodeEnv') === 'development' ||
+          configService.get<string>('nodeEnv') === 'test'
+            ? ['error', 'warn']
+            : false,
         migrations: [__dirname + '/migrations/*{.ts,.js}'],
         migrationsRun: false,
-        ssl: configService.get<string>('nodeEnv') === 'production' ? { rejectUnauthorized: false } : false,
+        ssl:
+          configService.get<string>('nodeEnv') === 'production'
+            ? { rejectUnauthorized: false }
+            : false,
       }),
     }),
   ],

@@ -2,7 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, Between } from 'typeorm';
 import { ReconciliationSummary } from '../entities/reconciliation-summary.entity';
-import { TransactionStatus, TransactionType } from '../../payments/entities/payment-transaction.entity';
+import {
+  TransactionStatus,
+  TransactionType,
+} from '../../payments/entities/payment-transaction.entity';
 import { FloatLedgerType } from '../../wallet/entities/collector-float-ledger.entity';
 import { EarningStatus } from '../../common/enums/earning-status.enum';
 import { JobStatus } from '../../common/enums/job-status.enum';
@@ -145,7 +148,8 @@ export class ReconciliationService {
       existing.walletDebits = metrics.internalMovements.walletDebits;
       existing.collectorFloatDeductions = metrics.internalMovements.collectorFloatDeductions;
       existing.platformShareCashJobs = metrics.internalMovements.platformShareCashJobs;
-      existing.platformShareCashFirstPickup = metrics.internalMovements.platformShareCashFirstPickup;
+      existing.platformShareCashFirstPickup =
+        metrics.internalMovements.platformShareCashFirstPickup;
       existing.manualPaymentsPending = metrics.pendingRisk.manualPaymentsPending;
       existing.manualPaymentsPendingAmount = metrics.pendingRisk.manualPaymentsPendingAmount;
       existing.failedProviderPayments = metrics.pendingRisk.failedProviderPayments;
@@ -198,7 +202,8 @@ export class ReconciliationService {
     // TODO: Add this check when wallet_transactions table is implemented
 
     // 2. Jobs completed with cash but no float deduction
-    const cashJobsNoFloat = await this.dataSource.query(`
+    const cashJobsNoFloat = await this.dataSource.query(
+      `
       SELECT j.id, j.cash_to_collect_amount, j.completed_at
       FROM jobs j
       WHERE j.status = 'COMPLETED'
@@ -209,7 +214,9 @@ export class ReconciliationService {
         WHERE cfl.job_id = j.id
         AND cfl.type = 'CASH_SETTLEMENT_DEDUCTION'
       )
-    `, [fromDate, toDate]);
+    `,
+      [fromDate, toDate],
+    );
 
     for (const item of cashJobsNoFloat) {
       unreconciled.push({
@@ -233,76 +240,97 @@ export class ReconciliationService {
   // Private helper methods for calculations
 
   private async getIntegratedProviderPayments(fromDate: Date, toDate: Date): Promise<number> {
-    const result = await this.dataSource.query(`
+    const result = await this.dataSource.query(
+      `
       SELECT COALESCE(SUM(amount), 0) as total
       FROM payment_transactions
       WHERE type = 'WALLET_TOPUP'
       AND status = 'SUCCESS'
       AND created_at >= $1 AND created_at <= $2
-    `, [fromDate, toDate]);
+    `,
+      [fromDate, toDate],
+    );
     return Number(result[0].total);
   }
 
   private async getManualProviderPayments(fromDate: Date, toDate: Date): Promise<number> {
-    const result = await this.dataSource.query(`
+    const result = await this.dataSource.query(
+      `
       SELECT COALESCE(SUM(amount), 0) as total
       FROM payment_transactions
       WHERE type IN ('JOB_PAYMENT', 'SUBSCRIPTION_PAYMENT')
       AND status = 'VERIFIED'
       AND created_at >= $1 AND created_at <= $2
-    `, [fromDate, toDate]);
+    `,
+      [fromDate, toDate],
+    );
     return Number(result[0].total);
   }
 
   private async getWalletTopups(fromDate: Date, toDate: Date): Promise<number> {
-    const result = await this.dataSource.query(`
+    const result = await this.dataSource.query(
+      `
       SELECT COALESCE(SUM(amount), 0) as total
       FROM payment_transactions
       WHERE type = 'WALLET_TOPUP'
       AND status IN ('SUCCESS', 'VERIFIED')
       AND created_at >= $1 AND created_at <= $2
-    `, [fromDate, toDate]);
+    `,
+      [fromDate, toDate],
+    );
     return Number(result[0].total);
   }
 
   private async getCashCollected(fromDate: Date, toDate: Date): Promise<number> {
-    const result = await this.dataSource.query(`
+    const result = await this.dataSource.query(
+      `
       SELECT COALESCE(SUM(cash_to_collect_amount), 0) as total
       FROM jobs
       WHERE status = 'COMPLETED'
       AND payment_mode IN ('CASH', 'CASH_ON_FIRST_PICKUP')
       AND completed_at >= $1 AND completed_at <= $2
-    `, [fromDate, toDate]);
+    `,
+      [fromDate, toDate],
+    );
     return Number(result[0].total);
   }
 
   private async getCollectorEarnings(fromDate: Date, toDate: Date): Promise<number> {
-    const result = await this.dataSource.query(`
+    const result = await this.dataSource.query(
+      `
       SELECT COALESCE(SUM(total_amount), 0) as total
       FROM earnings
       WHERE status = 'CONFIRMED'
       AND confirmed_at >= $1 AND confirmed_at <= $2
-    `, [fromDate, toDate]);
+    `,
+      [fromDate, toDate],
+    );
     return Number(result[0].total);
   }
 
   private async getMarketerCommissions(fromDate: Date, toDate: Date): Promise<number> {
-    const result = await this.dataSource.query(`
+    const result = await this.dataSource.query(
+      `
       SELECT COALESCE(SUM(amount), 0) as total
       FROM commission_transactions
       WHERE status = 'PAID'
       AND paid_at >= $1 AND paid_at <= $2
-    `, [fromDate, toDate]);
+    `,
+      [fromDate, toDate],
+    );
     return Number(result[0].total);
   }
 
   private async getApprovedPayouts(fromDate: Date, toDate: Date): Promise<number> {
-    const result = await this.dataSource.query(`
+    const result = await this.dataSource.query(
+      `
       SELECT COALESCE(SUM(amount), 0) as total
       FROM payout_requests
       WHERE status = 'APPROVED'
       AND approved_at >= $1 AND approved_at <= $2
-    `, [fromDate, toDate]);
+    `,
+      [fromDate, toDate],
+    );
     return Number(result[0].total);
   }
 
@@ -323,77 +351,98 @@ export class ReconciliationService {
   }
 
   private async getCollectorFloatDeductions(fromDate: Date, toDate: Date): Promise<number> {
-    const result = await this.dataSource.query(`
+    const result = await this.dataSource.query(
+      `
       SELECT COALESCE(SUM(ABS(amount)), 0) as total
       FROM collector_float_ledger
       WHERE type = 'CASH_SETTLEMENT_DEDUCTION'
       AND created_at >= $1 AND created_at <= $2
-    `, [fromDate, toDate]);
+    `,
+      [fromDate, toDate],
+    );
     return Number(result[0].total);
   }
 
   private async getPlatformShareCashJobs(fromDate: Date, toDate: Date): Promise<number> {
     // Platform share from normal cash jobs (CASH_SETTLEMENT_DEDUCTION)
-    const result = await this.dataSource.query(`
+    const result = await this.dataSource.query(
+      `
       SELECT COALESCE(SUM(ABS(amount)), 0) as total
       FROM collector_float_ledger
       WHERE type = 'CASH_SETTLEMENT_DEDUCTION'
       AND created_at >= $1 AND created_at <= $2
-    `, [fromDate, toDate]);
+    `,
+      [fromDate, toDate],
+    );
     return Number(result[0].total);
   }
 
   private async getPlatformShareCashFirstPickup(fromDate: Date, toDate: Date): Promise<number> {
     // Platform share from cash-on-first-pickup (CASH_SUBSCRIPTION_PLATFORM_SHARE)
     // Use actual ledger values, not estimated percentage
-    const result = await this.dataSource.query(`
+    const result = await this.dataSource.query(
+      `
       SELECT COALESCE(SUM(ABS(amount)), 0) as total
       FROM collector_float_ledger
       WHERE type = 'CASH_SUBSCRIPTION_PLATFORM_SHARE'
       AND created_at >= $1 AND created_at <= $2
-    `, [fromDate, toDate]);
+    `,
+      [fromDate, toDate],
+    );
     return Number(result[0].total);
   }
 
   private async getManualPaymentsPending(fromDate: Date, toDate: Date): Promise<number> {
-    const result = await this.dataSource.query(`
+    const result = await this.dataSource.query(
+      `
       SELECT COUNT(*) as count
       FROM payment_transactions
       WHERE type IN ('JOB_PAYMENT', 'SUBSCRIPTION_PAYMENT')
       AND status = 'PENDING'
       AND created_at >= $1 AND created_at <= $2
-    `, [fromDate, toDate]);
+    `,
+      [fromDate, toDate],
+    );
     return Number(result[0].count);
   }
 
   private async getManualPaymentsPendingAmount(fromDate: Date, toDate: Date): Promise<number> {
-    const result = await this.dataSource.query(`
+    const result = await this.dataSource.query(
+      `
       SELECT COALESCE(SUM(amount), 0) as total
       FROM payment_transactions
       WHERE type IN ('JOB_PAYMENT', 'SUBSCRIPTION_PAYMENT')
       AND status = 'PENDING'
       AND created_at >= $1 AND created_at <= $2
-    `, [fromDate, toDate]);
+    `,
+      [fromDate, toDate],
+    );
     return Number(result[0].total);
   }
 
   private async getFailedProviderPayments(fromDate: Date, toDate: Date): Promise<number> {
-    const result = await this.dataSource.query(`
+    const result = await this.dataSource.query(
+      `
       SELECT COUNT(*) as count
       FROM payment_transactions
       WHERE status = 'FAILED'
       AND created_at >= $1 AND created_at <= $2
-    `, [fromDate, toDate]);
+    `,
+      [fromDate, toDate],
+    );
     return Number(result[0].count);
   }
 
   private async getFailedProviderPaymentsAmount(fromDate: Date, toDate: Date): Promise<number> {
-    const result = await this.dataSource.query(`
+    const result = await this.dataSource.query(
+      `
       SELECT COALESCE(SUM(amount), 0) as total
       FROM payment_transactions
       WHERE status = 'FAILED'
       AND created_at >= $1 AND created_at <= $2
-    `, [fromDate, toDate]);
+    `,
+      [fromDate, toDate],
+    );
     return Number(result[0].total);
   }
 
@@ -445,10 +494,7 @@ export class ReconciliationService {
     ]);
 
     // Build CSV string
-    const csvContent = [
-      headers.join(','),
-      ...rows.map((row) => row.join(',')),
-    ].join('\n');
+    const csvContent = [headers.join(','), ...rows.map((row) => row.join(','))].join('\n');
 
     return Buffer.from(csvContent, 'utf-8');
   }

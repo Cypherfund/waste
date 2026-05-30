@@ -123,7 +123,7 @@ describe('MarketerService', () => {
 
     it('should throw ConflictException if email already exists', async () => {
       userRepo.findOne
-        .mockResolvedValueOnce(null)     // phone check → not found
+        .mockResolvedValueOnce(null) // phone check → not found
         .mockResolvedValueOnce(mockUser); // email check → found
 
       await expect(
@@ -136,7 +136,7 @@ describe('MarketerService', () => {
 
     it('should create user with MARKETER role and an active profile', async () => {
       userRepo.findOne.mockResolvedValue(null); // no conflicts
-      schemeRepo.find.mockResolvedValue([]);    // no auto-assigned schemes
+      schemeRepo.find.mockResolvedValue([]); // no auto-assigned schemes
 
       const result = await service.createMarketer(
         { name: 'Alice', phone: '+237670000002', password: 'Pass123!' },
@@ -183,9 +183,7 @@ describe('MarketerService', () => {
     it('should throw NotFoundException if marketer not found', async () => {
       profileRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.suspendMarketer('nonexistent')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.suspendMarketer('nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -207,9 +205,7 @@ describe('MarketerService', () => {
     it('should throw NotFoundException if marketer not found', async () => {
       profileRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.activateMarketer('nonexistent')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.activateMarketer('nonexistent')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -217,9 +213,7 @@ describe('MarketerService', () => {
     it('should throw NotFoundException if profile not found', async () => {
       profileRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.findByUserId('nonexistent')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.findByUserId('nonexistent')).rejects.toThrow(NotFoundException);
     });
 
     it('should return profile when found', async () => {

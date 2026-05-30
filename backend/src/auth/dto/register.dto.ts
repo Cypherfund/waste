@@ -18,7 +18,10 @@ export class RegisterDto {
   @MaxLength(100)
   name: string;
 
-  @ApiProperty({ example: '+237670000000', description: 'International phone number with country prefix' })
+  @ApiProperty({
+    example: '+237670000000',
+    description: 'International phone number with country prefix',
+  })
   @IsString()
   @Matches(/^\+[0-9]{7,15}$/, {
     message: 'Phone must be a valid international number starting with +',
@@ -43,13 +46,19 @@ export class RegisterDto {
   })
   role: UserRole;
 
-  @ApiPropertyOptional({ example: 'cmr', description: 'Country code selected during registration (e.g. cmr, ken)' })
+  @ApiPropertyOptional({
+    example: 'cmr',
+    description: 'Country code selected during registration (e.g. cmr, ken)',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(10)
   countryCode?: string;
 
-  @ApiPropertyOptional({ example: 'abc123def456', description: 'Referral token from lead invitation' })
+  @ApiPropertyOptional({
+    example: 'abc123def456',
+    description: 'Referral token from lead invitation',
+  })
   @IsOptional()
   @IsString()
   referralToken?: string;

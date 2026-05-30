@@ -31,7 +31,9 @@ describe('FilesService', () => {
 
     fileRepo = {
       create: jest.fn((dto) => ({ id: 'file-1', ...dto })),
-      save: jest.fn((entity) => Promise.resolve({ ...entity, id: entity.id ?? 'file-1', createdAt: new Date() })),
+      save: jest.fn((entity) =>
+        Promise.resolve({ ...entity, id: entity.id ?? 'file-1', createdAt: new Date() }),
+      ),
       findOne: jest.fn().mockResolvedValue(null),
       find: jest.fn().mockResolvedValue([]),
     };
@@ -93,26 +95,20 @@ describe('FilesService', () => {
     it('should reject invalid file type (PDF)', async () => {
       const file = mockFile({ mimetype: 'application/pdf', originalname: 'doc.pdf' });
 
-      await expect(service.upload(file, 'user-1')).rejects.toThrow(
-        'Invalid file type',
-      );
+      await expect(service.upload(file, 'user-1')).rejects.toThrow('Invalid file type');
       expect(storageProvider.upload).not.toHaveBeenCalled();
     });
 
     it('should reject invalid file type (GIF)', async () => {
       const file = mockFile({ mimetype: 'image/gif', originalname: 'anim.gif' });
 
-      await expect(service.upload(file, 'user-1')).rejects.toThrow(
-        'Invalid file type',
-      );
+      await expect(service.upload(file, 'user-1')).rejects.toThrow('Invalid file type');
     });
 
     it('should reject file exceeding 5MB', async () => {
       const file = mockFile({ size: 6 * 1024 * 1024 });
 
-      await expect(service.upload(file, 'user-1')).rejects.toThrow(
-        'File too large',
-      );
+      await expect(service.upload(file, 'user-1')).rejects.toThrow('File too large');
       expect(storageProvider.upload).not.toHaveBeenCalled();
     });
 
@@ -120,9 +116,7 @@ describe('FilesService', () => {
       storageProvider.upload.mockRejectedValue(new Error('IMGBB upload failed: 500'));
       const file = mockFile();
 
-      await expect(service.upload(file, 'user-1')).rejects.toThrow(
-        'IMGBB upload failed',
-      );
+      await expect(service.upload(file, 'user-1')).rejects.toThrow('IMGBB upload failed');
     });
 
     it('should store deleteUrl as null when provider does not return one', async () => {
@@ -133,9 +127,7 @@ describe('FilesService', () => {
 
       await service.upload(file, 'user-1');
 
-      expect(fileRepo.create).toHaveBeenCalledWith(
-        expect.objectContaining({ deleteUrl: null }),
-      );
+      expect(fileRepo.create).toHaveBeenCalledWith(expect.objectContaining({ deleteUrl: null }));
     });
   });
 
@@ -153,9 +145,7 @@ describe('FilesService', () => {
       await service.markUsed('https://i.ibb.co/abc123/test.jpg');
 
       expect(existing.isUsed).toBe(true);
-      expect(fileRepo.save).toHaveBeenCalledWith(
-        expect.objectContaining({ isUsed: true }),
-      );
+      expect(fileRepo.save).toHaveBeenCalledWith(expect.objectContaining({ isUsed: true }));
     });
 
     it('should gracefully handle untracked URL (legacy)', async () => {

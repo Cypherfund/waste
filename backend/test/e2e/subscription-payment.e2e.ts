@@ -58,10 +58,9 @@ describe('E2E: Subscription Payment Flow', () => {
 
   const cleanupPlans = async () => {
     try {
-      await dataSource.query(
-        `UPDATE "subscription_plans" SET "is_active" = false WHERE id = $1`,
-        [planId],
-      );
+      await dataSource.query(`UPDATE "subscription_plans" SET "is_active" = false WHERE id = $1`, [
+        planId,
+      ]);
     } catch (_) {}
   };
 
@@ -429,9 +428,7 @@ describe('E2E: Subscription Payment Flow', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
 
-      const subRows = res.body.data.filter(
-        (r: any) => r.paymentSource === 'SUBSCRIPTION_PAYMENT',
-      );
+      const subRows = res.body.data.filter((r: any) => r.paymentSource === 'SUBSCRIPTION_PAYMENT');
       expect(subRows.length).toBeGreaterThanOrEqual(1);
       expect(subRows[0].subscriptionId).toBeDefined();
       expect(subRows[0].jobId).toBeNull();
@@ -449,9 +446,7 @@ describe('E2E: Subscription Payment Flow', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
 
-      const subRow = res.body.data.find(
-        (r: any) => r.paymentSource === 'SUBSCRIPTION_PAYMENT',
-      );
+      const subRow = res.body.data.find((r: any) => r.paymentSource === 'SUBSCRIPTION_PAYMENT');
       expect(subRow.planName).toBe('Sub-Payment Test Plan');
     });
 
@@ -474,8 +469,7 @@ describe('E2E: Subscription Payment Flow', () => {
 
       const verifiedRows = res.body.data.filter(
         (r: any) =>
-          r.paymentSource === 'SUBSCRIPTION_PAYMENT' &&
-          r.subscriptionId === subRes.body.id,
+          r.paymentSource === 'SUBSCRIPTION_PAYMENT' && r.subscriptionId === subRes.body.id,
       );
       expect(verifiedRows).toHaveLength(0);
     });

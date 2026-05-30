@@ -46,9 +46,7 @@ export class AssignmentScheduler {
       try {
         await this.assignmentService.handleTimeout(job.id);
       } catch (error) {
-        this.logger.error(
-          `Failed to handle timeout for job ${job.id}: ${error.message}`,
-        );
+        this.logger.error(`Failed to handle timeout for job ${job.id}: ${error.message}`);
       }
     }
   }

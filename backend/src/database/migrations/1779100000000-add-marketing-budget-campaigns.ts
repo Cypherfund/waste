@@ -25,9 +25,13 @@ export class AddMarketingBudgetCampaigns1779100000000 implements MigrationInterf
         CONSTRAINT "fk_budget_period_created_by" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL
       )
     `);
-    
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "idx_budget_periods_status" ON "marketing_budget_periods"("status")`);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "idx_budget_periods_dates" ON "marketing_budget_periods"("start_date", "end_date")`);
+
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "idx_budget_periods_status" ON "marketing_budget_periods"("status")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "idx_budget_periods_dates" ON "marketing_budget_periods"("start_date", "end_date")`,
+    );
 
     // 2. Create marketing_campaigns table
     await queryRunner.query(`
@@ -53,10 +57,16 @@ export class AddMarketingBudgetCampaigns1779100000000 implements MigrationInterf
         CONSTRAINT "fk_campaign_created_by" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL
       )
     `);
-    
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "idx_campaigns_budget_period" ON "marketing_campaigns"("budget_period_id")`);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "idx_campaigns_status" ON "marketing_campaigns"("status")`);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "idx_campaigns_dates" ON "marketing_campaigns"("start_date", "end_date")`);
+
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "idx_campaigns_budget_period" ON "marketing_campaigns"("budget_period_id")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "idx_campaigns_status" ON "marketing_campaigns"("status")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "idx_campaigns_dates" ON "marketing_campaigns"("start_date", "end_date")`,
+    );
 
     // 3. Create campaign_marketer_assignments table
     await queryRunner.query(`
@@ -74,10 +84,16 @@ export class AddMarketingBudgetCampaigns1779100000000 implements MigrationInterf
         UNIQUE("campaign_id", "marketer_profile_id")
       )
     `);
-    
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "idx_cma_campaign" ON "campaign_marketer_assignments"("campaign_id")`);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "idx_cma_marketer" ON "campaign_marketer_assignments"("marketer_profile_id")`);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "idx_cma_active" ON "campaign_marketer_assignments"("campaign_id", "is_active") WHERE "is_active" = true`);
+
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "idx_cma_campaign" ON "campaign_marketer_assignments"("campaign_id")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "idx_cma_marketer" ON "campaign_marketer_assignments"("marketer_profile_id")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "idx_cma_active" ON "campaign_marketer_assignments"("campaign_id", "is_active") WHERE "is_active" = true`,
+    );
 
     // 4. Create campaign_commission_schemes table (optional)
     await queryRunner.query(`
@@ -92,9 +108,13 @@ export class AddMarketingBudgetCampaigns1779100000000 implements MigrationInterf
         UNIQUE("campaign_id", "scheme_id")
       )
     `);
-    
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "idx_ccs_campaign" ON "campaign_commission_schemes"("campaign_id")`);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "idx_ccs_scheme" ON "campaign_commission_schemes"("scheme_id")`);
+
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "idx_ccs_campaign" ON "campaign_commission_schemes"("campaign_id")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "idx_ccs_scheme" ON "campaign_commission_schemes"("scheme_id")`,
+    );
 
     // 5. Create budget_transactions table
     await queryRunner.query(`
@@ -119,12 +139,22 @@ export class AddMarketingBudgetCampaigns1779100000000 implements MigrationInterf
         CONSTRAINT "fk_bt_created_by" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL
       )
     `);
-    
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "idx_bt_budget_period" ON "budget_transactions"("budget_period_id")`);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "idx_bt_campaign" ON "budget_transactions"("campaign_id")`);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "idx_bt_commission" ON "budget_transactions"("commission_transaction_id")`);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "idx_bt_type" ON "budget_transactions"("type")`);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "idx_bt_created_at" ON "budget_transactions"("created_at")`);
+
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "idx_bt_budget_period" ON "budget_transactions"("budget_period_id")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "idx_bt_campaign" ON "budget_transactions"("campaign_id")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "idx_bt_commission" ON "budget_transactions"("commission_transaction_id")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "idx_bt_type" ON "budget_transactions"("type")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "idx_bt_created_at" ON "budget_transactions"("created_at")`,
+    );
 
     // 6. Add campaign_id to leads table
     await queryRunner.query(`
@@ -132,7 +162,9 @@ export class AddMarketingBudgetCampaigns1779100000000 implements MigrationInterf
       ADD COLUMN IF NOT EXISTS "campaign_id" uuid,
       ADD CONSTRAINT "fk_lead_campaign" FOREIGN KEY ("campaign_id") REFERENCES "marketing_campaigns"("id") ON DELETE SET NULL
     `);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "idx_leads_campaign" ON "leads"("campaign_id")`);
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "idx_leads_campaign" ON "leads"("campaign_id")`,
+    );
 
     // 7. Add campaign_id and budget_status to commission_transactions table
     await queryRunner.query(`
@@ -141,15 +173,25 @@ export class AddMarketingBudgetCampaigns1779100000000 implements MigrationInterf
       ADD COLUMN IF NOT EXISTS "budget_status" varchar(20) NOT NULL DEFAULT 'NOT_RESERVED' CHECK (budget_status IN ('NOT_RESERVED', 'RESERVED', 'RELEASED', 'SPENT')),
       ADD CONSTRAINT "fk_commission_campaign" FOREIGN KEY ("campaign_id") REFERENCES "marketing_campaigns"("id") ON DELETE SET NULL
     `);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "idx_commissions_campaign" ON "commission_transactions"("campaign_id")`);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "idx_commissions_budget_status" ON "commission_transactions"("budget_status")`);
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "idx_commissions_campaign" ON "commission_transactions"("campaign_id")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "idx_commissions_budget_status" ON "commission_transactions"("budget_status")`,
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     // Remove foreign keys and columns in reverse order
-    await queryRunner.query(`ALTER TABLE "commission_transactions" DROP CONSTRAINT IF EXISTS "fk_commission_campaign"`);
-    await queryRunner.query(`ALTER TABLE "commission_transactions" DROP COLUMN IF EXISTS "budget_status"`);
-    await queryRunner.query(`ALTER TABLE "commission_transactions" DROP COLUMN IF EXISTS "campaign_id"`);
+    await queryRunner.query(
+      `ALTER TABLE "commission_transactions" DROP CONSTRAINT IF EXISTS "fk_commission_campaign"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "commission_transactions" DROP COLUMN IF EXISTS "budget_status"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "commission_transactions" DROP COLUMN IF EXISTS "campaign_id"`,
+    );
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_commissions_budget_status"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_commissions_campaign"`);
 

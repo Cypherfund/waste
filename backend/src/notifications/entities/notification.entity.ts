@@ -8,7 +8,10 @@ import {
   Index,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
-import { NotificationChannel, NotificationStatus } from '../../common/enums/notification-channel.enum';
+import {
+  NotificationChannel,
+  NotificationStatus,
+} from '../../common/enums/notification-channel.enum';
 
 @Entity('notifications')
 export class Notification {

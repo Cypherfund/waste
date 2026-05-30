@@ -14,10 +14,7 @@ export class FilesCleanupScheduler {
 
   @Cron(CronExpression.EVERY_DAY_AT_3AM)
   async handleCleanup(): Promise<void> {
-    const thresholdHours = await this.systemConfigService.getNumber(
-      'files.cleanup_hours',
-      24,
-    );
+    const thresholdHours = await this.systemConfigService.getNumber('files.cleanup_hours', 24);
 
     this.logger.log(`Starting file cleanup (threshold: ${thresholdHours}h)`);
 

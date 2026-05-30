@@ -1,6 +1,19 @@
-import { Controller, Get, Post, Query, UseGuards, HttpCode, HttpStatus, StreamableFile } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Query,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+  StreamableFile,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
-import { ReconciliationService, ReconciliationMetrics, UnreconciledItem } from '../services/reconciliation.service';
+import {
+  ReconciliationService,
+  ReconciliationMetrics,
+  UnreconciledItem,
+} from '../services/reconciliation.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -37,10 +50,7 @@ export class ReconciliationController {
   @ApiOperation({ summary: 'Calculate and return daily reconciliation metrics' })
   @ApiQuery({ name: 'date', required: true, description: 'Date (YYYY-MM-DD)' })
   @ApiResponse({ status: 200, description: 'Daily reconciliation metrics calculated successfully' })
-  async getDailyMetrics(
-    @Query('date') date: string,
-    @CurrentUser() user: JwtPayload,
-  ) {
+  async getDailyMetrics(@Query('date') date: string, @CurrentUser() user: JwtPayload) {
     const metrics = await this.reconciliationService.calculateDailySummary(date);
     return {
       success: true,
@@ -75,10 +85,7 @@ export class ReconciliationController {
   @ApiOperation({ summary: 'Save daily reconciliation summary to database' })
   @ApiQuery({ name: 'date', required: true, description: 'Date (YYYY-MM-DD)' })
   @ApiResponse({ status: 200, description: 'Daily reconciliation summary saved successfully' })
-  async saveDailySummary(
-    @Query('date') date: string,
-    @CurrentUser() user: JwtPayload,
-  ) {
+  async saveDailySummary(@Query('date') date: string, @CurrentUser() user: JwtPayload) {
     const summary = await this.reconciliationService.saveDailySummary(date);
     return {
       success: true,

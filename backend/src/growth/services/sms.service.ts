@@ -46,7 +46,7 @@ export class SMSService {
     const sender = this.configService.get<string>('AT_SENDER_ID', 'KmerTrash');
 
     if (!username || !apiKey) {
-      throw new Error('Africa\'s Talking credentials not configured');
+      throw new Error("Africa's Talking credentials not configured");
     }
 
     try {
@@ -54,8 +54,8 @@ export class SMSService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'Accept': 'application/json',
-          'apiKey': apiKey,
+          Accept: 'application/json',
+          apiKey: apiKey,
         },
         body: new URLSearchParams({
           username,
@@ -77,7 +77,7 @@ export class SMSService {
 
       throw new Error('Failed to send SMS: ' + JSON.stringify(data));
     } catch (error) {
-      this.logger.error('Africa\'s Talking SMS failed:', error);
+      this.logger.error("Africa's Talking SMS failed:", error);
       throw error;
     }
   }
@@ -98,7 +98,7 @@ export class SMSService {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
-            'Authorization': 'Basic ' + Buffer.from(`${accountSid}:${authToken}`).toString('base64'),
+            Authorization: 'Basic ' + Buffer.from(`${accountSid}:${authToken}`).toString('base64'),
           },
           body: new URLSearchParams({
             To: to,

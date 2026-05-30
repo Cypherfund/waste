@@ -34,11 +34,7 @@ export class SystemConfigService {
     return this.configRepo.find({ order: { category: 'ASC', key: 'ASC' } });
   }
 
-  async upsert(
-    key: string,
-    value: string,
-    updatedBy: string,
-  ): Promise<SystemConfig> {
+  async upsert(key: string, value: string, updatedBy: string): Promise<SystemConfig> {
     let config = await this.configRepo.findOne({ where: { key } });
     if (config) {
       config.value = value;

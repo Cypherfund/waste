@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan } from 'typeorm';
 import { OnEvent } from '@nestjs/event-emitter';
@@ -80,8 +75,7 @@ export class FraudService {
       5,
     );
 
-    const durationMinutes =
-      (job.completedAt.getTime() - job.startedAt.getTime()) / (1000 * 60);
+    const durationMinutes = (job.completedAt.getTime() - job.startedAt.getTime()) / (1000 * 60);
 
     if (durationMinutes >= thresholdMinutes) return null;
 
@@ -102,10 +96,7 @@ export class FraudService {
   /**
    * GPS_MISMATCH: flag if collector completion coords are too far from job location.
    */
-  async checkGpsMismatch(
-    job: Job,
-    proof: Proof | null,
-  ): Promise<FraudFlag | null> {
+  async checkGpsMismatch(job: Job, proof: Proof | null): Promise<FraudFlag | null> {
     // Skip safely if no coordinates available
     if (!proof || proof.collectorLat == null || proof.collectorLng == null) return null;
     if (job.locationLat == null || job.locationLng == null) return null;
@@ -147,10 +138,7 @@ export class FraudService {
    * IMAGE_REUSE: flag if proof imageUrl was used in another proof recently.
    * MVP: simple exact URL match in recent proofs (not this job).
    */
-  async checkImageReuse(
-    proof: Proof | null,
-    collectorId: string,
-  ): Promise<FraudFlag | null> {
+  async checkImageReuse(proof: Proof | null, collectorId: string): Promise<FraudFlag | null> {
     if (!proof) return null;
 
     const existing = await this.proofRepo
@@ -183,9 +171,7 @@ export class FraudService {
    * SUSPICIOUS_PATTERN: flag if collector completes too many jobs in a short window.
    * Default threshold: > 3 completions in 1 hour.
    */
-  async checkSuspiciousPattern(
-    collectorId: string,
-  ): Promise<FraudFlag | null> {
+  async checkSuspiciousPattern(collectorId: string): Promise<FraudFlag | null> {
     const thresholdCount = await this.systemConfigService.getNumber(
       'fraud.suspicious_completions_per_hour',
       3,
@@ -206,9 +192,7 @@ export class FraudService {
 
     // HIGH if very excessive, MEDIUM otherwise
     const severity =
-      recentJobs.length > thresholdCount * 2
-        ? FraudSeverity.HIGH
-        : FraudSeverity.MEDIUM;
+      recentJobs.length > thresholdCount * 2 ? FraudSeverity.HIGH : FraudSeverity.MEDIUM;
 
     // Use the most recently completed job as the anchor for this flag
     const latestJob = recentJobs[0];
@@ -274,10 +258,7 @@ export class FraudService {
   /**
    * Auto-pause collector by setting isActive = false.
    */
-  private async autoPauseCollector(
-    collectorId: string,
-    flag: FraudFlag,
-  ): Promise<void> {
+  private async autoPauseCollector(collectorId: string, flag: FraudFlag): Promise<void> {
     try {
       await this.usersService.deactivateUser(collectorId);
 
@@ -292,9 +273,7 @@ export class FraudService {
         timestamp: new Date(),
       });
     } catch (err) {
-      this.logger.error(
-        `Failed to auto-pause collector ${collectorId}: ${err.message}`,
-      );
+      this.logger.error(`Failed to auto-pause collector ${collectorId}: ${err.message}`);
     }
   }
 
@@ -325,11 +304,7 @@ export class FraudService {
   /**
    * Review a fraud flag (admin resolution).
    */
-  async reviewFlag(
-    flagId: string,
-    adminId: string,
-    dto: ReviewFraudFlagDto,
-  ): Promise<FraudFlag> {
+  async reviewFlag(flagId: string, adminId: string, dto: ReviewFraudFlagDto): Promise<FraudFlag> {
     const flag = await this.flagRepo.findOne({ where: { id: flagId } });
     if (!flag) throw new NotFoundException('Fraud flag not found');
 
@@ -344,9 +319,7 @@ export class FraudService {
 
     const saved = await this.flagRepo.save(flag);
 
-    this.logger.log(
-      `Fraud flag ${flagId} reviewed as ${dto.resolution} by admin ${adminId}`,
-    );
+    this.logger.log(`Fraud flag ${flagId} reviewed as ${dto.resolution} by admin ${adminId}`);
 
     this.eventEmitter.emit(FraudEvents.FLAG_REVIEWED, {
       flagId: saved.id,
