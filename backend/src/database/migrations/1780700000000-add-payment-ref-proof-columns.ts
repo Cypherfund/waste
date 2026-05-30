@@ -17,17 +17,18 @@ export class AddPaymentRefProofColumns1780700000000 implements MigrationInterfac
     `);
 
     // Migrate existing data from failureReason to paymentRef for wallet top-ups
+    // Use string literal comparison to avoid unsafe enum use
     await queryRunner.query(`
       UPDATE "payment_transactions"
       SET "payment_ref" = "failure_reason"
-      WHERE "type" = 'WALLET_TOPUP' AND "failure_reason" IS NOT NULL
+      WHERE "type"::text = 'WALLET_TOPUP' AND "failure_reason" IS NOT NULL
     `);
 
     // Clear failureReason for wallet top-ups that had payment references
     await queryRunner.query(`
       UPDATE "payment_transactions"
       SET "failure_reason" = NULL
-      WHERE "type" = 'WALLET_TOPUP' AND "payment_ref" IS NOT NULL
+      WHERE "type"::text = 'WALLET_TOPUP' AND "payment_ref" IS NOT NULL
     `);
   }
 

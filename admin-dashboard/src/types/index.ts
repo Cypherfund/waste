@@ -443,3 +443,38 @@ export interface DashboardStats {
   jobsByStatus: Record<string, number>;
   paymentIntegrationEnabled: boolean;
 }
+
+// ─── Reconciliation ─────────────────────────────────────────────
+export interface ReconciliationSummary {
+  id: string;
+  summaryDate: string;
+  integratedProviderPayments: number;
+  manualProviderPayments: number;
+  walletTopups: number;
+  cashCollected: number;
+  collectorEarnings: number;
+  marketerCommissions: number;
+  approvedPayouts: number;
+  walletBalanceLiabilities: number;
+  walletDebits: number;
+  collectorFloatDeductions: number;
+  platformShareCashJobs: number;
+  platformShareCashFirstPickup: number;
+  manualPaymentsPending: number;
+  manualPaymentsPendingAmount: number;
+  failedProviderPayments: number;
+  failedProviderPaymentsAmount: number;
+  unreconciledItems: number;
+  notes: string | null;
+  createdAt: string;
+}
+
+export interface UnreconciledItem {
+  type: string;
+  description: string;
+  amount: number;
+  entityId: string;
+  entityType: string;
+  date: string;
+  reason: string;
+}

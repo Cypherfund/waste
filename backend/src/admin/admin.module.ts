@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AdminService } from './admin.service';
 import { AdminController } from './admin.controller';
+import { ReconciliationController } from './controllers/reconciliation.controller';
+import { ReconciliationService } from './services/reconciliation.service';
 import { Job } from '../jobs/entities/job.entity';
 import { Proof } from '../jobs/entities/proof.entity';
 import { Dispute } from '../disputes/entities/dispute.entity';
@@ -10,6 +12,7 @@ import { Rating } from '../ratings/entities/rating.entity';
 import { User } from '../users/entities/user.entity';
 import { UserAddress } from '../users/entities/user-address.entity';
 import { SystemCleanupLog } from './entities/system-cleanup-log.entity';
+import { ReconciliationSummary } from './entities/reconciliation-summary.entity';
 import { SystemCleanupService } from './services/system-cleanup.service';
 import { UsersModule } from '../users/users.module';
 import { JobsModule } from '../jobs/jobs.module';
@@ -57,6 +60,7 @@ import { CollectorAvailability } from '../timeslots/entities/collector-availabil
       User,
       UserAddress,
       SystemCleanupLog,
+      ReconciliationSummary,
       FraudFlag,
       PayoutRequest,
       CollectorFloatLedger,
@@ -93,7 +97,7 @@ import { CollectorAvailability } from '../timeslots/entities/collector-availabil
     NotificationsModule,
     SubscriptionsModule,
   ],
-  controllers: [AdminController],
-  providers: [AdminService, SystemCleanupService],
+  controllers: [AdminController, ReconciliationController],
+  providers: [AdminService, SystemCleanupService, ReconciliationService],
 })
 export class AdminModule {}

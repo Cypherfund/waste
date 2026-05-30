@@ -7,7 +7,7 @@ export class AddWalletTopupSupport1780500000000 implements MigrationInterface {
     // ── Add WALLET_TOPUP to transaction_type enum ─────────────────────
     await queryRunner.query(`
       DO $$ BEGIN
-        ALTER TYPE "public"."payment_transactions_type_enum"
+        ALTER TYPE "public"."transaction_type_enum"
         ADD VALUE IF NOT EXISTS 'WALLET_TOPUP';
       EXCEPTION WHEN duplicate_object THEN NULL;
       END $$

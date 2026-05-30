@@ -17,6 +17,8 @@ import {
   PaymentProvider,
   PendingPayment,
   CollectorFloat,
+  ReconciliationSummary,
+  UnreconciledItem,
 } from '../../types';
 
 export const usersApi = {
@@ -316,4 +318,30 @@ export const systemCleanupApi = {
 
   getLog: (id: string) =>
     client.get<any>(`/admin/system-cleanup/logs/${id}`).then((r) => r.data),
+};
+
+export const reconciliationApi = {
+  getSummary: (from: string, to: string) =>
+    client.get<{ success: boolean; data: ReconciliationSummary[] }>('/admin/reconciliation/summary', { params: { from, to } })
+      .then((r) => r.data.data),
+
+  getDailyMetrics: (date: string) =>
+    client.get<{ success: boolean; data: any }>('/admin/reconciliation/daily', { params: { date } })
+      .then((r) => r.data.data),
+
+  getUnreconciled: (from: string, to: string) =>
+    client.get<{ success: boolean; data: UnreconciledItem[] }>('/admin/reconciliation/unreconciled', { params: { from, to } })
+      .then((r) => r.data.data),
+
+  saveDaily: (date: string) =>
+    client.post<{ success: boolean; data: ReconciliationSummary }>('/admin/reconciliation/daily/save', null, { params: { date } })
+      .then((r) => r.data.data),
+
+  exportCsv: async (from: string, to: string) => {
+    const response = await client.get('/admin/reconciliation/export', {
+      params: { from, to },
+      responseType: 'blob',
+    });
+    return response.data;
+  },
 };
