@@ -15,12 +15,12 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
-    "test:e2e": "set DOTENV_CONFIG_PATH=./.env.test jest --config ./test/jest-e2e.json --forceExit",
-    "test:integration": "set DOTENV_CONFIG_PATH=./.env.test jest --config ./test/jest.integration.json --forceExit",
+    "test:e2e": "set DOTENV_CONFIG_PATH=./.env.test&& jest --config ./test/jest-e2e.json --forceExit",
+    "test:integration": "set DOTENV_CONFIG_PATH=./.env.test&& jest --config ./test/jest.integration.json --forceExit",
     "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js",
-    "migration:generate": "set DOTENV_CONFIG_PATH=./.env.test npm run typeorm -- migration:generate -d src/database/data-source.ts",
-    "migration:run": "set DOTENV_CONFIG_PATH=./.env.test npm run typeorm -- migration:run -d src/database/data-source.ts",
-    "migration:revert": "set DOTENV_CONFIG_PATH=./.env.test npm run typeorm -- migration:revert -d src/database/data-source.ts"
+    "migration:generate": "npm run typeorm -- migration:generate -d src/database/data-source.ts",
+    "migration:run": "npm run typeorm -- migration:run -d src/database/data-source.ts",
+    "migration:revert": "npm run typeorm -- migration:revert -d src/database/data-source.ts"
   },
   "dependencies": {
     "@nestjs/axios": "^4.0.1",
