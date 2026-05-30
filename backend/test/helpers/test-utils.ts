@@ -38,14 +38,18 @@ export async function createTestUser(
   return await userRepo.save(user);
 }
 
+let jobCounter = 0;
+
 export async function createTestJob(
   dataSource: DataSource,
   householdId: string,
   overrides: Partial<Job> = {},
 ): Promise<Job> {
   const jobRepo = dataSource.getRepository(Job);
-  // Use a unique date offset based on time to avoid duplicate key constraint
-  const scheduledDate = new Date(Date.now() + Math.random() * 7 * 24 * 60 * 60 * 1000);
+  // Use a counter-based date offset to avoid duplicate key constraint violations
+  const daysOffset = jobCounter++;
+  const scheduledDate = new Date();
+  scheduledDate.setDate(scheduledDate.getDate() + daysOffset);
 
   const job = jobRepo.create({
     householdId,
