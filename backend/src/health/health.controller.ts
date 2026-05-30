@@ -1,4 +1,4 @@
-import { Controller, Get, Inject, Logger, Req } from '@nestjs/common';
+import { Controller, Get, Inject, Logger, Req, HttpException, HttpStatus } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { DataSource } from 'typeorm';
 import Redis from 'ioredis';
@@ -57,13 +57,19 @@ export class HealthController {
       this.logger.warn('Readiness check: redis is down');
     }
 
-    return {
+    const response = {
       status: allUp ? 'ok' : 'degraded',
       database,
       redis,
       timestamp: new Date().toISOString(),
       requestId,
     };
+
+    if (!allUp) {
+      throw new HttpException(response, HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    return response;
   }
 
   @Public()

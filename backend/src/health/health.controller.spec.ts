@@ -3,6 +3,7 @@ import { HealthController } from './health.controller';
 import { DataSource } from 'typeorm';
 import Redis from 'ioredis';
 import { REDIS_CLIENT } from '../redis/redis.provider';
+import { HttpException } from '@nestjs/common';
 
 describe('HealthController', () => {
   let controller: HealthController;
@@ -123,11 +124,20 @@ describe('HealthController', () => {
         },
       };
 
-      const result = await controller.readiness(mockRequest as any);
-
-      expect(result.status).toBe('degraded');
-      expect(result.database).toBe('down');
-      expect(result.redis).toBe('ok');
+      await expect(controller.readiness(mockRequest as any)).rejects.toThrow(HttpException);
+      
+      try {
+        await controller.readiness(mockRequest as any);
+      } catch (error) {
+        expect(error.status).toBe(503);
+        expect(error.response).toEqual({
+          status: 'degraded',
+          database: 'down',
+          redis: 'ok',
+          timestamp: expect.any(String),
+          requestId: 'test-request-id',
+        });
+      }
     });
 
     it('should return degraded status when redis fails', async () => {
@@ -138,11 +148,20 @@ describe('HealthController', () => {
         },
       };
 
-      const result = await controller.readiness(mockRequest as any);
-
-      expect(result.status).toBe('degraded');
-      expect(result.database).toBe('ok');
-      expect(result.redis).toBe('down');
+      await expect(controller.readiness(mockRequest as any)).rejects.toThrow(HttpException);
+      
+      try {
+        await controller.readiness(mockRequest as any);
+      } catch (error) {
+        expect(error.status).toBe(503);
+        expect(error.response).toEqual({
+          status: 'degraded',
+          database: 'ok',
+          redis: 'down',
+          timestamp: expect.any(String),
+          requestId: 'test-request-id',
+        });
+      }
     });
 
     it('should include requestId in response', async () => {
