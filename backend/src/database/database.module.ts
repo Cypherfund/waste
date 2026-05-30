@@ -14,7 +14,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         username: configService.get<string>('database.username'),
         password: configService.get<string>('database.password'),
         database: configService.get<string>('database.name'),
-        autoLoadEntities: true,
+        autoLoadEntities: configService.get<string>('nodeEnv') !== 'test',
         synchronize: configService.get<string>('nodeEnv') === 'development',
         logging:
           configService.get<string>('nodeEnv') === 'development' ||
@@ -22,7 +22,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
             ? ['error', 'warn']
             : false,
         migrations: [__dirname + '/migrations/*{.ts,.js}'],
-        migrationsRun: false,
+        migrationsRun: configService.get<string>('nodeEnv') === 'test',
         ssl:
           configService.get<string>('nodeEnv') === 'production'
             ? { rejectUnauthorized: false }
