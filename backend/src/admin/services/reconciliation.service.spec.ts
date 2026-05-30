@@ -208,9 +208,9 @@ describe('ReconciliationService', () => {
 
       const mockDuplicateCredits = [
         {
+          payment_transaction_id: 'txn-1',
           user_id: 'user-1',
           amount: '1000',
-          payment_transaction_id: 'txn-1',
           created_at: new Date('2024-01-15'),
           count: '2',
         },

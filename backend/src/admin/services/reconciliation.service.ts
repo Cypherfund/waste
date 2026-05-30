@@ -257,13 +257,18 @@ export class ReconciliationService {
     // 3. Possible duplicate wallet credits (same payment_transaction_id)
     const duplicateCredits = await this.dataSource.query(
       `
-      SELECT wl.user_id, wl.amount, wl.payment_transaction_id, wl.created_at, COUNT(*) as count
+      SELECT
+        wl.payment_transaction_id,
+        MIN(wl.user_id) as user_id,
+        MIN(wl.amount) as amount,
+        MIN(wl.created_at) as created_at,
+        COUNT(*) as count
       FROM wallet_ledger wl
       WHERE wl.direction = 'CREDIT'
       AND wl.type = 'WALLET_TOPUP'
       AND wl.payment_transaction_id IS NOT NULL
       AND wl.created_at >= $1 AND wl.created_at <= $2
-      GROUP BY wl.user_id, wl.amount, wl.payment_transaction_id, wl.created_at
+      GROUP BY wl.payment_transaction_id
       HAVING COUNT(*) > 1
     `,
       [fromDate, toDate],
