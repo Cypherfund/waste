@@ -13,6 +13,11 @@ import { JobStatus } from '../common/enums/job-status.enum';
 import { PaymentStatus } from '../common/enums/payment-status.enum';
 import { PaymentEvents, PaymentFailedPayload } from '../events/events.types';
 import { User } from '../users/entities/user.entity';
+import {
+  WalletLedger,
+  WalletLedgerDirection,
+  WalletLedgerType,
+} from '../wallet/entities/wallet-ledger.entity';
 
 @Injectable()
 export class PaymentEventsService {
@@ -23,6 +28,8 @@ export class PaymentEventsService {
     private readonly jobRepo: Repository<Job>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    @InjectRepository(WalletLedger)
+    private readonly walletLedgerRepo: Repository<WalletLedger>,
     private readonly eventEmitter: EventEmitter2,
     private readonly dataSource: DataSource,
   ) {}
@@ -129,6 +136,9 @@ export class PaymentEventsService {
         return;
       }
 
+      const balanceBefore = Number(user.walletBalance);
+      const balanceAfter = balanceBefore + amount;
+
       // Credit wallet
       await em
         .createQueryBuilder()
@@ -140,6 +150,19 @@ export class PaymentEventsService {
       // Mark transaction as verified
       transaction.status = TransactionStatus.VERIFIED;
       await em.save(transaction);
+
+      // Write wallet ledger entry
+      const ledger = em.getRepository(WalletLedger).create({
+        userId,
+        direction: WalletLedgerDirection.CREDIT,
+        type: WalletLedgerType.WALLET_TOPUP,
+        amount,
+        balanceBefore,
+        balanceAfter,
+        paymentTransactionId: transactionId,
+        reference: `Wallet top-up ${transactionId}`,
+      });
+      await em.getRepository(WalletLedger).save(ledger);
 
       this.logger.log(
         `Wallet credited for user ${userId}: +${amount} XAF, transaction ${transactionId}`,

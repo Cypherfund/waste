@@ -24,6 +24,7 @@ import { EarningsModule } from '../earnings/earnings.module';
 import { WalletModule } from '../wallet/wallet.module';
 import { PayoutRequest } from '../wallet/entities/payout-request.entity';
 import { CollectorFloatLedger } from '../wallet/entities/collector-float-ledger.entity';
+import { WalletLedger } from '../wallet/entities/wallet-ledger.entity';
 import { UserPaymentMethod } from '../wallet/entities/user-payment-method.entity';
 import { CountriesModule } from '../countries/countries.module';
 import { PaymentsModule } from '../payments/payments.module';
@@ -64,6 +65,7 @@ import { CollectorAvailability } from '../timeslots/entities/collector-availabil
       FraudFlag,
       PayoutRequest,
       CollectorFloatLedger,
+      WalletLedger,
       UserPaymentMethod,
       PaymentTransaction,
       Lead,

@@ -13,6 +13,11 @@ import { User } from '../users/entities/user.entity';
 import { PayoutRequest, PayoutRequestStatus } from './entities/payout-request.entity';
 import { CollectorFloatLedger, FloatLedgerType } from './entities/collector-float-ledger.entity';
 import {
+  WalletLedger,
+  WalletLedgerDirection,
+  WalletLedgerType,
+} from './entities/wallet-ledger.entity';
+import {
   UserPaymentMethod,
   UserPaymentMethodUsageType,
 } from './entities/user-payment-method.entity';
@@ -42,6 +47,8 @@ export class WalletService {
     private readonly paymentProviderRepo: Repository<PaymentProviderEntity>,
     @InjectRepository(CollectorFloatLedger)
     private readonly floatLedgerRepo: Repository<CollectorFloatLedger>,
+    @InjectRepository(WalletLedger)
+    private readonly walletLedgerRepo: Repository<WalletLedger>,
     @InjectRepository(UserPaymentMethod)
     private readonly userPaymentMethodRepo: Repository<UserPaymentMethod>,
     @InjectRepository(PaymentTransaction)
@@ -56,12 +63,37 @@ export class WalletService {
   @OnEvent(EarningsEvents.CONFIRMED)
   async onEarningsConfirmed(payload: EarningsConfirmedPayload): Promise<void> {
     await this.dataSource.transaction(async (em) => {
+      // Get current balance before update
+      const user = await em.getRepository(User).findOne({ where: { id: payload.collectorId } });
+      if (!user) {
+        this.logger.error(`User not found for earnings credit: ${payload.collectorId}`);
+        return;
+      }
+
+      const balanceBefore = Number(user.walletBalance);
+      const balanceAfter = balanceBefore + payload.amount;
+
+      // Update wallet balance
       await em
         .createQueryBuilder()
         .update(User)
         .set({ walletBalance: () => `wallet_balance + ${payload.amount}` })
         .where('id = :id', { id: payload.collectorId })
         .execute();
+
+      // Write wallet ledger entry
+      const ledger = em.getRepository(WalletLedger).create({
+        userId: payload.collectorId,
+        direction: WalletLedgerDirection.CREDIT,
+        type: WalletLedgerType.COLLECTOR_EARNING,
+        amount: payload.amount,
+        balanceBefore,
+        balanceAfter,
+        earningId: payload.earningsId,
+        reference: `Earning ${payload.earningsId}`,
+        metadata: { jobId: payload.jobId },
+      });
+      await em.getRepository(WalletLedger).save(ledger);
     });
     this.logger.log(`Wallet credited ${payload.amount} XAF → collector ${payload.collectorId}`);
   }
@@ -304,9 +336,14 @@ export class WalletService {
 
       if (!user) throw new NotFoundException('User not found');
 
-      // Get job to determine amount
+      // Get job to determine amount (with lock to prevent race conditions)
       const { Job } = await import('../jobs/entities/job.entity');
-      const job = await em.getRepository(Job).findOne({ where: { id: jobId } });
+      const job = await em
+        .getRepository(Job)
+        .createQueryBuilder('j')
+        .where('j.id = :id', { id: jobId })
+        .setLock('pessimistic_write')
+        .getOne();
 
       if (!job) throw new NotFoundException('Job not found');
 
@@ -329,6 +366,9 @@ export class WalletService {
       if (balance < amount) {
         throw new BadRequestException('INSUFFICIENT_WALLET_BALANCE');
       }
+
+      const balanceBefore = balance;
+      const balanceAfter = balance - amount;
 
       // Debit wallet
       await em
@@ -357,6 +397,20 @@ export class WalletService {
       });
 
       const saved = await em.getRepository(PaymentTransaction).save(transaction);
+
+      // Write wallet ledger entry
+      const ledger = em.getRepository(WalletLedger).create({
+        userId,
+        direction: WalletLedgerDirection.DEBIT,
+        type: WalletLedgerType.JOB_PAYMENT,
+        amount,
+        balanceBefore,
+        balanceAfter,
+        paymentTransactionId: saved.id,
+        jobId,
+        reference: `Job ${jobId}`,
+      });
+      await em.getRepository(WalletLedger).save(ledger);
 
       // Update job payment fields
       job.paymentStatus = PaymentStatus.VERIFIED;
@@ -411,6 +465,9 @@ export class WalletService {
         throw new BadRequestException('INSUFFICIENT_WALLET_BALANCE');
       }
 
+      const balanceBefore = balance;
+      const balanceAfter = balance - amount;
+
       // Debit wallet
       await em
         .createQueryBuilder()
@@ -439,7 +496,7 @@ export class WalletService {
 
       const saved = await em.getRepository(PaymentTransaction).save(transaction);
 
-      // Activate subscription using shared activation logic
+      // Activate subscription using shared activation logic and get subscription ID
       const { UserSubscription } =
         await import('../subscriptions/entities/user-subscription.entity');
       const { SubscriptionStatus } = await import('../common/enums/subscription-status.enum');
@@ -454,6 +511,8 @@ export class WalletService {
       const startDateStr = now.toISOString().split('T')[0];
       const endDateStr = thirtyDaysLater.toISOString().split('T')[0];
 
+      let savedSubscription: any;
+
       if (existingSubscription) {
         existingSubscription.planId = planId;
         existingSubscription.status = SubscriptionStatus.ACTIVE;
@@ -461,11 +520,7 @@ export class WalletService {
         existingSubscription.startDate = startDateStr;
         existingSubscription.endDate = endDateStr;
         existingSubscription.remainingPickupsThisWeek = plan.pickupsPerWeek;
-
-        const monday = this.getMondayOfWeek(now);
-        existingSubscription.weekResetDate = monday.toISOString().split('T')[0];
-
-        await em.getRepository(UserSubscription).save(existingSubscription);
+        savedSubscription = await em.getRepository(UserSubscription).save(existingSubscription);
       } else {
         const newSubscription = em.getRepository(UserSubscription).create({
           userId,
@@ -475,16 +530,27 @@ export class WalletService {
           startDate: startDateStr,
           endDate: endDateStr,
           remainingPickupsThisWeek: plan.pickupsPerWeek,
-          weekResetDate: this.getMondayOfWeek(now).toISOString().split('T')[0],
         });
-        await em.getRepository(UserSubscription).save(newSubscription);
+        savedSubscription = await em.getRepository(UserSubscription).save(newSubscription);
       }
+
+      // Write wallet ledger entry with subscriptionId
+      const ledger = em.getRepository(WalletLedger).create({
+        userId,
+        direction: WalletLedgerDirection.DEBIT,
+        type: WalletLedgerType.SUBSCRIPTION_PAYMENT,
+        amount,
+        balanceBefore,
+        balanceAfter,
+        paymentTransactionId: saved.id,
+        subscriptionId: savedSubscription.id,
+        reference: `Subscription ${savedSubscription.id}`,
+      });
+      await em.getRepository(WalletLedger).save(ledger);
 
       // Emit subscription paid event for commission and notifications
       this.eventEmitter.emit(SubscriptionEvents.PAID, {
-        subscriptionId:
-          existingSubscription?.id ??
-          (await em.getRepository(UserSubscription).findOne({ where: { userId } }))?.id,
+        subscriptionId: savedSubscription.id,
         userId,
         planId,
         planName: plan.name,

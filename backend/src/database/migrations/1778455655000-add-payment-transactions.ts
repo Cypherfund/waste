@@ -22,7 +22,7 @@ export class AddPaymentTransactions1778455655000 implements MigrationInterface {
 
     // Ensure enum types exist even if table was created by another migration
     const enumExists = await queryRunner.query(
-      `SELECT 1 FROM pg_type WHERE typname = 'transaction_type_enum'`
+      `SELECT 1 FROM pg_type WHERE typname = 'transaction_type_enum'`,
     );
     if (enumExists.length === 0) {
       await queryRunner.query(`
@@ -31,7 +31,7 @@ export class AddPaymentTransactions1778455655000 implements MigrationInterface {
     }
 
     const statusEnumExists = await queryRunner.query(
-      `SELECT 1 FROM pg_type WHERE typname = 'transaction_status_enum'`
+      `SELECT 1 FROM pg_type WHERE typname = 'transaction_status_enum'`,
     );
     if (statusEnumExists.length === 0) {
       await queryRunner.query(`

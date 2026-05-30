@@ -198,8 +198,32 @@ export class ReconciliationService {
     const unreconciled: UnreconciledItem[] = [];
 
     // 1. Provider payments verified but wallet not credited
-    // Note: wallet_transactions table doesn't exist yet, skip this check
-    // TODO: Add this check when wallet_transactions table is implemented
+    const verifiedPaymentsNoLedger = await this.dataSource.query(
+      `
+      SELECT pt.id, pt.user_id, pt.amount, pt.created_at
+      FROM payment_transactions pt
+      WHERE pt.type = 'WALLET_TOPUP'
+      AND pt.status IN ('SUCCESS', 'VERIFIED')
+      AND pt.created_at >= $1 AND pt.created_at <= $2
+      AND NOT EXISTS (
+        SELECT 1 FROM wallet_ledger wl
+        WHERE wl.payment_transaction_id = pt.id
+      )
+    `,
+      [fromDate, toDate],
+    );
+
+    for (const item of verifiedPaymentsNoLedger) {
+      unreconciled.push({
+        type: 'PAYMENT_VERIFIED_NO_LEDGER',
+        description: 'Payment verified but no wallet ledger entry',
+        amount: Number(item.amount),
+        entityId: item.id,
+        entityType: 'payment_transaction',
+        date: item.created_at,
+        reason: 'Wallet top-up verified but wallet ledger entry missing',
+      });
+    }
 
     // 2. Jobs completed with cash but no float deduction
     const cashJobsNoFloat = await this.dataSource.query(
@@ -230,9 +254,37 @@ export class ReconciliationService {
       });
     }
 
-    // 3. Duplicate wallet credits (same amount, same user, same day)
-    // Note: wallet_transactions table doesn't exist yet, skip this check
-    // TODO: Add this check when wallet_transactions table is implemented
+    // 3. Possible duplicate wallet credits (same payment_transaction_id)
+    const duplicateCredits = await this.dataSource.query(
+      `
+      SELECT
+        wl.payment_transaction_id,
+        MIN(wl.user_id) as user_id,
+        MIN(wl.amount) as amount,
+        MIN(wl.created_at) as created_at,
+        COUNT(*) as count
+      FROM wallet_ledger wl
+      WHERE wl.direction = 'CREDIT'
+      AND wl.type = 'WALLET_TOPUP'
+      AND wl.payment_transaction_id IS NOT NULL
+      AND wl.created_at >= $1 AND wl.created_at <= $2
+      GROUP BY wl.payment_transaction_id
+      HAVING COUNT(*) > 1
+    `,
+      [fromDate, toDate],
+    );
+
+    for (const item of duplicateCredits) {
+      unreconciled.push({
+        type: 'POSSIBLE_DUPLICATE_WALLET_CREDITS',
+        description: 'Possible duplicate wallet credit (same payment transaction)',
+        amount: Number(item.amount),
+        entityId: item.payment_transaction_id,
+        entityType: 'payment_transaction',
+        date: item.created_at,
+        reason: `Payment transaction ${item.payment_transaction_id} appears ${item.count} times in wallet ledger`,
+      });
+    }
 
     return unreconciled;
   }
@@ -344,10 +396,17 @@ export class ReconciliationService {
   }
 
   private async getWalletDebits(fromDate: Date, toDate: Date): Promise<number> {
-    // Note: wallet_transactions table doesn't exist yet
-    // TODO: Implement when wallet ledger is added
-    // Return 0 for now to avoid double-counting collector float deductions
-    return 0;
+    // Sum all debit transactions from wallet_ledger
+    const result = await this.dataSource.query(
+      `
+      SELECT COALESCE(SUM(amount), 0) as total
+      FROM wallet_ledger
+      WHERE direction = 'DEBIT'
+      AND created_at >= $1 AND created_at <= $2
+    `,
+      [fromDate, toDate],
+    );
+    return Number(result[0].total);
   }
 
   private async getCollectorFloatDeductions(fromDate: Date, toDate: Date): Promise<number> {

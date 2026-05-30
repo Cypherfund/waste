@@ -34,6 +34,11 @@ import {
   PaymentTransaction,
   TransactionStatus,
 } from '../payments/entities/payment-transaction.entity';
+import {
+  WalletLedger,
+  WalletLedgerDirection,
+  WalletLedgerType,
+} from '../wallet/entities/wallet-ledger.entity';
 import { AdminJobFilterDto } from './dto/admin-job-filter.dto';
 import { ResolveDisputeDto } from '../disputes/dto/resolve-dispute.dto';
 import { ReviewFraudFlagDto } from '../fraud/dto/review-fraud-flag.dto';
@@ -80,6 +85,8 @@ export class AdminService {
     private readonly subRepo: Repository<UserSubscription>,
     @InjectRepository(PaymentTransaction)
     private readonly paymentTransactionRepo: Repository<PaymentTransaction>,
+    @InjectRepository(WalletLedger)
+    private readonly walletLedgerRepo: Repository<WalletLedger>,
   ) {}
 
   // ─── USERS ────────────────────────────────────────────────────
@@ -275,7 +282,7 @@ export class AdminService {
         .createQueryBuilder('t')
         .where('t.id = :id', { id: transactionId })
         .setLock('pessimistic_write')
-        .leftJoinAndSelect('t.user', 'user')
+        .innerJoinAndSelect('t.user', 'user')
         .getOne();
 
       if (!transaction) {
@@ -292,6 +299,15 @@ export class AdminService {
         throw new BadRequestException('This is not a wallet top-up transaction');
       }
 
+      // Get current balance before update
+      const user = await em.getRepository(User).findOne({ where: { id: transaction.userId } });
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      const balanceBefore = Number(user.walletBalance);
+      const balanceAfter = balanceBefore + transaction.amount;
+
       // Credit wallet balance and update transaction status in one transaction
       await em
         .createQueryBuilder()
@@ -302,6 +318,20 @@ export class AdminService {
 
       transaction.status = TransactionStatus.VERIFIED;
       await em.save(transaction);
+
+      // Write wallet ledger entry
+      const ledger = em.getRepository(WalletLedger).create({
+        userId: transaction.userId,
+        direction: WalletLedgerDirection.CREDIT,
+        type: WalletLedgerType.WALLET_TOPUP,
+        amount: transaction.amount,
+        balanceBefore,
+        balanceAfter,
+        paymentTransactionId: transactionId,
+        reference: `Wallet top-up ${transactionId}`,
+        createdBy: adminId,
+      });
+      await em.getRepository(WalletLedger).save(ledger);
 
       this.logger.log(
         `Admin ${adminId} approved wallet top-up ${transactionId}, credited ${transaction.amount} XAF to user ${transaction.userId}`,

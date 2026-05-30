@@ -131,8 +131,12 @@ describe('Commission Engine — Integration Tests', () => {
 
     // Create budget period + campaign via DB (required for commission approval flow)
     const today = new Date();
-    const startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-    const endDate = new Date(today.getFullYear(), today.getMonth() + 12, 0).toISOString().split('T')[0];
+    const startDate = new Date(today.getFullYear(), today.getMonth(), 1)
+      .toISOString()
+      .split('T')[0];
+    const endDate = new Date(today.getFullYear(), today.getMonth() + 12, 0)
+      .toISOString()
+      .split('T')[0];
 
     const [bp] = await dataSource.query(
       `INSERT INTO marketing_budget_periods (name, start_date, end_date, total_budget, committed_amount, spent_amount, status, currency)

@@ -159,13 +159,75 @@ describe('ReconciliationService', () => {
         },
       ];
 
-      dataSource.query.mockResolvedValue(mockCashJobs);
+      dataSource.query.mockImplementation((query: string) => {
+        if (query.includes('jobs') && query.includes('cash_to_collect_amount')) {
+          return Promise.resolve(mockCashJobs);
+        }
+        return Promise.resolve([]);
+      });
 
       const unreconciled = await service.getUnreconciledItems(fromDate, toDate);
 
       expect(unreconciled).toHaveLength(1);
       expect(unreconciled[0].type).toBe('CASH_JOB_NO_FLOAT_DEDUCTION');
       expect(unreconciled[0].entityId).toBe('job-1');
+      expect(unreconciled[0].amount).toBe(1000);
+    });
+
+    it('should return payments verified without wallet ledger entry', async () => {
+      const fromDate = new Date('2024-01-01');
+      const toDate = new Date('2024-01-31');
+
+      const mockPaymentsNoLedger = [
+        {
+          id: 'payment-1',
+          user_id: 'user-1',
+          amount: '1000',
+          created_at: new Date('2024-01-15'),
+        },
+      ];
+
+      dataSource.query.mockImplementation((query: string) => {
+        if (query.includes('payment_transactions') && query.includes('wallet_ledger')) {
+          return Promise.resolve(mockPaymentsNoLedger);
+        }
+        return Promise.resolve([]);
+      });
+
+      const unreconciled = await service.getUnreconciledItems(fromDate, toDate);
+
+      expect(unreconciled).toHaveLength(1);
+      expect(unreconciled[0].type).toBe('PAYMENT_VERIFIED_NO_LEDGER');
+      expect(unreconciled[0].entityId).toBe('payment-1');
+      expect(unreconciled[0].amount).toBe(1000);
+    });
+
+    it('should return possible duplicate wallet credits', async () => {
+      const fromDate = new Date('2024-01-01');
+      const toDate = new Date('2024-01-31');
+
+      const mockDuplicateCredits = [
+        {
+          payment_transaction_id: 'txn-1',
+          user_id: 'user-1',
+          amount: '1000',
+          created_at: new Date('2024-01-15'),
+          count: '2',
+        },
+      ];
+
+      dataSource.query.mockImplementation((query: string) => {
+        if (query.includes('wallet_ledger') && query.includes('GROUP BY')) {
+          return Promise.resolve(mockDuplicateCredits);
+        }
+        return Promise.resolve([]);
+      });
+
+      const unreconciled = await service.getUnreconciledItems(fromDate, toDate);
+
+      expect(unreconciled).toHaveLength(1);
+      expect(unreconciled[0].type).toBe('POSSIBLE_DUPLICATE_WALLET_CREDITS');
+      expect(unreconciled[0].entityId).toBe('txn-1');
       expect(unreconciled[0].amount).toBe(1000);
     });
 
@@ -182,14 +244,34 @@ describe('ReconciliationService', () => {
   });
 
   describe('walletDebits', () => {
-    it('should return 0 since wallet_transactions table does not exist', async () => {
+    it('should query wallet_ledger table for debit transactions', async () => {
       const fromDate = new Date('2024-01-01');
       const toDate = new Date('2024-01-31');
+
+      dataSource.query.mockResolvedValue([{ total: '1500' }]);
+
+      const result = await (service as any).getWalletDebits(fromDate, toDate);
+
+      expect(result).toBe(1500);
+      expect(dataSource.query).toHaveBeenCalledWith(
+        expect.stringContaining('wallet_ledger'),
+        expect.arrayContaining([fromDate, toDate]),
+      );
+      expect(dataSource.query).toHaveBeenCalledWith(
+        expect.stringContaining("direction = 'DEBIT'"),
+        expect.any(Array),
+      );
+    });
+
+    it('should return 0 when no debit transactions exist', async () => {
+      const fromDate = new Date('2024-01-01');
+      const toDate = new Date('2024-01-31');
+
+      dataSource.query.mockResolvedValue([{ total: '0' }]);
 
       const result = await (service as any).getWalletDebits(fromDate, toDate);
 
       expect(result).toBe(0);
-      expect(dataSource.query).not.toHaveBeenCalled();
     });
   });
 
