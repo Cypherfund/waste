@@ -189,8 +189,8 @@ describe('E2E: Cash on First Pickup Flow', () => {
 
   describe('POST /subscriptions/subscribe-cash-first-pickup', () => {
     it('should create subscription and linked job in one transaction', async () => {
-      // Use a fixed date far in the future to pass 24-hour advance booking validation
-      const scheduledDate = '2026-06-01';
+      // Use a date 2 days in the future to pass 24-hour advance booking validation
+      const scheduledDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
       const response = await request(httpServer)
         .post('/api/v1/subscriptions/subscribe-cash-first-pickup')
@@ -232,7 +232,7 @@ describe('E2E: Cash on First Pickup Flow', () => {
     });
 
     it('should reject if user already has PENDING_PAYMENT subscription', async () => {
-      const scheduledDate = '2026-06-01';
+      const scheduledDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
       // Create first subscription
       await request(httpServer)
@@ -269,7 +269,7 @@ describe('E2E: Cash on First Pickup Flow', () => {
         [householdId, planId],
       );
 
-      const scheduledDate = '2026-06-01';
+      const scheduledDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
       const response = await request(httpServer)
         .post('/api/v1/subscriptions/subscribe-cash-first-pickup')
@@ -286,11 +286,12 @@ describe('E2E: Cash on First Pickup Flow', () => {
     });
 
     it('should require authentication', async () => {
+      const scheduledDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       const response = await request(httpServer)
         .post('/api/v1/subscriptions/subscribe-cash-first-pickup')
         .send({
           planId,
-          scheduledDate: '2025-01-15',
+          scheduledDate,
           scheduledTime: '10:00',
           locationAddress: '123 Test Street',
         });
@@ -304,7 +305,7 @@ describe('E2E: Cash on First Pickup Flow', () => {
     let jobId: string;
 
     beforeEach(async () => {
-      const scheduledDate = '2026-06-01';
+      const scheduledDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
       const response = await request(httpServer)
         .post('/api/v1/subscriptions/subscribe-cash-first-pickup')
@@ -466,7 +467,7 @@ describe('E2E: Cash on First Pickup Flow', () => {
     let jobId: string;
 
     beforeEach(async () => {
-      const scheduledDate = '2026-06-01';
+      const scheduledDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
       const response = await request(httpServer)
         .post('/api/v1/subscriptions/subscribe-cash-first-pickup')
@@ -547,7 +548,7 @@ describe('E2E: Cash on First Pickup Flow', () => {
     let jobId: string;
 
     beforeEach(async () => {
-      const scheduledDate = '2026-06-01';
+      const scheduledDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
       const response = await request(httpServer)
         .post('/api/v1/subscriptions/subscribe-cash-first-pickup')
@@ -611,7 +612,7 @@ describe('E2E: Cash on First Pickup Flow', () => {
     let jobId: string;
 
     beforeEach(async () => {
-      const scheduledDate = '2026-06-01';
+      const scheduledDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
       const response = await request(httpServer)
         .post('/api/v1/subscriptions/subscribe-cash-first-pickup')

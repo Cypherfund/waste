@@ -128,16 +128,21 @@ describe('Commission Engine — Integration Tests', () => {
     marketerToken = await loginAndGetToken(baseUrl, '+237611000002', 'Marketer123!');
 
     // Create budget period + campaign via DB (required for commission approval flow)
+    const today = new Date();
+    const startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+    const endDate = new Date(today.getFullYear(), today.getMonth() + 12, 0).toISOString().split('T')[0];
+
     const [bp] = await dataSource.query(
-      `INSERT INTO marketing_budget_periods (name, start_date, end_date, total_budget, remaining_amount, committed_amount, spent_amount, status, currency)
-       VALUES ('Q1 2026', '2026-01-01', '2026-12-31', 100000, 100000, 0, 0, 'ACTIVE', 'XAF') RETURNING id`,
+      `INSERT INTO marketing_budget_periods (name, start_date, end_date, total_budget, committed_amount, spent_amount, status, currency)
+       VALUES ('Test Period', $1, $2, 100000, 0, 0, 'ACTIVE', 'XAF') RETURNING id`,
+      [startDate, endDate],
     );
     budgetPeriodId = bp.id;
 
     const [camp] = await dataSource.query(
       `INSERT INTO marketing_campaigns (name, budget_period_id, start_date, end_date, budget_amount, committed_amount, spent_amount, status)
-       VALUES ('Q1 Campaign', $1, '2026-01-01', '2026-12-31', 50000, 0, 0, 'ACTIVE') RETURNING id`,
-      [budgetPeriodId],
+       VALUES ('Test Campaign', $1, $2, $3, 50000, 0, 0, 'ACTIVE') RETURNING id`,
+      [budgetPeriodId, startDate, endDate],
     );
     campaignId = camp.id;
 

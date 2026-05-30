@@ -69,6 +69,18 @@ beforeAll(async () => {
     'collector_float_ledger',
     'user_payment_methods',
     'payment_providers',
+    'leads',
+    'marketer_profiles',
+    'commission_schemes',
+    'marketer_scheme_assignments',
+    'commission_transactions',
+    'marketer_payout_requests',
+    'marketer_notifications',
+    'marketing_budget_periods',
+    'marketing_campaigns',
+    'campaign_marketer_assignments',
+    'campaign_commission_schemes',
+    'budget_transactions',
   ];
 
   for (const table of tables) {
@@ -123,6 +135,18 @@ afterAll(async () => {
       'collector_float_ledger',
       'user_payment_methods',
       'payment_providers',
+      'leads',
+      'marketer_profiles',
+      'commission_schemes',
+      'marketer_scheme_assignments',
+      'commission_transactions',
+      'marketer_payout_requests',
+      'marketer_notifications',
+      'marketing_budget_periods',
+      'marketing_campaigns',
+      'campaign_marketer_assignments',
+      'campaign_commission_schemes',
+      'budget_transactions',
     ];
 
     for (const table of tables) {
