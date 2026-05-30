@@ -110,5 +110,6 @@ import { CollectorAvailability } from '../timeslots/entities/collector-availabil
   ],
   controllers: [AdminController, ReconciliationController, AdminAuditController],
   providers: [AdminService, SystemCleanupService, ReconciliationService, ReconciliationSchedulerService, AdminAuditService],
+  exports: [AdminAuditService],
 })
 export class AdminModule {}

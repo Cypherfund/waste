@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SystemConfig } from './entities/system-config.entity';
@@ -11,7 +11,8 @@ export class SystemConfigService {
   constructor(
     @InjectRepository(SystemConfig)
     private readonly configRepo: Repository<SystemConfig>,
-    private readonly adminAuditService: AdminAuditService,
+    @Optional()
+    private readonly adminAuditService?: AdminAuditService,
   ) {}
 
   async getString(key: string, defaultValue: string): Promise<string> {
@@ -55,17 +56,19 @@ export class SystemConfigService {
     }
     const saved = await this.configRepo.save(config);
 
-    // Log audit
-    await this.adminAuditService.log({
-      adminId: updatedBy,
-      action: AdminAuditAction.SYSTEM_CONFIG_UPDATED,
-      entityType: AdminAuditEntityType.SYSTEM_CONFIG,
-      entityId: key,
-      oldValue: oldValue ? { value: oldValue } : null,
-      newValue: { value },
-      metadata: { key, category: config.category, dataType: config.dataType },
-      context,
-    });
+    // Log audit (only if adminAuditService is available)
+    if (this.adminAuditService) {
+      await this.adminAuditService.log({
+        adminId: updatedBy,
+        action: AdminAuditAction.SYSTEM_CONFIG_UPDATED,
+        entityType: AdminAuditEntityType.SYSTEM_CONFIG,
+        entityId: key,
+        oldValue: oldValue ? { value: oldValue } : null,
+        newValue: { value },
+        metadata: { key, category: config.category, dataType: config.dataType },
+        context,
+      });
+    }
 
     return saved;
   }

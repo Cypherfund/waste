@@ -4,6 +4,7 @@ import {
   BadRequestException,
   NotFoundException,
   ForbiddenException,
+  Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In, IsNull } from 'typeorm';
@@ -58,7 +59,8 @@ export class WalletService {
     private readonly dataSource: DataSource,
     private readonly paymentService: PaymentService,
     private readonly eventEmitter: EventEmitter2,
-    private readonly adminAuditService: AdminAuditService,
+    @Optional()
+    private readonly adminAuditService?: AdminAuditService,
   ) {}
 
   // ── EVENT: earnings confirmed → credit wallet ─────────────────
@@ -840,16 +842,18 @@ export class WalletService {
       );
 
       // Log audit (outside transaction to avoid rollback on audit failure)
-      this.adminAuditService.log({
-        adminId,
-        action: AdminAuditAction.COLLECTOR_FLOAT_TOPPED_UP,
-        entityType: AdminAuditEntityType.COLLECTOR_FLOAT_LEDGER,
-        entityId: collectorId,
-        oldValue: { collectorFloatBalance: before },
-        newValue: { collectorFloatBalance: after },
-        metadata: { amount, note },
-        context,
-      });
+      if (this.adminAuditService) {
+        this.adminAuditService.log({
+          adminId,
+          action: AdminAuditAction.COLLECTOR_FLOAT_TOPPED_UP,
+          entityType: AdminAuditEntityType.COLLECTOR_FLOAT_LEDGER,
+          entityId: collectorId,
+          oldValue: { collectorFloatBalance: before },
+          newValue: { collectorFloatBalance: after },
+          metadata: { amount, note },
+          context,
+        });
+      }
 
       return { collectorId, newFloatBalance: after };
     });

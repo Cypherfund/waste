@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -27,7 +27,8 @@ export class MarketerPayoutService {
     private readonly notificationService: MarketerNotificationService,
     private readonly dataSource: DataSource,
     private readonly eventEmitter: EventEmitter2,
-    private readonly adminAuditService: AdminAuditService,
+    @Optional()
+    private readonly adminAuditService?: AdminAuditService,
   ) {}
 
   async createPayoutRequest(
@@ -135,16 +136,18 @@ export class MarketerPayoutService {
     const saved = await this.payoutRepo.save(payout);
 
     // Log audit
-    await this.adminAuditService.log({
-      adminId,
-      action: AdminAuditAction.MARKETER_PAYOUT_APPROVED,
-      entityType: AdminAuditEntityType.MARKETER_PAYOUT_REQUEST,
-      entityId: payoutId,
-      oldValue: { status: oldStatus },
-      newValue: { status: PayoutStatus.APPROVED },
-      metadata: { amount: payout.amount, marketerUserId: payout.marketerProfile.userId },
-      context,
-    });
+    if (this.adminAuditService) {
+      await this.adminAuditService.log({
+        adminId,
+        action: AdminAuditAction.MARKETER_PAYOUT_APPROVED,
+        entityType: AdminAuditEntityType.MARKETER_PAYOUT_REQUEST,
+        entityId: payoutId,
+        oldValue: { status: oldStatus },
+        newValue: { status: PayoutStatus.APPROVED },
+        metadata: { amount: payout.amount, marketerUserId: payout.marketerProfile.userId },
+        context,
+      });
+    }
 
     // Emit payout approved event for notification
     const payload: PayoutProcessedPayload = {
@@ -193,16 +196,18 @@ export class MarketerPayoutService {
     await this.profileRepo.save(profile);
 
     // Log audit
-    await this.adminAuditService.log({
-      adminId,
-      action: AdminAuditAction.MARKETER_PAYOUT_REJECTED,
-      entityType: AdminAuditEntityType.MARKETER_PAYOUT_REQUEST,
-      entityId: payoutId,
-      oldValue: { status: oldStatus, approvedAmount: oldApprovedAmount },
-      newValue: { status: PayoutStatus.REJECTED, approvedAmount: profile.approvedAmount },
-      metadata: { reason, amount: payout.amount, marketerUserId: profile.userId },
-      context,
-    });
+    if (this.adminAuditService) {
+      await this.adminAuditService.log({
+        adminId,
+        action: AdminAuditAction.MARKETER_PAYOUT_REJECTED,
+        entityType: AdminAuditEntityType.MARKETER_PAYOUT_REQUEST,
+        entityId: payoutId,
+        oldValue: { status: oldStatus, approvedAmount: oldApprovedAmount },
+        newValue: { status: PayoutStatus.REJECTED, approvedAmount: profile.approvedAmount },
+        metadata: { reason, amount: payout.amount, marketerUserId: profile.userId },
+        context,
+      });
+    }
 
     // Emit payout rejected event for notification
     const payload: PayoutProcessedPayload = {
@@ -255,16 +260,18 @@ export class MarketerPayoutService {
     await this.profileRepo.save(profile);
 
     // Log audit
-    await this.adminAuditService.log({
-      adminId,
-      action: AdminAuditAction.MARKETER_PAYOUT_MARKED_PAID,
-      entityType: AdminAuditEntityType.MARKETER_PAYOUT_REQUEST,
-      entityId: payoutId,
-      oldValue: { status: oldStatus, totalPaid: oldTotalPaid },
-      newValue: { status: PayoutStatus.PAID, totalPaid: profile.totalPaid },
-      metadata: { paidReference, amount: payout.amount, marketerUserId: profile.userId },
-      context,
-    });
+    if (this.adminAuditService) {
+      await this.adminAuditService.log({
+        adminId,
+        action: AdminAuditAction.MARKETER_PAYOUT_MARKED_PAID,
+        entityType: AdminAuditEntityType.MARKETER_PAYOUT_REQUEST,
+        entityId: payoutId,
+        oldValue: { status: oldStatus, totalPaid: oldTotalPaid },
+        newValue: { status: PayoutStatus.PAID, totalPaid: profile.totalPaid },
+        metadata: { paidReference, amount: payout.amount, marketerUserId: profile.userId },
+        context,
+      });
+    }
 
     // Notify marketer
     await this.notificationService.sendNotification(

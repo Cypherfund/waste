@@ -4,6 +4,7 @@ import {
   BadRequestException,
   ConflictException,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In } from 'typeorm';
@@ -34,7 +35,8 @@ export class SubscriptionsService {
     private readonly eventEmitter: EventEmitter2,
     private readonly dataSource: DataSource,
     private readonly systemConfigService: SystemConfigService,
-    private readonly adminAuditService: AdminAuditService,
+    @Optional()
+    private readonly adminAuditService?: AdminAuditService,
   ) {}
 
   async listPlans(): Promise<SubscriptionPlan[]> {
@@ -393,16 +395,18 @@ export class SubscriptionsService {
     const result = await this.activateSubscription(sub);
 
     // Log audit
-    await this.adminAuditService.log({
-      adminId,
-      action: AdminAuditAction.SUBSCRIPTION_PAYMENT_VERIFIED,
-      entityType: AdminAuditEntityType.SUBSCRIPTION,
-      entityId: subscriptionId,
-      oldValue: { status: oldStatus, paymentStatus: oldPaymentStatus },
-      newValue: { status: SubscriptionStatus.ACTIVE, paymentStatus: PaymentStatus.VERIFIED },
-      metadata: { userId: sub.userId, planId: sub.planId, amount: sub.plan.price },
-      context,
-    });
+    if (this.adminAuditService) {
+      await this.adminAuditService.log({
+        adminId,
+        action: AdminAuditAction.SUBSCRIPTION_PAYMENT_VERIFIED,
+        entityType: AdminAuditEntityType.SUBSCRIPTION,
+        entityId: subscriptionId,
+        oldValue: { status: oldStatus, paymentStatus: oldPaymentStatus },
+        newValue: { status: SubscriptionStatus.ACTIVE, paymentStatus: PaymentStatus.VERIFIED },
+        metadata: { userId: sub.userId, planId: sub.planId, amount: sub.plan.price },
+        context,
+      });
+    }
 
     return result;
   }
@@ -457,16 +461,18 @@ export class SubscriptionsService {
     );
 
     // Log audit
-    await this.adminAuditService.log({
-      adminId,
-      action: AdminAuditAction.SUBSCRIPTION_PAYMENT_REJECTED,
-      entityType: AdminAuditEntityType.SUBSCRIPTION,
-      entityId: subscriptionId,
-      oldValue: { status: oldStatus, paymentStatus: oldPaymentStatus },
-      newValue: { status: SubscriptionStatus.PAYMENT_FAILED, paymentStatus: PaymentStatus.REJECTED },
-      metadata: { reason, userId: sub.userId, planId: sub.planId },
-      context,
-    });
+    if (this.adminAuditService) {
+      await this.adminAuditService.log({
+        adminId,
+        action: AdminAuditAction.SUBSCRIPTION_PAYMENT_REJECTED,
+        entityType: AdminAuditEntityType.SUBSCRIPTION,
+        entityId: subscriptionId,
+        oldValue: { status: oldStatus, paymentStatus: oldPaymentStatus },
+        newValue: { status: SubscriptionStatus.PAYMENT_FAILED, paymentStatus: PaymentStatus.REJECTED },
+        metadata: { reason, userId: sub.userId, planId: sub.planId },
+        context,
+      });
+    }
 
     return saved;
   }

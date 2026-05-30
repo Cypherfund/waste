@@ -4,6 +4,7 @@ import {
   BadRequestException,
   NotFoundException,
   InternalServerErrorException,
+  Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan } from 'typeorm';
@@ -43,7 +44,8 @@ export class PaymentService {
     private readonly systemConfigService: SystemConfigService,
     private readonly featureFlagService: FeatureFlagService,
     private readonly eventEmitter: EventEmitter2,
-    private readonly adminAuditService: AdminAuditService,
+    @Optional()
+    private readonly adminAuditService?: AdminAuditService,
   ) {}
 
   // ── GET gateway base URL ────────────────────────────────────────
@@ -164,16 +166,18 @@ export class PaymentService {
     const saved = await this.providerRepo.save(provider);
 
     // Log audit
-    await this.adminAuditService.log({
-      adminId,
-      action: AdminAuditAction.PAYMENT_PROVIDER_CREATED,
-      entityType: AdminAuditEntityType.PAYMENT_PROVIDER,
-      entityId: String(saved.id),
-      oldValue: null,
-      newValue: { paymentCode: saved.paymentCode, providerName: saved.providerName, countryCode: saved.countryCode },
-      metadata: { paymentCode: saved.paymentCode },
-      context,
-    });
+    if (this.adminAuditService) {
+      await this.adminAuditService.log({
+        adminId,
+        action: AdminAuditAction.PAYMENT_PROVIDER_CREATED,
+        entityType: AdminAuditEntityType.PAYMENT_PROVIDER,
+        entityId: String(saved.id),
+        oldValue: null,
+        newValue: { paymentCode: saved.paymentCode, providerName: saved.providerName, countryCode: saved.countryCode },
+        metadata: { paymentCode: saved.paymentCode },
+        context,
+      });
+    }
 
     return saved;
   }
@@ -195,16 +199,18 @@ export class PaymentService {
     const saved = await this.providerRepo.save(provider);
 
     // Log audit
-    await this.adminAuditService.log({
-      adminId,
-      action: AdminAuditAction.PAYMENT_PROVIDER_UPDATED,
-      entityType: AdminAuditEntityType.PAYMENT_PROVIDER,
-      entityId: String(id),
-      oldValue,
-      newValue: { paymentCode: saved.paymentCode, providerName: saved.providerName, countryCode: saved.countryCode },
-      metadata: { paymentCode: saved.paymentCode },
-      context,
-    });
+    if (this.adminAuditService) {
+      await this.adminAuditService.log({
+        adminId,
+        action: AdminAuditAction.PAYMENT_PROVIDER_UPDATED,
+        entityType: AdminAuditEntityType.PAYMENT_PROVIDER,
+        entityId: String(id),
+        oldValue,
+        newValue: { paymentCode: saved.paymentCode, providerName: saved.providerName, countryCode: saved.countryCode },
+        metadata: { paymentCode: saved.paymentCode },
+        context,
+      });
+    }
 
     return saved;
   }
@@ -220,16 +226,18 @@ export class PaymentService {
     await this.providerRepo.remove(provider);
 
     // Log audit
-    await this.adminAuditService.log({
-      adminId,
-      action: AdminAuditAction.PAYMENT_PROVIDER_DELETED,
-      entityType: AdminAuditEntityType.PAYMENT_PROVIDER,
-      entityId: String(id),
-      oldValue,
-      newValue: null,
-      metadata: { paymentCode: provider.paymentCode },
-      context,
-    });
+    if (this.adminAuditService) {
+      await this.adminAuditService.log({
+        adminId,
+        action: AdminAuditAction.PAYMENT_PROVIDER_DELETED,
+        entityType: AdminAuditEntityType.PAYMENT_PROVIDER,
+        entityId: String(id),
+        oldValue,
+        newValue: null,
+        metadata: { paymentCode: provider.paymentCode },
+        context,
+      });
+    }
   }
 
   // ── INITIATE payment ─────────────────────────────────────────────
