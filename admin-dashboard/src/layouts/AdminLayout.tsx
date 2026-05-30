@@ -23,6 +23,7 @@ import {
   X,
   Smartphone,
   Scale,
+  FileText,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -38,6 +39,7 @@ const NAV_ITEMS = [
   { to: '/config', label: 'Config', icon: Settings },
   { to: '/app-updates', label: 'App Updates', icon: Smartphone },
   { to: '/system-cleanup', label: 'Developer Cleanup', icon: Trash2, danger: true },
+  { to: '/audit-logs', label: 'Audit Logs', icon: FileText },
   // Growth
   { to: '/marketing-budgets', label: 'Marketing Budgets', icon: Wallet },
   { to: '/marketing-campaigns', label: 'Marketing Campaigns', icon: Target },

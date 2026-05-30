@@ -278,6 +278,7 @@ export interface CleanupComponents {
   payments?: boolean;
   files?: boolean;
   notifications?: boolean;
+  admin?: boolean;
 }
 
 export interface CleanupRequest {
@@ -297,6 +298,7 @@ export interface CleanupAnalysis {
   payments: { paymentTransactions: number; earnings: number; payoutRequests: number; collectorFloatLedger: number };
   files: { unusedFiles: number };
   notifications: { notifications: number; marketerNotifications: number };
+  admin: { walletLedger: number; reconciliationRuns: number };
 }
 
 export interface CleanupResult {
@@ -344,4 +346,70 @@ export const reconciliationApi = {
     });
     return response.data;
   },
+};
+
+export enum AdminAuditAction {
+  PAYMENT_APPROVED = 'PAYMENT_APPROVED',
+  PAYMENT_REJECTED = 'PAYMENT_REJECTED',
+  WALLET_TOPUP_APPROVED = 'WALLET_TOPUP_APPROVED',
+  WALLET_TOPUP_REJECTED = 'WALLET_TOPUP_REJECTED',
+  SUBSCRIPTION_PAYMENT_VERIFIED = 'SUBSCRIPTION_PAYMENT_VERIFIED',
+  SUBSCRIPTION_PAYMENT_REJECTED = 'SUBSCRIPTION_PAYMENT_REJECTED',
+  COLLECTOR_PAYOUT_APPROVED = 'COLLECTOR_PAYOUT_APPROVED',
+  COLLECTOR_PAYOUT_REJECTED = 'COLLECTOR_PAYOUT_REJECTED',
+  COLLECTOR_PAYOUT_MARKED_PAID = 'COLLECTOR_PAYOUT_MARKED_PAID',
+  MARKETER_PAYOUT_APPROVED = 'MARKETER_PAYOUT_APPROVED',
+  MARKETER_PAYOUT_REJECTED = 'MARKETER_PAYOUT_REJECTED',
+  MARKETER_PAYOUT_MARKED_PAID = 'MARKETER_PAYOUT_MARKED_PAID',
+  SYSTEM_CONFIG_UPDATED = 'SYSTEM_CONFIG_UPDATED',
+  PAYMENT_PROVIDER_CREATED = 'PAYMENT_PROVIDER_CREATED',
+  PAYMENT_PROVIDER_UPDATED = 'PAYMENT_PROVIDER_UPDATED',
+  PAYMENT_PROVIDER_DELETED = 'PAYMENT_PROVIDER_DELETED',
+  COLLECTOR_FLOAT_TOPPED_UP = 'COLLECTOR_FLOAT_TOPPED_UP',
+  COLLECTOR_FLOAT_ADJUSTED = 'COLLECTOR_FLOAT_ADJUSTED',
+  SYSTEM_CLEANUP_ANALYZED = 'SYSTEM_CLEANUP_ANALYZED',
+  SYSTEM_CLEANUP_EXECUTED = 'SYSTEM_CLEANUP_EXECUTED',
+}
+
+export enum AdminAuditEntityType {
+  JOB = 'JOB',
+  PAYMENT_TRANSACTION = 'PAYMENT_TRANSACTION',
+  WALLET_TOPUP = 'WALLET_TOPUP',
+  SUBSCRIPTION = 'SUBSCRIPTION',
+  PAYOUT_REQUEST = 'PAYOUT_REQUEST',
+  MARKETER_PAYOUT_REQUEST = 'MARKETER_PAYOUT_REQUEST',
+  SYSTEM_CONFIG = 'SYSTEM_CONFIG',
+  PAYMENT_PROVIDER = 'PAYMENT_PROVIDER',
+  COLLECTOR_FLOAT_LEDGER = 'COLLECTOR_FLOAT_LEDGER',
+  SYSTEM_CLEANUP = 'SYSTEM_CLEANUP',
+}
+
+export interface AdminAuditLog {
+  id: string;
+  adminId: string | null;
+  action: string;
+  entityType: string;
+  entityId: string;
+  oldValue: any;
+  newValue: any;
+  metadata: any;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: string;
+}
+
+export interface AuditLogsResponse {
+  data: AdminAuditLog[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export const auditLogsApi = {
+  list: (params?: { from?: string; to?: string; adminId?: string; action?: string; entityType?: string; entityId?: string; page?: number; limit?: number }) =>
+    client.get<AuditLogsResponse>('/admin/audit-logs', { params }).then((r) => r.data),
+
+  getById: (id: string) =>
+    client.get<AdminAuditLog>(`/admin/audit-logs/${id}`).then((r) => r.data),
 };

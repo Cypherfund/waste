@@ -157,7 +157,7 @@ export class ReconciliationController {
     const run = await this.reconciliationSchedulerService.runForDate(
       body.date,
       'MANUAL' as any,
-      user.userId,
+      user.sub,
     );
     return {
       success: true,

@@ -4,6 +4,7 @@ import {
   BadRequestException,
   ConflictException,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In } from 'typeorm';
@@ -18,6 +19,7 @@ import { PaymentMode } from '../common/enums/payment-mode.enum';
 import { CashCollectionType } from '../common/enums/cash-collection-type.enum';
 import { JobStatus } from '../common/enums/job-status.enum';
 import { SystemConfigService } from '../config/system-config.service';
+import { AdminAuditService, AdminAuditAction, AdminAuditEntityType, AuditRequestContext } from '../admin/services/admin-audit.service';
 
 @Injectable()
 export class SubscriptionsService {
@@ -33,6 +35,8 @@ export class SubscriptionsService {
     private readonly eventEmitter: EventEmitter2,
     private readonly dataSource: DataSource,
     private readonly systemConfigService: SystemConfigService,
+    @Optional()
+    private readonly adminAuditService?: AdminAuditService,
   ) {}
 
   async listPlans(): Promise<SubscriptionPlan[]> {
@@ -375,7 +379,7 @@ export class SubscriptionsService {
     return this.planRepo.save(plan);
   }
 
-  async adminVerifySubscription(subscriptionId: string): Promise<UserSubscription> {
+  async adminVerifySubscription(subscriptionId: string, adminId: string, context?: AuditRequestContext): Promise<UserSubscription> {
     const sub = await this.subRepo.findOne({
       where: { id: subscriptionId },
       relations: ['plan'],
@@ -385,7 +389,26 @@ export class SubscriptionsService {
       throw new BadRequestException(`Subscription is not pending payment (status: ${sub.status})`);
     }
 
-    return this.activateSubscription(sub);
+    const oldStatus = sub.status;
+    const oldPaymentStatus = sub.paymentStatus;
+
+    const result = await this.activateSubscription(sub);
+
+    // Log audit
+    if (this.adminAuditService) {
+      await this.adminAuditService.log({
+        adminId,
+        action: AdminAuditAction.SUBSCRIPTION_PAYMENT_VERIFIED,
+        entityType: AdminAuditEntityType.SUBSCRIPTION,
+        entityId: subscriptionId,
+        oldValue: { status: oldStatus, paymentStatus: oldPaymentStatus },
+        newValue: { status: SubscriptionStatus.ACTIVE, paymentStatus: PaymentStatus.VERIFIED },
+        metadata: { userId: sub.userId, planId: sub.planId, amount: sub.plan.price },
+        context,
+      });
+    }
+
+    return result;
   }
 
   // Shared activation logic for both admin verification and wallet payment
@@ -416,13 +439,18 @@ export class SubscriptionsService {
 
   async adminRejectSubscription(
     subscriptionId: string,
+    adminId: string,
     reason?: string,
+    context?: AuditRequestContext,
   ): Promise<UserSubscription> {
     const sub = await this.subRepo.findOne({ where: { id: subscriptionId } });
     if (!sub) throw new NotFoundException('Subscription not found');
     if (sub.status !== SubscriptionStatus.PENDING_PAYMENT) {
       throw new BadRequestException(`Subscription is not pending payment (status: ${sub.status})`);
     }
+
+    const oldStatus = sub.status;
+    const oldPaymentStatus = sub.paymentStatus;
 
     sub.status = SubscriptionStatus.PAYMENT_FAILED;
     sub.paymentStatus = PaymentStatus.REJECTED;
@@ -431,6 +459,21 @@ export class SubscriptionsService {
     this.logger.log(
       `Admin rejected subscription ${subscriptionId}${reason ? ` — reason: ${reason}` : ''}`,
     );
+
+    // Log audit
+    if (this.adminAuditService) {
+      await this.adminAuditService.log({
+        adminId,
+        action: AdminAuditAction.SUBSCRIPTION_PAYMENT_REJECTED,
+        entityType: AdminAuditEntityType.SUBSCRIPTION,
+        entityId: subscriptionId,
+        oldValue: { status: oldStatus, paymentStatus: oldPaymentStatus },
+        newValue: { status: SubscriptionStatus.PAYMENT_FAILED, paymentStatus: PaymentStatus.REJECTED },
+        metadata: { reason, userId: sub.userId, planId: sub.planId },
+        context,
+      });
+    }
+
     return saved;
   }
 

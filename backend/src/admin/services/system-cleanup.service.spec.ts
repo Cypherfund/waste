@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import { Logger } from '@nestjs/common';
 import { SystemCleanupService } from './system-cleanup.service';
+import { AdminAuditService } from './admin-audit.service';
 import { SystemCleanupLog } from '../entities/system-cleanup-log.entity';
 import { User } from '../../users/entities/user.entity';
 import { Job } from '../../jobs/entities/job.entity';
@@ -33,6 +34,8 @@ import { MarketerNotification } from '../../growth/entities/marketer-notificatio
 import { CampaignMarketerAssignment } from '../../growth/entities/campaign-marketer-assignment.entity';
 import { CampaignCommissionScheme } from '../../growth/entities/campaign-commission-scheme.entity';
 import { MarketerSchemeAssignment } from '../../growth/entities/marketer-scheme-assignment.entity';
+import { WalletLedger } from '../../wallet/entities/wallet-ledger.entity';
+import { ReconciliationRun } from '../entities/reconciliation-run.entity';
 import { UserRole } from '../../common/enums/role.enum';
 import { CleanupStatus } from '../entities/system-cleanup-log.entity';
 
@@ -85,6 +88,7 @@ describe('SystemCleanupService', () => {
       providers: [
         SystemCleanupService,
         { provide: ConfigService, useValue: configService },
+        { provide: AdminAuditService, useValue: { log: jest.fn() } },
         { provide: getRepositoryToken(SystemCleanupLog), useValue: cleanupLogRepo },
         { provide: getRepositoryToken(User), useValue: userRepo },
         { provide: getRepositoryToken(Job), useValue: jobRepo },
@@ -175,6 +179,14 @@ describe('SystemCleanupService', () => {
         },
         {
           provide: getRepositoryToken(MarketerSchemeAssignment),
+          useValue: { count: jest.fn(), delete: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(WalletLedger),
+          useValue: { count: jest.fn(), delete: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(ReconciliationRun),
           useValue: { count: jest.fn(), delete: jest.fn() },
         },
         { provide: DataSource, useValue: dataSource },

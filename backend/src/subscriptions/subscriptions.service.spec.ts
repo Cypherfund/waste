@@ -4,6 +4,7 @@ import { DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { SubscriptionsService } from './subscriptions.service';
+import { AdminAuditService } from '../admin/services/admin-audit.service';
 import { SubscriptionPlan } from './entities/subscription-plan.entity';
 import { UserSubscription } from './entities/user-subscription.entity';
 import { Job } from '../jobs/entities/job.entity';
@@ -74,6 +75,7 @@ describe('SubscriptionsService', () => {
         { provide: EventEmitter2, useValue: eventEmitter },
         { provide: DataSource, useValue: { transaction: jest.fn() } },
         { provide: SystemConfigService, useValue: { getNumber: jest.fn().mockResolvedValue(24) } },
+        { provide: AdminAuditService, useValue: { log: jest.fn() } },
       ],
     }).compile();
 
@@ -188,7 +190,7 @@ describe('SubscriptionsService', () => {
       );
       subRepo.save.mockImplementation((s: any) => Promise.resolve(s));
 
-      const result = await service.adminVerifySubscription('sub-1');
+      const result = await service.adminVerifySubscription('sub-1', 'admin-1');
 
       expect(subRepo.save).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -204,7 +206,7 @@ describe('SubscriptionsService', () => {
       );
       subRepo.save.mockImplementation((s: any) => Promise.resolve(s));
 
-      await service.adminVerifySubscription('sub-1');
+      await service.adminVerifySubscription('sub-1', 'admin-1');
 
       const saved = subRepo.save.mock.calls[0][0];
       expect(saved.remainingPickupsThisWeek).toBe(3); // plan.pickupsPerWeek
@@ -215,7 +217,7 @@ describe('SubscriptionsService', () => {
       subRepo.findOne.mockResolvedValue(sub);
       subRepo.save.mockImplementation((s: any) => Promise.resolve({ ...s, id: 'sub-1' }));
 
-      await service.adminVerifySubscription('sub-1');
+      await service.adminVerifySubscription('sub-1', 'admin-1');
 
       expect(eventEmitter.emit).toHaveBeenCalledWith(
         SubscriptionEvents.PAID,
@@ -226,14 +228,14 @@ describe('SubscriptionsService', () => {
     it('throws NotFoundException when subscription does not exist', async () => {
       subRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.adminVerifySubscription('bad-id')).rejects.toThrow(NotFoundException);
+      await expect(service.adminVerifySubscription('bad-id', 'admin-1')).rejects.toThrow(NotFoundException);
     });
 
     it('throws BadRequestException when subscription is not PENDING_PAYMENT', async () => {
       subRepo.findOne.mockResolvedValue(makeSub({ status: SubscriptionStatus.ACTIVE }));
 
-      await expect(service.adminVerifySubscription('sub-1')).rejects.toThrow(BadRequestException);
-      await expect(service.adminVerifySubscription('sub-1')).rejects.toThrow('not pending payment');
+      await expect(service.adminVerifySubscription('sub-1', 'admin-1')).rejects.toThrow(BadRequestException);
+      await expect(service.adminVerifySubscription('sub-1', 'admin-1')).rejects.toThrow('not pending payment');
     });
   });
 
@@ -258,7 +260,7 @@ describe('SubscriptionsService', () => {
       subRepo.findOne.mockResolvedValue(makeSub({ status: SubscriptionStatus.PENDING_PAYMENT }));
       subRepo.save.mockImplementation((s: any) => Promise.resolve(s));
 
-      await service.adminRejectSubscription('sub-1');
+      await service.adminRejectSubscription('sub-1', 'admin-1');
 
       expect(eventEmitter.emit).not.toHaveBeenCalled();
     });
@@ -266,13 +268,13 @@ describe('SubscriptionsService', () => {
     it('throws NotFoundException when subscription does not exist', async () => {
       subRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.adminRejectSubscription('bad-id')).rejects.toThrow(NotFoundException);
+      await expect(service.adminRejectSubscription('bad-id', 'admin-1')).rejects.toThrow(NotFoundException);
     });
 
     it('throws BadRequestException when subscription is already ACTIVE', async () => {
       subRepo.findOne.mockResolvedValue(makeSub({ status: SubscriptionStatus.ACTIVE }));
 
-      await expect(service.adminRejectSubscription('sub-1')).rejects.toThrow(BadRequestException);
+      await expect(service.adminRejectSubscription('sub-1', 'admin-1')).rejects.toThrow(BadRequestException);
     });
   });
 

@@ -4,7 +4,9 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { AdminService } from './admin.service';
 import { AdminController } from './admin.controller';
 import { ReconciliationController } from './controllers/reconciliation.controller';
+import { AdminAuditController } from './controllers/admin-audit.controller';
 import { ReconciliationService } from './services/reconciliation.service';
+import { AdminAuditService } from './services/admin-audit.service';
 import { Job } from '../jobs/entities/job.entity';
 import { Proof } from '../jobs/entities/proof.entity';
 import { Dispute } from '../disputes/entities/dispute.entity';
@@ -15,6 +17,7 @@ import { UserAddress } from '../users/entities/user-address.entity';
 import { SystemCleanupLog } from './entities/system-cleanup-log.entity';
 import { ReconciliationSummary } from './entities/reconciliation-summary.entity';
 import { ReconciliationRun } from './entities/reconciliation-run.entity';
+import { AdminAuditLog } from './entities/admin-audit-log.entity';
 import { SystemCleanupService } from './services/system-cleanup.service';
 import { ReconciliationSchedulerService } from './services/reconciliation-scheduler.service';
 import { UsersModule } from '../users/users.module';
@@ -67,6 +70,7 @@ import { CollectorAvailability } from '../timeslots/entities/collector-availabil
       SystemCleanupLog,
       ReconciliationSummary,
       ReconciliationRun,
+      AdminAuditLog,
       FraudFlag,
       PayoutRequest,
       CollectorFloatLedger,
@@ -104,7 +108,8 @@ import { CollectorAvailability } from '../timeslots/entities/collector-availabil
     NotificationsModule,
     SubscriptionsModule,
   ],
-  controllers: [AdminController, ReconciliationController],
-  providers: [AdminService, SystemCleanupService, ReconciliationService, ReconciliationSchedulerService],
+  controllers: [AdminController, ReconciliationController, AdminAuditController],
+  providers: [AdminService, SystemCleanupService, ReconciliationService, ReconciliationSchedulerService, AdminAuditService],
+  exports: [AdminAuditService],
 })
 export class AdminModule {}

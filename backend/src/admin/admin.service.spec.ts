@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { AdminService } from './admin.service';
+import { AdminAuditService } from './services/admin-audit.service';
 import { UsersService } from '../users/users.service';
 import { JobsService } from '../jobs/jobs.service';
 import { AssignmentService } from '../assignment/assignment.service';
@@ -186,6 +187,7 @@ describe('AdminService', () => {
         { provide: SystemConfigService, useValue: systemConfigService },
         { provide: FeatureFlagService, useValue: featureFlagService },
         { provide: EventEmitter2, useValue: { emit: jest.fn(), emitAsync: jest.fn() } },
+        { provide: AdminAuditService, useValue: { log: jest.fn() } },
         { provide: getRepositoryToken(Job), useValue: jobRepo },
         { provide: getRepositoryToken(Dispute), useValue: disputeRepo },
         { provide: getRepositoryToken(Earning), useValue: earningRepo },
@@ -413,6 +415,7 @@ describe('AdminService', () => {
         'assignment.max_radius_km',
         '15',
         'admin-1',
+        undefined,
       );
       expect(result.key).toBe('assignment.max_radius_km');
       expect(result.value).toBe('15');

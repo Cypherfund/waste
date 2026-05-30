@@ -23,6 +23,7 @@ import { DisputesService } from '../disputes/disputes.service';
 import { FraudService } from '../fraud/fraud.service';
 import { SystemConfigService } from '../config/system-config.service';
 import { FeatureFlagService, FEATURE_FLAGS } from '../config/feature-flags';
+import { AdminAuditService, AdminAuditAction, AdminAuditEntityType, AuditRequestContext } from './services/admin-audit.service';
 import { Job } from '../jobs/entities/job.entity';
 import { UserSubscription } from '../subscriptions/entities/user-subscription.entity';
 import { SubscriptionStatus } from '../common/enums/subscription-status.enum';
@@ -70,6 +71,7 @@ export class AdminService {
     private readonly systemConfigService: SystemConfigService,
     private readonly featureFlagService: FeatureFlagService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly adminAuditService: AdminAuditService,
     private readonly dataSource: DataSource,
     @InjectRepository(Job)
     private readonly jobRepo: Repository<Job>,
@@ -275,7 +277,12 @@ export class AdminService {
 
   // ─── WALLET TOP-UP APPROVAL/REJECTION ─────────────────────────────
 
-  async approveWalletTopUp(transactionId: string, adminId: string): Promise<void> {
+  async approveWalletTopUp(transactionId: string, adminId: string, context?: AuditRequestContext): Promise<void> {
+    let balanceBefore: number = 0;
+    let balanceAfter: number = 0;
+    let transactionAmount: number = 0;
+    let transactionUserId: string = '';
+
     await this.dataSource.transaction(async (em) => {
       const transaction = await em
         .getRepository(PaymentTransaction)
@@ -305,8 +312,10 @@ export class AdminService {
         throw new NotFoundException('User not found');
       }
 
-      const balanceBefore = Number(user.walletBalance);
-      const balanceAfter = balanceBefore + transaction.amount;
+      balanceBefore = Number(user.walletBalance);
+      balanceAfter = balanceBefore + transaction.amount;
+      transactionAmount = transaction.amount;
+      transactionUserId = transaction.userId;
 
       // Credit wallet balance and update transaction status in one transaction
       await em
@@ -337,9 +346,25 @@ export class AdminService {
         `Admin ${adminId} approved wallet top-up ${transactionId}, credited ${transaction.amount} XAF to user ${transaction.userId}`,
       );
     });
+
+    // Log audit outside transaction to avoid rollback on audit failure
+    await this.adminAuditService.log({
+      adminId,
+      action: AdminAuditAction.WALLET_TOPUP_APPROVED,
+      entityType: AdminAuditEntityType.PAYMENT_TRANSACTION,
+      entityId: transactionId,
+      oldValue: { status: TransactionStatus.PENDING, walletBalance: balanceBefore },
+      newValue: { status: TransactionStatus.VERIFIED, walletBalance: balanceAfter },
+      metadata: { amount: transactionAmount, userId: transactionUserId },
+      context,
+    });
   }
 
-  async rejectWalletTopUp(transactionId: string, adminId: string, reason?: string): Promise<void> {
+  async rejectWalletTopUp(transactionId: string, adminId: string, reason?: string, context?: AuditRequestContext): Promise<void> {
+    let oldStatus: string = '';
+    let transactionAmount: number = 0;
+    let transactionUserId: string = '';
+
     await this.dataSource.transaction(async (em) => {
       const transaction = await em
         .getRepository(PaymentTransaction)
@@ -362,6 +387,10 @@ export class AdminService {
         throw new BadRequestException('This is not a wallet top-up transaction');
       }
 
+      oldStatus = transaction.status;
+      transactionAmount = transaction.amount;
+      transactionUserId = transaction.userId;
+
       // Update transaction status to FAILED
       transaction.status = TransactionStatus.FAILED;
       transaction.failureReason = reason || 'Rejected by admin';
@@ -370,6 +399,18 @@ export class AdminService {
       this.logger.log(
         `Admin ${adminId} rejected wallet top-up ${transactionId} for user ${transaction.userId}. Reason: ${reason}`,
       );
+    });
+
+    // Log audit outside transaction to avoid rollback on audit failure
+    await this.adminAuditService.log({
+      adminId,
+      action: AdminAuditAction.WALLET_TOPUP_REJECTED,
+      entityType: AdminAuditEntityType.PAYMENT_TRANSACTION,
+      entityId: transactionId,
+      oldValue: { status: oldStatus },
+      newValue: { status: TransactionStatus.FAILED },
+      metadata: { reason, amount: transactionAmount, userId: transactionUserId },
+      context,
     });
   }
 
@@ -420,8 +461,8 @@ export class AdminService {
     return all;
   }
 
-  async updateConfig(key: string, value: string, adminId: string) {
-    const result = await this.systemConfigService.upsert(key, value, adminId);
+  async updateConfig(key: string, value: string, adminId: string, context?: AuditRequestContext) {
+    const result = await this.systemConfigService.upsert(key, value, adminId, context);
     this.logger.log(`Admin ${adminId} updated config ${key} = ${value}`);
     return result;
   }
@@ -476,7 +517,7 @@ export class AdminService {
 
   // ─── PAYMENT VERIFICATION ──────────────────────────────────────
 
-  async verifyPayment(jobId: string, adminId: string): Promise<JobResponseDto> {
+  async verifyPayment(jobId: string, adminId: string, context?: AuditRequestContext): Promise<JobResponseDto> {
     const job = await this.jobRepo.findOne({ where: { id: jobId } });
     if (!job) {
       throw new NotFoundException('Job not found');
@@ -491,6 +532,9 @@ export class AdminService {
       throw new BadRequestException('Job is not in PAYMENT_PENDING status');
     }
 
+    const oldStatus = job.paymentStatus;
+    const oldJobStatus = job.status;
+
     // Update payment status and job status
     job.paymentStatus = PaymentStatus.VERIFIED;
     job.paymentVerifiedBy = adminId;
@@ -499,6 +543,18 @@ export class AdminService {
 
     const saved = await this.jobRepo.save(job);
     this.logger.log(`Admin ${adminId} verified payment for job ${jobId}`);
+
+    // Log audit
+    await this.adminAuditService.log({
+      adminId,
+      action: AdminAuditAction.PAYMENT_APPROVED,
+      entityType: AdminAuditEntityType.JOB,
+      entityId: jobId,
+      oldValue: { paymentStatus: oldStatus, jobStatus: oldJobStatus },
+      newValue: { paymentStatus: PaymentStatus.VERIFIED, jobStatus: JobStatus.REQUESTED },
+      metadata: { amount: job.quotedPrice, householdId: job.householdId },
+      context,
+    });
 
     // Trigger job assignment since it's now verified
     this.assignmentService.autoAssign(jobId);
@@ -516,7 +572,7 @@ export class AdminService {
     return await this.jobsService.toResponseDto(saved);
   }
 
-  async rejectPayment(jobId: string, adminId: string, reason?: string): Promise<JobResponseDto> {
+  async rejectPayment(jobId: string, adminId: string, reason?: string, context?: AuditRequestContext): Promise<JobResponseDto> {
     const job = await this.jobRepo.findOne({ where: { id: jobId } });
     if (!job) {
       throw new NotFoundException('Job not found');
@@ -531,6 +587,9 @@ export class AdminService {
       throw new BadRequestException('Job is not in PAYMENT_PENDING status');
     }
 
+    const oldStatus = job.paymentStatus;
+    const oldJobStatus = job.status;
+
     // REJECTED = admin explicitly rejected the submitted proof/ref
     // PAYMENT_FAILED = distinct from CANCELLED; allows household to resubmit payment
     job.paymentStatus = PaymentStatus.REJECTED;
@@ -539,6 +598,18 @@ export class AdminService {
 
     const saved = await this.jobRepo.save(job);
     this.logger.log(`Admin ${adminId} rejected payment for job ${jobId}: ${reason}`);
+
+    // Log audit
+    await this.adminAuditService.log({
+      adminId,
+      action: AdminAuditAction.PAYMENT_REJECTED,
+      entityType: AdminAuditEntityType.JOB,
+      entityId: jobId,
+      oldValue: { paymentStatus: oldStatus, jobStatus: oldJobStatus },
+      newValue: { paymentStatus: PaymentStatus.REJECTED, jobStatus: JobStatus.PAYMENT_FAILED },
+      metadata: { reason, amount: job.quotedPrice, householdId: job.householdId },
+      context,
+    });
 
     // Emit payment rejected event for notification
     const payload: PaymentRejectedPayload = {

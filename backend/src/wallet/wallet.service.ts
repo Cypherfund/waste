@@ -4,6 +4,7 @@ import {
   BadRequestException,
   NotFoundException,
   ForbiddenException,
+  Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In, IsNull } from 'typeorm';
@@ -25,6 +26,7 @@ import { SystemConfigService } from '../config/system-config.service';
 import { EarningsEvents, EarningsConfirmedPayload } from '../events/events.types';
 import { SubscriptionEvents } from '../events/events.types';
 import { PaymentProviderEntity } from '../payments/entities/payment-provider.entity';
+import { AdminAuditService, AdminAuditAction, AdminAuditEntityType, AuditRequestContext } from '../admin/services/admin-audit.service';
 import {
   PaymentTransaction,
   TransactionType,
@@ -57,6 +59,8 @@ export class WalletService {
     private readonly dataSource: DataSource,
     private readonly paymentService: PaymentService,
     private readonly eventEmitter: EventEmitter2,
+    @Optional()
+    private readonly adminAuditService?: AdminAuditService,
   ) {}
 
   // ── EVENT: earnings confirmed → credit wallet ─────────────────
@@ -796,6 +800,7 @@ export class WalletService {
     amount: number,
     adminId: string,
     note?: string,
+    context?: AuditRequestContext,
   ): Promise<{ collectorId: string; newFloatBalance: number }> {
     if (amount <= 0) throw new BadRequestException('Top-up amount must be positive');
 
@@ -835,6 +840,20 @@ export class WalletService {
           note ? ` [${note}]` : ''
         }`,
       );
+
+      // Log audit (outside transaction to avoid rollback on audit failure)
+      if (this.adminAuditService) {
+        this.adminAuditService.log({
+          adminId,
+          action: AdminAuditAction.COLLECTOR_FLOAT_TOPPED_UP,
+          entityType: AdminAuditEntityType.COLLECTOR_FLOAT_LEDGER,
+          entityId: collectorId,
+          oldValue: { collectorFloatBalance: before },
+          newValue: { collectorFloatBalance: after },
+          metadata: { amount, note },
+          context,
+        });
+      }
 
       return { collectorId, newFloatBalance: after };
     });

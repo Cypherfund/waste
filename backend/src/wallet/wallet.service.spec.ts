@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { WalletService } from './wallet.service';
+import { AdminAuditService } from '../admin/services/admin-audit.service';
 import { User } from '../users/entities/user.entity';
 import { PayoutRequest } from './entities/payout-request.entity';
 import { CollectorFloatLedger } from './entities/collector-float-ledger.entity';
@@ -69,6 +70,10 @@ describe('WalletService', () => {
         {
           provide: SystemConfigService,
           useValue: {},
+        },
+        {
+          provide: AdminAuditService,
+          useValue: { log: jest.fn() },
         },
         {
           provide: DataSource,

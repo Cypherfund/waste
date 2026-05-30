@@ -23,6 +23,7 @@ import MarketingCampaignsPage from '../pages/MarketingCampaignsPage';
 import SystemCleanupPage from '../pages/SystemCleanupPage';
 import AppUpdatesPage from '../pages/AppUpdatesPage';
 import ReconciliationPage from '../pages/ReconciliationPage';
+import AuditLogsPage from '../pages/AuditLogsPage';
 
 export const router = createBrowserRouter([
   {
@@ -58,6 +59,7 @@ export const router = createBrowserRouter([
       { path: 'system-cleanup', element: <SystemCleanupPage /> },
       { path: 'app-updates', element: <AppUpdatesPage /> },
       { path: 'reconciliation', element: <ReconciliationPage /> },
+      { path: 'audit-logs', element: <AuditLogsPage /> },
     ],
   },
 ]);
