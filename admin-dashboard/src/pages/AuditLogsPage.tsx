@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { auditLogsApi, AdminAuditLog } from '../services/api/admin';
+import { auditLogsApi, AdminAuditLog, AdminAuditAction, AdminAuditEntityType } from '../services/api/admin';
 import Spinner from '../components/Spinner';
 import ErrorBox from '../components/ErrorBox';
 
@@ -111,23 +111,33 @@ export default function AuditLogsPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Action</label>
-            <input
-              type="text"
+            <select
               value={action}
               onChange={(e) => setAction(e.target.value)}
-              placeholder="e.g., PAYMENT_APPROVED"
               className="w-full border rounded px-3 py-2"
-            />
+            >
+              <option value="">All Actions</option>
+              {Object.values(AdminAuditAction).map((a) => (
+                <option key={a} value={a}>
+                  {a}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Entity Type</label>
-            <input
-              type="text"
+            <select
               value={entityType}
               onChange={(e) => setEntityType(e.target.value)}
-              placeholder="e.g., JOB"
               className="w-full border rounded px-3 py-2"
-            />
+            >
+              <option value="">All Entity Types</option>
+              {Object.values(AdminAuditEntityType).map((e) => (
+                <option key={e} value={e}>
+                  {e}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Entity ID</label>
