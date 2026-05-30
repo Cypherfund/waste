@@ -18,6 +18,7 @@ import {
   PaymentTransaction,
   TransactionStatus,
 } from '../payments/entities/payment-transaction.entity';
+import { WalletLedger } from '../wallet/entities/wallet-ledger.entity';
 import { JobStatus } from '../common/enums/job-status.enum';
 import { UserRole } from '../common/enums/role.enum';
 import { DisputeStatus } from '../common/enums/dispute-status.enum';
@@ -192,6 +193,7 @@ describe('AdminService', () => {
         { provide: getRepositoryToken(User), useValue: userRepo },
         { provide: getRepositoryToken(UserSubscription), useValue: subRepo },
         { provide: getRepositoryToken(PaymentTransaction), useValue: paymentTransactionRepo },
+        { provide: getRepositoryToken(WalletLedger), useValue: { create: jest.fn(), save: jest.fn() } },
         { provide: DataSource, useValue: mockDataSource },
       ],
     }).compile();
@@ -597,7 +599,7 @@ describe('AdminService', () => {
     const mockLockedQuery = {
       where: jest.fn().mockReturnThis(),
       setLock: jest.fn().mockReturnThis(),
-      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      innerJoinAndSelect: jest.fn().mockReturnThis(),
       getOne: jest.fn(),
     };
 
@@ -621,8 +623,20 @@ describe('AdminService', () => {
       mockUpdateQuery.set.mockClear();
       mockUpdateQuery.where.mockClear();
       mockUpdateQuery.execute.mockClear();
-      mockEntityManager.getRepository.mockReturnValue({
-        createQueryBuilder: jest.fn(() => mockLockedQuery),
+      mockEntityManager.getRepository.mockImplementation((entity: any) => {
+        if (entity === PaymentTransaction) {
+          return { createQueryBuilder: jest.fn(() => mockLockedQuery) } as any;
+        }
+        if (entity === User) {
+          return { 
+            createQueryBuilder: jest.fn(() => mockLockedQuery),
+            findOne: jest.fn().mockResolvedValue({ id: 'user-1', walletBalance: 10000 }),
+          } as any;
+        }
+        if (entity === WalletLedger) {
+          return { create: jest.fn(), save: jest.fn() } as any;
+        }
+        return { createQueryBuilder: jest.fn(() => mockLockedQuery) } as any;
       });
       mockEntityManager.createQueryBuilder.mockReturnValue(mockUpdateQuery);
     });
@@ -713,7 +727,7 @@ describe('AdminService', () => {
     const mockLockedQuery = {
       where: jest.fn().mockReturnThis(),
       setLock: jest.fn().mockReturnThis(),
-      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      innerJoinAndSelect: jest.fn().mockReturnThis(),
       getOne: jest.fn(),
     };
 
@@ -727,8 +741,20 @@ describe('AdminService', () => {
         user: { id: 'user-1' },
       };
       mockLockedQuery.getOne.mockReset().mockResolvedValue(mockTransaction);
-      mockEntityManager.getRepository.mockReturnValue({
-        createQueryBuilder: jest.fn(() => mockLockedQuery),
+      mockEntityManager.getRepository.mockImplementation((entity: any) => {
+        if (entity === PaymentTransaction) {
+          return { createQueryBuilder: jest.fn(() => mockLockedQuery) } as any;
+        }
+        if (entity === User) {
+          return { 
+            createQueryBuilder: jest.fn(() => mockLockedQuery),
+            findOne: jest.fn().mockResolvedValue({ id: 'user-1', walletBalance: 10000 }),
+          } as any;
+        }
+        if (entity === WalletLedger) {
+          return { create: jest.fn(), save: jest.fn() } as any;
+        }
+        return { createQueryBuilder: jest.fn(() => mockLockedQuery) } as any;
       });
     });
 

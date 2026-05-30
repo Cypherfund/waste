@@ -10,6 +10,7 @@ import {
   TransactionStatus,
   TransactionType,
 } from './entities/payment-transaction.entity';
+import { WalletLedger } from '../wallet/entities/wallet-ledger.entity';
 
 describe('PaymentEventsService', () => {
   let service: PaymentEventsService;
@@ -52,6 +53,13 @@ describe('PaymentEventsService', () => {
           provide: getRepositoryToken(User),
           useValue: {
             findOne: jest.fn(),
+          },
+        },
+        {
+          provide: getRepositoryToken(WalletLedger),
+          useValue: {
+            create: jest.fn(),
+            save: jest.fn(),
           },
         },
         {
@@ -102,6 +110,9 @@ describe('PaymentEventsService', () => {
         }
         if (entity === User) {
           return { createQueryBuilder: jest.fn(() => mockLockedQuery) } as any;
+        }
+        if (entity === WalletLedger) {
+          return { create: jest.fn(), save: jest.fn() } as any;
         }
         return {} as any;
       });
