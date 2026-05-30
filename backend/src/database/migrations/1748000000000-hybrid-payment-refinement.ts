@@ -57,11 +57,9 @@ export class HybridPaymentRefinement1748000000000 implements MigrationInterface 
     await queryRunner.query(`ALTER TABLE "jobs" ADD COLUMN IF NOT EXISTS "payment_phone" VARCHAR(20) NULL`);
     await queryRunner.query(`ALTER TABLE "jobs" ADD COLUMN IF NOT EXISTS "provider_transaction_id" VARCHAR(100) NULL`);
 
-    // ─── 6. payment_providers — add new columns ───────────────────────────────
-    await queryRunner.query(`ALTER TABLE "payment_providers" ADD COLUMN IF NOT EXISTS "manual_instructions" TEXT NULL`);
-    await queryRunner.query(`ALTER TABLE "payment_providers" ADD COLUMN IF NOT EXISTS "integration_enabled" BOOLEAN NOT NULL DEFAULT FALSE`);
-    await queryRunner.query(`ALTER TABLE "payment_providers" ADD COLUMN IF NOT EXISTS "manual_instructions_enabled" BOOLEAN NOT NULL DEFAULT TRUE`);
-    await queryRunner.query(`ALTER TABLE "payment_providers" ADD COLUMN IF NOT EXISTS "manual_proof_required" BOOLEAN NOT NULL DEFAULT FALSE`);
+    // ─── 6. payment_providers columns ───────────────────────────────
+    // Note: These columns are now added during table creation in migration 1778456800000
+    // This migration kept for backward compatibility with databases that already ran without the columns
 
     // ─── 7. users — add collector_float_balance ───────────────────────────────
     await queryRunner.query(`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "collector_float_balance" DECIMAL(12,2) NOT NULL DEFAULT 0`);

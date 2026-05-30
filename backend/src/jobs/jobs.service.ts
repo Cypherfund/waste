@@ -23,6 +23,7 @@ import { PaymentMode } from '../common/enums/payment-mode.enum';
 import { User } from '../users/entities/user.entity';
 import { CollectorFloatLedger, FloatLedgerType } from '../wallet/entities/collector-float-ledger.entity';
 import { UserRole } from '../common/enums/role.enum';
+import { SubscriptionPlan } from '../subscriptions/entities/subscription-plan.entity';
 import { PaginatedResponse, paginate } from '../common/dto/pagination.dto';
 import {
   JobEvents,
@@ -480,7 +481,7 @@ export class JobsService {
           .getOne();
         if (!collector) throw new NotFoundException('Collector not found');
 
-        // Lock subscription
+        // Lock subscription (without plan join to avoid FOR UPDATE on nullable side)
         if (!job.subscriptionId) {
           throw new BadRequestException('Subscription ID is required for CASH_ON_FIRST_PICKUP job');
         }
@@ -489,9 +490,14 @@ export class JobsService {
           .createQueryBuilder('s')
           .where('s.id = :id', { id: job.subscriptionId })
           .setLock('pessimistic_write')
-          .leftJoinAndSelect('s.plan', 'plan')
           .getOne();
         if (!subscription) throw new NotFoundException('Subscription not found');
+
+        // Fetch plan separately
+        const plan = await em
+          .getRepository(SubscriptionPlan)
+          .findOne({ where: { id: subscription.planId } });
+        if (!plan) throw new NotFoundException('Subscription plan not found');
 
         // Calculate collector earning using locked job
         const earningsCalc = await this.earningsService.calculateEarnings(lockedJob);
@@ -533,7 +539,7 @@ export class JobsService {
         const mondayStr = monday.toISOString().split('T')[0];
         subscription.status = SubscriptionStatus.ACTIVE;
         subscription.paymentStatus = PaymentStatus.VERIFIED;
-        subscription.remainingPickupsThisWeek = subscription.plan.pickupsPerWeek - 1; // First pickup consumed
+        subscription.remainingPickupsThisWeek = plan.pickupsPerWeek - 1; // First pickup consumed
         subscription.weekResetDate = mondayStr;
         await em.getRepository(UserSubscription).save(subscription);
 
@@ -555,6 +561,16 @@ export class JobsService {
           collectorLng: dto.collectorLng ?? null,
         });
         const savedProof = await em.getRepository(Proof).save(proof);
+
+        // Emit subscription paid event inside transaction to access plan
+        this.eventEmitter.emit(SubscriptionEvents.PAID, {
+          subscriptionId: subscription.id,
+          userId: lockedJob.householdId,
+          planId: subscription.planId,
+          planName: plan.name,
+          amount: Number(lockedJob.cashToCollectAmount),
+          timestamp: new Date(),
+        });
 
         return { alreadyCompleted: false, savedJob, savedProof, activatedSubscription: subscription };
       });
@@ -600,19 +616,6 @@ export class JobsService {
         proofId: savedProof.id,
       };
       this.eventEmitter.emit(JobEvents.COMPLETED, payload);
-
-      // Emit subscription paid event for cash-on-first-pickup activation
-      if (result.activatedSubscription) {
-        const subscription = result.activatedSubscription;
-        this.eventEmitter.emit(SubscriptionEvents.PAID, {
-          subscriptionId: subscription.id,
-          userId: saved.householdId,
-          planId: subscription.planId,
-          planName: subscription.plan.name,
-          amount: Number(saved.cashToCollectAmount),
-          timestamp: new Date(),
-        });
-      }
 
       return await this.toResponseDto(saved);
     }
