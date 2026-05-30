@@ -350,7 +350,7 @@ export const reconciliationApi = {
 
 export interface AdminAuditLog {
   id: string;
-  adminId: string;
+  adminId: string | null;
   action: string;
   entityType: string;
   entityId: string;
