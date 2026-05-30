@@ -14,6 +14,6 @@ export default new DataSource({
   database: process.env.DATABASE_NAME || 'waste_management',
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
   migrations: [__dirname + '/migrations/*{.ts,.js}'],
-  synchronize: true,
+  synchronize: process.env.NODE_ENV !== 'test' && process.env.NODE_ENV !== 'production',
   ...(process.env.NODE_ENV === 'production' ? { ssl: { rejectUnauthorized: false } } : {}),
 });
