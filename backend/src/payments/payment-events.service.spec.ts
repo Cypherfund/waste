@@ -11,6 +11,8 @@ import {
   TransactionType,
 } from './entities/payment-transaction.entity';
 import { WalletLedger } from '../wallet/entities/wallet-ledger.entity';
+import { SentryService } from '../sentry/sentry.service';
+import { BusinessLoggerService } from '../common/services/business-logger.service';
 
 describe('PaymentEventsService', () => {
   let service: PaymentEventsService;
@@ -73,6 +75,24 @@ describe('PaymentEventsService', () => {
           provide: DataSource,
           useValue: {
             transaction: jest.fn(),
+          },
+        },
+        {
+          provide: SentryService,
+          useValue: {
+            isEnabled: jest.fn().mockReturnValue(false),
+            captureException: jest.fn(),
+            addBreadcrumb: jest.fn(),
+            setContext: jest.fn(),
+          },
+        },
+        {
+          provide: BusinessLoggerService,
+          useValue: {
+            logFailure: jest.fn(),
+            logWarning: jest.fn(),
+            logInfo: jest.fn(),
+            extractRequestContext: jest.fn(),
           },
         },
       ],

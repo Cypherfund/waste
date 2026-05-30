@@ -18,6 +18,8 @@ import { SystemConfigService } from '../config/system-config.service';
 import { PaymentService } from '../payments/payment.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EarningsConfirmedPayload } from '../events/events.types';
+import { SentryService } from '../sentry/sentry.service';
+import { BusinessLoggerService } from '../common/services/business-logger.service';
 
 describe('WalletService', () => {
   let service: WalletService;
@@ -89,6 +91,24 @@ describe('WalletService', () => {
           provide: EventEmitter2,
           useValue: {
             emit: jest.fn(),
+          },
+        },
+        {
+          provide: SentryService,
+          useValue: {
+            isEnabled: jest.fn().mockReturnValue(false),
+            captureException: jest.fn(),
+            addBreadcrumb: jest.fn(),
+            setContext: jest.fn(),
+          },
+        },
+        {
+          provide: BusinessLoggerService,
+          useValue: {
+            logFailure: jest.fn(),
+            logWarning: jest.fn(),
+            logInfo: jest.fn(),
+            extractRequestContext: jest.fn(),
           },
         },
       ],

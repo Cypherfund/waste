@@ -6,6 +6,8 @@ import { ReconciliationService } from './reconciliation.service';
 import { SystemConfigService } from '../../config/system-config.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ReconciliationRun, ReconciliationRunStatus, ReconciliationRunTrigger } from '../entities/reconciliation-run.entity';
+import { SentryService } from '../../sentry/sentry.service';
+import { BusinessLoggerService } from '../../common/services/business-logger.service';
 
 describe('ReconciliationSchedulerService', () => {
   let service: ReconciliationSchedulerService;
@@ -64,6 +66,24 @@ describe('ReconciliationSchedulerService', () => {
         {
           provide: DataSource,
           useValue: {},
+        },
+        {
+          provide: SentryService,
+          useValue: {
+            isEnabled: jest.fn().mockReturnValue(false),
+            captureException: jest.fn(),
+            addBreadcrumb: jest.fn(),
+            setContext: jest.fn(),
+          },
+        },
+        {
+          provide: BusinessLoggerService,
+          useValue: {
+            logFailure: jest.fn(),
+            logWarning: jest.fn(),
+            logInfo: jest.fn(),
+            extractRequestContext: jest.fn(),
+          },
         },
       ],
     }).compile();
