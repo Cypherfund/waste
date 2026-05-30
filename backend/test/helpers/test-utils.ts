@@ -44,8 +44,8 @@ export async function createTestJob(
   overrides: Partial<Job> = {},
 ): Promise<Job> {
   const jobRepo = dataSource.getRepository(Job);
-  const scheduledDate = new Date();
-  scheduledDate.setDate(scheduledDate.getDate() + 1);
+  // Use a unique date offset based on time to avoid duplicate key constraint
+  const scheduledDate = new Date(Date.now() + Math.random() * 7 * 24 * 60 * 60 * 1000);
 
   const job = jobRepo.create({
     householdId,

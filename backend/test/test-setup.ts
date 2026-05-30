@@ -81,6 +81,7 @@ beforeAll(async () => {
     'campaign_marketer_assignments',
     'campaign_commission_schemes',
     'budget_transactions',
+    'reconciliation_summaries',
   ];
 
   for (const table of tables) {
