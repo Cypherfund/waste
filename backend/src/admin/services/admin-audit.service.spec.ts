@@ -87,7 +87,7 @@ describe('AdminAuditService', () => {
         action: 'SYSTEM_CONFIG_UPDATED' as any,
         entityType: 'SYSTEM_CONFIG' as any,
         entityId: 'config-key',
-        oldValue: { value: 'secret-password' },
+        oldValue: { password: 'secret-password' },
         newValue: { value: 'new-value' },
         metadata: {},
         context: { ipAddress: '127.0.0.1', userAgent: 'test-agent' },
@@ -95,7 +95,7 @@ describe('AdminAuditService', () => {
 
       expect(auditLogRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          oldValue: { value: '[REDACTED]' },
+          oldValue: { password: '[REDACTED]' },
         }),
       );
     });

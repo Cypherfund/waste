@@ -170,7 +170,7 @@ export class PaymentService {
       entityType: AdminAuditEntityType.PAYMENT_PROVIDER,
       entityId: String(saved.id),
       oldValue: null,
-      newValue: { paymentCode: saved.paymentCode, name: saved.name, countryCode: saved.countryCode },
+      newValue: { paymentCode: saved.paymentCode, providerName: saved.providerName, countryCode: saved.countryCode },
       metadata: { paymentCode: saved.paymentCode },
       context,
     });
@@ -190,7 +190,7 @@ export class PaymentService {
       throw new NotFoundException(`Payment provider ${id} not found`);
     }
 
-    const oldValue = { paymentCode: provider.paymentCode, name: provider.name, countryCode: provider.countryCode };
+    const oldValue = { paymentCode: provider.paymentCode, providerName: provider.providerName, countryCode: provider.countryCode };
     Object.assign(provider, data);
     const saved = await this.providerRepo.save(provider);
 
@@ -201,7 +201,7 @@ export class PaymentService {
       entityType: AdminAuditEntityType.PAYMENT_PROVIDER,
       entityId: String(id),
       oldValue,
-      newValue: { paymentCode: saved.paymentCode, name: saved.name, countryCode: saved.countryCode },
+      newValue: { paymentCode: saved.paymentCode, providerName: saved.providerName, countryCode: saved.countryCode },
       metadata: { paymentCode: saved.paymentCode },
       context,
     });
@@ -216,7 +216,7 @@ export class PaymentService {
       throw new NotFoundException(`Payment provider ${id} not found`);
     }
 
-    const oldValue = { paymentCode: provider.paymentCode, name: provider.name, countryCode: provider.countryCode };
+    const oldValue = { paymentCode: provider.paymentCode, providerName: provider.providerName, countryCode: provider.countryCode };
     await this.providerRepo.remove(provider);
 
     // Log audit

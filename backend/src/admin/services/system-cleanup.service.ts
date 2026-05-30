@@ -1,6 +1,6 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, Between, Like, In } from 'typeorm';
+import { Repository, DataSource, Between, Like, In, LessThan } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { SystemCleanupLog, CleanupStatus } from '../entities/system-cleanup-log.entity';
 import { User } from '../../users/entities/user.entity';

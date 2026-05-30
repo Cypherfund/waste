@@ -3,6 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { MarketerPayoutService } from './marketer-payout.service';
+import { AdminAuditService } from '../../admin/services/admin-audit.service';
 import { MarketerNotificationService } from './marketer-notification.service';
 import {
   MarketerPayoutRequest,
@@ -64,6 +65,7 @@ describe('MarketerPayoutService', () => {
         { provide: MarketerNotificationService, useValue: notificationService },
         { provide: DataSource, useValue: dataSource },
         { provide: EventEmitter2, useValue: { emit: jest.fn(), emitAsync: jest.fn() } },
+        { provide: AdminAuditService, useValue: { log: jest.fn() } },
       ],
     }).compile();
 

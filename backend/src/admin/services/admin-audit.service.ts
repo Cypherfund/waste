@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AdminAuditLog, AdminAuditAction, AdminAuditEntityType } from '../entities/admin-audit-log.entity';
 
+export { AdminAuditAction, AdminAuditEntityType };
+
 export interface AuditRequestContext {
   ipAddress?: string;
   userAgent?: string;
@@ -13,9 +15,9 @@ export interface AuditLogOptions {
   action: AdminAuditAction;
   entityType: AdminAuditEntityType;
   entityId?: string;
-  oldValue?: Record<string, any>;
-  newValue?: Record<string, any>;
-  metadata?: Record<string, any>;
+  oldValue?: Record<string, any> | null;
+  newValue?: Record<string, any> | null;
+  metadata?: Record<string, any> | null;
   context?: AuditRequestContext;
 }
 
@@ -78,13 +80,13 @@ export class AdminAuditService {
     }
   }
 
-  private sanitizeData(data: Record<string, any> | undefined): Record<string, any> | null {
+  private sanitizeData(data: Record<string, any> | null | undefined): Record<string, any> | null {
     if (!data) return null;
 
     const sanitized = { ...data };
 
     for (const key of Object.keys(sanitized)) {
-      if (this.sensitiveKeys.some((sensitive) => key.toLowerCase().includes(sensitive))) {
+      if (this.sensitiveKeys.some((sensitive) => key.toLowerCase().includes(sensitive.toLowerCase()))) {
         sanitized[key] = '[REDACTED]';
       } else if (typeof sanitized[key] === 'object' && sanitized[key] !== null) {
         sanitized[key] = this.sanitizeData(sanitized[key]);
