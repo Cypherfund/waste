@@ -28,6 +28,7 @@ export class HealthController {
       status: 'ok',
       timestamp: new Date().toISOString(),
       requestId,
+      uptimeSeconds,
     };
   }
 

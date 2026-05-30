@@ -53,6 +53,7 @@ describe('HealthController', () => {
         status: 'ok',
         timestamp: expect.any(String),
         requestId: 'test-request-id',
+        uptimeSeconds: expect.any(Number),
       });
     });
 
@@ -93,6 +94,7 @@ describe('HealthController', () => {
         status: 'ok',
         timestamp: expect.any(String),
         requestId: 'test-request-id',
+        uptimeSeconds: expect.any(Number),
       });
     });
   });
