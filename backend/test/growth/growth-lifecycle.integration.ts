@@ -608,11 +608,11 @@ describe('Growth Module — Integration Tests', () => {
     });
 
     it('should reject payout exceeding approved balance', async () => {
-      // approvedAmount is now 3000; try to request 10000
       await dataSource.query(
-        `UPDATE marketer_payout_requests SET status = 'APPROVED' WHERE id = $1`,
-        [payoutId],
+        `UPDATE marketer_profiles SET approved_amount = 3000 WHERE id = $1`,
+        [marketerProfileId],
       );
+
       await request(httpServer)
         .post('/api/v1/marketer/payout-requests')
         .set('Authorization', `Bearer ${marketerToken}`)
@@ -685,14 +685,26 @@ describe('Growth Module — Integration Tests', () => {
     });
 
     it('should update totalPaid and set paidReference when marking as paid', async () => {
-      const [existing] = await dataSource.query(
-        `SELECT id FROM marketer_payout_requests WHERE marketer_profile_id = $1 AND status = 'APPROVED' LIMIT 1`,
-        [marketerProfileId],
-      );
-      if (!existing) return; // guard if prior test failed
+      const res = await request(httpServer)
+        .post('/api/v1/marketer/payout-requests')
+        .set('Authorization', `Bearer ${marketerToken}`)
+        .send({
+          amount: 1000,
+          method: 'MTN_MOMO',
+          accountNumber: '+237670000001',
+          accountName: 'Test Marketer',
+        })
+        .expect(201);
+
+      const newPayoutId = res.body.id;
 
       await request(httpServer)
-        .post(`/api/v1/admin/growth/marketer-payouts/${existing.id}/mark-paid`)
+        .post(`/api/v1/admin/growth/marketer-payouts/${newPayoutId}/approve`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(201);
+
+      await request(httpServer)
+        .post(`/api/v1/admin/growth/marketer-payouts/${newPayoutId}/mark-paid`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ paidReference: 'MOMO-REF-001' })
         .expect(201);
@@ -705,7 +717,7 @@ describe('Growth Module — Integration Tests', () => {
 
       const [payout] = await dataSource.query(
         `SELECT paid_reference, status FROM marketer_payout_requests WHERE id = $1`,
-        [existing.id],
+        [newPayoutId],
       );
       expect(payout.status).toBe('PAID');
       expect(payout.paid_reference).toBe('MOMO-REF-001');
