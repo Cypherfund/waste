@@ -102,9 +102,7 @@ export class JobsController {
   @Get('earnings/summary')
   @ApiOperation({ summary: 'Get earnings quick summary (COLLECTOR only)' })
   @ApiResponse({ status: 200, description: 'Quick summary', type: EarningsQuickSummaryDto })
-  async getEarningsSummary(
-    @CurrentUser() user: JwtPayload,
-  ): Promise<EarningsQuickSummaryDto> {
+  async getEarningsSummary(@CurrentUser() user: JwtPayload): Promise<EarningsQuickSummaryDto> {
     if (user.role !== UserRole.COLLECTOR) {
       throw new ForbiddenException('Only collectors can access earnings');
     }
@@ -128,7 +126,11 @@ export class JobsController {
   @Post(':id/accept')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Accept an assigned job (COLLECTOR only)' })
-  @ApiResponse({ status: 200, description: 'Job accepted, status → IN_PROGRESS', type: JobResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Job accepted, status → IN_PROGRESS',
+    type: JobResponseDto,
+  })
   @ApiResponse({ status: 400, description: 'Invalid state transition' })
   @ApiResponse({ status: 403, description: 'Not assigned to you' })
   async accept(
@@ -161,7 +163,11 @@ export class JobsController {
   @Post(':id/start')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Start a job (COLLECTOR only)' })
-  @ApiResponse({ status: 200, description: 'Job started, status → IN_PROGRESS', type: JobResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Job started, status → IN_PROGRESS',
+    type: JobResponseDto,
+  })
   @ApiResponse({ status: 400, description: 'Invalid state transition' })
   @ApiResponse({ status: 403, description: 'Not assigned to you' })
   async start(

@@ -3,7 +3,11 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { TransactionType, TransactionStatus, PaymentTransaction } from './entities/payment-transaction.entity';
+import {
+  TransactionType,
+  TransactionStatus,
+  PaymentTransaction,
+} from './entities/payment-transaction.entity';
 import { Job } from '../jobs/entities/job.entity';
 import { JobStatus } from '../common/enums/job-status.enum';
 import { PaymentStatus } from '../common/enums/payment-status.enum';
@@ -85,7 +89,11 @@ export class PaymentEventsService {
   }
 
   // ── Wallet top-up success ───────────────────────────────────────
-  private async handleWalletTopUpSuccess(transactionId: string, userId: string, amount: number): Promise<void> {
+  private async handleWalletTopUpSuccess(
+    transactionId: string,
+    userId: string,
+    amount: number,
+  ): Promise<void> {
     return this.dataSource.transaction(async (em) => {
       // Lock transaction for idempotency
       const transaction = await em
@@ -102,7 +110,9 @@ export class PaymentEventsService {
 
       // Idempotency: only process if still pending
       if (transaction.status !== TransactionStatus.PENDING) {
-        this.logger.log(`Transaction ${transactionId} already processed (status: ${transaction.status})`);
+        this.logger.log(
+          `Transaction ${transactionId} already processed (status: ${transaction.status})`,
+        );
         return;
       }
 
@@ -131,7 +141,9 @@ export class PaymentEventsService {
       transaction.status = TransactionStatus.VERIFIED;
       await em.save(transaction);
 
-      this.logger.log(`Wallet credited for user ${userId}: +${amount} XAF, transaction ${transactionId}`);
+      this.logger.log(
+        `Wallet credited for user ${userId}: +${amount} XAF, transaction ${transactionId}`,
+      );
     });
   }
 

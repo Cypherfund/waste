@@ -19,13 +19,13 @@ async function bootstrap() {
   const corsOrigins = configService.get<string[]>('cors.origins', ['http://localhost:5173']);
   const storageType = configService.get<string>('STORAGE_TYPE', 'local');
   const uploadsDir = configService.get<string>('UPLOADS_DIR', './uploads');
-  
+
   logger.log(`CORS Origins: ${JSON.stringify(corsOrigins)}`);
   logger.log(`Storage Type: ${storageType}`);
 
   // Global prefix
   app.setGlobalPrefix(apiPrefix);
-  
+
   // Serve static files if using local storage
   if (storageType === 'local') {
     app.useStaticAssets(join(__dirname, '..', uploadsDir), {
@@ -41,12 +41,7 @@ async function bootstrap() {
   app.enableCors({
     origin: corsOrigins,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'X-Correlation-ID',
-      'X-Idempotency-Key',
-    ],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Correlation-ID', 'X-Idempotency-Key'],
     exposedHeaders: ['X-Correlation-ID'],
     credentials: true,
     maxAge: 3600,

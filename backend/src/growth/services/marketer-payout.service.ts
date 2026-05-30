@@ -2,7 +2,14 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { MarketerPayoutRequest, PayoutStatus, MarketerProfile, CommissionTransaction, CommissionStatus, NotificationType } from '../entities';
+import {
+  MarketerPayoutRequest,
+  PayoutStatus,
+  MarketerProfile,
+  CommissionTransaction,
+  CommissionStatus,
+  NotificationType,
+} from '../entities';
 import { CreatePayoutRequestDto } from '../dto';
 import { MarketerNotificationService } from './marketer-notification.service';
 import { PayoutEvents, PayoutProcessedPayload } from '../../events/events.types';
@@ -36,7 +43,7 @@ export class MarketerPayoutService {
     // Check available balance
     if (dto.amount > profile.approvedAmount) {
       throw new BadRequestException(
-        `Insufficient approved balance. Available: ${profile.approvedAmount} XAF, Requested: ${dto.amount} XAF`
+        `Insufficient approved balance. Available: ${profile.approvedAmount} XAF, Requested: ${dto.amount} XAF`,
       );
     }
 
@@ -103,10 +110,7 @@ export class MarketerPayoutService {
     return { data, total, totalPages: Math.ceil(total / limit) };
   }
 
-  async approvePayout(
-    payoutId: string,
-    adminId: string,
-  ): Promise<MarketerPayoutRequest> {
+  async approvePayout(payoutId: string, adminId: string): Promise<MarketerPayoutRequest> {
     const payout = await this.payoutRepo.findOne({
       where: { id: payoutId },
       relations: ['marketerProfile'],

@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  NotFoundException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull, FindOptionsWhere } from 'typeorm';
 import { OnEvent } from '@nestjs/event-emitter';
@@ -69,94 +64,77 @@ export class NotificationsService {
   @OnEvent(JobEvents.ASSIGNED)
   async onJobAssigned(payload: JobAssignedPayload): Promise<void> {
     if (payload.collectorId) {
-      await this.createAndDispatch(
-        payload.collectorId,
-        NotificationType.JOB_ASSIGNED,
-        { jobId: payload.jobId },
-      );
+      await this.createAndDispatch(payload.collectorId, NotificationType.JOB_ASSIGNED, {
+        jobId: payload.jobId,
+      });
     }
     // Notify household only for manual assignments — auto-assign notifies household on JOB_ACCEPTED (when collector accepts)
     if (payload.isManualAssignment) {
-      await this.createAndDispatch(
-        payload.householdId,
-        NotificationType.JOB_ACCEPTED,
-        { jobId: payload.jobId },
-      );
+      await this.createAndDispatch(payload.householdId, NotificationType.JOB_ACCEPTED, {
+        jobId: payload.jobId,
+      });
     }
   }
 
   @OnEvent(JobEvents.ACCEPTED)
   async onJobAccepted(payload: JobEventPayload): Promise<void> {
-    await this.createAndDispatch(
-      payload.householdId,
-      NotificationType.JOB_ACCEPTED,
-      { jobId: payload.jobId },
-    );
+    await this.createAndDispatch(payload.householdId, NotificationType.JOB_ACCEPTED, {
+      jobId: payload.jobId,
+    });
   }
 
   @OnEvent(JobEvents.REJECTED)
   async onJobRejected(payload: JobRejectedPayload): Promise<void> {
-    await this.createAndDispatch(
-      payload.householdId,
-      NotificationType.JOB_REJECTED,
-      { jobId: payload.jobId, reason: payload.reason },
-    );
+    await this.createAndDispatch(payload.householdId, NotificationType.JOB_REJECTED, {
+      jobId: payload.jobId,
+      reason: payload.reason,
+    });
   }
 
   @OnEvent(JobEvents.STARTED)
   async onJobStarted(payload: JobEventPayload): Promise<void> {
-    await this.createAndDispatch(
-      payload.householdId,
-      NotificationType.JOB_STARTED,
-      { jobId: payload.jobId },
-    );
+    await this.createAndDispatch(payload.householdId, NotificationType.JOB_STARTED, {
+      jobId: payload.jobId,
+    });
   }
 
   @OnEvent(JobEvents.COMPLETED)
   async onJobCompleted(payload: JobCompletedPayload): Promise<void> {
-    await this.createAndDispatch(
-      payload.householdId,
-      NotificationType.JOB_COMPLETED,
-      { jobId: payload.jobId },
-    );
+    await this.createAndDispatch(payload.householdId, NotificationType.JOB_COMPLETED, {
+      jobId: payload.jobId,
+    });
   }
 
   @OnEvent(JobEvents.VALIDATED)
   async onJobValidated(payload: JobEventPayload): Promise<void> {
     if (payload.collectorId) {
-      await this.createAndDispatch(
-        payload.collectorId,
-        NotificationType.PROOF_VALIDATED,
-        { jobId: payload.jobId },
-      );
+      await this.createAndDispatch(payload.collectorId, NotificationType.PROOF_VALIDATED, {
+        jobId: payload.jobId,
+      });
     }
   }
 
   @OnEvent(JobEvents.CANCELLED)
   async onJobCancelled(payload: JobCancelledPayload): Promise<void> {
     // Notify both household and collector (if assigned)
-    await this.createAndDispatch(
-      payload.householdId,
-      NotificationType.JOB_CANCELLED,
-      { jobId: payload.jobId, reason: payload.reason },
-    );
+    await this.createAndDispatch(payload.householdId, NotificationType.JOB_CANCELLED, {
+      jobId: payload.jobId,
+      reason: payload.reason,
+    });
 
     if (payload.collectorId) {
-      await this.createAndDispatch(
-        payload.collectorId,
-        NotificationType.JOB_CANCELLED,
-        { jobId: payload.jobId, reason: payload.reason },
-      );
+      await this.createAndDispatch(payload.collectorId, NotificationType.JOB_CANCELLED, {
+        jobId: payload.jobId,
+        reason: payload.reason,
+      });
     }
   }
 
   @OnEvent(JobEvents.ASSIGNMENT_TIMEOUT)
   async onAssignmentTimeout(payload: JobAssignmentTimeoutPayload): Promise<void> {
-    await this.createAndDispatch(
-      payload.collectorId,
-      NotificationType.ASSIGNMENT_TIMEOUT,
-      { jobId: payload.jobId },
-    );
+    await this.createAndDispatch(payload.collectorId, NotificationType.ASSIGNMENT_TIMEOUT, {
+      jobId: payload.jobId,
+    });
   }
 
   @OnEvent(JobEvents.ASSIGNMENT_ESCALATED)
@@ -164,99 +142,89 @@ export class NotificationsService {
     // Notify all active admins per Phase 1 §7.2
     const admins = await this.usersService.findByRole('ADMIN');
     for (const admin of admins) {
-      await this.createAndDispatch(
-        admin.id,
-        NotificationType.ASSIGNMENT_ESCALATED,
-        { jobId: payload.jobId, attempts: payload.attempts },
-      );
+      await this.createAndDispatch(admin.id, NotificationType.ASSIGNMENT_ESCALATED, {
+        jobId: payload.jobId,
+        attempts: payload.attempts,
+      });
     }
   }
 
   @OnEvent(ProofEvents.UPLOADED)
   async onProofUploaded(payload: ProofUploadedPayload): Promise<void> {
     // Notify household that proof was uploaded — Phase 1 §7.2
-    await this.createAndDispatch(
-      payload.householdId,
-      NotificationType.PROOF_UPLOADED,
-      { jobId: payload.jobId },
-    );
+    await this.createAndDispatch(payload.householdId, NotificationType.PROOF_UPLOADED, {
+      jobId: payload.jobId,
+    });
   }
 
   @OnEvent(ProofEvents.AUTO_VALIDATED)
   async onProofAutoValidated(payload: ProofAutoValidatedPayload): Promise<void> {
     // Notify both household and collector — Phase 1 §7.2
-    await this.createAndDispatch(
-      payload.householdId,
-      NotificationType.PROOF_AUTO_VALIDATED,
-      { jobId: payload.jobId },
-    );
+    await this.createAndDispatch(payload.householdId, NotificationType.PROOF_AUTO_VALIDATED, {
+      jobId: payload.jobId,
+    });
     if (payload.collectorId) {
-      await this.createAndDispatch(
-        payload.collectorId,
-        NotificationType.PROOF_AUTO_VALIDATED,
-        { jobId: payload.jobId },
-      );
+      await this.createAndDispatch(payload.collectorId, NotificationType.PROOF_AUTO_VALIDATED, {
+        jobId: payload.jobId,
+      });
     }
   }
 
   @OnEvent(JobEvents.RATED)
   async onJobRated(payload: JobRatedPayload): Promise<void> {
     // Notify collector of new rating — Phase 1 §7.2
-    await this.createAndDispatch(
-      payload.collectorId,
-      NotificationType.JOB_RATED,
-      { jobId: payload.jobId },
-    );
+    await this.createAndDispatch(payload.collectorId, NotificationType.JOB_RATED, {
+      jobId: payload.jobId,
+    });
   }
 
   @OnEvent(EarningsEvents.CONFIRMED)
   async onEarningsConfirmed(payload: EarningsConfirmedPayload): Promise<void> {
     // Notify collector earnings confirmed — Phase 1 §7.2
-    await this.createAndDispatch(
-      payload.collectorId,
-      NotificationType.EARNINGS_CONFIRMED,
-      { jobId: payload.jobId },
-    );
+    await this.createAndDispatch(payload.collectorId, NotificationType.EARNINGS_CONFIRMED, {
+      jobId: payload.jobId,
+    });
   }
 
   // ─── PAYMENT EVENTS ─────────────────────────────────────────────
 
   @OnEvent(PaymentEvents.VERIFIED)
   async onPaymentVerified(payload: PaymentVerifiedPayload): Promise<void> {
-    await this.createAndDispatch(
-      payload.userId,
-      NotificationType.PAYMENT_VERIFIED,
-      { jobId: payload.jobId, amount: payload.amount, paymentMethod: payload.paymentMethod, targetScreen: 'booking_details' },
-    );
+    await this.createAndDispatch(payload.userId, NotificationType.PAYMENT_VERIFIED, {
+      jobId: payload.jobId,
+      amount: payload.amount,
+      paymentMethod: payload.paymentMethod,
+      targetScreen: 'booking_details',
+    });
   }
 
   @OnEvent(PaymentEvents.REJECTED)
   async onPaymentRejected(payload: PaymentRejectedPayload): Promise<void> {
-    await this.createAndDispatch(
-      payload.userId,
-      NotificationType.PAYMENT_REJECTED,
-      { jobId: payload.jobId, reason: payload.reason, targetScreen: 'booking_details' },
-    );
+    await this.createAndDispatch(payload.userId, NotificationType.PAYMENT_REJECTED, {
+      jobId: payload.jobId,
+      reason: payload.reason,
+      targetScreen: 'booking_details',
+    });
   }
 
   @OnEvent(PaymentEvents.FAILED)
   async onPaymentFailed(payload: PaymentFailedPayload): Promise<void> {
-    await this.createAndDispatch(
-      payload.userId,
-      NotificationType.PAYMENT_FAILED,
-      { jobId: payload.jobId, reason: payload.reason, targetScreen: 'booking_details' },
-    );
+    await this.createAndDispatch(payload.userId, NotificationType.PAYMENT_FAILED, {
+      jobId: payload.jobId,
+      reason: payload.reason,
+      targetScreen: 'booking_details',
+    });
   }
 
   // ─── SUBSCRIPTION EVENTS ────────────────────────────────────────
 
   @OnEvent(SubscriptionEvents.PAID)
   async onSubscriptionPaid(payload: SubscriptionPaidPayload): Promise<void> {
-    await this.createAndDispatch(
-      payload.userId,
-      NotificationType.SUBSCRIPTION_ACTIVATED,
-      { subscriptionId: payload.subscriptionId, planName: payload.planName, targetScreen: 'subscription' },
-    );
+    await this.createAndDispatch(payload.userId, NotificationType.SUBSCRIPTION_ACTIVATED, {
+      subscriptionId: payload.subscriptionId,
+      planName: payload.planName,
+      targetScreen: 'subscription',
+    });
   }
 
   // ─── DISPUTE EVENTS ─────────────────────────────────────────────
@@ -264,34 +232,34 @@ export class NotificationsService {
   @OnEvent(JobEvents.DISPUTED)
   async onJobDisputed(payload: JobEventPayload): Promise<void> {
     // Notify both household and collector
-    await this.createAndDispatch(
-      payload.householdId,
-      NotificationType.JOB_DISPUTED,
-      { jobId: payload.jobId, targetScreen: 'booking_details' },
-    );
+    await this.createAndDispatch(payload.householdId, NotificationType.JOB_DISPUTED, {
+      jobId: payload.jobId,
+      targetScreen: 'booking_details',
+    });
     if (payload.collectorId) {
-      await this.createAndDispatch(
-        payload.collectorId,
-        NotificationType.JOB_DISPUTED,
-        { jobId: payload.jobId, targetScreen: 'booking_details' },
-      );
+      await this.createAndDispatch(payload.collectorId, NotificationType.JOB_DISPUTED, {
+        jobId: payload.jobId,
+        targetScreen: 'booking_details',
+      });
     }
   }
 
   @OnEvent(DisputeEvents.RESOLVED)
   async onDisputeResolved(payload: DisputeResolvedPayload): Promise<void> {
     // Notify both household and collector
-    await this.createAndDispatch(
-      payload.householdId,
-      NotificationType.DISPUTE_RESOLVED,
-      { jobId: payload.jobId, disputeId: payload.disputeId, resolution: payload.resolution, targetScreen: 'booking_details' },
-    );
+    await this.createAndDispatch(payload.householdId, NotificationType.DISPUTE_RESOLVED, {
+      jobId: payload.jobId,
+      disputeId: payload.disputeId,
+      resolution: payload.resolution,
+      targetScreen: 'booking_details',
+    });
     if (payload.collectorId) {
-      await this.createAndDispatch(
-        payload.collectorId,
-        NotificationType.DISPUTE_RESOLVED,
-        { jobId: payload.jobId, disputeId: payload.disputeId, resolution: payload.resolution, targetScreen: 'booking_details' },
-      );
+      await this.createAndDispatch(payload.collectorId, NotificationType.DISPUTE_RESOLVED, {
+        jobId: payload.jobId,
+        disputeId: payload.disputeId,
+        resolution: payload.resolution,
+        targetScreen: 'booking_details',
+      });
     }
   }
 
@@ -299,29 +267,31 @@ export class NotificationsService {
 
   @OnEvent(CommissionEvents.EARNED)
   async onCommissionEarned(payload: CommissionEarnedPayload): Promise<void> {
-    await this.createAndDispatch(
-      payload.marketerUserId,
-      NotificationType.COMMISSION_EARNED,
-      { commissionId: payload.commissionId, amount: payload.amount, reason: payload.reason, targetScreen: 'earnings' },
-    );
+    await this.createAndDispatch(payload.marketerUserId, NotificationType.COMMISSION_EARNED, {
+      commissionId: payload.commissionId,
+      amount: payload.amount,
+      reason: payload.reason,
+      targetScreen: 'earnings',
+    });
   }
 
   @OnEvent(PayoutEvents.APPROVED)
   async onPayoutApproved(payload: PayoutProcessedPayload): Promise<void> {
-    await this.createAndDispatch(
-      payload.marketerUserId,
-      NotificationType.PAYOUT_APPROVED,
-      { payoutRequestId: payload.payoutRequestId, amount: payload.amount, targetScreen: 'earnings' },
-    );
+    await this.createAndDispatch(payload.marketerUserId, NotificationType.PAYOUT_APPROVED, {
+      payoutRequestId: payload.payoutRequestId,
+      amount: payload.amount,
+      targetScreen: 'earnings',
+    });
   }
 
   @OnEvent(PayoutEvents.REJECTED)
   async onPayoutRejected(payload: PayoutProcessedPayload): Promise<void> {
-    await this.createAndDispatch(
-      payload.marketerUserId,
-      NotificationType.PAYOUT_REJECTED,
-      { payoutRequestId: payload.payoutRequestId, amount: payload.amount, reason: payload.reason, targetScreen: 'earnings' },
-    );
+    await this.createAndDispatch(payload.marketerUserId, NotificationType.PAYOUT_REJECTED, {
+      payoutRequestId: payload.payoutRequestId,
+      amount: payload.amount,
+      reason: payload.reason,
+      targetScreen: 'earnings',
+    });
   }
 
   // ─── CORE METHODS ─────────────────────────────────────────────
@@ -329,11 +299,7 @@ export class NotificationsService {
   /**
    * Create a notification, persist it, and dispatch via appropriate channels.
    */
-  async createAndDispatch(
-    userId: string,
-    type: string,
-    context: TemplateContext,
-  ): Promise<void> {
+  async createAndDispatch(userId: string, type: string, context: TemplateContext): Promise<void> {
     try {
       const template = getTemplate(type, context);
 
@@ -371,9 +337,7 @@ export class NotificationsService {
           data: this.stringifyData(context),
         });
 
-        savedPush.status = pushResult.success
-          ? NotificationStatus.SENT
-          : NotificationStatus.FAILED;
+        savedPush.status = pushResult.success ? NotificationStatus.SENT : NotificationStatus.FAILED;
         savedPush.sentAt = pushResult.success ? new Date() : null;
         await this.notifRepo.save(savedPush);
       }
@@ -402,9 +366,7 @@ export class NotificationsService {
           body: `${template.title}: ${template.body}`,
         });
 
-        savedSms.status = smsResult.success
-          ? NotificationStatus.SENT
-          : NotificationStatus.FAILED;
+        savedSms.status = smsResult.success ? NotificationStatus.SENT : NotificationStatus.FAILED;
         savedSms.sentAt = smsResult.success ? new Date() : null;
         await this.notifRepo.save(savedSms);
       }

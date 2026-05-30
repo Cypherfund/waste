@@ -52,37 +52,58 @@ export class CreateJobDto {
   @MaxLength(1000)
   notes?: string;
 
-  @ApiPropertyOptional({ enum: ['NONE', 'MANUAL_PROVIDER', 'INTEGRATED_PROVIDER', 'CASH'], description: 'Payment mode' })
+  @ApiPropertyOptional({
+    enum: ['NONE', 'MANUAL_PROVIDER', 'INTEGRATED_PROVIDER', 'CASH'],
+    description: 'Payment mode',
+  })
   @IsOptional()
   @IsString()
   paymentMode?: string;
 
-  @ApiPropertyOptional({ example: 'MOBILE_MONEY', description: 'Payment provider code (for manual/integrated provider payments)' })
+  @ApiPropertyOptional({
+    example: 'MOBILE_MONEY',
+    description: 'Payment provider code (for manual/integrated provider payments)',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(50)
   paymentMethod?: string;
 
-  @ApiPropertyOptional({ example: 'TX123456789', description: 'Payment reference/transaction ID (required for manual provider payments)' })
+  @ApiPropertyOptional({
+    example: 'TX123456789',
+    description: 'Payment reference/transaction ID (required for manual provider payments)',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(100)
   paymentRef?: string;
 
-  @ApiPropertyOptional({ example: 'https://cdn.example.com/proof/abc123.jpg', description: 'Payment proof screenshot URL (required when provider.manualProofRequired=true)' })
+  @ApiPropertyOptional({
+    example: 'https://cdn.example.com/proof/abc123.jpg',
+    description: 'Payment proof screenshot URL (required when provider.manualProofRequired=true)',
+  })
   @IsOptional()
   @IsString()
   paymentProofUrl?: string;
 
-  @ApiPropertyOptional({ example: '105', description: 'Payment provider code (e.g. 105 for MTN, 106 for Orange) for real payments' })
+  @ApiPropertyOptional({
+    example: '105',
+    description: 'Payment provider code (e.g. 105 for MTN, 106 for Orange) for real payments',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(10)
   paymentCode?: string;
 
-  @ApiPropertyOptional({ example: '650931636', description: 'Phone number for mobile money payment (Cameroon format, 9 digits starting with 6)' })
+  @ApiPropertyOptional({
+    example: '650931636',
+    description:
+      'Phone number for mobile money payment (Cameroon format, 9 digits starting with 6)',
+  })
   @IsOptional()
   @IsString()
-  @Matches(/^6[0-9]{8}$/, { message: 'paymentPhone must be a valid Cameroon mobile number (9 digits starting with 6)' })
+  @Matches(/^6[0-9]{8}$/, {
+    message: 'paymentPhone must be a valid Cameroon mobile number (9 digits starting with 6)',
+  })
   paymentPhone?: string;
 }

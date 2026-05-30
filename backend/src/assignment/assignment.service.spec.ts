@@ -78,7 +78,7 @@ describe('AssignmentService', () => {
         {
           id: 'col-1',
           latitude: 4.05,
-          longitude: 9.70,
+          longitude: 9.7,
           avgRating: 4.5,
           activeJobCount: 1,
           dailyJobCount: 2,
@@ -128,10 +128,7 @@ describe('AssignmentService', () => {
 
       expect(jobsService.getJobEntity).toHaveBeenCalledWith('job-1');
       expect(configService.getAssignmentConfig).toHaveBeenCalled();
-      expect(jobsService.assignToCollector).toHaveBeenCalledWith(
-        'job-1',
-        expect.any(String),
-      );
+      expect(jobsService.assignToCollector).toHaveBeenCalledWith('job-1', expect.any(String));
       expect(eventEmitter.emit).toHaveBeenCalledWith(
         JobEvents.ASSIGNMENT_STARTED,
         expect.any(Object),
@@ -185,10 +182,7 @@ describe('AssignmentService', () => {
 
       await service.autoAssign('job-1');
 
-      expect(eventEmitter.emit).not.toHaveBeenCalledWith(
-        JobEvents.ASSIGNED,
-        expect.any(Object),
-      );
+      expect(eventEmitter.emit).not.toHaveBeenCalledWith(JobEvents.ASSIGNED, expect.any(Object));
     });
   });
 
@@ -225,10 +219,7 @@ describe('AssignmentService', () => {
     it('should assign the specified collector', async () => {
       await service.manualAssign('job-1', 'col-1');
 
-      expect(jobsService.assignToCollector).toHaveBeenCalledWith(
-        'job-1',
-        'col-1',
-      );
+      expect(jobsService.assignToCollector).toHaveBeenCalledWith('job-1', 'col-1');
       expect(eventEmitter.emit).toHaveBeenCalledWith(
         JobEvents.ASSIGNED,
         expect.objectContaining({ collectorId: 'col-1' }),
@@ -241,17 +232,17 @@ describe('AssignmentService', () => {
         status: JobStatus.IN_PROGRESS,
       });
 
-      await expect(
-        service.manualAssign('job-1', 'col-1'),
-      ).rejects.toThrow('Job must be in REQUESTED status');
+      await expect(service.manualAssign('job-1', 'col-1')).rejects.toThrow(
+        'Job must be in REQUESTED status',
+      );
     });
 
     it('should throw if collector not found', async () => {
       userRepo.findOne.mockResolvedValue(null);
 
-      await expect(
-        service.manualAssign('job-1', 'col-999'),
-      ).rejects.toThrow('Collector not found or not active');
+      await expect(service.manualAssign('job-1', 'col-999')).rejects.toThrow(
+        'Collector not found or not active',
+      );
     });
   });
 
@@ -264,9 +255,7 @@ describe('AssignmentService', () => {
         assignmentAttempts: 1,
       });
 
-      const autoAssignSpy = jest
-        .spyOn(service, 'autoAssign')
-        .mockResolvedValue();
+      const autoAssignSpy = jest.spyOn(service, 'autoAssign').mockResolvedValue();
 
       await service.handleTimeout('job-1');
 
@@ -330,10 +319,7 @@ describe('AssignmentService', () => {
         },
       ]);
 
-      const candidates = await service.getEligibleCollectors(
-        mockJob as Job,
-        defaultConfig,
-      );
+      const candidates = await service.getEligibleCollectors(mockJob as Job, defaultConfig);
 
       expect(candidates.map((c) => c.id)).toEqual(['col-ok']);
     });
@@ -360,10 +346,7 @@ describe('AssignmentService', () => {
         },
       ]);
 
-      const candidates = await service.getEligibleCollectors(
-        mockJob as Job,
-        defaultConfig,
-      );
+      const candidates = await service.getEligibleCollectors(mockJob as Job, defaultConfig);
 
       expect(candidates.map((c) => c.id)).toEqual(['col-near']);
     });
@@ -394,10 +377,7 @@ describe('AssignmentService', () => {
         .mockResolvedValueOnce(true)
         .mockResolvedValueOnce(false);
 
-      const candidates = await service.getEligibleCollectors(
-        mockJob as Job,
-        defaultConfig,
-      );
+      const candidates = await service.getEligibleCollectors(mockJob as Job, defaultConfig);
 
       expect(candidates.map((c) => c.id)).toEqual(['col-avail']);
     });
@@ -405,10 +385,7 @@ describe('AssignmentService', () => {
     it('should return empty array when no collectors in DB', async () => {
       (dataSource.query as jest.Mock).mockResolvedValue([]);
 
-      const candidates = await service.getEligibleCollectors(
-        mockJob as Job,
-        defaultConfig,
-      );
+      const candidates = await service.getEligibleCollectors(mockJob as Job, defaultConfig);
 
       expect(candidates).toEqual([]);
     });

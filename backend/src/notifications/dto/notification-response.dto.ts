@@ -1,5 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { NotificationChannel, NotificationStatus } from '../../common/enums/notification-channel.enum';
+import {
+  NotificationChannel,
+  NotificationStatus,
+} from '../../common/enums/notification-channel.enum';
 
 export class NotificationResponseDto {
   @ApiProperty()

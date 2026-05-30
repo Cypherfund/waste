@@ -119,37 +119,33 @@ describe('RatingsService', () => {
 
   describe('rateJob — validation', () => {
     it('should reject rating if household does not own the job', async () => {
-      await expect(
-        service.rateJob('job-1', 'other-hh', { value: 5 }),
-      ).rejects.toThrow('You can only rate your own jobs');
+      await expect(service.rateJob('job-1', 'other-hh', { value: 5 })).rejects.toThrow(
+        'You can only rate your own jobs',
+      );
     });
 
     it('should reject rating if job is not VALIDATED', async () => {
-      jobsService.getJobEntity.mockResolvedValue(
-        makeJob({ status: JobStatus.COMPLETED }),
-      );
+      jobsService.getJobEntity.mockResolvedValue(makeJob({ status: JobStatus.COMPLETED }));
 
-      await expect(
-        service.rateJob('job-1', 'hh-1', { value: 5 }),
-      ).rejects.toThrow('Job must be in VALIDATED status to rate');
+      await expect(service.rateJob('job-1', 'hh-1', { value: 5 })).rejects.toThrow(
+        'Job must be in VALIDATED status to rate',
+      );
     });
 
     it('should reject rating if job is in ASSIGNED status', async () => {
-      jobsService.getJobEntity.mockResolvedValue(
-        makeJob({ status: JobStatus.ASSIGNED }),
-      );
+      jobsService.getJobEntity.mockResolvedValue(makeJob({ status: JobStatus.ASSIGNED }));
 
-      await expect(
-        service.rateJob('job-1', 'hh-1', { value: 5 }),
-      ).rejects.toThrow('Job must be in VALIDATED status to rate');
+      await expect(service.rateJob('job-1', 'hh-1', { value: 5 })).rejects.toThrow(
+        'Job must be in VALIDATED status to rate',
+      );
     });
 
     it('should reject duplicate rating for the same job', async () => {
       ratingRepo.findOne.mockResolvedValue({ id: 'existing-rating' });
 
-      await expect(
-        service.rateJob('job-1', 'hh-1', { value: 5 }),
-      ).rejects.toThrow('This job has already been rated');
+      await expect(service.rateJob('job-1', 'hh-1', { value: 5 })).rejects.toThrow(
+        'This job has already been rated',
+      );
     });
   });
 

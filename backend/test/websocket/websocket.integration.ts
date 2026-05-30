@@ -1,5 +1,10 @@
 import { httpServer, dataSource, baseUrl, app } from '../test-setup';
-import { createTestUser, createTestJob, loginAndGetToken, cleanupTestData } from '../helpers/test-utils';
+import {
+  createTestUser,
+  createTestJob,
+  loginAndGetToken,
+  cleanupTestData,
+} from '../helpers/test-utils';
 import { UserRole } from '../../src/common/enums/role.enum';
 import { JobStatus } from '../../src/common/enums/job-status.enum';
 import { io, Socket } from 'socket.io-client';
@@ -23,7 +28,7 @@ describe('WebSocket Integration Tests', () => {
       'Household123!',
       UserRole.HOUSEHOLD,
       'WS Test Household',
-      '+237600000010'
+      '+237600000010',
     );
     householdId = household.id;
 
@@ -33,7 +38,7 @@ describe('WebSocket Integration Tests', () => {
       'Collector123!',
       UserRole.COLLECTOR,
       'WS Test Collector',
-      '+237600000011'
+      '+237600000011',
     );
     collectorId = collector.id;
 
@@ -124,14 +129,14 @@ describe('WebSocket Integration Tests', () => {
       })
         .then((job) => {
           jobId = job.id;
-          
+
           // Subscribe to job status updates on household socket
           householdSocket.emit('subscribe', { channel: `job:${jobId}` });
-          
+
           householdSocket.on('job:status', (data) => {
             statusUpdateReceived = data;
           });
-          
+
           setTimeout(done, 500);
         })
         .catch(done);
@@ -142,7 +147,9 @@ describe('WebSocket Integration Tests', () => {
 
       // Update DB first, then emit event via EventEmitter2 (matching production flow)
       dataSource
-        .query(`UPDATE jobs SET status = '${JobStatus.ASSIGNED}', collector_id = '${collectorId}' WHERE id = '${jobId}'`)
+        .query(
+          `UPDATE jobs SET status = '${JobStatus.ASSIGNED}', collector_id = '${collectorId}' WHERE id = '${jobId}'`,
+        )
         .then(() => {
           // Emit the domain event that the WS gateway listens to
           const eventEmitter = app.get(EventEmitter2);
@@ -153,7 +160,7 @@ describe('WebSocket Integration Tests', () => {
             status: JobStatus.ASSIGNED,
             timestamp: new Date(),
           });
-          
+
           setTimeout(() => {
             expect(statusUpdateReceived).toBeDefined();
             expect(statusUpdateReceived.jobId).toBe(jobId);
@@ -171,11 +178,11 @@ describe('WebSocket Integration Tests', () => {
     beforeAll((done) => {
       // Subscribe to collector channel
       collectorSocket.emit('subscribe', { channel: `collector:${collectorId}` });
-      
+
       collectorSocket.on('collector:assigned', (data) => {
         collectorJobAssignedReceived = data;
       });
-      
+
       setTimeout(done, 500);
     });
 
@@ -189,7 +196,9 @@ describe('WebSocket Integration Tests', () => {
         .then((job) => {
           // Update DB then emit domain event (matching production flow)
           dataSource
-            .query(`UPDATE jobs SET status = '${JobStatus.ASSIGNED}', collector_id = '${collectorId}' WHERE id = '${job.id}'`)
+            .query(
+              `UPDATE jobs SET status = '${JobStatus.ASSIGNED}', collector_id = '${collectorId}' WHERE id = '${job.id}'`,
+            )
             .then(() => {
               const eventEmitter = app.get(EventEmitter2);
               eventEmitter.emit(JobEvents.ASSIGNED, {
@@ -199,7 +208,7 @@ describe('WebSocket Integration Tests', () => {
                 status: JobStatus.ASSIGNED,
                 timestamp: new Date(),
               });
-              
+
               setTimeout(() => {
                 expect(collectorJobAssignedReceived).toBeDefined();
                 expect(collectorJobAssignedReceived.collectorId).toBe(collectorId);

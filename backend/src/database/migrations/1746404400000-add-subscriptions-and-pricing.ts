@@ -1,14 +1,19 @@
-import { MigrationInterface, QueryRunner } from "typeorm";
+import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class AddSubscriptionsAndPricing1746404400000 implements MigrationInterface {
-    name = 'AddSubscriptionsAndPricing1746404400000'
+  name = 'AddSubscriptionsAndPricing1746404400000';
 
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        const exists = await queryRunner.query(`SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='subscription_plans'`);
-        if (exists.length > 0) { console.log('Subscriptions migration: already applied, skipping.'); return; }
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    const exists = await queryRunner.query(
+      `SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='subscription_plans'`,
+    );
+    if (exists.length > 0) {
+      console.log('Subscriptions migration: already applied, skipping.');
+      return;
+    }
 
-        // ─── subscription_plans ───────────────────────────────────────────
-        await queryRunner.query(`
+    // ─── subscription_plans ───────────────────────────────────────────
+    await queryRunner.query(`
             CREATE TABLE "subscription_plans" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
                 "name" character varying(100) NOT NULL,
@@ -23,13 +28,13 @@ export class AddSubscriptionsAndPricing1746404400000 implements MigrationInterfa
             )
         `);
 
-        // ─── user_subscriptions ───────────────────────────────────────────
-        await queryRunner.query(`
+    // ─── user_subscriptions ───────────────────────────────────────────
+    await queryRunner.query(`
             CREATE TYPE "public"."user_subscriptions_status_enum"
             AS ENUM('ACTIVE', 'EXPIRED', 'CANCELLED')
         `);
 
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE TABLE "user_subscriptions" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
                 "user_id" uuid NOT NULL,
@@ -46,40 +51,40 @@ export class AddSubscriptionsAndPricing1746404400000 implements MigrationInterfa
             )
         `);
 
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE INDEX "IDX_user_subscriptions_user_id"
             ON "user_subscriptions" ("user_id")
         `);
 
-        await queryRunner.query(`
+    await queryRunner.query(`
             ALTER TABLE "user_subscriptions"
             ADD CONSTRAINT "FK_user_subscriptions_user"
             FOREIGN KEY ("user_id") REFERENCES "users"("id")
             ON DELETE NO ACTION ON UPDATE NO ACTION
         `);
 
-        await queryRunner.query(`
+    await queryRunner.query(`
             ALTER TABLE "user_subscriptions"
             ADD CONSTRAINT "FK_user_subscriptions_plan"
             FOREIGN KEY ("plan_id") REFERENCES "subscription_plans"("id")
             ON DELETE NO ACTION ON UPDATE NO ACTION
         `);
 
-        // ─── jobs pricing columns ──────────────────────────────────────────
-        await queryRunner.query(`
+    // ─── jobs pricing columns ──────────────────────────────────────────
+    await queryRunner.query(`
             CREATE TYPE "public"."jobs_pricing_type_enum"
             AS ENUM('SUBSCRIPTION', 'PAY_PER_PICKUP')
         `);
 
-        await queryRunner.query(`
+    await queryRunner.query(`
             ALTER TABLE "jobs"
             ADD COLUMN "quoted_price" numeric(10,2),
             ADD COLUMN "pricing_type" "public"."jobs_pricing_type_enum",
             ADD COLUMN "is_covered_by_subscription" boolean NOT NULL DEFAULT false
         `);
 
-        // ─── system_config: pricing keys ──────────────────────────────────
-        await queryRunner.query(`
+    // ─── system_config: pricing keys ──────────────────────────────────
+    await queryRunner.query(`
             INSERT INTO "system_config" (id, key, value, data_type, category, description, is_feature_flag, updated_by, updated_at)
             VALUES
                 (uuid_generate_v4(), 'pricing.per_pickup_price',           '1000', 'number',  'pricing', 'Price per pickup for pay-as-you-go (XAF)', false, NULL, NOW()),
@@ -88,8 +93,8 @@ export class AddSubscriptionsAndPricing1746404400000 implements MigrationInterfa
             ON CONFLICT (key) DO NOTHING
         `);
 
-        // ─── seed default Standard Plan ───────────────────────────────────
-        await queryRunner.query(`
+    // ─── seed default Standard Plan ───────────────────────────────────
+    await queryRunner.query(`
             INSERT INTO "subscription_plans" (id, name, price, currency, pickups_per_week, is_active, description, created_at, updated_at)
             VALUES (
                 uuid_generate_v4(),
@@ -104,27 +109,33 @@ export class AddSubscriptionsAndPricing1746404400000 implements MigrationInterfa
             )
             ON CONFLICT DO NOTHING
         `);
-    }
+  }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        // Remove jobs pricing columns
-        await queryRunner.query(`ALTER TABLE "jobs" DROP COLUMN IF EXISTS "is_covered_by_subscription"`);
-        await queryRunner.query(`ALTER TABLE "jobs" DROP COLUMN IF EXISTS "pricing_type"`);
-        await queryRunner.query(`ALTER TABLE "jobs" DROP COLUMN IF EXISTS "quoted_price"`);
-        await queryRunner.query(`DROP TYPE IF EXISTS "public"."jobs_pricing_type_enum"`);
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    // Remove jobs pricing columns
+    await queryRunner.query(
+      `ALTER TABLE "jobs" DROP COLUMN IF EXISTS "is_covered_by_subscription"`,
+    );
+    await queryRunner.query(`ALTER TABLE "jobs" DROP COLUMN IF EXISTS "pricing_type"`);
+    await queryRunner.query(`ALTER TABLE "jobs" DROP COLUMN IF EXISTS "quoted_price"`);
+    await queryRunner.query(`DROP TYPE IF EXISTS "public"."jobs_pricing_type_enum"`);
 
-        // Remove user_subscriptions
-        await queryRunner.query(`ALTER TABLE "user_subscriptions" DROP CONSTRAINT IF EXISTS "FK_user_subscriptions_plan"`);
-        await queryRunner.query(`ALTER TABLE "user_subscriptions" DROP CONSTRAINT IF EXISTS "FK_user_subscriptions_user"`);
-        await queryRunner.query(`DROP INDEX IF EXISTS "public"."IDX_user_subscriptions_user_id"`);
-        await queryRunner.query(`DROP TABLE IF EXISTS "user_subscriptions"`);
-        await queryRunner.query(`DROP TYPE IF EXISTS "public"."user_subscriptions_status_enum"`);
+    // Remove user_subscriptions
+    await queryRunner.query(
+      `ALTER TABLE "user_subscriptions" DROP CONSTRAINT IF EXISTS "FK_user_subscriptions_plan"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "user_subscriptions" DROP CONSTRAINT IF EXISTS "FK_user_subscriptions_user"`,
+    );
+    await queryRunner.query(`DROP INDEX IF EXISTS "public"."IDX_user_subscriptions_user_id"`);
+    await queryRunner.query(`DROP TABLE IF EXISTS "user_subscriptions"`);
+    await queryRunner.query(`DROP TYPE IF EXISTS "public"."user_subscriptions_status_enum"`);
 
-        // Remove subscription_plans
-        await queryRunner.query(`DROP TABLE IF EXISTS "subscription_plans"`);
+    // Remove subscription_plans
+    await queryRunner.query(`DROP TABLE IF EXISTS "subscription_plans"`);
 
-        // Remove pricing config keys
-        await queryRunner.query(`
+    // Remove pricing config keys
+    await queryRunner.query(`
             DELETE FROM "system_config"
             WHERE key IN (
                 'pricing.per_pickup_price',
@@ -132,5 +143,5 @@ export class AddSubscriptionsAndPricing1746404400000 implements MigrationInterfa
                 'pricing.subscription_pickups_per_week'
             )
         `);
-    }
+  }
 }

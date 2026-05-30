@@ -1,21 +1,11 @@
-import {
-  Injectable,
-  Logger,
-  BadRequestException,
-  NotFoundException,
-  Inject,
-} from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan, IsNull } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { FileRecord, FileType } from './entities/file.entity';
 import { StorageProvider, STORAGE_PROVIDER } from './providers/storage.provider';
 
-const ALLOWED_MIMETYPES = [
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-];
+const ALLOWED_MIMETYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
@@ -135,9 +125,7 @@ export class FilesService {
 
         this.logger.log(`Cleaned up file ${file.fileKey}`);
       } catch (err) {
-        this.logger.warn(
-          `Failed to cleanup file ${file.fileKey}: ${err.message}`,
-        );
+        this.logger.warn(`Failed to cleanup file ${file.fileKey}: ${err.message}`);
       }
     }
 

@@ -4,8 +4,13 @@ export class AddWalletAndPayouts1746490000000 implements MigrationInterface {
   name = 'AddWalletAndPayouts1746490000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    const exists = await queryRunner.query(`SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='payout_requests'`);
-    if (exists.length > 0) { console.log('Wallet migration: already applied, skipping.'); return; }
+    const exists = await queryRunner.query(
+      `SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='payout_requests'`,
+    );
+    if (exists.length > 0) {
+      console.log('Wallet migration: already applied, skipping.');
+      return;
+    }
 
     // ── wallet_balance on users ─────────────────────────────────────
     await queryRunner.query(`
@@ -85,8 +90,12 @@ export class AddWalletAndPayouts1746490000000 implements MigrationInterface {
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`DELETE FROM "system_config" WHERE key LIKE 'payout.%'`);
 
-    await queryRunner.query(`ALTER TABLE "payout_requests" DROP CONSTRAINT IF EXISTS "FK_payout_requests_reviewed_by"`);
-    await queryRunner.query(`ALTER TABLE "payout_requests" DROP CONSTRAINT IF EXISTS "FK_payout_requests_collector"`);
+    await queryRunner.query(
+      `ALTER TABLE "payout_requests" DROP CONSTRAINT IF EXISTS "FK_payout_requests_reviewed_by"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payout_requests" DROP CONSTRAINT IF EXISTS "FK_payout_requests_collector"`,
+    );
     await queryRunner.query(`DROP INDEX IF EXISTS "public"."IDX_payout_requests_status"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "public"."IDX_payout_requests_collector_id"`);
     await queryRunner.query(`DROP TABLE IF EXISTS "payout_requests"`);

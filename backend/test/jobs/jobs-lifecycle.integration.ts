@@ -1,5 +1,10 @@
 import { httpServer, dataSource, baseUrl } from '../test-setup';
-import { createTestUser, createTestJob, loginAndGetToken, cleanupTestData } from '../helpers/test-utils';
+import {
+  createTestUser,
+  createTestJob,
+  loginAndGetToken,
+  cleanupTestData,
+} from '../helpers/test-utils';
 import { UserRole } from '../../src/common/enums/role.enum';
 import { JobStatus } from '../../src/common/enums/job-status.enum';
 import * as request from 'supertest';
@@ -19,7 +24,7 @@ describe('Jobs Lifecycle Integration Tests', () => {
       'Household123!',
       UserRole.HOUSEHOLD,
       'Test Household',
-      '+237600000001'
+      '+237600000001',
     );
     householdId = household.id;
 
@@ -29,7 +34,7 @@ describe('Jobs Lifecycle Integration Tests', () => {
       'Collector123!',
       UserRole.COLLECTOR,
       'Test Collector',
-      '+237600000002'
+      '+237600000002',
     );
     collectorId = collector.id;
 
@@ -45,7 +50,7 @@ describe('Jobs Lifecycle Integration Tests', () => {
   describe('Job Creation', () => {
     it('should allow a household to create a job', async () => {
       const scheduledDate = new Date(Date.now() + 86400000); // Tomorrow
-      
+
       const response = await request(httpServer)
         .post('/api/v1/jobs')
         .set('authorization', `Bearer ${householdToken}`)
@@ -66,7 +71,7 @@ describe('Jobs Lifecycle Integration Tests', () => {
       expect(result.status).toBe(JobStatus.REQUESTED);
       expect(result.householdId).toBe(householdId);
       expect(result.locationAddress).toBe('123 Test Street, Akwa, Douala');
-      
+
       jobId = result.id;
     });
 
@@ -130,7 +135,7 @@ describe('Jobs Lifecycle Integration Tests', () => {
         'Admin123!',
         UserRole.ADMIN,
         'Test Admin',
-        '+237600000003'
+        '+237600000003',
       );
       const adminToken = await loginAndGetToken(baseUrl, '+237600000003', 'Admin123!');
 

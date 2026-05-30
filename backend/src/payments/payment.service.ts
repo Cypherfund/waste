@@ -10,7 +10,12 @@ import { Repository, LessThan } from 'typeorm';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { AxiosResponse } from 'axios';
-import { PaymentTransaction, TransactionStatus, TransactionType, PaymentSource } from './entities/payment-transaction.entity';
+import {
+  PaymentTransaction,
+  TransactionStatus,
+  TransactionType,
+  PaymentSource,
+} from './entities/payment-transaction.entity';
 import { PaymentProviderEntity } from './entities/payment-provider.entity';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import { PaymentCallbackDto } from './dto/payment-callback.dto';
@@ -158,7 +163,10 @@ export class PaymentService {
   }
 
   // ── UPDATE provider (admin) ─────────────────────────────────────
-  async updateProvider(id: number, data: Partial<PaymentProviderEntity>): Promise<PaymentProviderEntity> {
+  async updateProvider(
+    id: number,
+    data: Partial<PaymentProviderEntity>,
+  ): Promise<PaymentProviderEntity> {
     const provider = await this.providerRepo.findOne({ where: { id } });
     if (!provider) {
       throw new NotFoundException(`Payment provider ${id} not found`);
@@ -186,12 +194,10 @@ export class PaymentService {
     }
 
     // Validate limits
-    const minAmount = dto.type === TransactionType.CASHIN
-      ? provider.minDeposit
-      : provider.minWithdrawal;
-    const maxAmount = dto.type === TransactionType.CASHIN
-      ? provider.maxDeposit
-      : provider.maxWithdrawal;
+    const minAmount =
+      dto.type === TransactionType.CASHIN ? provider.minDeposit : provider.minWithdrawal;
+    const maxAmount =
+      dto.type === TransactionType.CASHIN ? provider.maxDeposit : provider.maxWithdrawal;
 
     if (
       (minAmount !== null && dto.amount < minAmount) ||
@@ -290,7 +296,9 @@ export class PaymentService {
 
     // Idempotency: only process if still pending
     if (transaction.status !== TransactionStatus.PENDING) {
-      this.logger.log(`Transaction ${transaction.id} already processed (status: ${transaction.status})`);
+      this.logger.log(
+        `Transaction ${transaction.id} already processed (status: ${transaction.status})`,
+      );
       return;
     }
 
@@ -353,12 +361,9 @@ export class PaymentService {
       const baseUrl = await this.getGatewayBaseUrl();
       try {
         const response: AxiosResponse<GatewayStatusResponse> = await firstValueFrom(
-          this.httpService.get<GatewayStatusResponse>(
-            `${baseUrl}/payment-api/payment/status`,
-            {
-              params: { transactionId: transaction.gatewayTransactionId },
-            },
-          ),
+          this.httpService.get<GatewayStatusResponse>(`${baseUrl}/payment-api/payment/status`, {
+            params: { transactionId: transaction.gatewayTransactionId },
+          }),
         );
         const data = response.data;
 
@@ -370,7 +375,9 @@ export class PaymentService {
             data: null,
           });
           // Reload to get updated status
-          return await this.transactionRepo.findOne({ where: { id: transactionId } }) as PaymentTransaction;
+          return (await this.transactionRepo.findOne({
+            where: { id: transactionId },
+          })) as PaymentTransaction;
         }
       } catch (error) {
         this.logger.error(`Failed to poll status: ${error.message}`);
@@ -382,7 +389,10 @@ export class PaymentService {
 
   // ── POLL pending transactions (cron job) ───────────────────────────
   async pollPendingTransactions(): Promise<void> {
-    const timeoutMinutes = await this.systemConfigService.getNumber('payment.pending_timeout_minutes', 15);
+    const timeoutMinutes = await this.systemConfigService.getNumber(
+      'payment.pending_timeout_minutes',
+      15,
+    );
     const cutoff = new Date(Date.now() - timeoutMinutes * 60 * 1000);
 
     const pending = await this.transactionRepo.find({
@@ -405,7 +415,10 @@ export class PaymentService {
 
   // ── TIMEOUT stale pending transactions ────────────────────────────
   async timeoutStalePendingTransactions(): Promise<void> {
-    const timeoutMinutes = await this.systemConfigService.getNumber('payment.pending_timeout_minutes', 15);
+    const timeoutMinutes = await this.systemConfigService.getNumber(
+      'payment.pending_timeout_minutes',
+      15,
+    );
     const cutoff = new Date(Date.now() - timeoutMinutes * 60 * 1000);
 
     const stale = await this.transactionRepo.find({

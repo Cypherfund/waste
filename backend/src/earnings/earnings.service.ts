@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  ForbiddenException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, ForbiddenException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThanOrEqual } from 'typeorm';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
@@ -78,9 +74,7 @@ export class EarningsService {
 
     const saved = await this.earningRepo.save(earning);
 
-    this.logger.log(
-      `Earnings created for job ${job.id}: ${saved.totalAmount} XAF (PENDING)`,
-    );
+    this.logger.log(`Earnings created for job ${job.id}: ${saved.totalAmount} XAF (PENDING)`);
 
     this.eventEmitter.emit(EarningsEvents.CALCULATED, {
       earningsId: saved.id,
@@ -117,9 +111,7 @@ export class EarningsService {
 
     const saved = await this.earningRepo.save(earning);
 
-    this.logger.log(
-      `Earnings confirmed for job ${payload.jobId}: ${saved.totalAmount} XAF`,
-    );
+    this.logger.log(`Earnings confirmed for job ${payload.jobId}: ${saved.totalAmount} XAF`);
 
     this.eventEmitter.emit(EarningsEvents.CONFIRMED, {
       earningsId: saved.id,
@@ -153,8 +145,7 @@ export class EarningsService {
     const distanceAmount = distanceKm * perKmRate;
 
     // Total = (base + distance) * surge
-    const totalAmount =
-      Math.round((baseRate + distanceAmount) * surgeMultiplier * 100) / 100;
+    const totalAmount = Math.round((baseRate + distanceAmount) * surgeMultiplier * 100) / 100;
 
     return {
       baseAmount: baseRate,

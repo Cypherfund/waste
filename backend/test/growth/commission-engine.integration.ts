@@ -31,11 +31,19 @@ const TABLES = [
 
 async function cleanAll() {
   for (const t of TABLES) {
-    try { await dataSource.query(`TRUNCATE TABLE "${t}" CASCADE`); } catch (_) {}
+    try {
+      await dataSource.query(`TRUNCATE TABLE "${t}" CASCADE`);
+    } catch (_) {}
   }
-  try { await dataSource.query(`TRUNCATE TABLE "user_subscriptions" CASCADE`); } catch (_) {}
-  try { await dataSource.query(`TRUNCATE TABLE "jobs" CASCADE`); } catch (_) {}
-  try { await dataSource.query(`TRUNCATE TABLE "users" CASCADE`); } catch (_) {}
+  try {
+    await dataSource.query(`TRUNCATE TABLE "user_subscriptions" CASCADE`);
+  } catch (_) {}
+  try {
+    await dataSource.query(`TRUNCATE TABLE "jobs" CASCADE`);
+  } catch (_) {}
+  try {
+    await dataSource.query(`TRUNCATE TABLE "users" CASCADE`);
+  } catch (_) {}
 }
 
 /** Read marketer_profiles row directly from DB — source of truth for counter tests */
@@ -93,7 +101,14 @@ describe('Commission Engine — Integration Tests', () => {
     schemeId = '92fa6da7-e4dd-44cc-9d4a-a0b57c93ad23';
 
     // Create admin
-    const admin = await createTestUser(dataSource, 'ce-admin@test.com', 'Admin123!', UserRole.ADMIN, 'CE Admin', '+237611000001');
+    const admin = await createTestUser(
+      dataSource,
+      'ce-admin@test.com',
+      'Admin123!',
+      UserRole.ADMIN,
+      'CE Admin',
+      '+237611000001',
+    );
     adminId = admin.id;
     adminToken = await loginAndGetToken(baseUrl, '+237611000001', 'Admin123!');
 
@@ -101,7 +116,12 @@ describe('Commission Engine — Integration Tests', () => {
     const mkRes = await request(httpServer)
       .post('/api/v1/admin/growth/marketers')
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({ name: 'CE Marketer', phone: '+237611000002', password: 'Marketer123!', territory: 'Douala' })
+      .send({
+        name: 'CE Marketer',
+        phone: '+237611000002',
+        password: 'Marketer123!',
+        territory: 'Douala',
+      })
       .expect(201);
     marketerProfileId = mkRes.body.id;
     marketerId = mkRes.body.userId;
@@ -122,9 +142,23 @@ describe('Commission Engine — Integration Tests', () => {
     campaignId = camp.id;
 
     // Create registered users for leads
-    const hhUser = await createTestUser(dataSource, 'hh-lead@test.com', 'Pass123!', UserRole.HOUSEHOLD, 'HH User', '+237611000010');
+    const hhUser = await createTestUser(
+      dataSource,
+      'hh-lead@test.com',
+      'Pass123!',
+      UserRole.HOUSEHOLD,
+      'HH User',
+      '+237611000010',
+    );
     householdUserId = hhUser.id;
-    const colUser = await createTestUser(dataSource, 'col-lead@test.com', 'Pass123!', UserRole.COLLECTOR, 'Col User', '+237611000011');
+    const colUser = await createTestUser(
+      dataSource,
+      'col-lead@test.com',
+      'Pass123!',
+      UserRole.COLLECTOR,
+      'Col User',
+      '+237611000011',
+    );
     collectorUserId = colUser.id;
   });
 
@@ -157,7 +191,8 @@ describe('Commission Engine — Integration Tests', () => {
     status?: JobStatus;
     paymentStatus?: PaymentStatus;
   }): Promise<string> {
-    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
     const [row] = await dataSource.query(
       `INSERT INTO jobs (household_id, collector_id, status, payment_status, scheduled_date, scheduled_time,
                         location_address, location_lat, location_lng)
@@ -182,7 +217,10 @@ describe('Commission Engine — Integration Tests', () => {
 
     beforeAll(async () => {
       await seedLead({ registeredUserId: householdUserId, type: 'HOUSEHOLD' });
-      jobId = await seedJob({ householdId: householdUserId, paymentStatus: PaymentStatus.NOT_REQUIRED });
+      jobId = await seedJob({
+        householdId: householdUserId,
+        paymentStatus: PaymentStatus.NOT_REQUIRED,
+      });
 
       // Simulate the engine event by directly calling the validate job endpoint
       // The engine listens to JobEvents.VALIDATED emitted by jobs.service.ts validateJob()
@@ -334,7 +372,10 @@ describe('Commission Engine — Integration Tests', () => {
 
       beforeAll(async () => {
         // Seed another pending commission
-        const jobId2 = await seedJob({ householdId: householdUserId, paymentStatus: PaymentStatus.NOT_REQUIRED });
+        const jobId2 = await seedJob({
+          householdId: householdUserId,
+          paymentStatus: PaymentStatus.NOT_REQUIRED,
+        });
         const [row] = await dataSource.query(
           `INSERT INTO commission_transactions
              (marketer_profile_id, scheme_id, lead_id, trigger_type, reference_id, reference_type, amount, status, campaign_id, description)
@@ -391,8 +432,12 @@ describe('Commission Engine — Integration Tests', () => {
       // Create 3 different household users as leads
       for (let i = 0; i < 3; i++) {
         const u = await createTestUser(
-          dataSource, `hh-multi-${i}@test.com`, 'Pass123!', UserRole.HOUSEHOLD,
-          `HH Multi ${i}`, `+23761100200${i}`,
+          dataSource,
+          `hh-multi-${i}@test.com`,
+          'Pass123!',
+          UserRole.HOUSEHOLD,
+          `HH Multi ${i}`,
+          `+23761100200${i}`,
         );
         const token = `TOK-MULTI-${i}-${Date.now()}`;
         await dataSource.query(
@@ -400,7 +445,15 @@ describe('Commission Engine — Integration Tests', () => {
                              invited_at, expires_at, sms_status, sms_retry_count, registered_user_id, campaign_id)
            VALUES ($1, $2, $3, 'HOUSEHOLD', 'REGISTERED', $4, $5, 'MANUAL',
                    NOW(), NOW() + INTERVAL '30 days', 'DELIVERED', 0, $6, $7)`,
-          [multiMarketerId, `HH Multi ${i}`, `+23761100200${i}`, token, `MKR-MULTI-${i}`, u.id, campaignId],
+          [
+            multiMarketerId,
+            `HH Multi ${i}`,
+            `+23761100200${i}`,
+            token,
+            `MKR-MULTI-${i}`,
+            u.id,
+            campaignId,
+          ],
         );
 
         // Seed commission directly as engine would (500 XAF each, 3 × = 1500 total)
@@ -470,7 +523,12 @@ describe('Commission Engine — Integration Tests', () => {
 
       // Household user referred by this marketer
       const hhUser = await createTestUser(
-        dataSource, 'sub-comm-hh@test.com', 'Pass123!', UserRole.HOUSEHOLD, 'Sub HH', '+237611000031',
+        dataSource,
+        'sub-comm-hh@test.com',
+        'Pass123!',
+        UserRole.HOUSEHOLD,
+        'Sub HH',
+        '+237611000031',
       );
       subHouseholdId = hhUser.id;
       subHouseholdToken = await loginAndGetToken(baseUrl, '+237611000031', 'Pass123!');
@@ -481,7 +539,13 @@ describe('Commission Engine — Integration Tests', () => {
                            invited_at, expires_at, sms_status, sms_retry_count, registered_user_id, campaign_id)
          VALUES ($1, 'Sub HH', '+237611000031', 'HOUSEHOLD', 'REGISTERED', $2, $3, 'MANUAL',
                  NOW(), NOW() + INTERVAL '30 days', 'DELIVERED', 0, $4, $5)`,
-        [subMarketerId, `TOK-SUB-${Date.now()}`, `MKR-SUB-${Date.now()}`, subHouseholdId, campaignId],
+        [
+          subMarketerId,
+          `TOK-SUB-${Date.now()}`,
+          `MKR-SUB-${Date.now()}`,
+          subHouseholdId,
+          campaignId,
+        ],
       );
 
       // Create subscription plan
@@ -559,7 +623,12 @@ describe('Commission Engine — Integration Tests', () => {
     it('should NOT fire commission on verify if no marketer lead exists for the household', async () => {
       // Create an unregistered household (no lead) and subscribe them
       const orphanHH = await createTestUser(
-        dataSource, 'orphan-hh@test.com', 'Pass123!', UserRole.HOUSEHOLD, 'Orphan HH', '+237611000032',
+        dataSource,
+        'orphan-hh@test.com',
+        'Pass123!',
+        UserRole.HOUSEHOLD,
+        'Orphan HH',
+        '+237611000032',
       );
       const orphanToken = await loginAndGetToken(baseUrl, '+237611000032', 'Pass123!');
 

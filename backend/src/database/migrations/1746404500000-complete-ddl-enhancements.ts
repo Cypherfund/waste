@@ -1,22 +1,27 @@
-import { MigrationInterface, QueryRunner } from "typeorm";
+import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class CompleteDdlEnhancements1746404500000 implements MigrationInterface {
-    name = 'CompleteDdlEnhancements1746404500000'
+  name = 'CompleteDdlEnhancements1746404500000';
 
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        const exists = await queryRunner.query(`SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='idempotency_cache'`);
-        if (exists.length > 0) { console.log('DDL enhancements migration: already applied, skipping.'); return; }
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    const exists = await queryRunner.query(
+      `SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='idempotency_cache'`,
+    );
+    if (exists.length > 0) {
+      console.log('DDL enhancements migration: already applied, skipping.');
+      return;
+    }
 
-        // ─── Extensions (may require superuser, skip gracefully) ────
-        await queryRunner.query(`
+    // ─── Extensions (may require superuser, skip gracefully) ────
+    await queryRunner.query(`
             DO $$ BEGIN
                 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
             EXCEPTION WHEN insufficient_privilege THEN
                 RAISE NOTICE 'pg_trgm extension skipped (insufficient privileges)';
             END $$
         `);
-        
-        await queryRunner.query(`
+
+    await queryRunner.query(`
             DO $$ BEGIN
                 CREATE EXTENSION IF NOT EXISTS "earthdistance" CASCADE;
             EXCEPTION WHEN insufficient_privilege THEN
@@ -24,10 +29,10 @@ export class CompleteDdlEnhancements1746404500000 implements MigrationInterface 
             END $$
         `);
 
-        // ─── Additional Indexes ───────────────────────────────────────
-        
-        // Location index for users (collectors) - requires earthdistance
-        await queryRunner.query(`
+    // ─── Additional Indexes ───────────────────────────────────────
+
+    // Location index for users (collectors) - requires earthdistance
+    await queryRunner.query(`
             DO $$ BEGIN
                 CREATE INDEX IF NOT EXISTS "idx_users_location" 
                 ON "users" USING gist (
@@ -39,30 +44,30 @@ export class CompleteDdlEnhancements1746404500000 implements MigrationInterface 
             END $$
         `);
 
-        // Additional job indexes
-        await queryRunner.query(`
+    // Additional job indexes
+    await queryRunner.query(`
             CREATE INDEX IF NOT EXISTS "idx_jobs_scheduled" 
             ON "jobs" (scheduled_date, scheduled_time)
         `);
 
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE INDEX IF NOT EXISTS "idx_jobs_status_date" 
             ON "jobs" (status, scheduled_date)
         `);
 
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE INDEX IF NOT EXISTS "idx_jobs_active" 
             ON "jobs" (status, scheduled_date)
             WHERE status IN ('REQUESTED', 'ASSIGNED', 'IN_PROGRESS')
         `);
 
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE INDEX IF NOT EXISTS "idx_jobs_household_date" 
             ON "jobs" (household_id, scheduled_date)
             WHERE status NOT IN ('CANCELLED')
         `);
 
-        await queryRunner.query(`
+    await queryRunner.query(`
             DO $$ BEGIN
                 CREATE INDEX IF NOT EXISTS "idx_jobs_location" 
                 ON "jobs" USING gist (
@@ -74,54 +79,54 @@ export class CompleteDdlEnhancements1746404500000 implements MigrationInterface 
             END $$
         `);
 
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE UNIQUE INDEX IF NOT EXISTS "idx_jobs_no_duplicate"
             ON "jobs" (household_id, scheduled_date)
             WHERE status IN ('REQUESTED', 'ASSIGNED', 'IN_PROGRESS')
         `);
 
-        // Additional earnings indexes
-        await queryRunner.query(`
+    // Additional earnings indexes
+    await queryRunner.query(`
             CREATE INDEX IF NOT EXISTS "idx_earnings_collector_status" 
             ON "earnings" (collector_id, status)
         `);
 
-        // Additional fraud_flags indexes
-        await queryRunner.query(`
+    // Additional fraud_flags indexes
+    await queryRunner.query(`
             CREATE INDEX IF NOT EXISTS "idx_fraud_flags_severity" 
             ON "fraud_flags" (severity) 
             WHERE status = 'OPEN'
         `);
 
-        // Additional notifications indexes
-        await queryRunner.query(`
+    // Additional notifications indexes
+    await queryRunner.query(`
             CREATE INDEX IF NOT EXISTS "idx_notifications_user_unread" 
             ON "notifications" (user_id, created_at DESC)
             WHERE read_at IS NULL
         `);
 
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE INDEX IF NOT EXISTS "idx_notifications_status" 
             ON "notifications" (status)
             WHERE status = 'PENDING'
         `);
 
-        // Additional collector_availability indexes
-        await queryRunner.query(`
+    // Additional collector_availability indexes
+    await queryRunner.query(`
             CREATE INDEX IF NOT EXISTS "idx_availability_day" 
             ON "collector_availability" (day_of_week, start_time, end_time)
             WHERE is_active = true
         `);
 
-        // Additional system_config indexes
-        await queryRunner.query(`
+    // Additional system_config indexes
+    await queryRunner.query(`
             CREATE INDEX IF NOT EXISTS "idx_config_feature_flags" 
             ON "system_config" (key) 
             WHERE is_feature_flag = true
         `);
 
-        // ─── idempotency_cache Table ───────────────────────────────────
-        await queryRunner.query(`
+    // ─── idempotency_cache Table ───────────────────────────────────
+    await queryRunner.query(`
             CREATE TABLE "idempotency_cache" (
                 "key" character varying(36) NOT NULL,
                 "status_code" integer NOT NULL,
@@ -132,13 +137,13 @@ export class CompleteDdlEnhancements1746404500000 implements MigrationInterface 
             )
         `);
 
-        await queryRunner.query(`
+    await queryRunner.query(`
             CREATE INDEX IF NOT EXISTS "idx_idempotency_expires" 
             ON "idempotency_cache" (expires_at)
         `);
 
-        // ─── Additional system_config entries ───────────────────────────
-        await queryRunner.query(`
+    // ─── Additional system_config entries ───────────────────────────
+    await queryRunner.query(`
             INSERT INTO "system_config" (id, key, value, data_type, category, description, is_feature_flag, updated_at)
             VALUES
                 (uuid_generate_v4(), 'earnings.base_rate', '500', 'number', 'earnings', 'Base earnings per job in XAF', false, NOW()),
@@ -170,8 +175,8 @@ export class CompleteDdlEnhancements1746404500000 implements MigrationInterface 
             ON CONFLICT (key) DO NOTHING
         `);
 
-        // ─── Updated_at Trigger Function ─────────────────────────────────
-        await queryRunner.query(`
+    // ─── Updated_at Trigger Function ─────────────────────────────────
+    await queryRunner.query(`
             CREATE OR REPLACE FUNCTION update_updated_at_column()
             RETURNS TRIGGER AS $$
             BEGIN
@@ -181,49 +186,51 @@ export class CompleteDdlEnhancements1746404500000 implements MigrationInterface 
             $$ language 'plpgsql'
         `);
 
-        // ─── Updated_at Triggers ─────────────────────────────────────────
-        await queryRunner.query(`
+    // ─── Updated_at Triggers ─────────────────────────────────────────
+    await queryRunner.query(`
             DROP TRIGGER IF EXISTS "update_users_updated_at" ON "users"
         `);
-        
-        await queryRunner.query(`
+
+    await queryRunner.query(`
             CREATE TRIGGER "update_users_updated_at"
             BEFORE UPDATE ON "users"
             FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()
         `);
 
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TRIGGER IF EXISTS "update_jobs_updated_at" ON "jobs"
         `);
-        
-        await queryRunner.query(`
+
+    await queryRunner.query(`
             CREATE TRIGGER "update_jobs_updated_at"
             BEFORE UPDATE ON "jobs"
             FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()
         `);
 
-        await queryRunner.query(`
+    await queryRunner.query(`
             DROP TRIGGER IF EXISTS "update_collector_availability_updated_at" ON "collector_availability"
         `);
-        
-        await queryRunner.query(`
+
+    await queryRunner.query(`
             CREATE TRIGGER "update_collector_availability_updated_at"
             BEFORE UPDATE ON "collector_availability"
             FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()
         `);
-    }
+  }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        // ─── Drop Triggers ───────────────────────────────────────────
-        await queryRunner.query(`DROP TRIGGER IF EXISTS "update_users_updated_at" ON "users"`);
-        await queryRunner.query(`DROP TRIGGER IF EXISTS "update_jobs_updated_at" ON "jobs"`);
-        await queryRunner.query(`DROP TRIGGER IF EXISTS "update_collector_availability_updated_at" ON "collector_availability"`);
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    // ─── Drop Triggers ───────────────────────────────────────────
+    await queryRunner.query(`DROP TRIGGER IF EXISTS "update_users_updated_at" ON "users"`);
+    await queryRunner.query(`DROP TRIGGER IF EXISTS "update_jobs_updated_at" ON "jobs"`);
+    await queryRunner.query(
+      `DROP TRIGGER IF EXISTS "update_collector_availability_updated_at" ON "collector_availability"`,
+    );
 
-        // ─── Drop Trigger Function ───────────────────────────────────────
-        await queryRunner.query(`DROP FUNCTION IF EXISTS update_updated_at_column()`);
+    // ─── Drop Trigger Function ───────────────────────────────────────
+    await queryRunner.query(`DROP FUNCTION IF EXISTS update_updated_at_column()`);
 
-        // ─── Drop Additional system_config entries ─────────────────────────
-        await queryRunner.query(`
+    // ─── Drop Additional system_config entries ─────────────────────────
+    await queryRunner.query(`
             DELETE FROM "system_config"
             WHERE key IN (
                 'earnings.base_rate',
@@ -255,27 +262,27 @@ export class CompleteDdlEnhancements1746404500000 implements MigrationInterface 
             )
         `);
 
-        // ─── Drop idempotency_cache Table ─────────────────────────────────
-        await queryRunner.query(`DROP INDEX IF EXISTS "idx_idempotency_expires"`);
-        await queryRunner.query(`DROP TABLE IF EXISTS "idempotency_cache"`);
+    // ─── Drop idempotency_cache Table ─────────────────────────────────
+    await queryRunner.query(`DROP INDEX IF EXISTS "idx_idempotency_expires"`);
+    await queryRunner.query(`DROP TABLE IF EXISTS "idempotency_cache"`);
 
-        // ─── Drop Additional Indexes ───────────────────────────────────────
-        await queryRunner.query(`DROP INDEX IF EXISTS "idx_users_location"`);
-        await queryRunner.query(`DROP INDEX IF EXISTS "idx_jobs_scheduled"`);
-        await queryRunner.query(`DROP INDEX IF EXISTS "idx_jobs_status_date"`);
-        await queryRunner.query(`DROP INDEX IF EXISTS "idx_jobs_active"`);
-        await queryRunner.query(`DROP INDEX IF EXISTS "idx_jobs_household_date"`);
-        await queryRunner.query(`DROP INDEX IF EXISTS "idx_jobs_location"`);
-        await queryRunner.query(`DROP INDEX IF EXISTS "idx_jobs_no_duplicate"`);
-        await queryRunner.query(`DROP INDEX IF EXISTS "idx_earnings_collector_status"`);
-        await queryRunner.query(`DROP INDEX IF EXISTS "idx_fraud_flags_severity"`);
-        await queryRunner.query(`DROP INDEX IF EXISTS "idx_notifications_user_unread"`);
-        await queryRunner.query(`DROP INDEX IF EXISTS "idx_notifications_status"`);
-        await queryRunner.query(`DROP INDEX IF EXISTS "idx_availability_day"`);
-        await queryRunner.query(`DROP INDEX IF EXISTS "idx_config_feature_flags"`);
+    // ─── Drop Additional Indexes ───────────────────────────────────────
+    await queryRunner.query(`DROP INDEX IF EXISTS "idx_users_location"`);
+    await queryRunner.query(`DROP INDEX IF EXISTS "idx_jobs_scheduled"`);
+    await queryRunner.query(`DROP INDEX IF EXISTS "idx_jobs_status_date"`);
+    await queryRunner.query(`DROP INDEX IF EXISTS "idx_jobs_active"`);
+    await queryRunner.query(`DROP INDEX IF EXISTS "idx_jobs_household_date"`);
+    await queryRunner.query(`DROP INDEX IF EXISTS "idx_jobs_location"`);
+    await queryRunner.query(`DROP INDEX IF EXISTS "idx_jobs_no_duplicate"`);
+    await queryRunner.query(`DROP INDEX IF EXISTS "idx_earnings_collector_status"`);
+    await queryRunner.query(`DROP INDEX IF EXISTS "idx_fraud_flags_severity"`);
+    await queryRunner.query(`DROP INDEX IF EXISTS "idx_notifications_user_unread"`);
+    await queryRunner.query(`DROP INDEX IF EXISTS "idx_notifications_status"`);
+    await queryRunner.query(`DROP INDEX IF EXISTS "idx_availability_day"`);
+    await queryRunner.query(`DROP INDEX IF EXISTS "idx_config_feature_flags"`);
 
-        // ─── Drop Extensions ───────────────────────────────────────────
-        await queryRunner.query(`DROP EXTENSION IF EXISTS "earthdistance" CASCADE`);
-        await queryRunner.query(`DROP EXTENSION IF EXISTS "pg_trgm"`);
-    }
+    // ─── Drop Extensions ───────────────────────────────────────────
+    await queryRunner.query(`DROP EXTENSION IF EXISTS "earthdistance" CASCADE`);
+    await queryRunner.query(`DROP EXTENSION IF EXISTS "pg_trgm"`);
+  }
 }

@@ -26,7 +26,8 @@ export class SubscriptionsController {
   @Roles(UserRole.HOUSEHOLD)
   subscribe(
     @CurrentUser('sub') userId: string,
-    @Body() body: {
+    @Body()
+    body: {
       planId: string;
       paymentMode?: string;
       paymentRef?: string;
@@ -66,7 +67,8 @@ export class SubscriptionsController {
   @Roles(UserRole.HOUSEHOLD)
   subscribeCashOnFirstPickup(
     @CurrentUser('sub') userId: string,
-    @Body() body: {
+    @Body()
+    body: {
       planId: string;
       scheduledDate: string;
       scheduledTime: string;
@@ -106,7 +108,14 @@ export class SubscriptionsController {
   @Roles(UserRole.ADMIN)
   adminUpdatePlan(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: { name?: string; price?: number; pickupsPerWeek?: number; isActive?: boolean; description?: string },
+    @Body()
+    body: {
+      name?: string;
+      price?: number;
+      pickupsPerWeek?: number;
+      isActive?: boolean;
+      description?: string;
+    },
   ) {
     return this.subscriptionsService.adminUpdatePlan(id, body);
   }
@@ -125,10 +134,7 @@ export class SubscriptionsController {
 
   @Patch('admin/:id/reject-payment')
   @Roles(UserRole.ADMIN)
-  adminRejectPayment(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: { reason?: string },
-  ) {
+  adminRejectPayment(@Param('id', ParseUUIDPipe) id: string, @Body() body: { reason?: string }) {
     return this.subscriptionsService.adminRejectSubscription(id, body?.reason);
   }
 }

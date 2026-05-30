@@ -7,10 +7,7 @@ import { FraudService } from './fraud.service';
 import { UsersModule } from '../users/users.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([FraudFlag, Proof, Job]),
-    UsersModule,
-  ],
+  imports: [TypeOrmModule.forFeature([FraudFlag, Proof, Job]), UsersModule],
   providers: [FraudService],
   exports: [FraudService],
 })

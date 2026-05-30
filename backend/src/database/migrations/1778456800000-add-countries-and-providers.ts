@@ -4,8 +4,13 @@ export class AddCountriesAndProviders1778456800000 implements MigrationInterface
   name = 'AddCountriesAndProviders1778456800000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    const exists = await queryRunner.query(`SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='supported_countries'`);
-    if (exists.length > 0) { console.log('Countries migration: already applied, skipping.'); return; }
+    const exists = await queryRunner.query(
+      `SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='supported_countries'`,
+    );
+    if (exists.length > 0) {
+      console.log('Countries migration: already applied, skipping.');
+      return;
+    }
 
     // ── supported_countries ──────────────────────────────────────
     await queryRunner.query(`
@@ -105,7 +110,9 @@ export class AddCountriesAndProviders1778456800000 implements MigrationInterface
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_users_country_code"`);
     await queryRunner.query(`ALTER TABLE "users" DROP COLUMN IF EXISTS "country_code"`);
-    await queryRunner.query(`DROP TRIGGER IF EXISTS trg_payment_providers_updated_at ON "payment_providers"`);
+    await queryRunner.query(
+      `DROP TRIGGER IF EXISTS trg_payment_providers_updated_at ON "payment_providers"`,
+    );
     await queryRunner.query(`DROP FUNCTION IF EXISTS update_payment_providers_updated_at`);
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_payment_providers_enabled"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_payment_providers_country"`);

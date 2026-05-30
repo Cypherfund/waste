@@ -23,7 +23,7 @@ export class PaymentController {
   constructor(private readonly paymentService: PaymentService) {}
 
   // ── GET providers for logged-in user (by their stored country) ──
-  @ApiOperation({ summary: 'Get available payment providers for the current user\'s country' })
+  @ApiOperation({ summary: "Get available payment providers for the current user's country" })
   @ApiBearerAuth()
   @Get('providers')
   async getProviders(
@@ -48,9 +48,7 @@ export class PaymentController {
   @ApiOperation({ summary: 'Payment gateway callback webhook' })
   @Public()
   @Post('callback')
-  async handleCallback(
-    @Body() payload: PaymentCallbackDto,
-  ): Promise<{ received: boolean }> {
+  async handleCallback(@Body() payload: PaymentCallbackDto): Promise<{ received: boolean }> {
     await this.paymentService.handleCallback(payload);
     return { received: true };
   }
@@ -72,7 +70,7 @@ export class PaymentController {
   }
 
   // ── GET user transactions ─────────────────────────────────────
-  @ApiOperation({ summary: 'Get current user\'s payment transactions' })
+  @ApiOperation({ summary: "Get current user's payment transactions" })
   @ApiBearerAuth()
   @Get('my-transactions')
   async getMyTransactions(

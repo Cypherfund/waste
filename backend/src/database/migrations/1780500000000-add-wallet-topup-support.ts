@@ -36,7 +36,9 @@ export class AddWalletTopupSupport1780500000000 implements MigrationInterface {
     await queryRunner.query(`DELETE FROM "system_config" WHERE key LIKE 'wallet.topup%'`);
 
     // ── Remove payment_source column ────────────────────────────────────
-    await queryRunner.query(`ALTER TABLE "payment_transactions" DROP COLUMN IF EXISTS "payment_source"`);
+    await queryRunner.query(
+      `ALTER TABLE "payment_transactions" DROP COLUMN IF EXISTS "payment_source"`,
+    );
 
     // ── Note: We don't remove WALLET_TOPUP from enum as it's not easily reversible
     // The enum value will remain but won't be used if this migration is rolled back

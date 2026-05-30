@@ -3,13 +3,27 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Lead, LeadStatus, CommissionTransaction, CommissionStatus, TriggerType, MarketerProfile } from '../entities';
+import {
+  Lead,
+  LeadStatus,
+  CommissionTransaction,
+  CommissionStatus,
+  TriggerType,
+  MarketerProfile,
+} from '../entities';
 import { CommissionService } from './commission.service';
 import { LeadService } from './lead.service';
 import { MarketerNotificationService } from './marketer-notification.service';
 import { Job } from '../../jobs/entities/job.entity';
 import { PaymentStatus } from '../../common/enums/payment-status.enum';
-import { JobEventPayload, JobEvents, SubscriptionPaidPayload, SubscriptionEvents, CommissionEvents, CommissionEarnedPayload } from '../../events/events.types';
+import {
+  JobEventPayload,
+  JobEvents,
+  SubscriptionPaidPayload,
+  SubscriptionEvents,
+  CommissionEvents,
+  CommissionEarnedPayload,
+} from '../../events/events.types';
 import { QualificationReason } from './lead.service';
 
 @Injectable()
@@ -65,8 +79,13 @@ export class CommissionEngineService {
       this.logger.error(`Job ${payload.jobId} not found`);
       return;
     }
-    if (job.paymentStatus !== PaymentStatus.VERIFIED && job.paymentStatus !== PaymentStatus.NOT_REQUIRED) {
-      this.logger.log(`Skipping commission - payment not verified for job ${payload.jobId}, status: ${job.paymentStatus}`);
+    if (
+      job.paymentStatus !== PaymentStatus.VERIFIED &&
+      job.paymentStatus !== PaymentStatus.NOT_REQUIRED
+    ) {
+      this.logger.log(
+        `Skipping commission - payment not verified for job ${payload.jobId}, status: ${job.paymentStatus}`,
+      );
       return;
     }
 
@@ -93,7 +112,9 @@ export class CommissionEngineService {
 
     // Use first eligible scheme
     const scheme = schemes[0];
-    this.logger.log(`Using scheme ${scheme.id}, type: ${scheme.type}, commissionType: ${scheme.commissionType}, amount: ${scheme.amount}`);
+    this.logger.log(
+      `Using scheme ${scheme.id}, type: ${scheme.type}, commissionType: ${scheme.commissionType}, amount: ${scheme.amount}`,
+    );
 
     // Calculate amount
     let amount = 0;
@@ -108,7 +129,11 @@ export class CommissionEngineService {
 
     // Idempotency check
     const existing = await this.transactionRepo.findOne({
-      where: { leadId: lead.id, triggerType: TriggerType.FIRST_SUCCESSFUL_BOOKING, referenceId: payload.jobId },
+      where: {
+        leadId: lead.id,
+        triggerType: TriggerType.FIRST_SUCCESSFUL_BOOKING,
+        referenceId: payload.jobId,
+      },
     });
     if (existing) {
       this.logger.log(`Commission already exists for job ${payload.jobId}, skipping`);
@@ -138,7 +163,9 @@ export class CommissionEngineService {
     profile.pendingAmount = parseFloat(profile.pendingAmount.toString()) + amount;
     const updatedProfile = await this.profileRepo.save(profile);
 
-    this.logger.log(`Created commission ${saved.id} for ${amount} XAF, profile pendingAmount now: ${updatedProfile.pendingAmount}`);
+    this.logger.log(
+      `Created commission ${saved.id} for ${amount} XAF, profile pendingAmount now: ${updatedProfile.pendingAmount}`,
+    );
 
     // Emit commission earned event for notification
     const commissionPayload: CommissionEarnedPayload = {
@@ -190,8 +217,13 @@ export class CommissionEngineService {
       this.logger.error(`Job ${payload.jobId} not found`);
       return;
     }
-    if (job.paymentStatus !== PaymentStatus.VERIFIED && job.paymentStatus !== PaymentStatus.NOT_REQUIRED) {
-      this.logger.log(`Skipping commission - payment not verified for job ${payload.jobId}, status: ${job.paymentStatus}`);
+    if (
+      job.paymentStatus !== PaymentStatus.VERIFIED &&
+      job.paymentStatus !== PaymentStatus.NOT_REQUIRED
+    ) {
+      this.logger.log(
+        `Skipping commission - payment not verified for job ${payload.jobId}, status: ${job.paymentStatus}`,
+      );
       return;
     }
 
@@ -224,7 +256,11 @@ export class CommissionEngineService {
 
     // Idempotency check
     const existing = await this.transactionRepo.findOne({
-      where: { leadId: lead.id, triggerType: TriggerType.FIRST_PICKUP_COMPLETED, referenceId: payload.jobId },
+      where: {
+        leadId: lead.id,
+        triggerType: TriggerType.FIRST_PICKUP_COMPLETED,
+        referenceId: payload.jobId,
+      },
     });
     if (existing) {
       this.logger.log(`Commission already exists for job ${payload.jobId}, skipping`);
@@ -305,7 +341,9 @@ export class CommissionEngineService {
 
     // Use first eligible scheme
     const scheme = schemes[0];
-    this.logger.log(`Using scheme ${scheme.id}, type: ${scheme.type}, commissionType: ${scheme.commissionType}, amount: ${scheme.amount}`);
+    this.logger.log(
+      `Using scheme ${scheme.id}, type: ${scheme.type}, commissionType: ${scheme.commissionType}, amount: ${scheme.amount}`,
+    );
 
     // Calculate amount
     let amount = 0;
@@ -320,10 +358,16 @@ export class CommissionEngineService {
 
     // Idempotency check
     const existing = await this.transactionRepo.findOne({
-      where: { leadId: lead.id, triggerType: TriggerType.SUBSCRIPTION_PAID, referenceId: payload.subscriptionId },
+      where: {
+        leadId: lead.id,
+        triggerType: TriggerType.SUBSCRIPTION_PAID,
+        referenceId: payload.subscriptionId,
+      },
     });
     if (existing) {
-      this.logger.log(`Commission already exists for subscription ${payload.subscriptionId}, skipping`);
+      this.logger.log(
+        `Commission already exists for subscription ${payload.subscriptionId}, skipping`,
+      );
       return;
     }
 
@@ -350,6 +394,8 @@ export class CommissionEngineService {
     profile.pendingAmount = parseFloat(profile.pendingAmount.toString()) + amount;
     const updatedProfile = await this.profileRepo.save(profile);
 
-    this.logger.log(`Created commission ${saved.id} for ${amount} XAF, profile pendingAmount now: ${updatedProfile.pendingAmount}`);
+    this.logger.log(
+      `Created commission ${saved.id} for ${amount} XAF, profile pendingAmount now: ${updatedProfile.pendingAmount}`,
+    );
   }
 }

@@ -117,9 +117,7 @@ describe('E2E: Pricing Integration', () => {
     });
 
     it('should require authentication', async () => {
-      await request(httpServer)
-        .get('/api/v1/subscriptions/pricing-quote')
-        .expect(401);
+      await request(httpServer).get('/api/v1/subscriptions/pricing-quote').expect(401);
     });
 
     it('should require household role', async () => {

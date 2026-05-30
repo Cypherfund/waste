@@ -4,8 +4,13 @@ export class AddManualPaymentColumns1778800000000 implements MigrationInterface 
   name = 'AddManualPaymentColumns1778800000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    const exists = await queryRunner.query(`SELECT 1 FROM information_schema.columns WHERE table_name='payment_providers' AND column_name='manual_payment_phone'`);
-    if (exists.length > 0) { console.log('Manual payment columns migration: already applied, skipping.'); return; }
+    const exists = await queryRunner.query(
+      `SELECT 1 FROM information_schema.columns WHERE table_name='payment_providers' AND column_name='manual_payment_phone'`,
+    );
+    if (exists.length > 0) {
+      console.log('Manual payment columns migration: already applied, skipping.');
+      return;
+    }
 
     // Add manual payment columns to payment_providers table
     await queryRunner.query(`

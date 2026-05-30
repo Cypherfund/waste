@@ -63,9 +63,7 @@ export class SchedulerService {
           });
         }
       } catch (err) {
-        this.logger.error(
-          `Auto-validation failed for job ${job.id}: ${err.message}`,
-        );
+        this.logger.error(`Auto-validation failed for job ${job.id}: ${err.message}`);
       }
     }
 
@@ -104,9 +102,7 @@ export class SchedulerService {
       try {
         await this.assignmentService.handleTimeout(job.id);
       } catch (err) {
-        this.logger.error(
-          `Timeout handling failed for job ${job.id}: ${err.message}`,
-        );
+        this.logger.error(`Timeout handling failed for job ${job.id}: ${err.message}`);
       }
     }
   }
@@ -120,10 +116,7 @@ export class SchedulerService {
    */
   @Cron(CronExpression.EVERY_DAY_AT_3AM)
   async handleFileCleanup(): Promise<void> {
-    const thresholdHours = await this.systemConfigService.getNumber(
-      'files.cleanup_hours',
-      24,
-    );
+    const thresholdHours = await this.systemConfigService.getNumber('files.cleanup_hours', 24);
 
     this.logger.log(`File cleanup: starting (threshold: ${thresholdHours}h)`);
 

@@ -6,10 +6,7 @@ import { RatingsService } from './ratings.service';
 import { JobsModule } from '../jobs/jobs.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Rating, User]),
-    forwardRef(() => JobsModule),
-  ],
+  imports: [TypeOrmModule.forFeature([Rating, User]), forwardRef(() => JobsModule)],
   providers: [RatingsService],
   exports: [RatingsService],
 })

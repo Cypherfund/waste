@@ -15,25 +15,33 @@ export class HybridPaymentRefinement1748000000000 implements MigrationInterface 
 
     // ─── 1. payment_status enum — add new values (if enum exists; production uses varchar) ─────────────────────────────
     const paymentStatusEnumExists = await queryRunner.query(
-      `SELECT 1 FROM pg_type WHERE typname = 'jobs_payment_status_enum'`
+      `SELECT 1 FROM pg_type WHERE typname = 'jobs_payment_status_enum'`,
     );
     if (paymentStatusEnumExists.length > 0) {
-      await queryRunner.query(`ALTER TYPE "jobs_payment_status_enum" ADD VALUE IF NOT EXISTS 'AWAITING_ADMIN_VERIFICATION'`);
-      await queryRunner.query(`ALTER TYPE "jobs_payment_status_enum" ADD VALUE IF NOT EXISTS 'PROVIDER_PENDING'`);
-      await queryRunner.query(`ALTER TYPE "jobs_payment_status_enum" ADD VALUE IF NOT EXISTS 'FAILED'`);
+      await queryRunner.query(
+        `ALTER TYPE "jobs_payment_status_enum" ADD VALUE IF NOT EXISTS 'AWAITING_ADMIN_VERIFICATION'`,
+      );
+      await queryRunner.query(
+        `ALTER TYPE "jobs_payment_status_enum" ADD VALUE IF NOT EXISTS 'PROVIDER_PENDING'`,
+      );
+      await queryRunner.query(
+        `ALTER TYPE "jobs_payment_status_enum" ADD VALUE IF NOT EXISTS 'FAILED'`,
+      );
     }
 
     // ─── 2. job_status enum — add PAYMENT_FAILED (if enum exists) ─────────────────────────────
     const jobStatusEnumExists = await queryRunner.query(
-      `SELECT 1 FROM pg_type WHERE typname = 'jobs_status_enum'`
+      `SELECT 1 FROM pg_type WHERE typname = 'jobs_status_enum'`,
     );
     if (jobStatusEnumExists.length > 0) {
-      await queryRunner.query(`ALTER TYPE "jobs_status_enum" ADD VALUE IF NOT EXISTS 'PAYMENT_FAILED'`);
+      await queryRunner.query(
+        `ALTER TYPE "jobs_status_enum" ADD VALUE IF NOT EXISTS 'PAYMENT_FAILED'`,
+      );
     }
 
     // ─── 3. payment_mode enum (new) — only if not already created by sync ────────────────────────────────
     const paymentModeEnumExists = await queryRunner.query(
-      `SELECT 1 FROM pg_type WHERE typname = 'jobs_payment_mode_enum'`
+      `SELECT 1 FROM pg_type WHERE typname = 'jobs_payment_mode_enum'`,
     );
     if (paymentModeEnumExists.length === 0) {
       await queryRunner.query(`
@@ -43,7 +51,7 @@ export class HybridPaymentRefinement1748000000000 implements MigrationInterface 
 
     // ─── 4. float_ledger_type enum (new) — only if not already created by sync ────────────────────────────────
     const floatLedgerTypeEnumExists = await queryRunner.query(
-      `SELECT 1 FROM pg_type WHERE typname = 'collector_float_ledger_type_enum'`
+      `SELECT 1 FROM pg_type WHERE typname = 'collector_float_ledger_type_enum'`,
     );
     if (floatLedgerTypeEnumExists.length === 0) {
       await queryRunner.query(`
@@ -52,17 +60,27 @@ export class HybridPaymentRefinement1748000000000 implements MigrationInterface 
     }
 
     // ─── 5. jobs — add new columns ────────────────────────────────────────────
-    await queryRunner.query(`ALTER TABLE "jobs" ADD COLUMN IF NOT EXISTS "payment_mode" "jobs_payment_mode_enum" NULL`);
-    await queryRunner.query(`ALTER TABLE "jobs" ADD COLUMN IF NOT EXISTS "payment_proof_url" TEXT NULL`);
-    await queryRunner.query(`ALTER TABLE "jobs" ADD COLUMN IF NOT EXISTS "payment_phone" VARCHAR(20) NULL`);
-    await queryRunner.query(`ALTER TABLE "jobs" ADD COLUMN IF NOT EXISTS "provider_transaction_id" VARCHAR(100) NULL`);
+    await queryRunner.query(
+      `ALTER TABLE "jobs" ADD COLUMN IF NOT EXISTS "payment_mode" "jobs_payment_mode_enum" NULL`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "jobs" ADD COLUMN IF NOT EXISTS "payment_proof_url" TEXT NULL`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "jobs" ADD COLUMN IF NOT EXISTS "payment_phone" VARCHAR(20) NULL`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "jobs" ADD COLUMN IF NOT EXISTS "provider_transaction_id" VARCHAR(100) NULL`,
+    );
 
     // ─── 6. payment_providers columns ───────────────────────────────
     // Note: These columns are now added during table creation in migration 1778456800000
     // This migration kept for backward compatibility with databases that already ran without the columns
 
     // ─── 7. users — add collector_float_balance ───────────────────────────────
-    await queryRunner.query(`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "collector_float_balance" DECIMAL(12,2) NOT NULL DEFAULT 0`);
+    await queryRunner.query(
+      `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "collector_float_balance" DECIMAL(12,2) NOT NULL DEFAULT 0`,
+    );
 
     // ─── 8. collector_float_ledger table (new) ────────────────────────────────
     await queryRunner.query(`
@@ -79,8 +97,12 @@ export class HybridPaymentRefinement1748000000000 implements MigrationInterface 
         CONSTRAINT "PK_collector_float_ledger" PRIMARY KEY ("id")
       )
     `);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "idx_float_ledger_collector" ON "collector_float_ledger" ("collector_id")`);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "idx_float_ledger_job" ON "collector_float_ledger" ("job_id") WHERE "job_id" IS NOT NULL`);
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "idx_float_ledger_collector" ON "collector_float_ledger" ("collector_id")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "idx_float_ledger_job" ON "collector_float_ledger" ("job_id") WHERE "job_id" IS NOT NULL`,
+    );
 
     // ─── 9. system_config seed rows ───────────────────────────────────────────
     await queryRunner.query(`
@@ -105,7 +127,9 @@ export class HybridPaymentRefinement1748000000000 implements MigrationInterface 
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     // ─── seed rows ───────────────────────────────────────────────────────────
-    await queryRunner.query(`DELETE FROM "system_config" WHERE "key" IN ('payments.cash_enabled','marketer.payout_mode','feature.marketer_auto_payout')`);
+    await queryRunner.query(
+      `DELETE FROM "system_config" WHERE "key" IN ('payments.cash_enabled','marketer.payout_mode','feature.marketer_auto_payout')`,
+    );
 
     // ─── collector_float_ledger ───────────────────────────────────────────────
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_float_ledger_job"`);
@@ -116,10 +140,18 @@ export class HybridPaymentRefinement1748000000000 implements MigrationInterface 
     await queryRunner.query(`ALTER TABLE "users" DROP COLUMN IF EXISTS "collector_float_balance"`);
 
     // ─── payment_providers ────────────────────────────────────────────────────
-    await queryRunner.query(`ALTER TABLE "payment_providers" DROP COLUMN IF EXISTS "manual_proof_required"`);
-    await queryRunner.query(`ALTER TABLE "payment_providers" DROP COLUMN IF EXISTS "manual_instructions_enabled"`);
-    await queryRunner.query(`ALTER TABLE "payment_providers" DROP COLUMN IF EXISTS "integration_enabled"`);
-    await queryRunner.query(`ALTER TABLE "payment_providers" DROP COLUMN IF EXISTS "manual_instructions"`);
+    await queryRunner.query(
+      `ALTER TABLE "payment_providers" DROP COLUMN IF EXISTS "manual_proof_required"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payment_providers" DROP COLUMN IF EXISTS "manual_instructions_enabled"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payment_providers" DROP COLUMN IF EXISTS "integration_enabled"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "payment_providers" DROP COLUMN IF EXISTS "manual_instructions"`,
+    );
 
     // ─── jobs ────────────────────────────────────────────────────────────────
     await queryRunner.query(`ALTER TABLE "jobs" DROP COLUMN IF EXISTS "provider_transaction_id"`);

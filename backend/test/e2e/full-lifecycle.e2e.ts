@@ -174,9 +174,7 @@ describe('E2E: Full Job Lifecycle', () => {
         .expect(200);
 
       const jobs = res.body.data || res.body;
-      const found = Array.isArray(jobs)
-        ? jobs.find((j: any) => j.id === jobId)
-        : null;
+      const found = Array.isArray(jobs) ? jobs.find((j: any) => j.id === jobId) : null;
       expect(found).toBeDefined();
     });
 
@@ -228,9 +226,7 @@ describe('E2E: Full Job Lifecycle', () => {
 
     it('should have sent WebSocket events for assignment', async () => {
       // Collector receives via collector:{id} channel (collector:assigned and job:status)
-      const collectorAssignEvent = wsEvents.collector.find(
-        (e) => e.jobId === jobId,
-      );
+      const collectorAssignEvent = wsEvents.collector.find((e) => e.jobId === jobId);
       expect(collectorAssignEvent).toBeDefined();
       expect(collectorAssignEvent.status).toBe(JobStatus.ASSIGNED);
     });

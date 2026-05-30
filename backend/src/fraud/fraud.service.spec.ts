@@ -160,7 +160,7 @@ describe('FraudService', () => {
       // Proof coords ~5km away
       const proof = makeProof({
         collectorLat: 4.09,
-        collectorLng: 9.70,
+        collectorLng: 9.7,
       });
 
       const result = await service.checkGpsMismatch(job, proof);
@@ -482,9 +482,7 @@ describe('FraudService', () => {
     it('should return all flags when no filters', async () => {
       await service.listFlags();
 
-      expect(flagRepo.find).toHaveBeenCalledWith(
-        expect.objectContaining({ where: {} }),
-      );
+      expect(flagRepo.find).toHaveBeenCalledWith(expect.objectContaining({ where: {} }));
     });
   });
 

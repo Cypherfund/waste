@@ -1,4 +1,13 @@
-import { IsString, IsEmail, IsOptional, IsNumber, MinLength, MaxLength, Min, Max } from 'class-validator';
+import {
+  IsString,
+  IsEmail,
+  IsOptional,
+  IsNumber,
+  MinLength,
+  MaxLength,
+  Min,
+  Max,
+} from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateProfileDto {

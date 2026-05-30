@@ -48,16 +48,17 @@ describe('E2E: Wallet Payment Flow', () => {
       await dataSource.query(`TRUNCATE TABLE "user_subscriptions" CASCADE`);
       await dataSource.query(`TRUNCATE TABLE "jobs" CASCADE`);
       await dataSource.query(`TRUNCATE TABLE "user_payment_methods" CASCADE`);
-      await dataSource.query(`UPDATE "users" SET "wallet_balance" = 0 WHERE id = $1`, [householdId]);
+      await dataSource.query(`UPDATE "users" SET "wallet_balance" = 0 WHERE id = $1`, [
+        householdId,
+      ]);
     } catch (_) {}
   };
 
   const cleanupPlans = async () => {
     try {
-      await dataSource.query(
-        `UPDATE "subscription_plans" SET "is_active" = false WHERE id = $1`,
-        [planId],
-      );
+      await dataSource.query(`UPDATE "subscription_plans" SET "is_active" = false WHERE id = $1`, [
+        planId,
+      ]);
     } catch (_) {}
   };
 
@@ -121,7 +122,8 @@ describe('E2E: Wallet Payment Flow', () => {
   describe('POST /wallet/pay-job', () => {
     beforeEach(async () => {
       // Create a minimal valid job fixture
-      const jobRes = await dataSource.query(`
+      const jobRes = await dataSource.query(
+        `
         INSERT INTO "jobs" (
           "household_id", "location_address", "location_lat", "location_lng",
           "scheduled_date", "scheduled_time",
@@ -131,16 +133,17 @@ describe('E2E: Wallet Payment Flow', () => {
           CURRENT_DATE, '10:00',
           'PAYMENT_PENDING', 'PENDING', 3000, NOW(), NOW()
         ) RETURNING id
-      `, [householdId]);
+      `,
+        [householdId],
+      );
       jobId = jobRes[0].id;
     });
 
     it('pays job with wallet when balance is sufficient', async () => {
       // Credit wallet with sufficient balance
-      await dataSource.query(
-        `UPDATE "users" SET "wallet_balance" = 10000 WHERE id = $1`,
-        [householdId],
-      );
+      await dataSource.query(`UPDATE "users" SET "wallet_balance" = 10000 WHERE id = $1`, [
+        householdId,
+      ]);
 
       const res = await request(httpServer)
         .post('/api/v1/wallet/pay-job')
@@ -173,10 +176,9 @@ describe('E2E: Wallet Payment Flow', () => {
 
     it('rejects job payment when wallet balance is insufficient', async () => {
       // Set wallet balance to insufficient amount
-      await dataSource.query(
-        `UPDATE "users" SET "wallet_balance" = 500 WHERE id = $1`,
-        [householdId],
-      );
+      await dataSource.query(`UPDATE "users" SET "wallet_balance" = 500 WHERE id = $1`, [
+        householdId,
+      ]);
 
       const res = await request(httpServer)
         .post('/api/v1/wallet/pay-job')
@@ -223,10 +225,9 @@ describe('E2E: Wallet Payment Flow', () => {
   describe('POST /wallet/pay-subscription', () => {
     it('pays subscription with wallet when balance is sufficient', async () => {
       // Credit wallet with sufficient balance
-      await dataSource.query(
-        `UPDATE "users" SET "wallet_balance" = 10000 WHERE id = $1`,
-        [householdId],
-      );
+      await dataSource.query(`UPDATE "users" SET "wallet_balance" = 10000 WHERE id = $1`, [
+        householdId,
+      ]);
 
       const res = await request(httpServer)
         .post('/api/v1/wallet/pay-subscription')
@@ -258,10 +259,9 @@ describe('E2E: Wallet Payment Flow', () => {
 
     it('rejects subscription payment when wallet balance is insufficient', async () => {
       // Set wallet balance to insufficient amount
-      await dataSource.query(
-        `UPDATE "users" SET "wallet_balance" = 500 WHERE id = $1`,
-        [householdId],
-      );
+      await dataSource.query(`UPDATE "users" SET "wallet_balance" = 500 WHERE id = $1`, [
+        householdId,
+      ]);
 
       const res = await request(httpServer)
         .post('/api/v1/wallet/pay-subscription')
@@ -288,12 +288,12 @@ describe('E2E: Wallet Payment Flow', () => {
           accountNumber: '+237699000001',
           usageType: 'CASHIN',
         });
-      
+
       if (methodRes.status !== 201) {
         console.log('Payment method creation failed:', methodRes.body);
         throw new Error(`Failed to create payment method: ${JSON.stringify(methodRes.body)}`);
       }
-      
+
       userPaymentMethodId = methodRes.body.id;
     });
 

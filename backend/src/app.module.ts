@@ -120,13 +120,6 @@ export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer.apply(CorrelationIdMiddleware).forRoutes('*');
     // Enforce minimum supported build on critical routes
-    consumer
-      .apply(AppVersionMiddleware)
-      .forRoutes(
-        'jobs',
-        'wallet',
-        'subscriptions',
-        'payments',
-      );
+    consumer.apply(AppVersionMiddleware).forRoutes('jobs', 'wallet', 'subscriptions', 'payments');
   }
 }

@@ -98,9 +98,7 @@ export class SubscriptionsService {
     });
 
     const saved = await this.subRepo.save(sub);
-    this.logger.log(
-      `User ${userId} subscribed to plan ${plan.name} — status: ${saved.status}`,
-    );
+    this.logger.log(`User ${userId} subscribed to plan ${plan.name} — status: ${saved.status}`);
 
     // Only emit commission event for immediately-active subscriptions (admin-created / backward compat)
     if (!requiresPayment) {
@@ -140,14 +138,21 @@ export class SubscriptionsService {
     const sub = await this.subRepo.findOne({
       where: [
         { userId, status: SubscriptionStatus.ACTIVE },
-        { userId, status: SubscriptionStatus.PENDING_PAYMENT, paymentMode: PaymentMode.CASH_ON_FIRST_PICKUP },
+        {
+          userId,
+          status: SubscriptionStatus.PENDING_PAYMENT,
+          paymentMode: PaymentMode.CASH_ON_FIRST_PICKUP,
+        },
       ],
       relations: ['plan', 'linkedFirstJob'],
     });
     if (!sub) throw new NotFoundException('No active or pending cash subscription found');
 
     // For pending cash subscriptions, cancel linked job if it hasn't started
-    if (sub.status === SubscriptionStatus.PENDING_PAYMENT && sub.paymentMode === PaymentMode.CASH_ON_FIRST_PICKUP) {
+    if (
+      sub.status === SubscriptionStatus.PENDING_PAYMENT &&
+      sub.paymentMode === PaymentMode.CASH_ON_FIRST_PICKUP
+    ) {
       if (sub.linkedFirstJobId && sub.linkedFirstJob) {
         const job = sub.linkedFirstJob;
         if (job.status === JobStatus.REQUESTED || job.status === JobStatus.ASSIGNED) {
@@ -170,7 +175,11 @@ export class SubscriptionsService {
 
   async cancelPendingCashSubscription(userId: string): Promise<UserSubscription> {
     const sub = await this.subRepo.findOne({
-      where: { userId, status: SubscriptionStatus.PENDING_PAYMENT, paymentMode: PaymentMode.CASH_ON_FIRST_PICKUP },
+      where: {
+        userId,
+        status: SubscriptionStatus.PENDING_PAYMENT,
+        paymentMode: PaymentMode.CASH_ON_FIRST_PICKUP,
+      },
       relations: ['plan', 'linkedFirstJob'],
     });
     if (!sub) throw new NotFoundException('No pending cash subscription found');
@@ -211,7 +220,10 @@ export class SubscriptionsService {
 
     // Validate scheduled date is at least booking.min_advance_hours from now
     const scheduledDate = new Date(jobDetails.scheduledDate);
-    const minAdvanceHours = await this.systemConfigService.getNumber('booking.min_advance_hours', 24);
+    const minAdvanceHours = await this.systemConfigService.getNumber(
+      'booking.min_advance_hours',
+      24,
+    );
     const earliest = new Date(Date.now() + minAdvanceHours * 60 * 60 * 1000);
     earliest.setHours(0, 0, 0, 0);
 
@@ -222,7 +234,12 @@ export class SubscriptionsService {
     }
 
     // Duplicate check: prevent duplicate active job for same date
-    const activeStatuses = [JobStatus.REQUESTED, JobStatus.ASSIGNED, JobStatus.IN_PROGRESS, JobStatus.PAYMENT_PENDING];
+    const activeStatuses = [
+      JobStatus.REQUESTED,
+      JobStatus.ASSIGNED,
+      JobStatus.IN_PROGRESS,
+      JobStatus.PAYMENT_PENDING,
+    ];
     const existingJob = await this.jobRepo.findOne({
       where: {
         householdId: userId,
@@ -232,9 +249,7 @@ export class SubscriptionsService {
     });
 
     if (existingJob) {
-      throw new ConflictException(
-        'You already have an active job scheduled for this date',
-      );
+      throw new ConflictException('You already have an active job scheduled for this date');
     }
 
     // Check for existing subscriptions
@@ -346,7 +361,13 @@ export class SubscriptionsService {
 
   async adminUpdatePlan(
     planId: string,
-    dto: { name?: string; price?: number; pickupsPerWeek?: number; isActive?: boolean; description?: string },
+    dto: {
+      name?: string;
+      price?: number;
+      pickupsPerWeek?: number;
+      isActive?: boolean;
+      description?: string;
+    },
   ): Promise<SubscriptionPlan> {
     const plan = await this.planRepo.findOne({ where: { id: planId } });
     if (!plan) throw new NotFoundException('Plan not found');
@@ -393,7 +414,10 @@ export class SubscriptionsService {
     return saved;
   }
 
-  async adminRejectSubscription(subscriptionId: string, reason?: string): Promise<UserSubscription> {
+  async adminRejectSubscription(
+    subscriptionId: string,
+    reason?: string,
+  ): Promise<UserSubscription> {
     const sub = await this.subRepo.findOne({ where: { id: subscriptionId } });
     if (!sub) throw new NotFoundException('Subscription not found');
     if (sub.status !== SubscriptionStatus.PENDING_PAYMENT) {

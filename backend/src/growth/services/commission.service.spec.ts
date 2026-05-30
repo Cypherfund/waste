@@ -101,9 +101,9 @@ describe('CommissionService', () => {
 
       expect(profileRepo.save).toHaveBeenCalledWith(
         expect.objectContaining({
-          pendingAmount: 1500,   // 2000 - 500
-          approvedAmount: 3500,  // 3000 + 500
-          totalEarned: 5500,     // 5000 + 500
+          pendingAmount: 1500, // 2000 - 500
+          approvedAmount: 3500, // 3000 + 500
+          totalEarned: 5500, // 5000 + 500
         }),
       );
     });
@@ -111,9 +111,9 @@ describe('CommissionService', () => {
     it('should throw NotFoundException if transaction not found', async () => {
       transactionRepo.findOne.mockResolvedValue(null);
 
-      await expect(
-        service.approveTransaction('nonexistent', 'admin-1'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.approveTransaction('nonexistent', 'admin-1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw BadRequestException if transaction is not pending', async () => {
@@ -122,9 +122,9 @@ describe('CommissionService', () => {
         status: CommissionStatus.APPROVED,
       });
 
-      await expect(
-        service.approveTransaction('tx-1', 'admin-1'),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.approveTransaction('tx-1', 'admin-1')).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should reject re-approving an already approved transaction', async () => {
@@ -133,9 +133,9 @@ describe('CommissionService', () => {
         status: CommissionStatus.APPROVED,
       });
 
-      await expect(
-        service.approveTransaction('tx-1', 'admin-1'),
-      ).rejects.toThrow('Transaction is not pending');
+      await expect(service.approveTransaction('tx-1', 'admin-1')).rejects.toThrow(
+        'Transaction is not pending',
+      );
     });
 
     it('should reject approving a rejected transaction', async () => {
@@ -144,9 +144,9 @@ describe('CommissionService', () => {
         status: CommissionStatus.REJECTED,
       });
 
-      await expect(
-        service.approveTransaction('tx-1', 'admin-1'),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.approveTransaction('tx-1', 'admin-1')).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -166,7 +166,9 @@ describe('CommissionService', () => {
       };
       transactionRepo.findOne.mockResolvedValue(tx);
 
-      const result = await service.rejectTransaction('tx-1', 'admin-1', { reason: 'Fraudulent lead' });
+      const result = await service.rejectTransaction('tx-1', 'admin-1', {
+        reason: 'Fraudulent lead',
+      });
 
       expect(result.status).toBe(CommissionStatus.REJECTED);
       expect(result.rejectionReason).toBe('Fraudulent lead');
@@ -174,9 +176,9 @@ describe('CommissionService', () => {
 
       expect(profileRepo.save).toHaveBeenCalledWith(
         expect.objectContaining({
-          pendingAmount: 1500,   // 2000 - 500
-          approvedAmount: 3000,  // unchanged
-          totalEarned: 5000,     // unchanged
+          pendingAmount: 1500, // 2000 - 500
+          approvedAmount: 3000, // unchanged
+          totalEarned: 5000, // unchanged
         }),
       );
     });
@@ -236,9 +238,7 @@ describe('CommissionService', () => {
 
       await service.assignScheme('profile-1', 'scheme-1', 'admin-1');
 
-      expect(assignmentRepo.save).toHaveBeenCalledWith(
-        expect.objectContaining({ isActive: true }),
-      );
+      expect(assignmentRepo.save).toHaveBeenCalledWith(expect.objectContaining({ isActive: true }));
       expect(assignmentRepo.create).not.toHaveBeenCalled();
     });
 

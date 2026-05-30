@@ -20,7 +20,7 @@ export class LeadCleanupService {
     this.logger.log('Running stale lead expiration job...');
 
     const now = new Date();
-    
+
     // Find leads that have expired
     const expiredLeads = await this.leadRepo.find({
       where: {
@@ -38,7 +38,7 @@ export class LeadCleanupService {
       const profile = await this.profileRepo.findOne({
         where: { userId: lead.marketerId },
       });
-      
+
       if (profile) {
         profile.totalExpired++;
         await this.profileRepo.save(profile);
@@ -59,8 +59,8 @@ export class LeadCleanupService {
 
     await this.profileRepo.update(
       {},
-      { 
-        dailyLeadsCreated: 0, 
+      {
+        dailyLeadsCreated: 0,
         dailyLeadsResetAt: startOfDay,
       },
     );

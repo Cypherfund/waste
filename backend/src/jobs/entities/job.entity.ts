@@ -97,7 +97,12 @@ export class Job {
   @Column({ type: 'boolean', default: false, name: 'is_covered_by_subscription' })
   isCoveredBySubscription: boolean;
 
-  @Column({ type: 'varchar', length: 30, default: PaymentStatus.NOT_REQUIRED, name: 'payment_status' })
+  @Column({
+    type: 'varchar',
+    length: 30,
+    default: PaymentStatus.NOT_REQUIRED,
+    name: 'payment_status',
+  })
   paymentStatus: string;
 
   @Column({ type: 'varchar', length: 50, nullable: true, name: 'payment_method' })
@@ -127,7 +132,13 @@ export class Job {
   @Column({ type: 'varchar', length: 100, nullable: true, name: 'provider_transaction_id' })
   providerTransactionId: string | null;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true, name: 'cash_to_collect_amount' })
+  @Column({
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+    name: 'cash_to_collect_amount',
+  })
   cashToCollectAmount: number | null;
 
   @Column({ type: 'varchar', length: 50, nullable: true, name: 'cash_collection_type' })

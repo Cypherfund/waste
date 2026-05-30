@@ -70,17 +70,18 @@ describe('E2E: Cash on First Pickup Flow', () => {
 
   const cleanupUsers = async () => {
     try {
-      await dataSource.query(`DELETE FROM "notifications" WHERE "user_id" IN (SELECT id FROM "users" WHERE phone LIKE '+237691%')`);
+      await dataSource.query(
+        `DELETE FROM "notifications" WHERE "user_id" IN (SELECT id FROM "users" WHERE phone LIKE '+237691%')`,
+      );
       await dataSource.query(`DELETE FROM "users" WHERE phone LIKE '+237691%'`);
     } catch (_) {}
   };
 
   const cleanupPlans = async () => {
     try {
-      await dataSource.query(
-        `UPDATE "subscription_plans" SET "is_active" = false WHERE id = $1`,
-        [planId],
-      );
+      await dataSource.query(`UPDATE "subscription_plans" SET "is_active" = false WHERE id = $1`, [
+        planId,
+      ]);
     } catch (_) {}
   };
 
@@ -92,7 +93,7 @@ describe('E2E: Cash on First Pickup Flow', () => {
       // Generate UUID in application
       const { v4: uuidv4 } = require('uuid');
       planId = uuidv4();
-      
+
       await dataSource.query(
         `INSERT INTO "subscription_plans" (id, name, price, "pickups_per_week", "is_active", "created_at", "updated_at")
          VALUES ($1, 'Cash FP Plan', 3500, 4, true, NOW(), NOW())`,
@@ -133,11 +134,11 @@ describe('E2E: Cash on First Pickup Flow', () => {
     await cleanupJobs();
     await cleanupFloatLedger();
     await cleanupUsers();
-    
+
     // Create users for each test to handle test-setup truncation
     const { v4: uuidv4 } = require('uuid');
     const testId = uuidv4().substring(0, 8);
-    
+
     const household = await createTestUser(
       dataSource,
       `cashfp-household-${testId}@test.com`,
@@ -157,10 +158,9 @@ describe('E2E: Cash on First Pickup Flow', () => {
       `+237691${testId}02`,
     );
     collectorId = collector.id;
-    await dataSource.query(
-      `UPDATE "users" SET "collector_float_balance" = 10000 WHERE id = $1`,
-      [collectorId],
-    );
+    await dataSource.query(`UPDATE "users" SET "collector_float_balance" = 10000 WHERE id = $1`, [
+      collectorId,
+    ]);
 
     const admin = await createTestUser(
       dataSource,
@@ -486,7 +486,7 @@ describe('E2E: Cash on First Pickup Flow', () => {
       // Create another collector with sufficient float
       const { v4: uuidv4 } = require('uuid');
       const testId = uuidv4().substring(0, 8);
-      
+
       const collector2 = await createTestUser(
         dataSource,
         `cashfp-collector2-${testId}@test.com`,
@@ -495,10 +495,9 @@ describe('E2E: Cash on First Pickup Flow', () => {
         'Cash FP Collector 2',
         `+237691${testId}04`,
       );
-      await dataSource.query(
-        `UPDATE "users" SET "collector_float_balance" = 10000 WHERE id = $1`,
-        [collector2.id],
-      );
+      await dataSource.query(`UPDATE "users" SET "collector_float_balance" = 10000 WHERE id = $1`, [
+        collector2.id,
+      ]);
 
       // Assign job to collector with sufficient float
       await dataSource.query(
@@ -507,20 +506,16 @@ describe('E2E: Cash on First Pickup Flow', () => {
       );
 
       // Verify job is assigned
-      const job = await dataSource.query(
-        `SELECT * FROM "jobs" WHERE id = $1`,
-        [jobId],
-      );
+      const job = await dataSource.query(`SELECT * FROM "jobs" WHERE id = $1`, [jobId]);
       expect(job[0].collector_id).toBe(collector2.id);
       expect(job[0].status).toBe('ASSIGNED');
     });
 
     it('should reject assignment to collector with insufficient float', async () => {
       // Set collector float to insufficient amount
-      await dataSource.query(
-        `UPDATE "users" SET "collector_float_balance" = 100 WHERE id = $1`,
-        [collectorId],
-      );
+      await dataSource.query(`UPDATE "users" SET "collector_float_balance" = 100 WHERE id = $1`, [
+        collectorId,
+      ]);
 
       // Reset job to REQUESTED status for assignment
       await dataSource.query(
@@ -537,7 +532,7 @@ describe('E2E: Cash on First Pickup Flow', () => {
       // The assignment should succeed (manual assignment doesn't check float)
       // but the auto-assignment logic would skip this collector
       expect(response.status).toBe(201);
-      
+
       // Verify the collector has insufficient float
       const collector = await dataSource.query(
         `SELECT "collector_float_balance" FROM "users" WHERE id = $1`,
@@ -545,7 +540,6 @@ describe('E2E: Cash on First Pickup Flow', () => {
       );
       expect(Number(collector[0].collector_float_balance)).toBeLessThan(3500);
     });
-
   });
 
   describe('Cancellation with linked job', () => {
@@ -587,10 +581,7 @@ describe('E2E: Cash on First Pickup Flow', () => {
       expect(subscription[0].status).toBe(SubscriptionStatus.CANCELLED);
 
       // Verify linked job cancelled
-      const job = await dataSource.query(
-        `SELECT * FROM "jobs" WHERE id = $1`,
-        [jobId],
-      );
+      const job = await dataSource.query(`SELECT * FROM "jobs" WHERE id = $1`, [jobId]);
       expect(job[0].status).toBe('CANCELLED');
       expect(job[0].cancellation_reason).toContain('Cash subscription cancelled');
     });
@@ -607,10 +598,7 @@ describe('E2E: Cash on First Pickup Flow', () => {
         .set('Authorization', `Bearer ${householdToken}`);
 
       // Verify job not cancelled
-      const job = await dataSource.query(
-        `SELECT * FROM "jobs" WHERE id = $1`,
-        [jobId],
-      );
+      const job = await dataSource.query(`SELECT * FROM "jobs" WHERE id = $1`, [jobId]);
       if (!job || job.length === 0) {
         throw new Error('Job not found');
       }

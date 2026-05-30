@@ -1,4 +1,11 @@
-import { IsString, IsOptional, IsPhoneNumber, IsEmail, MaxLength, MinLength } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsPhoneNumber,
+  IsEmail,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateMarketerDto {

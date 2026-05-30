@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  BadRequestException,
-  ConflictException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CollectorAvailability } from './entities/collector-availability.entity';
@@ -80,9 +75,7 @@ export class TimeslotsService {
       results.push(this.toResponseDto(saved));
     }
 
-    this.logger.log(
-      `Collector ${collectorId} set ${results.length} availability slot(s)`,
-    );
+    this.logger.log(`Collector ${collectorId} set ${results.length} availability slot(s)`);
 
     return results;
   }
@@ -207,12 +200,7 @@ export class TimeslotsService {
    * Check if two time ranges overlap.
    * Two ranges [s1,e1] and [s2,e2] overlap when s1 < e2 AND s2 < e1.
    */
-  timesOverlap(
-    s1: string,
-    e1: string,
-    s2: string,
-    e2: string,
-  ): boolean {
+  timesOverlap(s1: string, e1: string, s2: string, e2: string): boolean {
     return s1 < e2 && s2 < e1;
   }
 

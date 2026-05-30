@@ -1,7 +1,16 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
-import { CommissionScheme, CommissionTransaction, CommissionStatus, MarketerProfile, MarketerSchemeAssignment, MarketingCampaign, BudgetPeriodStatus, BudgetStatus } from '../entities';
+import {
+  CommissionScheme,
+  CommissionTransaction,
+  CommissionStatus,
+  MarketerProfile,
+  MarketerSchemeAssignment,
+  MarketingCampaign,
+  BudgetPeriodStatus,
+  BudgetStatus,
+} from '../entities';
 import { CreateSchemeDto, ApproveCommissionDto, RejectCommissionDto } from '../dto';
 import { BudgetService } from './budget.service';
 
@@ -21,7 +30,11 @@ export class CommissionService {
     private readonly budgetService: BudgetService,
   ) {}
 
-  async markTransactionAsPaid(transactionId: string, adminId: string, paidReference: string): Promise<CommissionTransaction> {
+  async markTransactionAsPaid(
+    transactionId: string,
+    adminId: string,
+    paidReference: string,
+  ): Promise<CommissionTransaction> {
     const transaction = await this.transactionRepo.findOne({
       where: { id: transactionId },
       relations: ['marketerProfile', 'campaign'],
@@ -172,15 +185,23 @@ export class CommissionService {
     }
 
     const amount = parseFloat(transaction.amount.toString());
-    const campaignRemaining = campaign.budgetAmount - campaign.committedAmount - campaign.spentAmount;
-    const budgetPeriodRemaining = campaign.budgetPeriod.totalBudget - campaign.budgetPeriod.committedAmount - campaign.budgetPeriod.spentAmount;
+    const campaignRemaining =
+      campaign.budgetAmount - campaign.committedAmount - campaign.spentAmount;
+    const budgetPeriodRemaining =
+      campaign.budgetPeriod.totalBudget -
+      campaign.budgetPeriod.committedAmount -
+      campaign.budgetPeriod.spentAmount;
 
     if (campaignRemaining < amount) {
-      throw new BadRequestException(`Insufficient campaign budget. Campaign has ${campaignRemaining} XAF remaining, but commission requires ${amount} XAF`);
+      throw new BadRequestException(
+        `Insufficient campaign budget. Campaign has ${campaignRemaining} XAF remaining, but commission requires ${amount} XAF`,
+      );
     }
 
     if (budgetPeriodRemaining < amount) {
-      throw new BadRequestException(`Insufficient overall marketing budget. Budget period has ${budgetPeriodRemaining} XAF remaining, but commission requires ${amount} XAF`);
+      throw new BadRequestException(
+        `Insufficient overall marketing budget. Budget period has ${budgetPeriodRemaining} XAF remaining, but commission requires ${amount} XAF`,
+      );
     }
 
     // Reserve budget
@@ -202,7 +223,7 @@ export class CommissionService {
     transaction.status = CommissionStatus.APPROVED;
     transaction.reviewedAt = new Date();
     transaction.reviewedBy = adminId;
-    
+
     if (dto?.note) {
       transaction.description = dto.note;
     }
@@ -247,7 +268,8 @@ export class CommissionService {
 
     // Update marketer stats
     const profile = transaction.marketerProfile;
-    profile.pendingAmount = parseFloat(profile.pendingAmount.toString()) - parseFloat(transaction.amount.toString());
+    profile.pendingAmount =
+      parseFloat(profile.pendingAmount.toString()) - parseFloat(transaction.amount.toString());
     await this.profileRepo.save(profile);
 
     return saved;
@@ -305,10 +327,7 @@ export class CommissionService {
   }
 
   async removeSchemeAssignment(marketerProfileId: string, schemeId: string): Promise<void> {
-    await this.assignmentRepo.update(
-      { marketerProfileId, schemeId },
-      { isActive: false },
-    );
+    await this.assignmentRepo.update({ marketerProfileId, schemeId }, { isActive: false });
   }
 
   async getMarketerSchemes(marketerProfileId: string): Promise<CommissionScheme[]> {
@@ -317,24 +336,19 @@ export class CommissionService {
       relations: ['scheme'],
     });
 
-    return assignments.map(a => a.scheme);
+    return assignments.map((a) => a.scheme);
   }
 
   // Get eligible schemes for a trigger type
-  async getEligibleSchemes(
-    marketerProfileId: string,
-    type: string,
-  ): Promise<CommissionScheme[]> {
+  async getEligibleSchemes(marketerProfileId: string, type: string): Promise<CommissionScheme[]> {
     const assignments = await this.assignmentRepo.find({
-      where: { 
-        marketerProfileId, 
+      where: {
+        marketerProfileId,
         isActive: true,
       },
       relations: ['scheme'],
     });
 
-    return assignments
-      .map(a => a.scheme)
-      .filter(s => s.type === type && s.isActive);
+    return assignments.map((a) => a.scheme).filter((s) => s.type === type && s.isActive);
   }
 }

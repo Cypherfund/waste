@@ -71,7 +71,7 @@ export class MarketerNotificationService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `key=${serverKey}`,
+          Authorization: `key=${serverKey}`,
         },
         body: JSON.stringify({
           to: fcmToken,
@@ -96,12 +96,15 @@ export class MarketerNotificationService {
     }
   }
 
-  async getNotifications(marketerProfileId: string, unreadOnly?: boolean): Promise<MarketerNotification[]> {
+  async getNotifications(
+    marketerProfileId: string,
+    unreadOnly?: boolean,
+  ): Promise<MarketerNotification[]> {
     const where: any = { marketerProfileId };
     if (unreadOnly) {
       where.isRead = false;
     }
-    
+
     return this.notificationRepo.find({
       where,
       order: { createdAt: 'DESC' },
@@ -109,17 +112,11 @@ export class MarketerNotificationService {
   }
 
   async markAsRead(notificationId: string, marketerProfileId: string): Promise<void> {
-    await this.notificationRepo.update(
-      { id: notificationId, marketerProfileId },
-      { isRead: true },
-    );
+    await this.notificationRepo.update({ id: notificationId, marketerProfileId }, { isRead: true });
   }
 
   async markAllAsRead(marketerProfileId: string): Promise<void> {
-    await this.notificationRepo.update(
-      { marketerProfileId, isRead: false },
-      { isRead: true },
-    );
+    await this.notificationRepo.update({ marketerProfileId, isRead: false }, { isRead: true });
   }
 
   async getUnreadCount(marketerProfileId: string): Promise<number> {

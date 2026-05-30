@@ -28,14 +28,17 @@ async function recalcMarketerStats(): Promise<void> {
 
   for (const profile of profiles) {
     // Calculate actual stats from commission transactions
-    const stats = await dataSource.query(`
+    const stats = await dataSource.query(
+      `
       SELECT 
         COALESCE(SUM(CASE WHEN status = 'PENDING' THEN amount ELSE 0 END), 0) as pending,
         COALESCE(SUM(CASE WHEN status = 'APPROVED' THEN amount ELSE 0 END), 0) as approved,
         COALESCE(SUM(CASE WHEN status = 'PAID' THEN amount ELSE 0 END), 0) as paid
       FROM commission_transactions
       WHERE marketer_profile_id = $1
-    `, [profile.id]);
+    `,
+      [profile.id],
+    );
 
     const { pending, approved, paid } = stats[0];
     const totalEarned = parseFloat(approved) + parseFloat(paid);
@@ -47,17 +50,24 @@ async function recalcMarketerStats(): Promise<void> {
       parseFloat(profile.total_earned) !== totalEarned
     ) {
       console.log(`Fixing stats for marketer ${profile.id}:`);
-      console.log(`  Before: pending=${profile.pending_amount}, approved=${profile.approved_amount}, paid=${profile.total_paid}, earned=${profile.total_earned}`);
-      console.log(`  After:  pending=${pending}, approved=${approved}, paid=${paid}, earned=${totalEarned}`);
+      console.log(
+        `  Before: pending=${profile.pending_amount}, approved=${profile.approved_amount}, paid=${profile.total_paid}, earned=${profile.total_earned}`,
+      );
+      console.log(
+        `  After:  pending=${pending}, approved=${approved}, paid=${paid}, earned=${totalEarned}`,
+      );
 
-      await dataSource.query(`
+      await dataSource.query(
+        `
         UPDATE marketer_profiles
         SET pending_amount = $1,
             approved_amount = $2,
             total_paid = $3,
             total_earned = $4
         WHERE id = $5
-      `, [pending, approved, paid, totalEarned, profile.id]);
+      `,
+        [pending, approved, paid, totalEarned, profile.id],
+      );
     }
   }
 

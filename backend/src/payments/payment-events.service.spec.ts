@@ -5,7 +5,11 @@ import { Repository, DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Job } from '../jobs/entities/job.entity';
 import { User } from '../users/entities/user.entity';
-import { PaymentTransaction, TransactionStatus, TransactionType } from './entities/payment-transaction.entity';
+import {
+  PaymentTransaction,
+  TransactionStatus,
+  TransactionType,
+} from './entities/payment-transaction.entity';
 
 describe('PaymentEventsService', () => {
   let service: PaymentEventsService;
@@ -131,9 +135,7 @@ describe('PaymentEventsService', () => {
 
     it('is idempotent - second callback does not credit wallet again', async () => {
       // First call - transaction is PENDING
-      mockLockedQuery.getOne
-        .mockResolvedValueOnce(mockTransaction)
-        .mockResolvedValueOnce(mockUser);
+      mockLockedQuery.getOne.mockResolvedValueOnce(mockTransaction).mockResolvedValueOnce(mockUser);
 
       await service.onPaymentSuccess({
         transactionId: 'txn-1',

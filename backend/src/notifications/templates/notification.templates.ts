@@ -142,10 +142,7 @@ const templates: Record<string, TemplateFactory> = {
  * Get a notification template by type.
  * Returns a generic fallback if type is not registered.
  */
-export function getTemplate(
-  type: string,
-  ctx: TemplateContext,
-): NotificationTemplate {
+export function getTemplate(type: string, ctx: TemplateContext): NotificationTemplate {
   const factory = templates[type];
   if (factory) return factory(ctx);
 

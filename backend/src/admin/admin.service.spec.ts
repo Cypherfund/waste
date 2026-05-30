@@ -14,7 +14,10 @@ import { Earning } from '../earnings/entities/earning.entity';
 import { Rating } from '../ratings/entities/rating.entity';
 import { User } from '../users/entities/user.entity';
 import { UserSubscription } from '../subscriptions/entities/user-subscription.entity';
-import { PaymentTransaction, TransactionStatus } from '../payments/entities/payment-transaction.entity';
+import {
+  PaymentTransaction,
+  TransactionStatus,
+} from '../payments/entities/payment-transaction.entity';
 import { JobStatus } from '../common/enums/job-status.enum';
 import { UserRole } from '../common/enums/role.enum';
 import { DisputeStatus } from '../common/enums/dispute-status.enum';
@@ -225,9 +228,9 @@ describe('AdminService', () => {
     });
 
     it('should prevent admin from deactivating themselves', async () => {
-      await expect(
-        service.deactivateUser('admin-1', 'admin-1'),
-      ).rejects.toThrow('Cannot deactivate yourself');
+      await expect(service.deactivateUser('admin-1', 'admin-1')).rejects.toThrow(
+        'Cannot deactivate yourself',
+      );
     });
 
     it('should activate a user', async () => {
@@ -294,9 +297,7 @@ describe('AdminService', () => {
         new Error('Job must be in REQUESTED status'),
       );
 
-      await expect(
-        service.manualAssign('job-1', 'col-1'),
-      ).rejects.toThrow('REQUESTED');
+      await expect(service.manualAssign('job-1', 'col-1')).rejects.toThrow('REQUESTED');
     });
   });
 
@@ -404,11 +405,7 @@ describe('AdminService', () => {
     });
 
     it('should update a config value', async () => {
-      const result = await service.updateConfig(
-        'assignment.max_radius_km',
-        '15',
-        'admin-1',
-      );
+      const result = await service.updateConfig('assignment.max_radius_km', '15', 'admin-1');
 
       expect(systemConfigService.upsert).toHaveBeenCalledWith(
         'assignment.max_radius_km',
@@ -459,9 +456,7 @@ describe('AdminService', () => {
 
   describe('collector performance', () => {
     it('should return collector performance list', async () => {
-      userRepo.find.mockResolvedValue([
-        { id: 'col-1', name: 'Alice', avgRating: 4.8 },
-      ]);
+      userRepo.find.mockResolvedValue([{ id: 'col-1', name: 'Alice', avgRating: 4.8 }]);
 
       const result = await service.getCollectorPerformance(10);
 
@@ -509,12 +504,14 @@ describe('AdminService', () => {
     });
 
     beforeEach(() => {
-      jobsService.toResponseDto = jest.fn((j) => Promise.resolve({
-        id: j.id,
-        householdId: j.householdId,
-        paymentStatus: j.paymentStatus,
-        createdAt: j.createdAt,
-      }));
+      jobsService.toResponseDto = jest.fn((j) =>
+        Promise.resolve({
+          id: j.id,
+          householdId: j.householdId,
+          paymentStatus: j.paymentStatus,
+          createdAt: j.createdAt,
+        }),
+      );
     });
 
     it('returns empty list when no pending payments exist', async () => {
@@ -640,7 +637,9 @@ describe('AdminService', () => {
     it('throws NotFoundException if transaction not found', async () => {
       mockLockedQuery.getOne.mockResolvedValue(null);
 
-      await expect(service.approveWalletTopUp('txn-1', 'admin-1')).rejects.toThrow('Transaction not found');
+      await expect(service.approveWalletTopUp('txn-1', 'admin-1')).rejects.toThrow(
+        'Transaction not found',
+      );
     });
 
     it('throws BadRequestException if transaction status is not PENDING', async () => {
@@ -649,7 +648,9 @@ describe('AdminService', () => {
         status: TransactionStatus.VERIFIED,
       });
 
-      await expect(service.approveWalletTopUp('txn-1', 'admin-1')).rejects.toThrow('already been processed');
+      await expect(service.approveWalletTopUp('txn-1', 'admin-1')).rejects.toThrow(
+        'already been processed',
+      );
     });
 
     it('throws BadRequestException if transaction type is not WALLET_TOPUP', async () => {
@@ -658,7 +659,9 @@ describe('AdminService', () => {
         type: 'JOB_PAYMENT',
       });
 
-      await expect(service.approveWalletTopUp('txn-1', 'admin-1')).rejects.toThrow('not a wallet top-up');
+      await expect(service.approveWalletTopUp('txn-1', 'admin-1')).rejects.toThrow(
+        'not a wallet top-up',
+      );
     });
 
     it('credits wallet and marks transaction VERIFIED', async () => {
@@ -688,7 +691,9 @@ describe('AdminService', () => {
         status: TransactionStatus.VERIFIED,
       });
 
-      await expect(service.approveWalletTopUp('txn-1', 'admin-1')).rejects.toThrow('already been processed');
+      await expect(service.approveWalletTopUp('txn-1', 'admin-1')).rejects.toThrow(
+        'already been processed',
+      );
 
       // Execute should not be called again
       expect(mockUpdateQuery.execute.mock.calls.length).toBe(executeCallCount);
@@ -738,7 +743,9 @@ describe('AdminService', () => {
     it('throws NotFoundException if transaction not found', async () => {
       mockLockedQuery.getOne.mockResolvedValue(null);
 
-      await expect(service.rejectWalletTopUp('txn-1', 'admin-1')).rejects.toThrow('Transaction not found');
+      await expect(service.rejectWalletTopUp('txn-1', 'admin-1')).rejects.toThrow(
+        'Transaction not found',
+      );
     });
 
     it('throws BadRequestException if transaction status is not PENDING', async () => {
@@ -747,7 +754,9 @@ describe('AdminService', () => {
         status: TransactionStatus.VERIFIED,
       });
 
-      await expect(service.rejectWalletTopUp('txn-1', 'admin-1')).rejects.toThrow('already been processed');
+      await expect(service.rejectWalletTopUp('txn-1', 'admin-1')).rejects.toThrow(
+        'already been processed',
+      );
     });
 
     it('throws BadRequestException if transaction type is not WALLET_TOPUP', async () => {
@@ -756,7 +765,9 @@ describe('AdminService', () => {
         type: 'JOB_PAYMENT',
       });
 
-      await expect(service.rejectWalletTopUp('txn-1', 'admin-1')).rejects.toThrow('not a wallet top-up');
+      await expect(service.rejectWalletTopUp('txn-1', 'admin-1')).rejects.toThrow(
+        'not a wallet top-up',
+      );
     });
 
     it('marks transaction FAILED and stores failureReason', async () => {
@@ -794,7 +805,9 @@ describe('AdminService', () => {
         status: TransactionStatus.FAILED,
       });
 
-      await expect(service.rejectWalletTopUp('txn-1', 'admin-1', 'Another reason')).rejects.toThrow('already been processed');
+      await expect(service.rejectWalletTopUp('txn-1', 'admin-1', 'Another reason')).rejects.toThrow(
+        'already been processed',
+      );
 
       // Save should not be called again
       expect(mockEntityManager.save.mock.calls.length).toBe(saveCallCount);

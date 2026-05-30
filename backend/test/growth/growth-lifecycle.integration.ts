@@ -76,9 +76,7 @@ describe('Growth Module — Integration Tests', () => {
 
   describe('Access Control', () => {
     it('should reject unauthenticated requests to admin growth endpoints', async () => {
-      await request(httpServer)
-        .get('/api/v1/admin/growth/marketers')
-        .expect(401);
+      await request(httpServer).get('/api/v1/admin/growth/marketers').expect(401);
     });
 
     it('should reject non-admin access to admin growth endpoints', async () => {
@@ -89,9 +87,7 @@ describe('Growth Module — Integration Tests', () => {
     });
 
     it('should reject unauthenticated requests to marketer mobile endpoints', async () => {
-      await request(httpServer)
-        .get('/api/v1/marketer/dashboard')
-        .expect(401);
+      await request(httpServer).get('/api/v1/marketer/dashboard').expect(401);
     });
 
     it('should reject non-marketer access to marketer mobile endpoints', async () => {
@@ -253,7 +249,7 @@ describe('Growth Module — Integration Tests', () => {
         .expect(400);
     });
 
-    it('should list only the logged-in marketer\'s leads', async () => {
+    it("should list only the logged-in marketer's leads", async () => {
       const res = await request(httpServer)
         .get('/api/v1/marketer/leads')
         .set('Authorization', `Bearer ${marketerToken}`)
@@ -287,9 +283,7 @@ describe('Growth Module — Integration Tests', () => {
       });
 
       it('should reject an unknown referral token', async () => {
-        await request(httpServer)
-          .get('/api/v1/growth/claim/invalid-token-xyz')
-          .expect(404);
+        await request(httpServer).get('/api/v1/growth/claim/invalid-token-xyz').expect(404);
       });
     });
   });
@@ -303,10 +297,9 @@ describe('Growth Module — Integration Tests', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(201);
 
-      const profile = await dataSource.query(
-        `SELECT status FROM marketer_profiles WHERE id = $1`,
-        [marketerProfileId],
-      );
+      const profile = await dataSource.query(`SELECT status FROM marketer_profiles WHERE id = $1`, [
+        marketerProfileId,
+      ]);
       expect(profile[0].status).toBe('SUSPENDED');
     });
 
@@ -323,10 +316,9 @@ describe('Growth Module — Integration Tests', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(201);
 
-      const profile = await dataSource.query(
-        `SELECT status FROM marketer_profiles WHERE id = $1`,
-        [marketerProfileId],
-      );
+      const profile = await dataSource.query(`SELECT status FROM marketer_profiles WHERE id = $1`, [
+        marketerProfileId,
+      ]);
       expect(profile[0].status).toBe('ACTIVE');
     });
   });
@@ -397,10 +389,9 @@ describe('Growth Module — Integration Tests', () => {
          RETURNING id`,
         [marketerProfileId, schemeId, marketerId, campaignId],
       );
-      await dataSource.query(
-        `UPDATE marketer_profiles SET pending_amount = 300 WHERE id = $1`,
-        [marketerProfileId],
-      );
+      await dataSource.query(`UPDATE marketer_profiles SET pending_amount = 300 WHERE id = $1`, [
+        marketerProfileId,
+      ]);
 
       await request(httpServer)
         .post(`/api/v1/admin/growth/commission-transactions/${tx2.id}/reject`)
@@ -510,10 +501,9 @@ describe('Growth Module — Integration Tests', () => {
         `UPDATE marketer_payout_requests SET status = 'PENDING' WHERE id = $1`,
         [payoutId],
       );
-      await dataSource.query(
-        `UPDATE marketer_profiles SET approved_amount = 3000 WHERE id = $1`,
-        [marketerProfileId],
-      );
+      await dataSource.query(`UPDATE marketer_profiles SET approved_amount = 3000 WHERE id = $1`, [
+        marketerProfileId,
+      ]);
 
       await request(httpServer)
         .post(`/api/v1/admin/growth/marketer-payouts/${payoutId}/reject`)

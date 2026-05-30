@@ -75,8 +75,8 @@ describe('LocationService', () => {
         id: 'loc-1',
         jobId: 'job-1',
         collectorId: 'col-1',
-        latitude: 4.0400,
-        longitude: 9.7000,
+        latitude: 4.04,
+        longitude: 9.7,
         accuracy: 10,
         speed: null,
         heading: null,
@@ -116,17 +116,15 @@ describe('LocationService', () => {
 
   describe('updateLocation — authorization', () => {
     it('should reject if collector is not assigned to the job', async () => {
-      await expect(
-        service.updateLocation('other-col', validInput),
-      ).rejects.toThrow('You are not assigned to this job');
+      await expect(service.updateLocation('other-col', validInput)).rejects.toThrow(
+        'You are not assigned to this job',
+      );
     });
 
     it('should reject if job not found', async () => {
       jobRepo.findOne.mockResolvedValue(null);
 
-      await expect(
-        service.updateLocation('col-1', validInput),
-      ).rejects.toThrow('Job not found');
+      await expect(service.updateLocation('col-1', validInput)).rejects.toThrow('Job not found');
     });
   });
 
@@ -136,25 +134,25 @@ describe('LocationService', () => {
     it('should reject if job is not IN_PROGRESS', async () => {
       jobRepo.findOne.mockResolvedValue(makeJob({ status: JobStatus.COMPLETED }));
 
-      await expect(
-        service.updateLocation('col-1', validInput),
-      ).rejects.toThrow('Job must be IN_PROGRESS');
+      await expect(service.updateLocation('col-1', validInput)).rejects.toThrow(
+        'Job must be IN_PROGRESS',
+      );
     });
 
     it('should reject if job is ASSIGNED (not started yet)', async () => {
       jobRepo.findOne.mockResolvedValue(makeJob({ status: JobStatus.ASSIGNED }));
 
-      await expect(
-        service.updateLocation('col-1', validInput),
-      ).rejects.toThrow('Job must be IN_PROGRESS');
+      await expect(service.updateLocation('col-1', validInput)).rejects.toThrow(
+        'Job must be IN_PROGRESS',
+      );
     });
 
     it('should reject if job is REQUESTED', async () => {
       jobRepo.findOne.mockResolvedValue(makeJob({ status: JobStatus.REQUESTED }));
 
-      await expect(
-        service.updateLocation('col-1', validInput),
-      ).rejects.toThrow('Job must be IN_PROGRESS');
+      await expect(service.updateLocation('col-1', validInput)).rejects.toThrow(
+        'Job must be IN_PROGRESS',
+      );
     });
   });
 

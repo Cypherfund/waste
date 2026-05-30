@@ -19,10 +19,11 @@ let baseUrl: string;
 
 beforeAll(async () => {
   // Verify we're using test environment
-  const nodeEnv = process.env.NODE_ENV || process.env.DOTENV_CONFIG_PATH?.includes('test') ? 'test' : 'unknown';
+  const nodeEnv =
+    process.env.NODE_ENV || process.env.DOTENV_CONFIG_PATH?.includes('test') ? 'test' : 'unknown';
   console.log(`[Integration Tests] Running in NODE_ENV: ${nodeEnv}`);
   console.log(`[Integration Tests] Database: ${process.env.DATABASE_NAME}`);
-  
+
   if (!process.env.DATABASE_NAME?.includes('test')) {
     console.warn('[Integration Tests] WARNING: Not using a test database!');
     console.warn('[Integration Tests] DATABASE_NAME should be "waste_management_test"');
@@ -31,9 +32,9 @@ beforeAll(async () => {
   const moduleFixture: TestingModule = await Test.createTestingModule({
     imports: [AppModule],
   })
-  .overrideProvider(APP_GUARD)
-  .useValue([])
-  .compile();
+    .overrideProvider(APP_GUARD)
+    .useValue([])
+    .compile();
 
   app = moduleFixture.createNestApplication();
   app.setGlobalPrefix('api/v1'); // Set global prefix to match production
@@ -42,20 +43,34 @@ beforeAll(async () => {
 
   httpServer = app.getHttpServer();
   dataSource = app.get(DataSource);
-  
+
   baseUrl = await app.getUrl();
   console.log(`[Integration Tests] App listening on: ${baseUrl}`);
   console.log(`[Integration Tests] Connected to database: ${dataSource.options.database}`);
-  
+
   // Clean database before tests - handle missing tables gracefully
   const tables = [
-    'ratings', 'earnings', 'notifications',
-    'fraud_flags', 'disputes', 'jobs', 'users',
-    'files', 'proofs', 'location_updates', 'collector_availability', 'system_config',
-    'user_subscriptions', 'subscription_plans', 'payment_transactions',
-    'payout_requests', 'collector_float_ledger', 'user_payment_methods', 'payment_providers',
+    'ratings',
+    'earnings',
+    'notifications',
+    'fraud_flags',
+    'disputes',
+    'jobs',
+    'users',
+    'files',
+    'proofs',
+    'location_updates',
+    'collector_availability',
+    'system_config',
+    'user_subscriptions',
+    'subscription_plans',
+    'payment_transactions',
+    'payout_requests',
+    'collector_float_ledger',
+    'user_payment_methods',
+    'payment_providers',
   ];
-  
+
   for (const table of tables) {
     try {
       await dataSource.query(`TRUNCATE TABLE "${table}" CASCADE`);
@@ -89,13 +104,27 @@ afterAll(async () => {
   // Clean database after tests
   if (dataSource) {
     const tables = [
-      'ratings', 'earnings', 'notifications',
-      'fraud_flags', 'disputes', 'jobs', 'users',
-      'files', 'proofs', 'location_updates', 'collector_availability', 'system_config',
-      'user_subscriptions', 'subscription_plans', 'payment_transactions',
-      'payout_requests', 'collector_float_ledger', 'user_payment_methods', 'payment_providers',
+      'ratings',
+      'earnings',
+      'notifications',
+      'fraud_flags',
+      'disputes',
+      'jobs',
+      'users',
+      'files',
+      'proofs',
+      'location_updates',
+      'collector_availability',
+      'system_config',
+      'user_subscriptions',
+      'subscription_plans',
+      'payment_transactions',
+      'payout_requests',
+      'collector_float_ledger',
+      'user_payment_methods',
+      'payment_providers',
     ];
-    
+
     for (const table of tables) {
       try {
         await dataSource.query(`TRUNCATE TABLE "${table}" CASCADE`);
@@ -106,7 +135,7 @@ afterAll(async () => {
       }
     }
   }
-  
+
   if (app) {
     await app.close();
   }

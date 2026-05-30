@@ -1,8 +1,23 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, LessThan, MoreThan, In } from 'typeorm';
 import { randomBytes } from 'crypto';
-import { Lead, LeadStatus, LeadType, SMSSStatus, MarketerProfile, NotificationType, MarketingCampaign, CampaignMarketerAssignment, CampaignStatus } from '../entities';
+import {
+  Lead,
+  LeadStatus,
+  LeadType,
+  SMSSStatus,
+  MarketerProfile,
+  NotificationType,
+  MarketingCampaign,
+  CampaignMarketerAssignment,
+  CampaignStatus,
+} from '../entities';
 import { CreateLeadDto } from '../dto';
 import { SMSService } from './sms.service';
 import { MarketerNotificationService } from './marketer-notification.service';
@@ -37,12 +52,17 @@ export class LeadService {
   }
 
   private generateReferralCode(name: string): string {
-    const namePart = name.replace(/[^a-zA-Z]/g, '').substring(0, 5).toUpperCase();
+    const namePart = name
+      .replace(/[^a-zA-Z]/g, '')
+      .substring(0, 5)
+      .toUpperCase();
     const random = Math.floor(1000 + Math.random() * 9000);
     return `MKR-${namePart}-${random}`;
   }
 
-  private async canCreateLead(marketerId: string): Promise<{ allowed: boolean; remaining: number; resetAt: Date }> {
+  private async canCreateLead(
+    marketerId: string,
+  ): Promise<{ allowed: boolean; remaining: number; resetAt: Date }> {
     const profile = await this.profileRepo.findOne({
       where: { userId: marketerId },
     });
@@ -102,7 +122,9 @@ export class LeadService {
       // Auto-select if only one active campaign
       const activeCampaigns = await this.campaignService.getActiveCampaignsForMarketer(profile.id);
       if (activeCampaigns.length === 0) {
-        throw new BadRequestException('No active campaign assigned. Please contact your administrator.');
+        throw new BadRequestException(
+          'No active campaign assigned. Please contact your administrator.',
+        );
       } else if (activeCampaigns.length === 1) {
         campaignId = activeCampaigns[0].id;
       } else {
@@ -134,7 +156,7 @@ export class LeadService {
        SET daily_leads_created = daily_leads_created + 1, 
            total_leads = total_leads + 1 
        WHERE id = $1 AND daily_leads_created < $2`,
-      [profile.id, DAILY_LEAD_LIMIT]
+      [profile.id, DAILY_LEAD_LIMIT],
     );
 
     if (result.affected === 0) {
@@ -153,7 +175,7 @@ export class LeadService {
       type: dto.type,
       area: dto.area || null,
       notes: dto.notes || null,
-      source: dto.source || 'FIELD' as any,
+      source: dto.source || ('FIELD' as any),
       referralToken: this.generateReferralToken(),
       referralCode: this.generateReferralCode(dto.name),
       status: LeadStatus.INVITED,
@@ -183,7 +205,7 @@ export class LeadService {
     }
 
     const referralLink = `https://kmertrash.com/ref/${lead.referralToken}`;
-    
+
     // Get marketer name
     const profile = await this.profileRepo.findOne({
       where: { userId: lead.marketerId },
@@ -199,7 +221,7 @@ export class LeadService {
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       try {
         const result = await this.smsService.send(lead.phone, message);
-        
+
         lead.smsStatus = SMSSStatus.SENT;
         lead.smsSentAt = new Date();
         lead.smsProviderMessageId = result.messageId;
@@ -214,7 +236,7 @@ export class LeadService {
           throw error;
         }
         // Wait 2 seconds before retry
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise((resolve) => setTimeout(resolve, 2000));
       }
     }
   }
@@ -237,7 +259,7 @@ export class LeadService {
     lead.expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     lead.smsRetryCount = 0;
     lead.status = LeadStatus.INVITED;
-    
+
     await this.leadRepo.save(lead);
 
     // Send new SMS
@@ -279,9 +301,8 @@ export class LeadService {
     if (profile) {
       profile.totalRegistered++;
       // Guard against division by zero
-      profile.conversionRate = profile.totalLeads > 0
-        ? (profile.totalRegistered / profile.totalLeads) * 100
-        : 0;
+      profile.conversionRate =
+        profile.totalLeads > 0 ? (profile.totalRegistered / profile.totalLeads) * 100 : 0;
       await this.profileRepo.save(profile);
 
       // Send notification
@@ -318,15 +339,15 @@ export class LeadService {
     });
     if (profile) {
       profile.totalQualified++;
-      profile.qualificationRate = profile.totalRegistered > 0
-        ? (profile.totalQualified / profile.totalRegistered) * 100
-        : 0;
+      profile.qualificationRate =
+        profile.totalRegistered > 0 ? (profile.totalQualified / profile.totalRegistered) * 100 : 0;
       await this.profileRepo.save(profile);
 
       // Send notification with detailed message based on qualification reason
-      const message = reason === QualificationReason.SUBSCRIPTION
-        ? `${lead.name} has subscribed. Commission pending approval!`
-        : `${lead.name} has made their first booking. Commission pending approval!`;
+      const message =
+        reason === QualificationReason.SUBSCRIPTION
+          ? `${lead.name} has subscribed. Commission pending approval!`
+          : `${lead.name} has made their first booking. Commission pending approval!`;
 
       await this.notificationService.sendNotification(
         profile.id,
@@ -448,15 +469,15 @@ export class LeadService {
 
   async handleIncomingSMS(phone: string, message: string): Promise<void> {
     const optOutKeywords = ['stop', 'unsubscribe', 'cancel', 'arret', 'desabonner', 'opt out'];
-    
-    if (optOutKeywords.some(k => message.toLowerCase().includes(k))) {
-      await this.leadRepo.update(
-        { phone },
-        { smsOptOut: true, smsStatus: SMSSStatus.FAILED },
-      );
-      
+
+    if (optOutKeywords.some((k) => message.toLowerCase().includes(k))) {
+      await this.leadRepo.update({ phone }, { smsOptOut: true, smsStatus: SMSSStatus.FAILED });
+
       // Send confirmation
-      await this.smsService.send(phone, 'You have opted out of KmerTrash messages. Reply START to resubscribe. / Vous vous êtes désabonné des messages KmerTrash. Répondez START pour vous réabonner.');
+      await this.smsService.send(
+        phone,
+        'You have opted out of KmerTrash messages. Reply START to resubscribe. / Vous vous êtes désabonné des messages KmerTrash. Répondez START pour vous réabonner.',
+      );
     }
   }
 

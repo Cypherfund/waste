@@ -40,7 +40,9 @@ export class CampaignService {
     const budgetEndDate = new Date(budgetPeriod.endDate);
 
     if (campaignStartDate < budgetStartDate) {
-      throw new BadRequestException('Campaign start date cannot be before budget period start date');
+      throw new BadRequestException(
+        'Campaign start date cannot be before budget period start date',
+      );
     }
 
     if (campaignEndDate > budgetEndDate) {
@@ -48,10 +50,11 @@ export class CampaignService {
     }
 
     // Validate campaign budget amount against remaining budget
-    const remainingBudget = budgetPeriod.totalBudget - budgetPeriod.committedAmount - budgetPeriod.spentAmount;
+    const remainingBudget =
+      budgetPeriod.totalBudget - budgetPeriod.committedAmount - budgetPeriod.spentAmount;
     if (dto.budgetAmount > remainingBudget) {
       throw new BadRequestException(
-        `Campaign budget amount (${dto.budgetAmount}) exceeds remaining budget period balance (${remainingBudget})`
+        `Campaign budget amount (${dto.budgetAmount}) exceeds remaining budget period balance (${remainingBudget})`,
       );
     }
 
@@ -114,13 +117,17 @@ export class CampaignService {
         throw new NotFoundException('Budget period not found');
       }
 
-      const campaignStartDate = dto.startDate ? new Date(dto.startDate) : new Date(campaign.startDate);
+      const campaignStartDate = dto.startDate
+        ? new Date(dto.startDate)
+        : new Date(campaign.startDate);
       const campaignEndDate = dto.endDate ? new Date(dto.endDate) : new Date(campaign.endDate);
       const budgetStartDate = new Date(newBudgetPeriod.startDate);
       const budgetEndDate = new Date(newBudgetPeriod.endDate);
 
       if (campaignStartDate < budgetStartDate) {
-        throw new BadRequestException('Campaign start date cannot be before budget period start date');
+        throw new BadRequestException(
+          'Campaign start date cannot be before budget period start date',
+        );
       }
 
       if (campaignEndDate > budgetEndDate) {
@@ -129,10 +136,11 @@ export class CampaignService {
 
       // Validate campaign budget amount against remaining budget in new period
       const campaignBudget = dto.budgetAmount || campaign.budgetAmount;
-      const remainingBudget = newBudgetPeriod.totalBudget - newBudgetPeriod.committedAmount - newBudgetPeriod.spentAmount;
+      const remainingBudget =
+        newBudgetPeriod.totalBudget - newBudgetPeriod.committedAmount - newBudgetPeriod.spentAmount;
       if (campaignBudget > remainingBudget) {
         throw new BadRequestException(
-          `Campaign budget amount (${campaignBudget}) exceeds remaining budget period balance (${remainingBudget})`
+          `Campaign budget amount (${campaignBudget}) exceeds remaining budget period balance (${remainingBudget})`,
         );
       }
     }
@@ -144,13 +152,17 @@ export class CampaignService {
       });
 
       if (budgetPeriod) {
-        const campaignStartDate = dto.startDate ? new Date(dto.startDate) : new Date(campaign.startDate);
+        const campaignStartDate = dto.startDate
+          ? new Date(dto.startDate)
+          : new Date(campaign.startDate);
         const campaignEndDate = dto.endDate ? new Date(dto.endDate) : new Date(campaign.endDate);
         const budgetStartDate = new Date(budgetPeriod.startDate);
         const budgetEndDate = new Date(budgetPeriod.endDate);
 
         if (campaignStartDate < budgetStartDate) {
-          throw new BadRequestException('Campaign start date cannot be before budget period start date');
+          throw new BadRequestException(
+            'Campaign start date cannot be before budget period start date',
+          );
         }
 
         if (campaignEndDate > budgetEndDate) {
@@ -165,7 +177,7 @@ export class CampaignService {
 
   async activateCampaign(id: string): Promise<MarketingCampaign> {
     const campaign = await this.findCampaignById(id);
-    
+
     if (campaign.status === CampaignStatus.ACTIVE) {
       throw new BadRequestException('Campaign is already active');
     }
@@ -180,7 +192,7 @@ export class CampaignService {
 
   async pauseCampaign(id: string): Promise<MarketingCampaign> {
     const campaign = await this.findCampaignById(id);
-    
+
     if (campaign.status !== CampaignStatus.ACTIVE) {
       throw new BadRequestException('Only active campaigns can be paused');
     }
@@ -191,7 +203,7 @@ export class CampaignService {
 
   async endCampaign(id: string): Promise<MarketingCampaign> {
     const campaign = await this.findCampaignById(id);
-    
+
     if (campaign.status === CampaignStatus.ENDED || campaign.status === CampaignStatus.CANCELLED) {
       throw new BadRequestException('Campaign is already ended or cancelled');
     }
@@ -202,7 +214,7 @@ export class CampaignService {
 
   async cancelCampaign(id: string): Promise<MarketingCampaign> {
     const campaign = await this.findCampaignById(id);
-    
+
     if (campaign.status === CampaignStatus.CANCELLED) {
       throw new BadRequestException('Campaign is already cancelled');
     }
@@ -211,7 +223,11 @@ export class CampaignService {
     return this.campaignRepo.save(campaign);
   }
 
-  async assignMarketers(campaignId: string, dto: AssignMarketersDto, assignedBy: string): Promise<void> {
+  async assignMarketers(
+    campaignId: string,
+    dto: AssignMarketersDto,
+    assignedBy: string,
+  ): Promise<void> {
     const campaign = await this.findCampaignById(campaignId);
 
     for (const marketerProfileId of dto.marketerProfileIds) {
@@ -279,15 +295,15 @@ export class CampaignService {
     });
 
     const activeCampaigns = assignments
-      .map(a => a.campaign)
-      .filter(c => c.status === CampaignStatus.ACTIVE);
+      .map((a) => a.campaign)
+      .filter((c) => c.status === CampaignStatus.ACTIVE);
 
     return activeCampaigns;
   }
 
   async getCampaignPerformance(campaignId: string): Promise<any> {
     const campaign = await this.findCampaignById(campaignId);
-    
+
     // Note: This will be expanded to include lead, commission, and conversion stats
     return {
       campaign,
@@ -295,8 +311,15 @@ export class CampaignService {
         total: campaign.budgetAmount,
         committed: campaign.committedAmount,
         spent: campaign.spentAmount,
-        remaining: campaign.budgetAmount - parseFloat(campaign.committedAmount.toString()) - parseFloat(campaign.spentAmount.toString()),
-        usagePct: ((parseFloat(campaign.committedAmount.toString()) + parseFloat(campaign.spentAmount.toString())) / campaign.budgetAmount) * 100,
+        remaining:
+          campaign.budgetAmount -
+          parseFloat(campaign.committedAmount.toString()) -
+          parseFloat(campaign.spentAmount.toString()),
+        usagePct:
+          ((parseFloat(campaign.committedAmount.toString()) +
+            parseFloat(campaign.spentAmount.toString())) /
+            campaign.budgetAmount) *
+          100,
       },
     };
   }

@@ -24,20 +24,14 @@ export interface ScoredCollector {
  *       + (W_rating × rating_penalty)
  *       + (W_recency × recency_score)
  */
-export function scoreCollector(
-  candidate: CollectorCandidate,
-  config: AssignmentConfig,
-): number {
-  const distanceScore =
-    (candidate.distanceKm / config.maxRadiusKm) * 100;
+export function scoreCollector(candidate: CollectorCandidate, config: AssignmentConfig): number {
+  const distanceScore = (candidate.distanceKm / config.maxRadiusKm) * 100;
 
-  const workloadScore =
-    (candidate.activeJobCount / config.maxConcurrentJobs) * 100;
+  const workloadScore = (candidate.activeJobCount / config.maxConcurrentJobs) * 100;
 
   // New collectors (avgRating=0) get neutral score of 50 per Phase 1 §5.2
   const effectiveRating = candidate.avgRating === 0 ? 2.5 : candidate.avgRating;
-  const ratingPenalty =
-    (1 - (effectiveRating / 5)) * 100;
+  const ratingPenalty = (1 - effectiveRating / 5) * 100;
 
   const recencyScore = computeRecencyScore(candidate.lastCompletedAt);
 
@@ -56,8 +50,7 @@ export function scoreCollector(
 export function computeRecencyScore(lastCompletedAt: Date | null): number {
   if (!lastCompletedAt) return 0;
 
-  const hoursSince =
-    (Date.now() - lastCompletedAt.getTime()) / (1000 * 60 * 60);
+  const hoursSince = (Date.now() - lastCompletedAt.getTime()) / (1000 * 60 * 60);
 
   if (hoursSince < 1) return 80;
   if (hoursSince < 4) return 40;

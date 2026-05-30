@@ -159,7 +159,10 @@ describe('PricingService', () => {
     });
 
     it('should throw error if config value is not a valid number', async () => {
-      systemConfigService.configRepo.findOne.mockResolvedValue({ key: 'pricing.per_pickup_price', value: 'invalid' });
+      systemConfigService.configRepo.findOne.mockResolvedValue({
+        key: 'pricing.per_pickup_price',
+        value: 'invalid',
+      });
       subRepo.findOne.mockResolvedValue(null);
       planRepo.find.mockResolvedValue([]);
 
@@ -217,7 +220,9 @@ describe('PricingService', () => {
       const result = await service.consumePickup('user-1');
 
       expect(result).toBe(true);
-      expect(subscription.weekResetDate).toBe(getMondayOfWeek(new Date()).toISOString().split('T')[0]);
+      expect(subscription.weekResetDate).toBe(
+        getMondayOfWeek(new Date()).toISOString().split('T')[0],
+      );
       expect(subRepo.save).toHaveBeenCalledWith(subscription); // reset saves
     });
   });
@@ -324,7 +329,9 @@ describe('PricingService', () => {
       await service.getQuoteForUser('user-1');
 
       expect(subscription.remainingPickupsThisWeek).toBe(3);
-      expect(subscription.weekResetDate).toBe(getMondayOfWeek(new Date()).toISOString().split('T')[0]);
+      expect(subscription.weekResetDate).toBe(
+        getMondayOfWeek(new Date()).toISOString().split('T')[0],
+      );
       expect(subRepo.save).toHaveBeenCalledWith(subscription);
     });
 

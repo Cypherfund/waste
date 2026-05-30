@@ -91,29 +91,92 @@ describe('SystemCleanupService', () => {
         { provide: getRepositoryToken(Proof), useValue: { count: jest.fn(), delete: jest.fn() } },
         { provide: getRepositoryToken(Rating), useValue: { count: jest.fn(), delete: jest.fn() } },
         { provide: getRepositoryToken(Dispute), useValue: { count: jest.fn(), delete: jest.fn() } },
-        { provide: getRepositoryToken(FraudFlag), useValue: { count: jest.fn(), delete: jest.fn() } },
-        { provide: getRepositoryToken(LocationUpdate), useValue: { count: jest.fn(), delete: jest.fn() } },
-        { provide: getRepositoryToken(UserAddress), useValue: { count: jest.fn(), delete: jest.fn() } },
-        { provide: getRepositoryToken(UserPaymentMethod), useValue: { count: jest.fn(), delete: jest.fn() } },
-        { provide: getRepositoryToken(UserSubscription), useValue: { count: jest.fn(), delete: jest.fn() } },
+        {
+          provide: getRepositoryToken(FraudFlag),
+          useValue: { count: jest.fn(), delete: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(LocationUpdate),
+          useValue: { count: jest.fn(), delete: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(UserAddress),
+          useValue: { count: jest.fn(), delete: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(UserPaymentMethod),
+          useValue: { count: jest.fn(), delete: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(UserSubscription),
+          useValue: { count: jest.fn(), delete: jest.fn() },
+        },
         { provide: getRepositoryToken(Lead), useValue: { count: jest.fn(), delete: jest.fn() } },
-        { provide: getRepositoryToken(MarketerProfile), useValue: { count: jest.fn(), delete: jest.fn() } },
-        { provide: getRepositoryToken(CommissionTransaction), useValue: { count: jest.fn(), delete: jest.fn() } },
-        { provide: getRepositoryToken(MarketerPayoutRequest), useValue: { count: jest.fn(), delete: jest.fn() } },
-        { provide: getRepositoryToken(MarketingCampaign), useValue: { count: jest.fn(), delete: jest.fn() } },
-        { provide: getRepositoryToken(MarketingBudgetPeriod), useValue: { count: jest.fn(), delete: jest.fn() } },
-        { provide: getRepositoryToken(BudgetTransaction), useValue: { count: jest.fn(), delete: jest.fn() } },
-        { provide: getRepositoryToken(PaymentTransaction), useValue: { count: jest.fn(), delete: jest.fn() } },
+        {
+          provide: getRepositoryToken(MarketerProfile),
+          useValue: { count: jest.fn(), delete: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(CommissionTransaction),
+          useValue: { count: jest.fn(), delete: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(MarketerPayoutRequest),
+          useValue: { count: jest.fn(), delete: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(MarketingCampaign),
+          useValue: { count: jest.fn(), delete: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(MarketingBudgetPeriod),
+          useValue: { count: jest.fn(), delete: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(BudgetTransaction),
+          useValue: { count: jest.fn(), delete: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(PaymentTransaction),
+          useValue: { count: jest.fn(), delete: jest.fn() },
+        },
         { provide: getRepositoryToken(Earning), useValue: { count: jest.fn(), delete: jest.fn() } },
-        { provide: getRepositoryToken(PayoutRequest), useValue: { count: jest.fn(), delete: jest.fn() } },
-        { provide: getRepositoryToken(CollectorFloatLedger), useValue: { count: jest.fn(), delete: jest.fn() } },
-        { provide: getRepositoryToken(FileRecord), useValue: { count: jest.fn(), delete: jest.fn() } },
-        { provide: getRepositoryToken(Notification), useValue: { count: jest.fn(), delete: jest.fn() } },
-        { provide: getRepositoryToken(CollectorAvailability), useValue: { count: jest.fn(), delete: jest.fn() } },
-        { provide: getRepositoryToken(MarketerNotification), useValue: { count: jest.fn(), delete: jest.fn() } },
-        { provide: getRepositoryToken(CampaignMarketerAssignment), useValue: { count: jest.fn(), delete: jest.fn() } },
-        { provide: getRepositoryToken(CampaignCommissionScheme), useValue: { count: jest.fn(), delete: jest.fn() } },
-        { provide: getRepositoryToken(MarketerSchemeAssignment), useValue: { count: jest.fn(), delete: jest.fn() } },
+        {
+          provide: getRepositoryToken(PayoutRequest),
+          useValue: { count: jest.fn(), delete: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(CollectorFloatLedger),
+          useValue: { count: jest.fn(), delete: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(FileRecord),
+          useValue: { count: jest.fn(), delete: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(Notification),
+          useValue: { count: jest.fn(), delete: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(CollectorAvailability),
+          useValue: { count: jest.fn(), delete: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(MarketerNotification),
+          useValue: { count: jest.fn(), delete: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(CampaignMarketerAssignment),
+          useValue: { count: jest.fn(), delete: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(CampaignCommissionScheme),
+          useValue: { count: jest.fn(), delete: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(MarketerSchemeAssignment),
+          useValue: { count: jest.fn(), delete: jest.fn() },
+        },
         { provide: DataSource, useValue: dataSource },
         { provide: Logger, useValue: { error: jest.fn(), log: jest.fn() } },
       ],
@@ -125,7 +188,7 @@ describe('SystemCleanupService', () => {
   describe('1. Execute fails when ALLOW_SYSTEM_CLEANUP=false', () => {
     it('should throw error when cleanup is disabled', async () => {
       configService.get.mockReturnValue('false');
-      
+
       const request = {
         developerCode: 'test-code',
         filters: { createdBefore: '2024-01-01' },
@@ -134,9 +197,9 @@ describe('SystemCleanupService', () => {
         logId: 'log-1',
       };
 
-      await expect(
-        service.executeCleanup(request, 'admin-1')
-      ).rejects.toThrow('System cleanup is not enabled');
+      await expect(service.executeCleanup(request, 'admin-1')).rejects.toThrow(
+        'System cleanup is not enabled',
+      );
     });
   });
 
@@ -150,9 +213,9 @@ describe('SystemCleanupService', () => {
         logId: 'log-1',
       };
 
-      await expect(
-        service.executeCleanup(request, 'admin-1')
-      ).rejects.toThrow('Invalid developer code');
+      await expect(service.executeCleanup(request, 'admin-1')).rejects.toThrow(
+        'Invalid developer code',
+      );
     });
   });
 
@@ -166,9 +229,9 @@ describe('SystemCleanupService', () => {
         logId: 'log-1',
       };
 
-      await expect(
-        service.executeCleanup(request, 'admin-1')
-      ).rejects.toThrow('Confirmation phrase must be "DELETE TEST DATA"');
+      await expect(service.executeCleanup(request, 'admin-1')).rejects.toThrow(
+        'Confirmation phrase must be "DELETE TEST DATA"',
+      );
     });
   });
 
@@ -182,9 +245,9 @@ describe('SystemCleanupService', () => {
         logId: 'log-1',
       };
 
-      await expect(
-        service.executeCleanup(request, 'admin-1')
-      ).rejects.toThrow('At least one filter is required');
+      await expect(service.executeCleanup(request, 'admin-1')).rejects.toThrow(
+        'At least one filter is required',
+      );
     });
 
     it('should allow execution with forceAllNonAdmin=true and no filters', async () => {
@@ -202,9 +265,7 @@ describe('SystemCleanupService', () => {
         logId: 'log-1',
       };
 
-      await expect(
-        service.executeCleanup(request, 'admin-1')
-      ).resolves.toBeDefined();
+      await expect(service.executeCleanup(request, 'admin-1')).resolves.toBeDefined();
     });
   });
 
@@ -212,7 +273,7 @@ describe('SystemCleanupService', () => {
     it('should exclude ADMIN role from user where clause', () => {
       const filters = { createdBefore: '2024-01-01' };
       const where = (service as any).buildUserWhereClause(filters);
-      
+
       expect(where.role).toBeDefined();
       // The where clause should only include non-admin roles
       expect(where.role).not.toContain(UserRole.ADMIN);
@@ -255,14 +316,14 @@ describe('SystemCleanupService', () => {
       expect(cleanupLogRepo.create).toHaveBeenCalled();
       expect(cleanupLogRepo.save).toHaveBeenCalled();
       expect(result.logId).toBe('log-1');
-      
+
       // Verify that create was called with the right structure
       expect(cleanupLogRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
           requestedBy: 'admin-1',
           filters: request.filters,
           components: request.components,
-        })
+        }),
       );
     });
 
@@ -292,9 +353,9 @@ describe('SystemCleanupService', () => {
         logId: 'invalid-log-id',
       };
 
-      await expect(
-        service.executeCleanup(request, 'admin-1')
-      ).rejects.toThrow('Cleanup log not found');
+      await expect(service.executeCleanup(request, 'admin-1')).rejects.toThrow(
+        'Cleanup log not found',
+      );
     });
 
     it('should validate that filters match the analysis log', async () => {
@@ -312,9 +373,9 @@ describe('SystemCleanupService', () => {
         logId: 'log-1',
       };
 
-      await expect(
-        service.executeCleanup(request, 'admin-1')
-      ).rejects.toThrow('Filters do not match the analysis');
+      await expect(service.executeCleanup(request, 'admin-1')).rejects.toThrow(
+        'Filters do not match the analysis',
+      );
     });
 
     it('should validate that components match the analysis log', async () => {
@@ -332,9 +393,9 @@ describe('SystemCleanupService', () => {
         logId: 'log-1',
       };
 
-      await expect(
-        service.executeCleanup(request, 'admin-1')
-      ).rejects.toThrow('Components do not match the analysis');
+      await expect(service.executeCleanup(request, 'admin-1')).rejects.toThrow(
+        'Components do not match the analysis',
+      );
     });
   });
 
@@ -372,9 +433,10 @@ describe('SystemCleanupService', () => {
       const path = require('path');
       const migrationsDir = path.join(__dirname, '../../database/migrations');
       const migrationFiles = fs.readdirSync(migrationsDir);
-      
-      const hasSystemCleanupMigration = migrationFiles.some((file: string) => 
-        file.includes('system-cleanup-logs') || file.includes('system_cleanup_logs')
+
+      const hasSystemCleanupMigration = migrationFiles.some(
+        (file: string) =>
+          file.includes('system-cleanup-logs') || file.includes('system_cleanup_logs'),
       );
 
       expect(hasSystemCleanupMigration).toBe(true);

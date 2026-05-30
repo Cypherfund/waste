@@ -4,7 +4,13 @@ import { DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { MarketerPayoutService } from './marketer-payout.service';
 import { MarketerNotificationService } from './marketer-notification.service';
-import { MarketerPayoutRequest, PayoutStatus, PayoutMethod, MarketerProfile, CommissionTransaction } from '../entities';
+import {
+  MarketerPayoutRequest,
+  PayoutStatus,
+  PayoutMethod,
+  MarketerProfile,
+  CommissionTransaction,
+} from '../entities';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 describe('MarketerPayoutService', () => {
@@ -124,7 +130,7 @@ describe('MarketerPayoutService', () => {
         amount: 2000,
         method: PayoutMethod.MTN_MOMO,
         accountNumber: '670000000',
-          accountName: 'Test Name',
+        accountName: 'Test Name',
       });
 
       expect(result).toBeDefined();
@@ -168,9 +174,9 @@ describe('MarketerPayoutService', () => {
         status: PayoutStatus.APPROVED,
       });
 
-      await expect(
-        service.rejectPayout('payout-1', 'admin-1', 'reason'),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.rejectPayout('payout-1', 'admin-1', 'reason')).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -182,9 +188,9 @@ describe('MarketerPayoutService', () => {
         marketerProfile: { ...mockProfile },
       });
 
-      await expect(
-        service.markAsPaid('payout-1', 'admin-1', ''),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.markAsPaid('payout-1', 'admin-1', '')).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should update totalPaid when marked as paid', async () => {
@@ -199,9 +205,7 @@ describe('MarketerPayoutService', () => {
 
       await service.markAsPaid('payout-1', 'admin-1', 'REF-123');
 
-      expect(profileRepo.save).toHaveBeenCalledWith(
-        expect.objectContaining({ totalPaid: 3000 }),
-      );
+      expect(profileRepo.save).toHaveBeenCalledWith(expect.objectContaining({ totalPaid: 3000 }));
     });
 
     it('should reject if payout is not approved', async () => {
@@ -210,9 +214,9 @@ describe('MarketerPayoutService', () => {
         status: PayoutStatus.PENDING,
       });
 
-      await expect(
-        service.markAsPaid('payout-1', 'admin-1', 'REF-123'),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.markAsPaid('payout-1', 'admin-1', 'REF-123')).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 });

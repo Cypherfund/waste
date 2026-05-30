@@ -1,7 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Lead, LeadStatus, CommissionTransaction, CommissionStatus, TriggerType, MarketerProfile } from '../entities';
+import {
+  Lead,
+  LeadStatus,
+  CommissionTransaction,
+  CommissionStatus,
+  TriggerType,
+  MarketerProfile,
+} from '../entities';
 import { CommissionService } from './commission.service';
 import { Job } from '../../jobs/entities/job.entity';
 import { PaymentStatus } from '../../common/enums/payment-status.enum';
@@ -29,7 +36,11 @@ export class CommissionReconciliationService {
    * Reconcile household job validations that didn't get commissions
    * Finds validated jobs for registered household leads and creates missing commissions
    */
-  async reconcileHouseholdJobCommissions(): Promise<{ processed: number; created: number; errors: number }> {
+  async reconcileHouseholdJobCommissions(): Promise<{
+    processed: number;
+    created: number;
+    errors: number;
+  }> {
     this.logger.log('Starting household job commission reconciliation');
     let processed = 0;
     let created = 0;
@@ -81,8 +92,8 @@ export class CommissionReconciliationService {
             .createQueryBuilder('job')
             .where('job.householdId = :householdId', { householdId: lead.registeredUserId })
             .andWhere('job.status = :status', { status: 'COMPLETED' })
-            .andWhere('job.paymentStatus IN (:...statuses)', { 
-              statuses: [PaymentStatus.VERIFIED, PaymentStatus.NOT_REQUIRED] 
+            .andWhere('job.paymentStatus IN (:...statuses)', {
+              statuses: [PaymentStatus.VERIFIED, PaymentStatus.NOT_REQUIRED],
             })
             .getMany();
 
@@ -141,7 +152,9 @@ export class CommissionReconciliationService {
       throw err;
     }
 
-    this.logger.log(`Reconciliation complete: processed=${processed}, created=${created}, errors=${errors}`);
+    this.logger.log(
+      `Reconciliation complete: processed=${processed}, created=${created}, errors=${errors}`,
+    );
     return { processed, created, errors };
   }
 
@@ -149,7 +162,11 @@ export class CommissionReconciliationService {
    * Reconcile subscription payments that didn't get commissions
    * Finds active subscriptions for registered household leads and creates missing commissions
    */
-  async reconcileSubscriptionCommissions(): Promise<{ processed: number; created: number; errors: number }> {
+  async reconcileSubscriptionCommissions(): Promise<{
+    processed: number;
+    created: number;
+    errors: number;
+  }> {
     this.logger.log('Starting subscription commission reconciliation');
     let processed = 0;
     let created = 0;
@@ -245,7 +262,9 @@ export class CommissionReconciliationService {
             await this.profileRepo.save(profile);
 
             created++;
-            this.logger.log(`Created reconciled commission for subscription ${sub.id}: ${amount} XAF`);
+            this.logger.log(
+              `Created reconciled commission for subscription ${sub.id}: ${amount} XAF`,
+            );
           }
         } catch (err) {
           errors++;
@@ -257,7 +276,9 @@ export class CommissionReconciliationService {
       throw err;
     }
 
-    this.logger.log(`Reconciliation complete: processed=${processed}, created=${created}, errors=${errors}`);
+    this.logger.log(
+      `Reconciliation complete: processed=${processed}, created=${created}, errors=${errors}`,
+    );
     return { processed, created, errors };
   }
 

@@ -8,7 +8,7 @@ export class AddGrowthSystem1779000000001 implements MigrationInterface {
     const enumExists = await queryRunner.query(`
       SELECT 1 FROM pg_type WHERE typname = 'users_role_enum'
     `);
-    
+
     if (enumExists.length > 0) {
       // Check if MARKETER value exists
       const marketerExists = await queryRunner.query(`
@@ -16,7 +16,7 @@ export class AddGrowthSystem1779000000001 implements MigrationInterface {
         WHERE enumlabel = 'MARKETER' 
         AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'users_role_enum')
       `);
-      
+
       if (marketerExists.length === 0) {
         await queryRunner.query(`ALTER TYPE "public"."users_role_enum" ADD VALUE 'MARKETER'`);
       }
@@ -54,12 +54,18 @@ export class AddGrowthSystem1779000000001 implements MigrationInterface {
         CONSTRAINT "FK_leads_user" FOREIGN KEY ("registered_user_id") REFERENCES "users"("id") ON DELETE SET NULL
       )
     `);
-    
+
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_leads_phone" ON "leads"("phone")`);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_leads_status" ON "leads"("status")`);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_leads_referral_token" ON "leads"("referral_token")`);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_leads_marketer_id" ON "leads"("marketer_id")`);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_leads_created_at" ON "leads"("created_at")`);
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "IDX_leads_referral_token" ON "leads"("referral_token")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "IDX_leads_marketer_id" ON "leads"("marketer_id")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "IDX_leads_created_at" ON "leads"("created_at")`,
+    );
 
     // 2. Create marketer_profiles table
     await queryRunner.query(`
@@ -87,9 +93,13 @@ export class AddGrowthSystem1779000000001 implements MigrationInterface {
         CONSTRAINT "FK_marketer_profiles_user" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE
       )
     `);
-    
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_marketer_profiles_user" ON "marketer_profiles"("user_id")`);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_marketer_profiles_status" ON "marketer_profiles"("status")`);
+
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "IDX_marketer_profiles_user" ON "marketer_profiles"("user_id")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "IDX_marketer_profiles_status" ON "marketer_profiles"("status")`,
+    );
 
     // 3. Create commission_schemes table
     await queryRunner.query(`
@@ -151,11 +161,19 @@ export class AddGrowthSystem1779000000001 implements MigrationInterface {
         CONSTRAINT "FK_ct_reviewed_by" FOREIGN KEY ("reviewed_by") REFERENCES "users"("id") ON DELETE SET NULL
       )
     `);
-    
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_ct_profile" ON "commission_transactions"("marketer_profile_id")`);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_ct_status" ON "commission_transactions"("status")`);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_ct_created" ON "commission_transactions"("created_at")`);
-    await queryRunner.query(`CREATE UNIQUE INDEX IF NOT EXISTS "UQ_ct_lead_trigger_ref" ON "commission_transactions"("lead_id", "trigger_type", "reference_id")`);
+
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "IDX_ct_profile" ON "commission_transactions"("marketer_profile_id")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "IDX_ct_status" ON "commission_transactions"("status")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "IDX_ct_created" ON "commission_transactions"("created_at")`,
+    );
+    await queryRunner.query(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "UQ_ct_lead_trigger_ref" ON "commission_transactions"("lead_id", "trigger_type", "reference_id")`,
+    );
 
     // 6. Create marketer_payout_requests table
     await queryRunner.query(`
@@ -179,9 +197,13 @@ export class AddGrowthSystem1779000000001 implements MigrationInterface {
         CONSTRAINT "FK_mpr_reviewed_by" FOREIGN KEY ("reviewed_by") REFERENCES "users"("id") ON DELETE SET NULL
       )
     `);
-    
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_mpr_profile" ON "marketer_payout_requests"("marketer_profile_id")`);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_mpr_status" ON "marketer_payout_requests"("status")`);
+
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "IDX_mpr_profile" ON "marketer_payout_requests"("marketer_profile_id")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "IDX_mpr_status" ON "marketer_payout_requests"("status")`,
+    );
 
     // 7. Create marketer_notifications table
     await queryRunner.query(`
@@ -198,9 +220,13 @@ export class AddGrowthSystem1779000000001 implements MigrationInterface {
         CONSTRAINT "FK_notif_profile" FOREIGN KEY ("marketer_profile_id") REFERENCES "marketer_profiles"("id") ON DELETE CASCADE
       )
     `);
-    
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_notif_profile" ON "marketer_notifications"("marketer_profile_id")`);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_notif_unread" ON "marketer_notifications"("marketer_profile_id", "is_read") WHERE "is_read" = false`);
+
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "IDX_notif_profile" ON "marketer_notifications"("marketer_profile_id")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "IDX_notif_unread" ON "marketer_notifications"("marketer_profile_id", "is_read") WHERE "is_read" = false`,
+    );
 
     // 8. Add referral columns to users table (idempotent)
     await queryRunner.query(`
@@ -210,18 +236,28 @@ export class AddGrowthSystem1779000000001 implements MigrationInterface {
       ADD COLUMN IF NOT EXISTS "referral_token_used" varchar(100),
       ADD COLUMN IF NOT EXISTS "referred_at" timestamptz
     `);
-    
+
     // Add constraints only if they don't exist
-    const fkRefExists = await queryRunner.query(`SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'FK_user_referred_by'`);
+    const fkRefExists = await queryRunner.query(
+      `SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'FK_user_referred_by'`,
+    );
     if (fkRefExists.length === 0) {
-      await queryRunner.query(`ALTER TABLE "users" ADD CONSTRAINT "FK_user_referred_by" FOREIGN KEY ("referred_by_marketer_id") REFERENCES "users"("id") ON DELETE SET NULL`);
+      await queryRunner.query(
+        `ALTER TABLE "users" ADD CONSTRAINT "FK_user_referred_by" FOREIGN KEY ("referred_by_marketer_id") REFERENCES "users"("id") ON DELETE SET NULL`,
+      );
     }
-    const fkLeadExists = await queryRunner.query(`SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'FK_user_lead'`);
+    const fkLeadExists = await queryRunner.query(
+      `SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'FK_user_lead'`,
+    );
     if (fkLeadExists.length === 0) {
-      await queryRunner.query(`ALTER TABLE "users" ADD CONSTRAINT "FK_user_lead" FOREIGN KEY ("lead_id") REFERENCES "leads"("id") ON DELETE SET NULL`);
+      await queryRunner.query(
+        `ALTER TABLE "users" ADD CONSTRAINT "FK_user_lead" FOREIGN KEY ("lead_id") REFERENCES "leads"("id") ON DELETE SET NULL`,
+      );
     }
-    
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_users_referred_by" ON "users"("referred_by_marketer_id")`);
+
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "IDX_users_referred_by" ON "users"("referred_by_marketer_id")`,
+    );
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_users_lead" ON "users"("lead_id")`);
 
     // 9. Seed default commission schemes (idempotent)
@@ -246,13 +282,13 @@ export class AddGrowthSystem1779000000001 implements MigrationInterface {
     // Remove foreign keys first
     await queryRunner.query(`ALTER TABLE "users" DROP CONSTRAINT IF EXISTS "FK_user_lead"`);
     await queryRunner.query(`ALTER TABLE "users" DROP CONSTRAINT IF EXISTS "FK_user_referred_by"`);
-    
+
     // Remove columns from users
     await queryRunner.query(`ALTER TABLE "users" DROP COLUMN IF EXISTS "referred_at"`);
     await queryRunner.query(`ALTER TABLE "users" DROP COLUMN IF EXISTS "referral_token_used"`);
     await queryRunner.query(`ALTER TABLE "users" DROP COLUMN IF EXISTS "lead_id"`);
     await queryRunner.query(`ALTER TABLE "users" DROP COLUMN IF EXISTS "referred_by_marketer_id"`);
-    
+
     // Drop tables in reverse order
     await queryRunner.query(`DROP TABLE IF EXISTS "marketer_notifications"`);
     await queryRunner.query(`DROP TABLE IF EXISTS "marketer_payout_requests"`);

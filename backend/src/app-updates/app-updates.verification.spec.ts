@@ -82,8 +82,14 @@ describe('Pre-merge Verification', () => {
         AppUpdatesService,
         AppVersionMiddleware,
         { provide: getRepositoryToken(AppVersion), useValue: repo },
-        { provide: FcmProvider, useValue: { send: jest.fn().mockResolvedValue({ success: true }) } },
-        { provide: UsersService, useValue: { findAllWithFcmToken: jest.fn().mockResolvedValue([]) } },
+        {
+          provide: FcmProvider,
+          useValue: { send: jest.fn().mockResolvedValue({ success: true }) },
+        },
+        {
+          provide: UsersService,
+          useValue: { findAllWithFcmToken: jest.fn().mockResolvedValue([]) },
+        },
         { provide: AppWebSocketGateway, useValue: wsGateway },
       ],
     }).compile();

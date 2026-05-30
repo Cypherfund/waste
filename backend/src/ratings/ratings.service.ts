@@ -73,9 +73,7 @@ export class RatingsService {
     });
 
     const saved = await this.ratingRepo.save(rating);
-    this.logger.log(
-      `Job ${jobId} rated ${dto.value}/5 by household ${householdId}`,
-    );
+    this.logger.log(`Job ${jobId} rated ${dto.value}/5 by household ${householdId}`);
 
     // Transition job VALIDATED → RATED (reuse JobsService method)
     await this.jobsService.transitionToRated(jobId);

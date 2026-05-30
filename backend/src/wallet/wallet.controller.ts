@@ -112,10 +112,7 @@ export class WalletController {
   }
 
   @Post('withdraw')
-  async requestWithdrawal(
-    @CurrentUser() user: JwtPayload,
-    @Body() dto: RequestWithdrawalDto,
-  ) {
+  async requestWithdrawal(@CurrentUser() user: JwtPayload, @Body() dto: RequestWithdrawalDto) {
     if (user.role !== UserRole.COLLECTOR) {
       throw new ForbiddenException('Only collectors can request withdrawals');
     }
@@ -131,10 +128,7 @@ export class WalletController {
   }
 
   @Post('top-up')
-  async topUpWallet(
-    @CurrentUser() user: JwtPayload,
-    @Body() dto: TopUpWalletDto,
-  ) {
+  async topUpWallet(@CurrentUser() user: JwtPayload, @Body() dto: TopUpWalletDto) {
     if (user.role !== UserRole.HOUSEHOLD) {
       throw new ForbiddenException('Only households can top up their wallet');
     }
@@ -142,10 +136,7 @@ export class WalletController {
   }
 
   @Post('pay-job')
-  async payJobWithWallet(
-    @CurrentUser() user: JwtPayload,
-    @Body() dto: PayJobWithWalletDto,
-  ) {
+  async payJobWithWallet(@CurrentUser() user: JwtPayload, @Body() dto: PayJobWithWalletDto) {
     if (user.role !== UserRole.HOUSEHOLD) {
       throw new ForbiddenException('Only households can pay for jobs');
     }
@@ -174,10 +165,7 @@ export class WalletController {
   }
 
   @Post('payment-methods')
-  async addPaymentMethod(
-    @CurrentUser() user: JwtPayload,
-    @Body() dto: AddPaymentMethodDto,
-  ) {
+  async addPaymentMethod(@CurrentUser() user: JwtPayload, @Body() dto: AddPaymentMethodDto) {
     return this.walletService.addPaymentMethod(user.sub, dto);
   }
 
@@ -200,10 +188,7 @@ export class WalletController {
   }
 
   @Delete('payment-methods/:id')
-  async deletePaymentMethod(
-    @CurrentUser() user: JwtPayload,
-    @Param('id') id: string,
-  ) {
+  async deletePaymentMethod(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
     await this.walletService.deletePaymentMethod(user.sub, id);
     return { success: true };
   }

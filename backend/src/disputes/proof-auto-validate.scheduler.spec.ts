@@ -50,18 +50,13 @@ describe('ProofAutoValidateScheduler', () => {
   it('should read auto_validate_hours from config', async () => {
     await scheduler.handleAutoValidation();
 
-    expect(systemConfigService.getNumber).toHaveBeenCalledWith(
-      'proof.auto_validate_hours',
-      24,
-    );
+    expect(systemConfigService.getNumber).toHaveBeenCalledWith('proof.auto_validate_hours', 24);
   });
 
   it('should query for COMPLETED jobs older than threshold', async () => {
     await scheduler.handleAutoValidation();
 
-    expect(jobsService.findCompletedJobsOlderThan).toHaveBeenCalledWith(
-      expect.any(Date),
-    );
+    expect(jobsService.findCompletedJobsOlderThan).toHaveBeenCalledWith(expect.any(Date));
   });
 
   it('should auto-validate completed jobs older than threshold', async () => {
@@ -84,7 +79,12 @@ describe('ProofAutoValidateScheduler', () => {
     jobsService.findCompletedJobsOlderThan.mockResolvedValue([job1, job2]);
     jobsService.autoValidateJob
       .mockResolvedValueOnce({ ...job1, status: JobStatus.VALIDATED })
-      .mockResolvedValueOnce({ ...job2, status: JobStatus.VALIDATED, householdId: 'hh-2', collectorId: 'col-2' });
+      .mockResolvedValueOnce({
+        ...job2,
+        status: JobStatus.VALIDATED,
+        householdId: 'hh-2',
+        collectorId: 'col-2',
+      });
 
     await scheduler.handleAutoValidation();
 

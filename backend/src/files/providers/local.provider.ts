@@ -27,7 +27,7 @@ export class LocalProvider implements StorageProvider {
   async upload(file: Buffer, filename: string): Promise<UploadResult> {
     const uniqueFilename = `${Date.now()}-${filename}`;
     const filePath = join(this.uploadsDir, uniqueFilename);
-    
+
     try {
       await fs.writeFile(filePath, file);
       // Ensure the URL is properly formatted with protocol
@@ -36,7 +36,7 @@ export class LocalProvider implements StorageProvider {
         url = `http://${url}`;
       }
       url = `${url}/uploads/${uniqueFilename}`;
-      
+
       this.logger.log(`File uploaded successfully: ${uniqueFilename}`);
       return { url };
     } catch (error) {

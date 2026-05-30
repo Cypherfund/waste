@@ -15,7 +15,15 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums/role.enum';
-import { LeadService, MarketerService, CommissionService, MarketerPayoutService, MarketerNotificationService, CampaignService, CommissionEngineService } from '../services';
+import {
+  LeadService,
+  MarketerService,
+  CommissionService,
+  MarketerPayoutService,
+  MarketerNotificationService,
+  CampaignService,
+  CommissionEngineService,
+} from '../services';
 import { CreateLeadDto, CreatePayoutRequestDto } from '../dto';
 import { LeadStatus } from '../entities';
 
@@ -41,12 +49,14 @@ export class GrowthMobileController {
     const profile = await this.marketerService.findByUserId(req.user.sub);
     const leads = await this.leadService.getMarketerLeads(req.user.sub);
     const commissions = await this.commissionService.getMarketerCommissions(profile.id);
-    
+
     // Calculate today's stats
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayLeads = leads.filter(l => new Date(l.createdAt) >= today).length;
-    const todayQualified = leads.filter(l => l.qualifiedAt && new Date(l.qualifiedAt) >= today).length;
+    const todayLeads = leads.filter((l) => new Date(l.createdAt) >= today).length;
+    const todayQualified = leads.filter(
+      (l) => l.qualifiedAt && new Date(l.qualifiedAt) >= today,
+    ).length;
 
     return {
       profile: {
@@ -100,28 +110,19 @@ export class GrowthMobileController {
 
   @Get('leads')
   @ApiOperation({ summary: 'List my leads' })
-  async listLeads(
-    @Request() req: any,
-    @Query('status') status?: LeadStatus,
-  ) {
+  async listLeads(@Request() req: any, @Query('status') status?: LeadStatus) {
     return this.leadService.getMarketerLeads(req.user.sub, status);
   }
 
   @Get('leads/:id')
   @ApiOperation({ summary: 'Get lead details' })
-  async getLead(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Request() req: any,
-  ) {
+  async getLead(@Param('id', ParseUUIDPipe) id: string, @Request() req: any) {
     return this.leadService.getLeadById(id, req.user.sub);
   }
 
   @Post('leads/:id/resend')
   @ApiOperation({ summary: 'Resend invite SMS' })
-  async resendInvite(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Request() req: any,
-  ) {
+  async resendInvite(@Param('id', ParseUUIDPipe) id: string, @Request() req: any) {
     return this.leadService.resendInvite(id, req.user.sub);
   }
 
@@ -136,10 +137,7 @@ export class GrowthMobileController {
   // Payouts
   @Post('payout-requests')
   @ApiOperation({ summary: 'Request payout' })
-  async requestPayout(
-    @Body() dto: CreatePayoutRequestDto,
-    @Request() req: any,
-  ) {
+  async requestPayout(@Body() dto: CreatePayoutRequestDto, @Request() req: any) {
     const profile = await this.marketerService.findByUserId(req.user.sub);
     return this.payoutService.createPayoutRequest(profile.id, dto);
   }
@@ -154,10 +152,7 @@ export class GrowthMobileController {
   // Notifications
   @Get('notifications')
   @ApiOperation({ summary: 'Get my notifications' })
-  async getNotifications(
-    @Request() req: any,
-    @Query('unreadOnly') unreadOnly?: boolean,
-  ) {
+  async getNotifications(@Request() req: any, @Query('unreadOnly') unreadOnly?: boolean) {
     const profile = await this.marketerService.findByUserId(req.user.sub);
     return this.notificationService.getNotifications(profile.id, unreadOnly);
   }
@@ -179,10 +174,7 @@ export class GrowthMobileController {
 
   @Patch('notifications/:id/read')
   @ApiOperation({ summary: 'Mark notification as read' })
-  async markNotificationRead(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Request() req: any,
-  ) {
+  async markNotificationRead(@Param('id', ParseUUIDPipe) id: string, @Request() req: any) {
     const profile = await this.marketerService.findByUserId(req.user.sub);
     return this.notificationService.markAsRead(id, profile.id);
   }
