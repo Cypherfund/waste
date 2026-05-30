@@ -77,14 +77,21 @@ export default function ReconciliationPage() {
     fetchSummary();
   }, [fromDate, toDate]);
 
-  const handleExport = () => {
-    const url = reconciliationApi.exportCsvUrl(fromDate, toDate);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `reconciliation_${fromDate}_to_${toDate}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleExport = async () => {
+    try {
+      const blob = await reconciliationApi.exportCsv(fromDate, toDate);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `reconciliation_${fromDate}_to_${toDate}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to export CSV:', err);
+      alert('Failed to export CSV. Please try again.');
+    }
   };
 
   const handleSaveDaily = async () => {

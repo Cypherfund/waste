@@ -337,8 +337,11 @@ export const reconciliationApi = {
     client.post<{ success: boolean; data: ReconciliationSummary }>('/admin/reconciliation/daily/save', null, { params: { date } })
       .then((r) => r.data.data),
 
-  exportCsvUrl: (from: string, to: string) => {
-    const token = localStorage.getItem('access_token') ?? '';
-    return `${client.defaults.baseURL}/admin/reconciliation/export?from=${from}&to=${to}`;
+  exportCsv: async (from: string, to: string) => {
+    const response = await client.get('/admin/reconciliation/export', {
+      params: { from, to },
+      responseType: 'blob',
+    });
+    return response.data;
   },
 };
