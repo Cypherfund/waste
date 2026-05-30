@@ -8,6 +8,7 @@ import {
   HttpStatus,
   StreamableFile,
   Body,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery, ApiResponse, ApiBody } from '@nestjs/swagger';
 import {
@@ -140,7 +141,7 @@ export class ReconciliationController {
     // Validate date format (YYYY-MM-DD)
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(body.date)) {
-      throw new Error('Invalid date format. Use YYYY-MM-DD');
+      throw new BadRequestException('Invalid date format. Use YYYY-MM-DD');
     }
 
     // Validate date is not in the future
@@ -150,7 +151,7 @@ export class ReconciliationController {
     inputDate.setHours(0, 0, 0, 0);
 
     if (inputDate > today) {
-      throw new Error('Cannot reconcile future dates');
+      throw new BadRequestException('Cannot reconcile future dates');
     }
 
     const run = await this.reconciliationSchedulerService.runForDate(
