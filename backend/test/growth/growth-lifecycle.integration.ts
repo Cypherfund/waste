@@ -129,8 +129,8 @@ describe('Growth Module — Integration Tests', () => {
       const endDate = new Date(today.getFullYear(), today.getMonth() + 12, 0).toISOString().split('T')[0];
 
       const [bp] = await dataSource.query(
-        `INSERT INTO marketing_budget_periods (name, start_date, end_date, total_budget, committed_amount, spent_amount, status, currency)
-         VALUES ('Test Period', $1, $2, 100000, 0, 0, 'ACTIVE', 'XAF') RETURNING id`,
+        `INSERT INTO marketing_budget_periods (name, start_date, end_date, total_budget, remaining_amount, committed_amount, spent_amount, status, currency)
+         VALUES ('Test Period', $1, $2, 100000, 100000, 0, 0, 'ACTIVE', 'XAF') RETURNING id`,
         [startDate, endDate],
       );
       // Campaign
@@ -332,17 +332,85 @@ describe('Growth Module — Integration Tests', () => {
 
   describe('Commission Balance Transitions', () => {
     let txId: string;
+    let testLeadId: string;
 
-    beforeAll(async () => {
+    beforeEach(async () => {
+      // Clean up before each test to ensure isolation
+      await cleanGrowthData();
+
+      // Recreate marketer profile for this test suite
+      const admin = await createTestUser(
+        dataSource,
+        'ce-admin@test.com',
+        'Admin123!',
+        UserRole.ADMIN,
+        'CE Admin',
+        '+237611000001',
+      );
+      adminId = admin.id;
+      adminToken = await loginAndGetToken(baseUrl, '+237611000001', 'Admin123!');
+
+      const mkRes = await request(httpServer)
+        .post('/api/v1/admin/growth/marketers')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          name: 'CE Marketer',
+          phone: '+237611000002',
+          password: 'Marketer123!',
+          territory: 'Douala',
+        })
+        .expect(201);
+      marketerProfileId = mkRes.body.id;
+      marketerId = mkRes.body.userId;
+      marketerToken = await loginAndGetToken(baseUrl, '+237611000002', 'Marketer123!');
+
+      // Set up campaign
+      const today = new Date();
+      const startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+      const endDate = new Date(today.getFullYear(), today.getMonth() + 12, 0).toISOString().split('T')[0];
+
+      const [bp] = await dataSource.query(
+        `INSERT INTO marketing_budget_periods (name, start_date, end_date, total_budget, remaining_amount, committed_amount, spent_amount, status, currency)
+         VALUES ('Test Period', $1, $2, 100000, 100000, 0, 0, 'ACTIVE', 'XAF') RETURNING id`,
+        [startDate, endDate],
+      );
+      const [camp] = await dataSource.query(
+        `INSERT INTO marketing_campaigns (name, budget_period_id, start_date, end_date, budget_amount, committed_amount, spent_amount, status)
+         VALUES ('Test Campaign', $1, $2, $3, 50000, 0, 0, 'ACTIVE') RETURNING id`,
+        [bp.id, startDate, endDate],
+      );
+      campaignId = camp.id;
+      await dataSource.query(
+        `INSERT INTO campaign_marketer_assignments (campaign_id, marketer_profile_id, assigned_by, is_active)
+         VALUES ($1, $2, $3, true)`,
+        [campaignId, marketerProfileId, adminId],
+      );
+
+      // Seed commission scheme
+      await dataSource.query(`
+        INSERT INTO commission_schemes (id, name, type, description, commission_type, amount, is_active, is_auto_assigned)
+        VALUES
+          ('92fa6da7-e4dd-44cc-9d4a-a0b57c93ad23', 'Household Onboarding',  'HOUSEHOLD_ONBOARDING', 'Commission when referred household completes first booking with payment and collector assigned', 'FIXED',      500.00, true, true)
+        ON CONFLICT (id) DO NOTHING
+      `);
+      schemeId = '92fa6da7-e4dd-44cc-9d4a-a0b57c93ad23';
+
+      // Create a test lead for commission tests
+      const [lead] = await dataSource.query(
+        `INSERT INTO leads (marketer_id, name, phone, type, area, source, referral_token, referral_code, status, invited_at, expires_at)
+         VALUES ($1, 'Test Lead', '+237699999999', 'HOUSEHOLD', 'Akwa', 'MANUAL', 'test-token-123', 'TEST123', 'INVITED', NOW(), NOW() + INTERVAL '7 days')
+         RETURNING id`,
+        [marketerId],
+      );
+      testLeadId = lead.id;
+
       // Seed a PENDING commission transaction directly in DB
       const [tx] = await dataSource.query(
         `INSERT INTO commission_transactions
            (marketer_profile_id, scheme_id, lead_id, trigger_type, reference_id, reference_type, amount, status, campaign_id, description)
-         SELECT $1, $2,
-                (SELECT id FROM leads WHERE marketer_id = $3 LIMIT 1),
-                'FIRST_SUCCESSFUL_BOOKING', 'booking-int-test-1', 'booking', 500, 'PENDING', $4, 'Test commission'
+         VALUES ($1, $2, $3, 'FIRST_SUCCESSFUL_BOOKING', 'booking-int-test-1', 'booking', 500, 'PENDING', $4, 'Test commission')
          RETURNING id`,
-        [marketerProfileId, schemeId, marketerId, campaignId],
+        [marketerProfileId, schemeId, testLeadId, campaignId],
       );
       txId = tx.id;
 
@@ -369,6 +437,13 @@ describe('Growth Module — Integration Tests', () => {
     });
 
     it('should reject re-approving an already approved transaction', async () => {
+      // First approve the transaction
+      await request(httpServer)
+        .post(`/api/v1/admin/growth/commission-transactions/${txId}/approve`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(201);
+
+      // Try to approve again - should fail
       await request(httpServer)
         .post(`/api/v1/admin/growth/commission-transactions/${txId}/approve`)
         .set('Authorization', `Bearer ${adminToken}`)
@@ -376,6 +451,13 @@ describe('Growth Module — Integration Tests', () => {
     });
 
     it('should not allow rejecting an approved transaction', async () => {
+      // First approve the transaction
+      await request(httpServer)
+        .post(`/api/v1/admin/growth/commission-transactions/${txId}/approve`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(201);
+
+      // Try to reject approved transaction - should fail
       await request(httpServer)
         .post(`/api/v1/admin/growth/commission-transactions/${txId}/reject`)
         .set('Authorization', `Bearer ${adminToken}`)
@@ -388,11 +470,9 @@ describe('Growth Module — Integration Tests', () => {
       const [tx2] = await dataSource.query(
         `INSERT INTO commission_transactions
            (marketer_profile_id, scheme_id, lead_id, trigger_type, reference_id, reference_type, amount, status, campaign_id, description)
-         SELECT $1, $2,
-                (SELECT id FROM leads WHERE marketer_id = $3 LIMIT 1),
-                'FIRST_SUCCESSFUL_BOOKING', 'booking-int-test-2', 'booking', 300, 'PENDING', $4, 'Test commission 2'
+         VALUES ($1, $2, $3, 'FIRST_SUCCESSFUL_BOOKING', 'booking-int-test-2', 'booking', 300, 'PENDING', $4, 'Test commission 2')
          RETURNING id`,
-        [marketerProfileId, schemeId, marketerId, campaignId],
+        [marketerProfileId, schemeId, testLeadId, campaignId],
       );
       await dataSource.query(`UPDATE marketer_profiles SET pending_amount = 300 WHERE id = $1`, [
         marketerProfileId,
@@ -409,7 +489,7 @@ describe('Growth Module — Integration Tests', () => {
         [marketerProfileId],
       );
       expect(Number(profile.pending_amount)).toBe(0);
-      expect(Number(profile.total_earned)).toBe(500); // unchanged from prior approve
+      expect(Number(profile.total_earned)).toBe(0); // unchanged since we rejected
     });
 
     it('should prevent duplicate commission for same lead+trigger+referenceId', async () => {
@@ -438,14 +518,41 @@ describe('Growth Module — Integration Tests', () => {
   describe('Payout Balance Transitions', () => {
     let payoutId: string;
 
-    beforeAll(async () => {
+    beforeEach(async () => {
+      // Clean up before each test to ensure isolation
+      await cleanGrowthData();
+
+      // Recreate marketer profile for this test suite
+      const admin = await createTestUser(
+        dataSource,
+        'ce-admin@test.com',
+        'Admin123!',
+        UserRole.ADMIN,
+        'CE Admin',
+        '+237611000001',
+      );
+      adminId = admin.id;
+      adminToken = await loginAndGetToken(baseUrl, '+237611000001', 'Admin123!');
+
+      const mkRes = await request(httpServer)
+        .post('/api/v1/admin/growth/marketers')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          name: 'CE Marketer',
+          phone: '+237611000002',
+          password: 'Marketer123!',
+          territory: 'Douala',
+        })
+        .expect(201);
+      marketerProfileId = mkRes.body.id;
+      marketerId = mkRes.body.userId;
+      marketerToken = await loginAndGetToken(baseUrl, '+237611000002', 'Marketer123!');
+
       // Ensure marketer has approved balance
       await dataSource.query(
         `UPDATE marketer_profiles SET approved_amount = 5000, total_paid = 0 WHERE id = $1`,
         [marketerProfileId],
       );
-      // Refresh token (marketer was reactivated above)
-      marketerToken = await loginAndGetToken(baseUrl, '+237600100002', 'Marketer123!');
     });
 
     it('should deduct approvedAmount when creating a payout request', async () => {
@@ -470,6 +577,24 @@ describe('Growth Module — Integration Tests', () => {
     });
 
     it('should reject a second pending payout while one is active', async () => {
+      // Reset approved_amount to 5000 for this test
+      await dataSource.query(`UPDATE marketer_profiles SET approved_amount = 5000 WHERE id = $1`, [
+        marketerProfileId,
+      ]);
+
+      // First create a PENDING payout
+      await request(httpServer)
+        .post('/api/v1/marketer/payout-requests')
+        .set('Authorization', `Bearer ${marketerToken}`)
+        .send({
+          amount: 2000,
+          method: 'MTN_MOMO',
+          accountNumber: '+237670000001',
+          accountName: 'Test Marketer',
+        })
+        .expect(201);
+
+      // Try to create a second PENDING payout - should fail
       await request(httpServer)
         .post('/api/v1/marketer/payout-requests')
         .set('Authorization', `Bearer ${marketerToken}`)
@@ -501,17 +626,21 @@ describe('Growth Module — Integration Tests', () => {
     });
 
     it('should return amount to approvedAmount on rejection', async () => {
-      // Revert payout back to PENDING and restore approved balance
-      await dataSource.query(
-        `UPDATE marketer_payout_requests SET status = 'PENDING' WHERE id = $1`,
-        [payoutId],
-      );
-      await dataSource.query(`UPDATE marketer_profiles SET approved_amount = 3000 WHERE id = $1`, [
-        marketerProfileId,
-      ]);
+      // Create a new payout for this test
+      const res = await request(httpServer)
+        .post('/api/v1/marketer/payout-requests')
+        .set('Authorization', `Bearer ${marketerToken}`)
+        .send({
+          amount: 2000,
+          method: 'MTN_MOMO',
+          accountNumber: '+237670000001',
+          accountName: 'Test Marketer',
+        })
+        .expect(201);
+      const testPayoutId = res.body.id;
 
       await request(httpServer)
-        .post(`/api/v1/admin/growth/marketer-payouts/${payoutId}/reject`)
+        .post(`/api/v1/admin/growth/marketer-payouts/${testPayoutId}/reject`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ reason: 'Invalid account' })
         .expect(201);
@@ -522,10 +651,10 @@ describe('Growth Module — Integration Tests', () => {
       );
       const [rejected] = await dataSource.query(
         `SELECT status FROM marketer_payout_requests WHERE id = $1`,
-        [payoutId],
+        [testPayoutId],
       );
       expect(rejected.status).toBe('REJECTED');
-      expect(Number(profile.approved_amount)).toBe(5000); // 3000 + 2000 returned
+      expect(Number(profile.approved_amount)).toBe(5000); // full amount returned
     });
 
     it('should require paidReference when marking payout as paid', async () => {
