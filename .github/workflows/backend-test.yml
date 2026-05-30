@@ -75,6 +75,20 @@ jobs:
         env:
           DOTENV_CONFIG_PATH: ./.env.test
 
+      - name: Run integration tests
+        if: github.ref == 'refs/heads/main'
+        working-directory: ./backend
+        run: npm run test:integration
+        env:
+          DOTENV_CONFIG_PATH: ./.env.test
+
+      - name: Run E2E tests
+        if: github.ref == 'refs/heads/main'
+        working-directory: ./backend
+        run: npm run test:e2e
+        env:
+          DOTENV_CONFIG_PATH: ./.env.test
+
       - name: Run lint
         working-directory: ./backend
         run: npm run lint
