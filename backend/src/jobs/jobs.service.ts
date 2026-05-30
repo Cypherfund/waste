@@ -46,6 +46,8 @@ import { EarningsService } from '../earnings/earnings.service';
 import { UserSubscription } from '../subscriptions/entities/user-subscription.entity';
 import { SubscriptionStatus } from '../common/enums/subscription-status.enum';
 import { CashCollectionType } from '../common/enums/cash-collection-type.enum';
+import { SentryService } from '../sentry/sentry.service';
+import { BusinessLoggerService, BusinessEventType } from '../common/services/business-logger.service';
 
 @Injectable()
 export class JobsService {
@@ -65,11 +67,27 @@ export class JobsService {
     private readonly dataSource: DataSource,
     private readonly systemConfigService: SystemConfigService,
     private readonly earningsService: EarningsService,
+    private readonly sentryService: SentryService,
+    private readonly businessLogger: BusinessLoggerService,
   ) {}
 
   // ─── CRUD ─────────────────────────────────────────────────────
 
   async create(householdId: string, dto: CreateJobDto): Promise<JobResponseDto> {
+    this.sentryService.setContext('job_creation', {
+      householdId,
+      scheduledDate: dto.scheduledDate,
+    });
+
+    this.sentryService.addBreadcrumb({
+      category: 'job',
+      message: 'Creating new job',
+      level: 'info',
+      data: {
+        householdId,
+      },
+    });
+
     // Validate scheduled date is at least booking.min_advance_hours from now
     const scheduledDate = new Date(dto.scheduledDate);
     const minAdvanceHours = await this.systemConfigService.getNumber(

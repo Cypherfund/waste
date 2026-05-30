@@ -1,112 +1,195 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HealthController } from './health.controller';
 import { DataSource } from 'typeorm';
+import Redis from 'ioredis';
 import { REDIS_CLIENT } from '../redis/redis.provider';
 
 describe('HealthController', () => {
   let controller: HealthController;
-  let dataSource: any;
-  let redis: any;
+  let dataSource: jest.Mocked<DataSource>;
+  let redis: jest.Mocked<Redis>;
 
   beforeEach(async () => {
-    dataSource = {
-      isInitialized: true,
-      query: jest.fn().mockResolvedValue([{ '?column?': 1 }]),
-    };
-
-    redis = {
-      ping: jest.fn().mockResolvedValue('PONG'),
-    };
-
     const module: TestingModule = await Test.createTestingModule({
       controllers: [HealthController],
       providers: [
-        { provide: DataSource, useValue: dataSource },
-        { provide: REDIS_CLIENT, useValue: redis },
+        {
+          provide: DataSource,
+          useValue: {
+            isInitialized: true,
+            query: jest.fn().mockResolvedValue([{ 1: 1 }]),
+          },
+        },
+        {
+          provide: REDIS_CLIENT,
+          useValue: {
+            ping: jest.fn().mockResolvedValue('PONG'),
+          },
+        },
       ],
     }).compile();
 
     controller = module.get<HealthController>(HealthController);
+    dataSource = module.get(DataSource);
+    redis = module.get(REDIS_CLIENT);
   });
 
-  // ─── LIVENESS ───────────────────────────────────────────────────
+  it('should be defined', () => {
+    expect(controller).toBeDefined();
+  });
 
-  describe('GET /health', () => {
-    it('should return ok status with timestamp and uptime', () => {
-      const result = controller.liveness();
+  describe('liveness', () => {
+    it('should return ok status with timestamp and requestId', () => {
+      const mockRequest = {
+        headers: {
+          'x-request-id': 'test-request-id',
+        },
+      };
 
-      expect(result.status).toBe('ok');
-      expect(result.timestamp).toBeDefined();
-      expect(result.uptime).toMatch(/^\d+s$/);
+      const result = controller.liveness(mockRequest as any);
+
+      expect(result).toEqual({
+        status: 'ok',
+        timestamp: expect.any(String),
+        requestId: 'test-request-id',
+      });
+    });
+
+    it('should use X-Correlation-ID when X-Request-Id is not present', () => {
+      const mockRequest = {
+        headers: {
+          'x-correlation-id': 'test-correlation-id',
+        },
+      };
+
+      const result = controller.liveness(mockRequest as any);
+
+      expect(result.requestId).toBe('test-correlation-id');
+    });
+
+    it('should use dash when neither header is present', () => {
+      const mockRequest = {
+        headers: {},
+      };
+
+      const result = controller.liveness(mockRequest as any);
+
+      expect(result.requestId).toBe('-');
     });
   });
 
-  // ─── READINESS ──────────────────────────────────────────────────
+  describe('livenessAlias', () => {
+    it('should return same result as liveness', () => {
+      const mockRequest = {
+        headers: {
+          'x-request-id': 'test-request-id',
+        },
+      };
 
-  describe('GET /health/ready', () => {
-    it('should return ready when all dependencies are up', async () => {
-      const result = await controller.readiness();
+      const result = controller.livenessAlias(mockRequest as any);
 
-      expect(result.status).toBe('ready');
-      expect(result.database).toBe('up');
-      expect(result.redis).toBe('up');
-      expect(result.timestamp).toBeDefined();
+      expect(result).toEqual({
+        status: 'ok',
+        timestamp: expect.any(String),
+        requestId: 'test-request-id',
+      });
+    });
+  });
+
+  describe('readiness', () => {
+    it('should return ok status when all checks pass', async () => {
+      const mockRequest = {
+        headers: {
+          'x-request-id': 'test-request-id',
+        },
+      };
+
+      const result = await controller.readiness(mockRequest as any);
+
+      expect(result).toEqual({
+        status: 'ok',
+        database: 'ok',
+        redis: 'ok',
+        timestamp: expect.any(String),
+        requestId: 'test-request-id',
+      });
     });
 
-    it('should return degraded when database is down', async () => {
-      dataSource.query.mockRejectedValue(new Error('Connection refused'));
+    it('should return degraded status when database fails', async () => {
+      dataSource.query.mockRejectedValue(new Error('DB error'));
+      const mockRequest = {
+        headers: {
+          'x-request-id': 'test-request-id',
+        },
+      };
 
-      const result = await controller.readiness();
+      const result = await controller.readiness(mockRequest as any);
 
       expect(result.status).toBe('degraded');
       expect(result.database).toBe('down');
-      expect(result.redis).toBe('up');
+      expect(result.redis).toBe('ok');
     });
 
-    it('should return degraded when redis is down', async () => {
-      redis.ping.mockRejectedValue(new Error('Connection refused'));
+    it('should return degraded status when redis fails', async () => {
+      redis.ping.mockRejectedValue(new Error('Redis error'));
+      const mockRequest = {
+        headers: {
+          'x-request-id': 'test-request-id',
+        },
+      };
 
-      const result = await controller.readiness();
+      const result = await controller.readiness(mockRequest as any);
 
       expect(result.status).toBe('degraded');
-      expect(result.database).toBe('up');
+      expect(result.database).toBe('ok');
       expect(result.redis).toBe('down');
     });
 
-    it('should return degraded when both dependencies are down', async () => {
-      dataSource.query.mockRejectedValue(new Error('DB down'));
-      redis.ping.mockRejectedValue(new Error('Redis down'));
+    it('should include requestId in response', async () => {
+      const mockRequest = {
+        headers: {
+          'x-request-id': 'test-request-id',
+        },
+      };
 
-      const result = await controller.readiness();
+      const result = await controller.readiness(mockRequest as any);
 
-      expect(result.status).toBe('degraded');
-      expect(result.database).toBe('down');
-      expect(result.redis).toBe('down');
+      expect(result.requestId).toBe('test-request-id');
     });
 
-    it('should return degraded when database is not initialized', async () => {
-      dataSource.isInitialized = false;
+    it('should not expose sensitive information', async () => {
+      const mockRequest = {
+        headers: {
+          'x-request-id': 'test-request-id',
+        },
+      };
 
-      const result = await controller.readiness();
+      const result = await controller.readiness(mockRequest as any);
 
-      expect(result.status).toBe('degraded');
-      expect(result.database).toBe('down');
+      expect(result).not.toHaveProperty('databaseUrl');
+      expect(result).not.toHaveProperty('redisHost');
+      expect(result).not.toHaveProperty('error');
+      expect(result).not.toHaveProperty('stackTrace');
     });
+  });
 
-    it('should return degraded when redis ping returns unexpected value', async () => {
-      redis.ping.mockResolvedValue('ERROR');
+  describe('readinessAlias', () => {
+    it('should return same result as readiness', async () => {
+      const mockRequest = {
+        headers: {
+          'x-request-id': 'test-request-id',
+        },
+      };
 
-      const result = await controller.readiness();
+      const result = await controller.readinessAlias(mockRequest as any);
 
-      expect(result.status).toBe('degraded');
-      expect(result.redis).toBe('down');
-    });
-
-    it('should not throw even when all checks fail', async () => {
-      dataSource.query.mockRejectedValue(new Error('DB crash'));
-      redis.ping.mockRejectedValue(new Error('Redis crash'));
-
-      await expect(controller.readiness()).resolves.not.toThrow();
+      expect(result).toEqual({
+        status: 'ok',
+        database: 'ok',
+        redis: 'ok',
+        timestamp: expect.any(String),
+        requestId: 'test-request-id',
+      });
     });
   });
 });

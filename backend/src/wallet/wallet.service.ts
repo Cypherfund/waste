@@ -35,6 +35,8 @@ import {
 } from '../payments/entities/payment-transaction.entity';
 import { PaymentMode } from '../common/enums/payment-mode.enum';
 import { PaymentService } from '../payments/payment.service';
+import { SentryService } from '../sentry/sentry.service';
+import { BusinessLoggerService, BusinessEventType } from '../common/services/business-logger.service';
 
 @Injectable()
 export class WalletService {
@@ -59,6 +61,8 @@ export class WalletService {
     private readonly dataSource: DataSource,
     private readonly paymentService: PaymentService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly sentryService: SentryService,
+    private readonly businessLogger: BusinessLoggerService,
     @Optional()
     private readonly adminAuditService?: AdminAuditService,
   ) {}
@@ -228,6 +232,22 @@ export class WalletService {
     userId: string,
     dto: { amount: number; paymentMethodId: string; paymentRef?: string; paymentProofUrl?: string },
   ): Promise<PaymentTransaction> {
+    this.sentryService.setContext('wallet_topup', {
+      userId,
+      amount: dto.amount,
+      paymentMethodId: dto.paymentMethodId,
+    });
+
+    this.sentryService.addBreadcrumb({
+      category: 'wallet',
+      message: 'Initiating wallet top-up',
+      level: 'info',
+      data: {
+        userId,
+        amount: dto.amount,
+      },
+    });
+
     // Check if top-up is enabled
     const topupEnabled = await this.systemConfigService.getBoolean('wallet.topup_enabled', true);
     if (!topupEnabled) {

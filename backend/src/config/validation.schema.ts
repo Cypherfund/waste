@@ -32,4 +32,11 @@ export const validationSchema = Joi.object({
   // Throttle
   THROTTLE_TTL: Joi.number().default(60000),
   THROTTLE_LIMIT: Joi.number().default(100),
+
+  // Sentry
+  SENTRY_DSN: Joi.string().allow('').optional(),
+  SENTRY_ENABLED: Joi.boolean().default(false),
+  SENTRY_ENVIRONMENT: Joi.string().allow('').optional(),
+  SENTRY_RELEASE: Joi.string().allow('').optional(),
+  SENTRY_TRACES_SAMPLE_RATE: Joi.number().min(0).max(1).default(0.1),
 });

@@ -30,6 +30,8 @@ import { SystemConfigService } from '../config/system-config.service';
 import { FeatureFlagService, FEATURE_FLAGS } from '../config/feature-flags';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AdminAuditService, AdminAuditAction, AdminAuditEntityType, AuditRequestContext } from '../admin/services/admin-audit.service';
+import { SentryService } from '../sentry/sentry.service';
+import { BusinessLoggerService, BusinessEventType } from '../common/services/business-logger.service';
 
 @Injectable()
 export class PaymentService {
@@ -44,6 +46,8 @@ export class PaymentService {
     private readonly systemConfigService: SystemConfigService,
     private readonly featureFlagService: FeatureFlagService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly sentryService: SentryService,
+    private readonly businessLogger: BusinessLoggerService,
     @Optional()
     private readonly adminAuditService?: AdminAuditService,
   ) {}
@@ -289,6 +293,26 @@ export class PaymentService {
     const callbackUrl = `${await this.getCallbackBaseUrl()}/api/v1/payments/callback`;
 
     try {
+      this.sentryService.setContext('payment', {
+        transactionId: saved.id,
+        internalRef,
+        userId,
+        amount: dto.amount,
+        paymentCode: dto.paymentCode,
+        type: dto.type,
+      });
+
+      this.sentryService.addBreadcrumb({
+        category: 'payment',
+        message: 'Initiating payment with gateway',
+        level: 'info',
+        data: {
+          transactionId: saved.id,
+          paymentCode: dto.paymentCode,
+          amount: dto.amount,
+        },
+      });
+
       const response: AxiosResponse<GatewayInitiateResponse> = await firstValueFrom(
         this.httpService.post<GatewayInitiateResponse>(
           `${baseUrl}/payment-api/payment/mobile-wallet`,
@@ -315,6 +339,15 @@ export class PaymentService {
         saved.status = TransactionStatus.FAILED;
         saved.failureReason = data.message;
         await this.transactionRepo.save(saved);
+
+        this.businessLogger.logFailure(BusinessEventType.PAYMENT_INITIATION_FAILED, {
+          userId,
+          transactionId: saved.id,
+          amount: dto.amount,
+          provider: dto.paymentCode,
+          errorMessage: data.message,
+        });
+
         throw new BadRequestException(`Payment initiation failed: ${data.message}`);
       }
 
@@ -332,6 +365,23 @@ export class PaymentService {
       saved.status = TransactionStatus.FAILED;
       saved.failureReason = error.message;
       await this.transactionRepo.save(saved);
+
+      this.businessLogger.logFailure(BusinessEventType.PAYMENT_INITIATION_FAILED, {
+        userId,
+        transactionId: saved.id,
+        amount: dto.amount,
+        provider: dto.paymentCode,
+        errorMessage: error.message,
+      });
+
+      this.sentryService.captureException(error, {
+        transactionId: saved.id,
+        internalRef,
+        userId,
+        amount: dto.amount,
+        paymentCode: dto.paymentCode,
+      });
+
       throw new InternalServerErrorException('Failed to initiate payment');
     }
   }
@@ -340,6 +390,16 @@ export class PaymentService {
   async handleCallback(payload: PaymentCallbackDto): Promise<void> {
     this.logger.log(`Received callback for transaction: ${payload.transactionId}`);
 
+    this.sentryService.addBreadcrumb({
+      category: 'payment',
+      message: 'Received payment callback',
+      level: 'info',
+      data: {
+        gatewayTransactionId: payload.transactionId,
+        status: payload.status,
+      },
+    });
+
     // Find transaction by gateway transaction ID
     const transaction = await this.transactionRepo.findOne({
       where: { gatewayTransactionId: payload.transactionId },
@@ -347,6 +407,10 @@ export class PaymentService {
 
     if (!transaction) {
       this.logger.warn(`Callback received for unknown transaction: ${payload.transactionId}`);
+      this.businessLogger.logWarning(BusinessEventType.PAYMENT_CALLBACK_FAILED, {
+        gatewayTransactionId: payload.transactionId,
+        errorMessage: 'Unknown transaction',
+      });
       return; // Don't throw - we want to return 200 to stop retries
     }
 
@@ -357,6 +421,14 @@ export class PaymentService {
       );
       return;
     }
+
+    this.sentryService.setContext('payment_callback', {
+      transactionId: transaction.id,
+      gatewayTransactionId: payload.transactionId,
+      userId: transaction.userId,
+      amount: transaction.amount,
+      status: payload.status,
+    });
 
     transaction.callbackReceivedAt = new Date();
 
@@ -377,6 +449,14 @@ export class PaymentService {
       transaction.status = TransactionStatus.FAILED;
       transaction.failureReason = 'Gateway reported failure';
       this.logger.log(`Payment FAILED: ${transaction.id}`);
+
+      this.businessLogger.logFailure(BusinessEventType.PAYMENT_CALLBACK_FAILED, {
+        userId: transaction.userId,
+        transactionId: transaction.id,
+        amount: transaction.amount,
+        provider: transaction.paymentCode,
+        errorMessage: transaction.failureReason,
+      });
 
       this.eventEmitter.emit('payment.failed', {
         transactionId: transaction.id,

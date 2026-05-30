@@ -6,9 +6,25 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { join } from 'path';
+import * as Sentry from '@sentry/node';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
+
+  // Initialize Sentry before NestJS app creation
+  const sentryEnabled = process.env.SENTRY_ENABLED === 'true';
+  const sentryDsn = process.env.SENTRY_DSN || '';
+
+  if (sentryEnabled && sentryDsn) {
+    Sentry.init({
+      dsn: sentryDsn,
+      environment: process.env.SENTRY_ENVIRONMENT || process.env.NODE_ENV || 'development',
+      release: process.env.SENTRY_RELEASE || '',
+      tracesSampleRate: parseFloat(process.env.SENTRY_TRACES_SAMPLE_RATE || '0.1'),
+    });
+    logger.log('Sentry initialized');
+  }
+
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: ['error', 'warn', 'log'],
   });
