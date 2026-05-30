@@ -81,11 +81,13 @@ jobs:
           IMGBB_API_KEY=test-api-key
           EOF
 
+      - name: Build
+        working-directory: ./backend
+        run: npm run build
+
       - name: Run database migrations
         working-directory: ./backend
-        run: |
-          npm run build
-          npx ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:run -d src/database/data-source.ts
+        run: npx ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:run -d src/database/data-source.ts
         env:
           DOTENV_CONFIG_PATH: ./.env.test
 
@@ -96,14 +98,12 @@ jobs:
           DOTENV_CONFIG_PATH: ./.env.test
 
       - name: Run integration tests
-        if: github.ref == 'refs/heads/main'
         working-directory: ./backend
         run: npm run test:integration
         env:
           DOTENV_CONFIG_PATH: ./.env.test
 
       - name: Run E2E tests
-        if: github.ref == 'refs/heads/main'
         working-directory: ./backend
         run: npm run test:e2e
         env:
@@ -112,7 +112,3 @@ jobs:
       - name: Run lint
         working-directory: ./backend
         run: npm run lint
-
-      - name: Build
-        working-directory: ./backend
-        run: npm run build
