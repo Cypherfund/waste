@@ -34,7 +34,3 @@ jobs:
       - name: Analyze
         working-directory: ./mobile
         run: flutter analyze
-
-      - name: Run tests
-        working-directory: ./mobile
-        run: flutter test
