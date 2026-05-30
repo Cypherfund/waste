@@ -5,13 +5,20 @@ export class AddWalletTopupSupport1780500000000 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // ── Add WALLET_TOPUP to transaction_type enum ─────────────────────
-    await queryRunner.query(`
-      DO $$ BEGIN
-        ALTER TYPE "public"."transaction_type_enum"
-        ADD VALUE IF NOT EXISTS 'WALLET_TOPUP';
-      EXCEPTION WHEN duplicate_object THEN NULL;
-      END $$
+    // First check if the enum exists
+    const enumExists = await queryRunner.query(`
+      SELECT 1 FROM pg_type WHERE typname = 'transaction_type_enum'
     `);
+
+    if (enumExists.length > 0) {
+      await queryRunner.query(`
+        DO $$ BEGIN
+          ALTER TYPE "public"."transaction_type_enum"
+          ADD VALUE IF NOT EXISTS 'WALLET_TOPUP';
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$
+      `);
+    }
 
     // ── Add payment_source column to payment_transactions ───────────────
     await queryRunner.query(`

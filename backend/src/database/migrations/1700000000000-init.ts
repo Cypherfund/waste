@@ -4,13 +4,16 @@ export class Init1700000000000 implements MigrationInterface {
   name = 'Init1700000000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // If the database already has these objects (e.g. created outside migrations),
-    // skip this entire migration. Check for `jobs` table as a proxy.
-    const alreadyRan = await queryRunner.query(
+    // If the database already has core tables (e.g. created outside migrations),
+    // skip this entire migration. Check for multiple core tables as a proxy.
+    const usersTable = await queryRunner.query(
+      `SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'users'`,
+    );
+    const jobsTable = await queryRunner.query(
       `SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'jobs'`,
     );
-    if (alreadyRan.length > 0) {
-      console.log('Init migration: database already set up, skipping.');
+    if (usersTable.length > 0 && jobsTable.length > 0) {
+      console.log('Init migration: database already has core tables, skipping.');
       return;
     }
 

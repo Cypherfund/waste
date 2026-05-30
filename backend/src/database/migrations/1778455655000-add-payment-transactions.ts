@@ -8,18 +8,40 @@ export class AddPaymentTransactions1778455655000 implements MigrationInterface {
       `SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='payment_transactions'`,
     );
     if (exists.length > 0) {
-      console.log('Payment transactions migration: already applied, skipping.');
-      return;
+      console.log('Payment transactions migration: table already exists, skipping table creation.');
+    } else {
+      // Create enum types
+      await queryRunner.query(`
+        CREATE TYPE "transaction_type_enum" AS ENUM ('CASHIN', 'CASHOUT')
+      `);
+
+      await queryRunner.query(`
+        CREATE TYPE "transaction_status_enum" AS ENUM ('PENDING', 'SUCCESS', 'FAILED')
+      `);
     }
 
-    // Create enum types
-    await queryRunner.query(`
-      CREATE TYPE "transaction_type_enum" AS ENUM ('CASHIN', 'CASHOUT')
-    `);
+    // Ensure enum types exist even if table was created by another migration
+    const enumExists = await queryRunner.query(
+      `SELECT 1 FROM pg_type WHERE typname = 'transaction_type_enum'`
+    );
+    if (enumExists.length === 0) {
+      await queryRunner.query(`
+        CREATE TYPE "transaction_type_enum" AS ENUM ('CASHIN', 'CASHOUT')
+      `);
+    }
 
-    await queryRunner.query(`
-      CREATE TYPE "transaction_status_enum" AS ENUM ('PENDING', 'SUCCESS', 'FAILED')
-    `);
+    const statusEnumExists = await queryRunner.query(
+      `SELECT 1 FROM pg_type WHERE typname = 'transaction_status_enum'`
+    );
+    if (statusEnumExists.length === 0) {
+      await queryRunner.query(`
+        CREATE TYPE "transaction_status_enum" AS ENUM ('PENDING', 'SUCCESS', 'FAILED')
+      `);
+    }
+
+    if (exists.length > 0) {
+      return;
+    }
 
     // Create payment_transactions table
     await queryRunner.query(`
