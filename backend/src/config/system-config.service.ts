@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SystemConfig } from './entities/system-config.entity';
+import { AdminAuditService, AdminAuditAction, AdminAuditEntityType, AuditRequestContext } from '../admin/services/admin-audit.service';
 
 @Injectable()
 export class SystemConfigService {
@@ -10,6 +11,7 @@ export class SystemConfigService {
   constructor(
     @InjectRepository(SystemConfig)
     private readonly configRepo: Repository<SystemConfig>,
+    private readonly adminAuditService: AdminAuditService,
   ) {}
 
   async getString(key: string, defaultValue: string): Promise<string> {
@@ -34,8 +36,10 @@ export class SystemConfigService {
     return this.configRepo.find({ order: { category: 'ASC', key: 'ASC' } });
   }
 
-  async upsert(key: string, value: string, updatedBy: string): Promise<SystemConfig> {
+  async upsert(key: string, value: string, updatedBy: string, context?: AuditRequestContext): Promise<SystemConfig> {
     let config = await this.configRepo.findOne({ where: { key } });
+    const oldValue = config?.value;
+    
     if (config) {
       config.value = value;
       config.updatedBy = updatedBy;
@@ -49,7 +53,21 @@ export class SystemConfigService {
         updatedBy,
       });
     }
-    return this.configRepo.save(config);
+    const saved = await this.configRepo.save(config);
+
+    // Log audit
+    await this.adminAuditService.log({
+      adminId: updatedBy,
+      action: AdminAuditAction.SYSTEM_CONFIG_UPDATED,
+      entityType: AdminAuditEntityType.SYSTEM_CONFIG,
+      entityId: key,
+      oldValue: oldValue ? { value: oldValue } : null,
+      newValue: { value },
+      metadata: { key, category: config.category, dataType: config.dataType },
+      context,
+    });
+
+    return saved;
   }
 
   async getAssignmentConfig(): Promise<AssignmentConfig> {

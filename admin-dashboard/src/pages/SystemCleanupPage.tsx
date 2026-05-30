@@ -210,6 +210,7 @@ export default function SystemCleanupPage() {
               payments: 'Payments (transactions, earnings, payouts, float ledger)',
               files: 'Files (unused files)',
               notifications: 'Notifications (notifications, marketer notifications)',
+              admin: 'Admin (wallet ledger, reconciliation runs)',
             } as const).map((key) => (
               <label key={key} className="flex items-start">
                 <input
@@ -227,6 +228,7 @@ export default function SystemCleanupPage() {
                     payments: 'Payments (transactions, earnings, payouts, float ledger)',
                     files: 'Files (unused files)',
                     notifications: 'Notifications (notifications, marketer notifications)',
+                    admin: 'Admin (wallet ledger, reconciliation runs)',
                   } as any)[key]}
                 </span>
               </label>

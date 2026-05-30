@@ -181,7 +181,10 @@ export class GrowthAdminController {
   @Post('marketer-payouts/:id/approve')
   @ApiOperation({ summary: 'Approve payout request' })
   async approvePayout(@Param('id', ParseUUIDPipe) id: string, @Request() req: any) {
-    return this.payoutService.approvePayout(id, req.user.sub);
+    return this.payoutService.approvePayout(id, req.user.sub, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] as string,
+    });
   }
 
   @Post('marketer-payouts/:id/mark-paid')
@@ -191,7 +194,10 @@ export class GrowthAdminController {
     @Body('paidReference') paidReference: string,
     @Request() req: any,
   ) {
-    return this.payoutService.markAsPaid(id, req.user.sub, paidReference);
+    return this.payoutService.markAsPaid(id, req.user.sub, paidReference, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] as string,
+    });
   }
 
   @Post('marketer-payouts/:id/reject')
@@ -201,7 +207,10 @@ export class GrowthAdminController {
     @Body('reason') reason: string,
     @Request() req: any,
   ) {
-    return this.payoutService.rejectPayout(id, req.user.sub, reason);
+    return this.payoutService.rejectPayout(id, req.user.sub, reason, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] as string,
+    });
   }
 
   // Commission Reconciliation

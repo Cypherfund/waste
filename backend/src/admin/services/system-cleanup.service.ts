@@ -16,6 +16,7 @@ import { FileRecord } from '../../files/entities/file.entity';
 import { Earning } from '../../earnings/entities/earning.entity';
 import { PayoutRequest } from '../../wallet/entities/payout-request.entity';
 import { CollectorFloatLedger } from '../../wallet/entities/collector-float-ledger.entity';
+import { WalletLedger } from '../../wallet/entities/wallet-ledger.entity';
 import { UserAddress } from '../../users/entities/user-address.entity';
 import { UserPaymentMethod } from '../../wallet/entities/user-payment-method.entity';
 import { UserSubscription } from '../../subscriptions/entities/user-subscription.entity';
@@ -31,6 +32,8 @@ import { BudgetTransaction } from '../../growth/entities/budget-transaction.enti
 import { CampaignMarketerAssignment } from '../../growth/entities/campaign-marketer-assignment.entity';
 import { CampaignCommissionScheme } from '../../growth/entities/campaign-commission-scheme.entity';
 import { MarketerSchemeAssignment } from '../../growth/entities/marketer-scheme-assignment.entity';
+import { AdminAuditService, AdminAuditAction, AdminAuditEntityType, AuditRequestContext } from './admin-audit.service';
+import { ReconciliationRun } from '../entities/reconciliation-run.entity';
 
 export interface CleanupFilters {
   createdBefore?: string;
@@ -49,6 +52,7 @@ export interface CleanupComponents {
   payments?: boolean;
   files?: boolean;
   notifications?: boolean;
+  admin?: boolean;
 }
 
 export interface CleanupRequest {
@@ -91,6 +95,7 @@ export interface CleanupAnalysis {
   };
   files: { unusedFiles: number };
   notifications: { notifications: number; marketerNotifications: number };
+  admin: { walletLedger: number; reconciliationRuns: number };
 }
 
 @Injectable()
@@ -98,6 +103,7 @@ export class SystemCleanupService {
   private readonly logger = new Logger(SystemCleanupService.name);
 
   constructor(
+    private readonly adminAuditService: AdminAuditService,
     private configService: ConfigService,
     private dataSource: DataSource,
     @InjectRepository(SystemCleanupLog)
@@ -158,6 +164,10 @@ export class SystemCleanupService {
     private campaignCommissionSchemeRepo: Repository<CampaignCommissionScheme>,
     @InjectRepository(MarketerSchemeAssignment)
     private marketerSchemeAssignmentRepo: Repository<MarketerSchemeAssignment>,
+    @InjectRepository(WalletLedger)
+    private walletLedgerRepo: Repository<WalletLedger>,
+    @InjectRepository(ReconciliationRun)
+    private reconciliationRunRepo: Repository<ReconciliationRun>,
   ) {}
 
   validateDeveloperCode(code: string): boolean {
@@ -194,6 +204,7 @@ export class SystemCleanupService {
   async analyzeCleanup(
     request: CleanupRequest,
     requestedBy: string,
+    context?: AuditRequestContext,
   ): Promise<{ analysis: CleanupAnalysis; logId: string }> {
     if (!this.isCleanupAllowed()) {
       throw new BadRequestException('System cleanup is not enabled. Set ALLOW_SYSTEM_CLEANUP=true');
@@ -213,12 +224,25 @@ export class SystemCleanupService {
     });
     await this.cleanupLogRepo.save(log);
 
+    // Log audit
+    await this.adminAuditService.log({
+      adminId: requestedBy,
+      action: AdminAuditAction.SYSTEM_CLEANUP_ANALYZED,
+      entityType: AdminAuditEntityType.SYSTEM_CLEANUP,
+      entityId: log.id,
+      oldValue: null,
+      newValue: { filters: request.filters, components: request.components, analysis },
+      metadata: { developerCode: request.developerCode },
+      context,
+    });
+
     return { analysis, logId: log.id };
   }
 
   async executeCleanup(
     request: CleanupRequest,
     requestedBy: string,
+    context?: AuditRequestContext,
   ): Promise<{ deletedCounts: CleanupAnalysis; errors: string[]; logId: string }> {
     if (!this.isCleanupAllowed()) {
       throw new BadRequestException('System cleanup is not enabled. Set ALLOW_SYSTEM_CLEANUP=true');
@@ -290,6 +314,18 @@ export class SystemCleanupService {
     log.completedAt = new Date();
     await this.cleanupLogRepo.save(log);
 
+    // Log audit
+    await this.adminAuditService.log({
+      adminId: requestedBy,
+      action: AdminAuditAction.SYSTEM_CLEANUP_EXECUTED,
+      entityType: AdminAuditEntityType.SYSTEM_CLEANUP,
+      entityId: log.id,
+      oldValue: { analysisBefore: log.analysisBefore },
+      newValue: { deletedCounts, errors },
+      metadata: { developerCode: request.developerCode, dryRun: request.dryRun },
+      context,
+    });
+
     return { deletedCounts, errors, logId: log.id };
   }
 
@@ -316,6 +352,7 @@ export class SystemCleanupService {
       payments: { paymentTransactions: 0, earnings: 0, payoutRequests: 0, collectorFloatLedger: 0 },
       files: { unusedFiles: 0 },
       notifications: { notifications: 0, marketerNotifications: 0 },
+      admin: { walletLedger: 0, reconciliationRuns: 0 },
       // cache: { idempotencyCache: 0 },
     };
 
@@ -477,6 +514,21 @@ export class SystemCleanupService {
           : 0;
     }
 
+    if (components.admin) {
+      const adminWhere = userIds.length > 0 ? { userId: In(userIds) } : {};
+      analysis.admin.walletLedger = await this.walletLedgerRepo.count({ where: adminWhere });
+      
+      // Reconciliation runs can be filtered by date
+      const reconciliationWhere: any = {};
+      if (filters.createdBefore) {
+        reconciliationWhere.startedAt = LessThan(new Date(filters.createdBefore));
+      }
+      if (filters.createdAfter) {
+        reconciliationWhere.startedAt = Between(new Date(filters.createdAfter), new Date());
+      }
+      analysis.admin.reconciliationRuns = await this.reconciliationRunRepo.count({ where: reconciliationWhere });
+    }
+
     return analysis;
   }
 
@@ -505,6 +557,7 @@ export class SystemCleanupService {
       payments: { paymentTransactions: 0, earnings: 0, payoutRequests: 0, collectorFloatLedger: 0 },
       files: { unusedFiles: 0 },
       notifications: { notifications: 0, marketerNotifications: 0 },
+      admin: { walletLedger: 0, reconciliationRuns: 0 },
     };
 
     const userWhere = this.buildUserWhereClause(filters);
@@ -724,7 +777,37 @@ export class SystemCleanupService {
             : 0;
       }
 
-      // 7. Delete files (before users since files reference users via uploadedBy)
+      // 7. Delete admin components
+      if (components.admin) {
+        const adminWhere = userIds.length > 0 ? { userId: In(userIds) } : {};
+        deletedCounts.admin.walletLedger = await this.deleteCount(
+          queryRunner,
+          this.walletLedgerRepo,
+          adminWhere,
+          dryRun,
+          errors,
+          userIds.length === 0,
+        );
+        
+        // Reconciliation runs can be filtered by date
+        const reconciliationWhere: any = {};
+        if (filters.createdBefore) {
+          reconciliationWhere.startedAt = LessThan(new Date(filters.createdBefore));
+        }
+        if (filters.createdAfter) {
+          reconciliationWhere.startedAt = Between(new Date(filters.createdAfter), new Date());
+        }
+        deletedCounts.admin.reconciliationRuns = await this.deleteCount(
+          queryRunner,
+          this.reconciliationRunRepo,
+          reconciliationWhere,
+          dryRun,
+          errors,
+          true,
+        );
+      }
+
+      // 8. Delete files (before users since files reference users via uploadedBy)
       if (components.files) {
         const fileWhere = userIds.length > 0 ? { uploadedBy: In(userIds) } : {};
         deletedCounts.files.unusedFiles = await this.deleteCount(

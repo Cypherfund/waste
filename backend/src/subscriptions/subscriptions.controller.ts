@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Patch, Param, Body, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, ParseUUIDPipe, Req } from '@nestjs/common';
+import { Request } from 'express';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { SubscriptionsService } from './subscriptions.service';
 import { PricingService } from './pricing.service';
@@ -128,13 +129,28 @@ export class SubscriptionsController {
 
   @Patch('admin/:id/verify-payment')
   @Roles(UserRole.ADMIN)
-  adminVerifyPayment(@Param('id', ParseUUIDPipe) id: string) {
-    return this.subscriptionsService.adminVerifySubscription(id);
+  adminVerifyPayment(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('sub') adminId: string,
+    @Req() req: Request,
+  ) {
+    return this.subscriptionsService.adminVerifySubscription(id, adminId, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] as string,
+    });
   }
 
   @Patch('admin/:id/reject-payment')
   @Roles(UserRole.ADMIN)
-  adminRejectPayment(@Param('id', ParseUUIDPipe) id: string, @Body() body: { reason?: string }) {
-    return this.subscriptionsService.adminRejectSubscription(id, body?.reason);
+  adminRejectPayment(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('sub') adminId: string,
+    @Body() body: { reason?: string },
+    @Req() req: Request,
+  ) {
+    return this.subscriptionsService.adminRejectSubscription(id, adminId, body?.reason, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] as string,
+    });
   }
 }

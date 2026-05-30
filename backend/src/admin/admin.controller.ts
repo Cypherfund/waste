@@ -9,11 +9,13 @@ import {
   Query,
   Body,
   Res,
+  Req,
   ParseUUIDPipe,
   ParseIntPipe,
   DefaultValuePipe,
 } from '@nestjs/common';
 import { Response } from 'express';
+import { Request } from 'express';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { SystemCleanupService } from './services/system-cleanup.service';
@@ -105,8 +107,15 @@ export class AdminController {
   // ─── PAYMENT VERIFICATION ──────────────────────────────────────
 
   @Patch('jobs/:id/verify-payment')
-  verifyPayment(@Param('id', ParseUUIDPipe) id: string, @CurrentUser('sub') adminId: string) {
-    return this.adminService.verifyPayment(id, adminId);
+  verifyPayment(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('sub') adminId: string,
+    @Req() req: Request,
+  ) {
+    return this.adminService.verifyPayment(id, adminId, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] as string,
+    });
   }
 
   @Patch('jobs/:id/reject-payment')
@@ -114,8 +123,12 @@ export class AdminController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('sub') adminId: string,
     @Body() body: { reason?: string },
+    @Req() req: Request,
   ) {
-    return this.adminService.rejectPayment(id, adminId, body.reason);
+    return this.adminService.rejectPayment(id, adminId, body.reason, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] as string,
+    });
   }
 
   // ─── DISPUTES ─────────────────────────────────────────────────
@@ -170,8 +183,12 @@ export class AdminController {
     @Param('key') key: string,
     @CurrentUser('sub') adminId: string,
     @Body() body: { value: string },
+    @Req() req: Request,
   ) {
-    return this.adminService.updateConfig(key, body.value, adminId);
+    return this.adminService.updateConfig(key, body.value, adminId, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] as string,
+    });
   }
 
   // ─── EARNINGS / PAYOUTS ────────────────────────────────────────
@@ -263,18 +280,40 @@ export class AdminController {
   }
 
   @Post('payments/providers')
-  createProvider(@Body() body: Record<string, unknown>) {
-    return this.paymentService.createProvider(body as any);
+  createProvider(
+    @Body() body: Record<string, unknown>,
+    @CurrentUser('sub') adminId: string,
+    @Req() req: Request,
+  ) {
+    return this.paymentService.createProvider(body as any, adminId, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] as string,
+    });
   }
 
   @Patch('payments/providers/:id')
-  updateProvider(@Param('id', ParseIntPipe) id: number, @Body() body: Record<string, unknown>) {
-    return this.paymentService.updateProvider(id, body as any);
+  updateProvider(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: Record<string, unknown>,
+    @CurrentUser('sub') adminId: string,
+    @Req() req: Request,
+  ) {
+    return this.paymentService.updateProvider(id, body as any, adminId, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] as string,
+    });
   }
 
   @Delete('payments/providers/:id')
-  deleteProvider(@Param('id', ParseIntPipe) id: number) {
-    return this.paymentService.deleteProvider(id);
+  deleteProvider(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('sub') adminId: string,
+    @Req() req: Request,
+  ) {
+    return this.paymentService.deleteProvider(id, adminId, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] as string,
+    });
   }
 
   // ─── COLLECTOR FLOAT TOP-UP ──────────────────────────────────
@@ -284,15 +323,26 @@ export class AdminController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('sub') adminId: string,
     @Body() body: { amount: number; note?: string },
+    @Req() req: Request,
   ) {
-    return this.walletService.adminFloatTopUp(id, body.amount, adminId, body.note);
+    return this.walletService.adminFloatTopUp(id, body.amount, adminId, body.note, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] as string,
+    });
   }
 
   // ─── WALLET TOP-UP APPROVAL ───────────────────────────────────
 
   @Post('wallet-top-up/:id/approve')
-  approveWalletTopUp(@Param('id', ParseUUIDPipe) id: string, @CurrentUser('sub') adminId: string) {
-    return this.adminService.approveWalletTopUp(id, adminId);
+  approveWalletTopUp(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('sub') adminId: string,
+    @Req() req: Request,
+  ) {
+    return this.adminService.approveWalletTopUp(id, adminId, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] as string,
+    });
   }
 
   @Post('wallet-top-up/:id/reject')
@@ -300,8 +350,12 @@ export class AdminController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser('sub') adminId: string,
     @Body() body: { reason?: string },
+    @Req() req: Request,
   ) {
-    return this.adminService.rejectWalletTopUp(id, adminId, body.reason);
+    return this.adminService.rejectWalletTopUp(id, adminId, body.reason, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] as string,
+    });
   }
 
   // ─── STATS & PERFORMANCE ──────────────────────────────────────
@@ -319,13 +373,27 @@ export class AdminController {
   // ─── SYSTEM CLEANUP (Developer Tool) ───────────────────────────
 
   @Post('system-cleanup/analyze')
-  analyzeCleanup(@Body() body: any, @CurrentUser('sub') adminId: string) {
-    return this.systemCleanupService.analyzeCleanup(body, adminId);
+  analyzeCleanup(
+    @Body() body: any,
+    @CurrentUser('sub') adminId: string,
+    @Req() req: Request,
+  ) {
+    return this.systemCleanupService.analyzeCleanup(body, adminId, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] as string,
+    });
   }
 
   @Post('system-cleanup/execute')
-  executeCleanup(@Body() body: any, @CurrentUser('sub') adminId: string) {
-    return this.systemCleanupService.executeCleanup(body, adminId);
+  executeCleanup(
+    @Body() body: any,
+    @CurrentUser('sub') adminId: string,
+    @Req() req: Request,
+  ) {
+    return this.systemCleanupService.executeCleanup(body, adminId, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] as string,
+    });
   }
 
   @Get('system-cleanup/logs')

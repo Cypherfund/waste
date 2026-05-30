@@ -278,6 +278,7 @@ export interface CleanupComponents {
   payments?: boolean;
   files?: boolean;
   notifications?: boolean;
+  admin?: boolean;
 }
 
 export interface CleanupRequest {
@@ -297,6 +298,7 @@ export interface CleanupAnalysis {
   payments: { paymentTransactions: number; earnings: number; payoutRequests: number; collectorFloatLedger: number };
   files: { unusedFiles: number };
   notifications: { notifications: number; marketerNotifications: number };
+  admin: { walletLedger: number; reconciliationRuns: number };
 }
 
 export interface CleanupResult {
@@ -344,4 +346,34 @@ export const reconciliationApi = {
     });
     return response.data;
   },
+};
+
+export interface AdminAuditLog {
+  id: string;
+  adminId: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  oldValue: any;
+  newValue: any;
+  metadata: any;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: string;
+}
+
+export interface AuditLogsResponse {
+  data: AdminAuditLog[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export const auditLogsApi = {
+  list: (params?: { from?: string; to?: string; adminId?: string; action?: string; entityType?: string; entityId?: string; page?: number; limit?: number }) =>
+    client.get<AuditLogsResponse>('/admin/audit-logs', { params }).then((r) => r.data),
+
+  getById: (id: string) =>
+    client.get<AdminAuditLog>(`/admin/audit-logs/${id}`).then((r) => r.data),
 };

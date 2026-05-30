@@ -28,6 +28,7 @@ import {
 import { SystemConfigService } from '../config/system-config.service';
 import { FeatureFlagService, FEATURE_FLAGS } from '../config/feature-flags';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { AdminAuditService, AdminAuditAction, AdminAuditEntityType, AuditRequestContext } from '../admin/services/admin-audit.service';
 
 @Injectable()
 export class PaymentService {
@@ -42,6 +43,7 @@ export class PaymentService {
     private readonly systemConfigService: SystemConfigService,
     private readonly featureFlagService: FeatureFlagService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly adminAuditService: AdminAuditService,
   ) {}
 
   // ── GET gateway base URL ────────────────────────────────────────
@@ -157,31 +159,77 @@ export class PaymentService {
   }
 
   // ── CREATE provider (admin) ─────────────────────────────────────
-  async createProvider(data: Partial<PaymentProviderEntity>): Promise<PaymentProviderEntity> {
+  async createProvider(data: Partial<PaymentProviderEntity>, adminId: string, context?: AuditRequestContext): Promise<PaymentProviderEntity> {
     const provider = this.providerRepo.create(data);
-    return this.providerRepo.save(provider);
+    const saved = await this.providerRepo.save(provider);
+
+    // Log audit
+    await this.adminAuditService.log({
+      adminId,
+      action: AdminAuditAction.PAYMENT_PROVIDER_CREATED,
+      entityType: AdminAuditEntityType.PAYMENT_PROVIDER,
+      entityId: String(saved.id),
+      oldValue: null,
+      newValue: { paymentCode: saved.paymentCode, name: saved.name, countryCode: saved.countryCode },
+      metadata: { paymentCode: saved.paymentCode },
+      context,
+    });
+
+    return saved;
   }
 
   // ── UPDATE provider (admin) ─────────────────────────────────────
   async updateProvider(
     id: number,
     data: Partial<PaymentProviderEntity>,
+    adminId: string,
+    context?: AuditRequestContext,
   ): Promise<PaymentProviderEntity> {
     const provider = await this.providerRepo.findOne({ where: { id } });
     if (!provider) {
       throw new NotFoundException(`Payment provider ${id} not found`);
     }
+
+    const oldValue = { paymentCode: provider.paymentCode, name: provider.name, countryCode: provider.countryCode };
     Object.assign(provider, data);
-    return this.providerRepo.save(provider);
+    const saved = await this.providerRepo.save(provider);
+
+    // Log audit
+    await this.adminAuditService.log({
+      adminId,
+      action: AdminAuditAction.PAYMENT_PROVIDER_UPDATED,
+      entityType: AdminAuditEntityType.PAYMENT_PROVIDER,
+      entityId: String(id),
+      oldValue,
+      newValue: { paymentCode: saved.paymentCode, name: saved.name, countryCode: saved.countryCode },
+      metadata: { paymentCode: saved.paymentCode },
+      context,
+    });
+
+    return saved;
   }
 
   // ── DELETE provider (admin) ─────────────────────────────────────
-  async deleteProvider(id: number): Promise<void> {
+  async deleteProvider(id: number, adminId: string, context?: AuditRequestContext): Promise<void> {
     const provider = await this.providerRepo.findOne({ where: { id } });
     if (!provider) {
       throw new NotFoundException(`Payment provider ${id} not found`);
     }
+
+    const oldValue = { paymentCode: provider.paymentCode, name: provider.name, countryCode: provider.countryCode };
     await this.providerRepo.remove(provider);
+
+    // Log audit
+    await this.adminAuditService.log({
+      adminId,
+      action: AdminAuditAction.PAYMENT_PROVIDER_DELETED,
+      entityType: AdminAuditEntityType.PAYMENT_PROVIDER,
+      entityId: String(id),
+      oldValue,
+      newValue: null,
+      metadata: { paymentCode: provider.paymentCode },
+      context,
+    });
   }
 
   // ── INITIATE payment ─────────────────────────────────────────────

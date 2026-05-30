@@ -13,6 +13,7 @@ import {
 import { CreatePayoutRequestDto } from '../dto';
 import { MarketerNotificationService } from './marketer-notification.service';
 import { PayoutEvents, PayoutProcessedPayload } from '../../events/events.types';
+import { AdminAuditService, AdminAuditAction, AdminAuditEntityType, AuditRequestContext } from '../../admin/services/admin-audit.service';
 
 @Injectable()
 export class MarketerPayoutService {
@@ -26,6 +27,7 @@ export class MarketerPayoutService {
     private readonly notificationService: MarketerNotificationService,
     private readonly dataSource: DataSource,
     private readonly eventEmitter: EventEmitter2,
+    private readonly adminAuditService: AdminAuditService,
   ) {}
 
   async createPayoutRequest(
@@ -110,7 +112,7 @@ export class MarketerPayoutService {
     return { data, total, totalPages: Math.ceil(total / limit) };
   }
 
-  async approvePayout(payoutId: string, adminId: string): Promise<MarketerPayoutRequest> {
+  async approvePayout(payoutId: string, adminId: string, context?: AuditRequestContext): Promise<MarketerPayoutRequest> {
     const payout = await this.payoutRepo.findOne({
       where: { id: payoutId },
       relations: ['marketerProfile'],
@@ -124,11 +126,25 @@ export class MarketerPayoutService {
       throw new BadRequestException('Payout request is not pending');
     }
 
+    const oldStatus = payout.status;
+
     payout.status = PayoutStatus.APPROVED;
     payout.reviewedBy = adminId;
     payout.reviewedAt = new Date();
 
     const saved = await this.payoutRepo.save(payout);
+
+    // Log audit
+    await this.adminAuditService.log({
+      adminId,
+      action: AdminAuditAction.MARKETER_PAYOUT_APPROVED,
+      entityType: AdminAuditEntityType.MARKETER_PAYOUT_REQUEST,
+      entityId: payoutId,
+      oldValue: { status: oldStatus },
+      newValue: { status: PayoutStatus.APPROVED },
+      metadata: { amount: payout.amount, marketerUserId: payout.marketerProfile.userId },
+      context,
+    });
 
     // Emit payout approved event for notification
     const payload: PayoutProcessedPayload = {
@@ -146,6 +162,7 @@ export class MarketerPayoutService {
     payoutId: string,
     adminId: string,
     reason: string,
+    context?: AuditRequestContext,
   ): Promise<MarketerPayoutRequest> {
     const payout = await this.payoutRepo.findOne({
       where: { id: payoutId },
@@ -160,6 +177,9 @@ export class MarketerPayoutService {
       throw new BadRequestException('Payout request is not pending');
     }
 
+    const oldStatus = payout.status;
+    const oldApprovedAmount = Number(payout.marketerProfile.approvedAmount);
+
     payout.status = PayoutStatus.REJECTED;
     payout.reviewedBy = adminId;
     payout.reviewedAt = new Date();
@@ -169,8 +189,20 @@ export class MarketerPayoutService {
 
     // Return amount to approved balance
     const profile = payout.marketerProfile;
-    profile.approvedAmount = Number(profile.approvedAmount) + parseFloat(payout.amount.toString());
+    profile.approvedAmount = oldApprovedAmount + parseFloat(payout.amount.toString());
     await this.profileRepo.save(profile);
+
+    // Log audit
+    await this.adminAuditService.log({
+      adminId,
+      action: AdminAuditAction.MARKETER_PAYOUT_REJECTED,
+      entityType: AdminAuditEntityType.MARKETER_PAYOUT_REQUEST,
+      entityId: payoutId,
+      oldValue: { status: oldStatus, approvedAmount: oldApprovedAmount },
+      newValue: { status: PayoutStatus.REJECTED, approvedAmount: profile.approvedAmount },
+      metadata: { reason, amount: payout.amount, marketerUserId: profile.userId },
+      context,
+    });
 
     // Emit payout rejected event for notification
     const payload: PayoutProcessedPayload = {
@@ -189,6 +221,7 @@ export class MarketerPayoutService {
     payoutId: string,
     adminId: string,
     paidReference?: string,
+    context?: AuditRequestContext,
   ): Promise<MarketerPayoutRequest> {
     const payout = await this.payoutRepo.findOne({
       where: { id: payoutId },
@@ -207,6 +240,9 @@ export class MarketerPayoutService {
       throw new BadRequestException('Payment reference is required when marking as paid');
     }
 
+    const oldStatus = payout.status;
+    const oldTotalPaid = Number(payout.marketerProfile.totalPaid);
+
     payout.status = PayoutStatus.PAID;
     payout.paidAt = new Date();
     payout.paidReference = paidReference;
@@ -215,8 +251,20 @@ export class MarketerPayoutService {
 
     // Update marketer stats
     const profile = payout.marketerProfile;
-    profile.totalPaid = Number(profile.totalPaid) + parseFloat(payout.amount.toString());
+    profile.totalPaid = oldTotalPaid + parseFloat(payout.amount.toString());
     await this.profileRepo.save(profile);
+
+    // Log audit
+    await this.adminAuditService.log({
+      adminId,
+      action: AdminAuditAction.MARKETER_PAYOUT_MARKED_PAID,
+      entityType: AdminAuditEntityType.MARKETER_PAYOUT_REQUEST,
+      entityId: payoutId,
+      oldValue: { status: oldStatus, totalPaid: oldTotalPaid },
+      newValue: { status: PayoutStatus.PAID, totalPaid: profile.totalPaid },
+      metadata: { paidReference, amount: payout.amount, marketerUserId: profile.userId },
+      context,
+    });
 
     // Notify marketer
     await this.notificationService.sendNotification(
