@@ -11,10 +11,11 @@ import { SystemConfigModule } from '../config/system-config.module';
 import { Job } from '../jobs/entities/job.entity';
 import { User } from '../users/entities/user.entity';
 import { UsersModule } from '../users/users.module';
+import { WalletLedger } from '../wallet/entities/wallet-ledger.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([PaymentTransaction, PaymentProviderEntity, Job, User]),
+    TypeOrmModule.forFeature([PaymentTransaction, PaymentProviderEntity, Job, User, WalletLedger]),
     HttpModule,
     SystemConfigModule,
     UsersModule,

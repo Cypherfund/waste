@@ -125,8 +125,12 @@ describe('Growth Module — Integration Tests', () => {
     it('should set up campaign for marketer (required for lead creation)', async () => {
       // Budget period
       const today = new Date();
-      const startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-      const endDate = new Date(today.getFullYear(), today.getMonth() + 12, 0).toISOString().split('T')[0];
+      const startDate = new Date(today.getFullYear(), today.getMonth(), 1)
+        .toISOString()
+        .split('T')[0];
+      const endDate = new Date(today.getFullYear(), today.getMonth() + 12, 0)
+        .toISOString()
+        .split('T')[0];
 
       const [bp] = await dataSource.query(
         `INSERT INTO marketing_budget_periods (name, start_date, end_date, total_budget, committed_amount, spent_amount, status, currency)
@@ -366,8 +370,12 @@ describe('Growth Module — Integration Tests', () => {
 
       // Set up campaign
       const today = new Date();
-      const startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-      const endDate = new Date(today.getFullYear(), today.getMonth() + 12, 0).toISOString().split('T')[0];
+      const startDate = new Date(today.getFullYear(), today.getMonth(), 1)
+        .toISOString()
+        .split('T')[0];
+      const endDate = new Date(today.getFullYear(), today.getMonth() + 12, 0)
+        .toISOString()
+        .split('T')[0];
 
       const [bp] = await dataSource.query(
         `INSERT INTO marketing_budget_periods (name, start_date, end_date, total_budget, committed_amount, spent_amount, status, currency)
@@ -608,10 +616,9 @@ describe('Growth Module — Integration Tests', () => {
     });
 
     it('should reject payout exceeding approved balance', async () => {
-      await dataSource.query(
-        `UPDATE marketer_profiles SET approved_amount = 3000 WHERE id = $1`,
-        [marketerProfileId],
-      );
+      await dataSource.query(`UPDATE marketer_profiles SET approved_amount = 3000 WHERE id = $1`, [
+        marketerProfileId,
+      ]);
 
       await request(httpServer)
         .post('/api/v1/marketer/payout-requests')

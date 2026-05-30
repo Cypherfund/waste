@@ -13,6 +13,11 @@ import { User } from '../users/entities/user.entity';
 import { PayoutRequest, PayoutRequestStatus } from './entities/payout-request.entity';
 import { CollectorFloatLedger, FloatLedgerType } from './entities/collector-float-ledger.entity';
 import {
+  WalletLedger,
+  WalletLedgerDirection,
+  WalletLedgerType,
+} from './entities/wallet-ledger.entity';
+import {
   UserPaymentMethod,
   UserPaymentMethodUsageType,
 } from './entities/user-payment-method.entity';
@@ -42,6 +47,8 @@ export class WalletService {
     private readonly paymentProviderRepo: Repository<PaymentProviderEntity>,
     @InjectRepository(CollectorFloatLedger)
     private readonly floatLedgerRepo: Repository<CollectorFloatLedger>,
+    @InjectRepository(WalletLedger)
+    private readonly walletLedgerRepo: Repository<WalletLedger>,
     @InjectRepository(UserPaymentMethod)
     private readonly userPaymentMethodRepo: Repository<UserPaymentMethod>,
     @InjectRepository(PaymentTransaction)
@@ -56,12 +63,42 @@ export class WalletService {
   @OnEvent(EarningsEvents.CONFIRMED)
   async onEarningsConfirmed(payload: EarningsConfirmedPayload): Promise<void> {
     await this.dataSource.transaction(async (em) => {
+      // Get current balance before update
+      const user = await em.getRepository(User).findOne({ where: { id: payload.collectorId } });
+      if (!user) {
+        this.logger.error(`User not found for earnings credit: ${payload.collectorId}`);
+        return;
+      }
+
+      const balanceBefore = Number(user.walletBalance);
+      const balanceAfter = balanceBefore + payload.amount;
+
+      // Update wallet balance
       await em
         .createQueryBuilder()
         .update(User)
         .set({ walletBalance: () => `wallet_balance + ${payload.amount}` })
         .where('id = :id', { id: payload.collectorId })
         .execute();
+
+      // Write wallet ledger entry (if table exists)
+      try {
+        const ledger = em.getRepository(WalletLedger).create({
+          userId: payload.collectorId,
+          direction: WalletLedgerDirection.CREDIT,
+          type: WalletLedgerType.COLLECTOR_EARNING,
+          amount: payload.amount,
+          balanceBefore,
+          balanceAfter,
+          earningId: payload.earningsId,
+          reference: `Earning ${payload.earningsId}`,
+          metadata: { jobId: payload.jobId },
+        });
+        await em.getRepository(WalletLedger).save(ledger);
+      } catch (e) {
+        // Wallet ledger table may not exist if migration not run
+        this.logger.warn(`Failed to write wallet ledger entry: ${e.message}`);
+      }
     });
     this.logger.log(`Wallet credited ${payload.amount} XAF → collector ${payload.collectorId}`);
   }
@@ -330,6 +367,9 @@ export class WalletService {
         throw new BadRequestException('INSUFFICIENT_WALLET_BALANCE');
       }
 
+      const balanceBefore = balance;
+      const balanceAfter = balance - amount;
+
       // Debit wallet
       await em
         .createQueryBuilder()
@@ -357,6 +397,25 @@ export class WalletService {
       });
 
       const saved = await em.getRepository(PaymentTransaction).save(transaction);
+
+      // Write wallet ledger entry (if table exists)
+      try {
+        const ledger = em.getRepository(WalletLedger).create({
+          userId,
+          direction: WalletLedgerDirection.DEBIT,
+          type: WalletLedgerType.JOB_PAYMENT,
+          amount,
+          balanceBefore,
+          balanceAfter,
+          paymentTransactionId: saved.id,
+          jobId,
+          reference: `Job ${jobId}`,
+        });
+        await em.getRepository(WalletLedger).save(ledger);
+      } catch (e) {
+        // Wallet ledger table may not exist if migration not run
+        this.logger.warn(`Failed to write wallet ledger entry: ${e.message}`);
+      }
 
       // Update job payment fields
       job.paymentStatus = PaymentStatus.VERIFIED;
@@ -411,6 +470,9 @@ export class WalletService {
         throw new BadRequestException('INSUFFICIENT_WALLET_BALANCE');
       }
 
+      const balanceBefore = balance;
+      const balanceAfter = balance - amount;
+
       // Debit wallet
       await em
         .createQueryBuilder()
@@ -438,6 +500,19 @@ export class WalletService {
       });
 
       const saved = await em.getRepository(PaymentTransaction).save(transaction);
+
+      // Write wallet ledger entry
+      const ledger = em.getRepository(WalletLedger).create({
+        userId,
+        direction: WalletLedgerDirection.DEBIT,
+        type: WalletLedgerType.SUBSCRIPTION_PAYMENT,
+        amount,
+        balanceBefore,
+        balanceAfter,
+        paymentTransactionId: saved.id,
+        reference: `Subscription plan ${planId}`,
+      });
+      await em.getRepository(WalletLedger).save(ledger);
 
       // Activate subscription using shared activation logic
       const { UserSubscription } =

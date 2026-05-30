@@ -6,7 +6,7 @@ export class AddWalletPaymentTransactionTypes1780600000000 implements MigrationI
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Check if enum exists before adding values
     const enumExists = await queryRunner.query(
-      `SELECT 1 FROM pg_type WHERE typname = 'transaction_type_enum'`
+      `SELECT 1 FROM pg_type WHERE typname = 'transaction_type_enum'`,
     );
 
     if (enumExists.length > 0) {
@@ -23,7 +23,7 @@ export class AddWalletPaymentTransactionTypes1780600000000 implements MigrationI
     }
 
     const statusEnumExists = await queryRunner.query(
-      `SELECT 1 FROM pg_type WHERE typname = 'transaction_status_enum'`
+      `SELECT 1 FROM pg_type WHERE typname = 'transaction_status_enum'`,
     );
 
     if (statusEnumExists.length > 0) {

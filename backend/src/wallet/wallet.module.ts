@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '../users/entities/user.entity';
 import { PayoutRequest } from './entities/payout-request.entity';
 import { CollectorFloatLedger } from './entities/collector-float-ledger.entity';
+import { WalletLedger } from './entities/wallet-ledger.entity';
 import { PaymentProviderEntity } from '../payments/entities/payment-provider.entity';
 import { UserPaymentMethod } from './entities/user-payment-method.entity';
 import { PaymentTransaction } from '../payments/entities/payment-transaction.entity';
@@ -16,6 +17,7 @@ import { PaymentsModule } from '../payments/payments.module';
       User,
       PayoutRequest,
       CollectorFloatLedger,
+      WalletLedger,
       PaymentProviderEntity,
       UserPaymentMethod,
       PaymentTransaction,

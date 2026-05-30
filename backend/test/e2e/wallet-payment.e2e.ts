@@ -44,6 +44,11 @@ describe('E2E: Wallet Payment Flow', () => {
 
   const cleanup = async () => {
     try {
+      await dataSource.query(`TRUNCATE TABLE "wallet_ledger" CASCADE`);
+    } catch (_) {
+      // Table may not exist yet if migration not run
+    }
+    try {
       await dataSource.query(`TRUNCATE TABLE "payment_transactions" CASCADE`);
       await dataSource.query(`TRUNCATE TABLE "user_subscriptions" CASCADE`);
       await dataSource.query(`TRUNCATE TABLE "jobs" CASCADE`);
@@ -121,6 +126,9 @@ describe('E2E: Wallet Payment Flow', () => {
 
   describe('POST /wallet/pay-job', () => {
     beforeEach(async () => {
+      // Clean up payment methods
+      await dataSource.query(`DELETE FROM "user_payment_methods" WHERE "user_id" = $1`, [householdId]);
+      
       // Create a minimal valid job fixture
       const jobRes = await dataSource.query(
         `
@@ -279,6 +287,9 @@ describe('E2E: Wallet Payment Flow', () => {
     let userPaymentMethodId: string;
 
     beforeEach(async () => {
+      // Clean up payment methods
+      await dataSource.query(`DELETE FROM "user_payment_methods" WHERE "user_id" = $1`, [householdId]);
+      
       // Create a user payment method
       const methodRes = await request(httpServer)
         .post('/api/v1/wallet/payment-methods')
@@ -326,6 +337,28 @@ describe('E2E: Wallet Payment Flow', () => {
         .expect(400);
 
       expect(res.body.message).toContain('Payment reference is required');
+    });
+
+    it('admin approval creates wallet ledger entry', async () => {
+      // Create pending top-up
+      const topupRes = await request(httpServer)
+        .post('/api/v1/wallet/top-up')
+        .set('Authorization', `Bearer ${householdToken}`)
+        .send({
+          amount: 5000,
+          paymentMethodId: userPaymentMethodId,
+          paymentRef: 'TXN-MANUAL-002',
+          paymentProofUrl: 'https://cdn.example.com/proof2.jpg',
+        })
+        .expect(201);
+
+      const transactionId = topupRes.body.id;
+
+      // Approve as admin
+      await request(httpServer)
+        .post(`/api/v1/admin/wallet-top-up/${transactionId}/approve`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(201);
     });
   });
 });
