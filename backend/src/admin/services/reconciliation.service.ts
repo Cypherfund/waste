@@ -259,7 +259,7 @@ export class ReconciliationService {
       `
       SELECT
         wl.payment_transaction_id,
-        MIN(wl.user_id) as user_id,
+        wl.user_id,
         MIN(wl.amount) as amount,
         MIN(wl.created_at) as created_at,
         COUNT(*) as count
@@ -268,7 +268,7 @@ export class ReconciliationService {
       AND wl.type = 'WALLET_TOPUP'
       AND wl.payment_transaction_id IS NOT NULL
       AND wl.created_at >= $1 AND wl.created_at <= $2
-      GROUP BY wl.payment_transaction_id
+      GROUP BY wl.payment_transaction_id, wl.user_id
       HAVING COUNT(*) > 1
     `,
       [fromDate, toDate],

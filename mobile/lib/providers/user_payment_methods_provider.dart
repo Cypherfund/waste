@@ -7,6 +7,7 @@ class UserPaymentMethodsProvider extends ChangeNotifier {
   List<UserPaymentMethod> _methods = [];
   bool _loading = false;
   String? _error;
+  String? _lastUsage; // Track the last usage type loaded
 
   UserPaymentMethodsProvider({required WalletApi walletApi}) : _walletApi = walletApi;
 
@@ -27,13 +28,19 @@ class UserPaymentMethodsProvider extends ChangeNotifier {
   UserPaymentMethod? get defaultCashoutMethod =>
       cashoutMethods.firstWhere((m) => m.isDefault, orElse: () => cashoutMethods.first);
 
-  Future<void> loadMethods({String? usage}) async {
+  Future<void> loadMethods({String? usage, bool forceRefresh = false}) async {
+    // Return early if already loaded for the same usage and not forcing refresh
+    if (!forceRefresh && _lastUsage == usage && _methods.isNotEmpty) {
+      return;
+    }
+
     _loading = true;
     _error = null;
     notifyListeners();
 
     try {
       _methods = await _walletApi.getMyPaymentMethods(usage: usage);
+      _lastUsage = usage;
     } catch (e) {
       _error = 'Unable to load payment methods. Please try again.';
       debugPrint('Error loading payment methods: $e');

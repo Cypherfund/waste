@@ -142,17 +142,33 @@ class _AccountSwitcherSheetState extends State<AccountSwitcherSheet> {
                                   await auth.switchAccount(account);
                                   if (context.mounted) {
                                     setState(() => _switchingId = null);
-                                    Navigator.pop(context);
+                                    
+                                    // Show error if switch failed
+                                    if (auth.error != null) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(auth.error!),
+                                          backgroundColor: Colors.red.shade600,
+                                          behavior: SnackBarBehavior.floating,
+                                        ),
+                                      );
+                                      return;
+                                    }
+                                    
+                                    // Only navigate if switch was successful
+                                    if (auth.status == AuthStatus.authenticated) {
+                                      Navigator.pop(context);
+                                      final isCollector = auth.user?.isCollector == true;
+                                      final isMarketer = auth.user?.isMarketer == true;
+                                      final route = isCollector
+                                          ? '/collector-home'
+                                          : isMarketer
+                                              ? '/marketer-home'
+                                              : '/home';
+                                      appNavigatorKey.currentState
+                                          ?.pushNamedAndRemoveUntil(route, (r) => false);
+                                    }
                                   }
-                                  final isCollector = auth.user?.isCollector == true;
-                                  final isMarketer = auth.user?.isMarketer == true;
-                                  final route = isCollector
-                                      ? '/collector-home'
-                                      : isMarketer
-                                          ? '/marketer-home'
-                                          : '/home';
-                                  appNavigatorKey.currentState
-                                      ?.pushNamedAndRemoveUntil(route, (r) => false);
                                 },
                         ),
                       );

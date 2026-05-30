@@ -307,6 +307,7 @@ class AuthProvider extends ChangeNotifier {
     if (_switchingAccountId != null || account.id == _user?.id) return;
 
     _switchingAccountId = account.id;
+    _error = null;
     notifyListeners();
 
     try {
@@ -314,10 +315,11 @@ class AuthProvider extends ChangeNotifier {
       final refreshed = await _tryRefreshTokensForAccount(account);
 
       if (!refreshed) {
-        // Token is invalid — remove from saved list
+        // Token is invalid — remove from saved list and notify user
         await _storage.removeAccount(account.id);
         await _syncService.clearJobsForUser(account.id);
         await _loadSavedAccounts();
+        _error = 'Session expired for ${account.name}. Account removed from device.';
         _switchingAccountId = null;
         notifyListeners();
         return;
@@ -366,7 +368,11 @@ class AuthProvider extends ChangeNotifier {
 
   Future<bool> _tryRefreshTokensForAccount(SavedAccount account) async {
     try {
+      debugPrint('[AuthProvider] Attempting to refresh tokens for account: ${account.id}');
+      debugPrint('[AuthProvider] Refresh token length: ${account.refreshToken?.length}');
+      debugPrint('[AuthProvider] Refresh token prefix: ${account.refreshToken?.substring(0, 20)}...');
       final response = await _authApi.refreshTokens(account.refreshToken);
+      debugPrint('[AuthProvider] Token refresh successful for account: ${account.id}');
       // Update stored tokens for this account
       final updated = account.copyWith(
         accessToken: response.accessToken,
@@ -374,7 +380,8 @@ class AuthProvider extends ChangeNotifier {
       );
       await _storage.saveAccount(updated);
       return true;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[AuthProvider] Token refresh failed for account ${account.id}: $e');
       return false;
     }
   }

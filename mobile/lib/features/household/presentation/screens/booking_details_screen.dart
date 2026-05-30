@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../config/app_config.dart';
 import '../../../../models/job.dart';
@@ -36,6 +37,33 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     await jobProvider.refreshJob(widget.jobId);
   }
 
+  void _shareBookingDetails(BuildContext context) {
+    final jobProvider = context.read<JobProvider>();
+    final job = jobProvider.getJob(widget.jobId);
+    
+    if (job == null) return;
+
+    final statusText = _getStatusText(job.status);
+    final scheduledDate = DateFormat('MMM dd, yyyy').format(DateTime.parse(job.scheduledDate));
+    final scheduledTime = job.scheduledTime;
+    
+    final shareText = '''
+🗑️ Waste Collection Booking
+
+📍 Address: ${job.locationAddress}
+📅 Date: $scheduledDate
+⏰ Time: $scheduledTime
+✅ Status: $statusText
+
+Booking ID: ${job.id.substring(0, 8)}...
+
+Booked via KmerTrash
+''';
+
+    Share.share(shareText);
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -59,9 +87,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.share_outlined, color: Colors.black),
-            onPressed: () {
-              // Share booking details
-            },
+            onPressed: () => _shareBookingDetails(context),
           ),
         ],
       ),

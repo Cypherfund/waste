@@ -6,6 +6,7 @@ import '../../../providers/user_payment_methods_provider.dart';
 import '../../../providers/subscription_provider.dart';
 import '../../../providers/collector_earnings_provider.dart';
 import '../../../services/api/wallet_api.dart';
+import '../../../widgets/skeleton_loader.dart';
 
 enum PaymentMethodMode { cashin, cashout }
 
@@ -91,7 +92,36 @@ class _PaymentMethodsSetupScreenState extends State<PaymentMethodsSetupScreen> {
               : provider.cashoutMethods;
 
           if (provider.loading) {
-            return const Center(child: CircularProgressIndicator());
+            return ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                // Section label skeleton
+                SkeletonLoader(width: 140, height: 16, borderRadius: BorderRadius.circular(4)),
+                const SizedBox(height: 12),
+                // Payment method card skeletons
+                ...List.generate(3, (_) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: SkeletonLoader(
+                    width: double.infinity,
+                    height: 72,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                )),
+                // Add new section skeleton
+                const SizedBox(height: 24),
+                SkeletonLoader(width: 140, height: 16, borderRadius: BorderRadius.circular(4)),
+                const SizedBox(height: 12),
+                // Provider card skeletons
+                ...List.generate(2, (_) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: SkeletonLoader(
+                    width: double.infinity,
+                    height: 64,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                )),
+              ],
+            );
           }
 
           if (provider.error != null) {

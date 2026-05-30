@@ -1,7 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../config/app_theme.dart';
+import '../../models/subscription.dart';
 import '../../providers/subscription_provider.dart';
+
+String _subscriptionStatusToString(SubscriptionStatus status) {
+  switch (status) {
+    case SubscriptionStatus.ACTIVE:
+      return 'ACTIVE';
+    case SubscriptionStatus.EXPIRED:
+      return 'EXPIRED';
+    case SubscriptionStatus.CANCELLED:
+      return 'CANCELLED';
+    case SubscriptionStatus.PENDING_PAYMENT:
+      return 'PENDING_PAYMENT';
+    case SubscriptionStatus.PAYMENT_FAILED:
+      return 'PAYMENT_FAILED';
+  }
+}
 
 class ManageSubscriptionScreen extends StatefulWidget {
   const ManageSubscriptionScreen({super.key});
@@ -148,7 +164,7 @@ class _ManageSubscriptionScreenState extends State<ManageSubscriptionScreen> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  subscription.status.name,
+                  _subscriptionStatusToString(subscription.status),
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,

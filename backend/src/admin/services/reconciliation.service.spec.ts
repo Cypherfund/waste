@@ -231,6 +231,31 @@ describe('ReconciliationService', () => {
       expect(unreconciled[0].amount).toBe(1000);
     });
 
+    it('should not use MIN() on UUID columns in duplicate credits query', async () => {
+      const fromDate = new Date('2024-01-01');
+      const toDate = new Date('2024-01-31');
+
+      dataSource.query.mockResolvedValue([]);
+
+      await service.getUnreconciledItems(fromDate, toDate);
+
+      // Find the duplicate credits query call
+      const duplicateCreditsQuery = dataSource.query.mock.calls.find((call: any) => 
+        call[0].includes('wallet_ledger') && 
+        call[0].includes('GROUP BY') &&
+        call[0].includes('payment_transaction_id')
+      );
+
+      expect(duplicateCreditsQuery).toBeDefined();
+      const query = duplicateCreditsQuery[0];
+
+      // Ensure MIN() is not used on user_id (UUID column)
+      expect(query).not.toMatch(/MIN\s*\(\s*wl\.user_id\s*\)/i);
+      
+      // Ensure user_id is in GROUP BY clause
+      expect(query).toMatch(/GROUP BY.*wl\.user_id/i);
+    });
+
     it('should return empty array when no unreconciled items', async () => {
       const fromDate = new Date('2024-01-01');
       const toDate = new Date('2024-01-31');

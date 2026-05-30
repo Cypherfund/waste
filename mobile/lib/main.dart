@@ -449,11 +449,12 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
         },
         routes: {
           '/login': (context) => const LoginScreen(),
+          '/register': (context) => const RegisterScreen(),
           '/add-account': (context) => LoginScreen(
             addAccountMode: true,
             onSignUp: null,
           ),
-          // '/register' is handled by onGenerateRoute to support query parameters
+          // '/register' is also handled by onGenerateRoute to support query parameters on web
           '/home': (context) => const HomeDashboardScreen(),
           '/bookings': (context) => const BookingsListScreen(),
           '/wallet': (context) => const WalletScreen(),

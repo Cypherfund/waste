@@ -1,4 +1,22 @@
 enum SubscriptionStatus { ACTIVE, EXPIRED, CANCELLED, PENDING_PAYMENT, PAYMENT_FAILED }
+
+extension SubscriptionStatusExtension on SubscriptionStatus {
+  String toDisplayString() {
+    switch (this) {
+      case SubscriptionStatus.ACTIVE:
+        return 'ACTIVE';
+      case SubscriptionStatus.EXPIRED:
+        return 'EXPIRED';
+      case SubscriptionStatus.CANCELLED:
+        return 'CANCELLED';
+      case SubscriptionStatus.PENDING_PAYMENT:
+        return 'PENDING_PAYMENT';
+      case SubscriptionStatus.PAYMENT_FAILED:
+        return 'PAYMENT_FAILED';
+    }
+  }
+}
+
 enum PricingType { SUBSCRIPTION, PAY_PER_PICKUP }
 
 class SubscriptionPlan {

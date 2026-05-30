@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../providers/auth_provider.dart';
 import '../providers/marketer_provider.dart';
 import 'screens/marketer_dashboard_screen.dart';
 import 'screens/marketer_leads_screen.dart';
@@ -45,6 +46,16 @@ class _MarketerShellState extends State<MarketerShell> {
   @override
   Widget build(BuildContext context) {
     final unread = context.watch<MarketerProvider>().unreadCount;
+    final auth = context.watch<AuthProvider>();
+
+    // Navigate to login if user is logged out
+    if (auth.status == AuthStatus.unauthenticated) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+        }
+      });
+    }
 
     return Scaffold(
       body: IndexedStack(
