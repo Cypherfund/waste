@@ -6,6 +6,7 @@ import '../../models/job.dart';
 import '../../providers/job_provider.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/job_status_badge.dart';
+import '../../widgets/skeleton_loader.dart';
 
 class JobsListScreen extends StatefulWidget {
   const JobsListScreen({super.key});
@@ -138,9 +139,7 @@ class _JobList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isLoading && jobs.isEmpty) {
-      return const Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
-      );
+      return _buildSkeletonLoader();
     }
 
     if (error != null && jobs.isEmpty) {
@@ -281,5 +280,41 @@ class _JobCard extends StatelessWidget {
     } catch (_) {
       return dateStr;
     }
+  }
+
+  Widget _buildSkeletonLoader() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: 5,
+      itemBuilder: (context, index) {
+        return AppCard(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  SkeletonLoader(width: 100, height: 16, borderRadius: BorderRadius.circular(4)),
+                  SkeletonLoader(width: 60, height: 16, borderRadius: BorderRadius.circular(4)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              SkeletonLoader(width: double.infinity, height: 14, borderRadius: BorderRadius.circular(4)),
+              const SizedBox(height: 8),
+              SkeletonLoader(width: 150, height: 14, borderRadius: BorderRadius.circular(4)),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  SkeletonLoader(width: 40, height: 40, borderRadius: BorderRadius.circular(20)),
+                  const SizedBox(width: 12),
+                  SkeletonLoader(width: 100, height: 14, borderRadius: BorderRadius.circular(4)),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }

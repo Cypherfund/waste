@@ -6,6 +6,7 @@ import '../../../../config/app_theme.dart';
 import '../../../../config/app_config.dart';
 import '../../../../models/job.dart';
 import '../../../../providers/job_provider.dart';
+import '../../../../widgets/skeleton_loader.dart';
 import '../widgets/payment_timeline.dart';
 
 class BookingDetailsScreen extends StatefulWidget {
@@ -96,7 +97,7 @@ Booked via KmerTrash
           final job = jobProvider.getJob(widget.jobId);
           
           if (job == null) {
-            return const Center(child: CircularProgressIndicator());
+            return _buildSkeletonLoader();
           }
           
           return RefreshIndicator(
@@ -1407,5 +1408,68 @@ Booked via KmerTrash
       case JobStatus.paymentFailed:
         return 'Payment verification failed. Please contact support.';
     }
+  }
+
+  Widget _buildSkeletonLoader() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Status Header skeleton
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonLoader(width: 120, height: 20, borderRadius: BorderRadius.circular(4)),
+                const SizedBox(height: 8),
+                SkeletonLoader(width: 200, height: 14, borderRadius: BorderRadius.circular(4)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Booking ID Card skeleton
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonLoader(width: 100, height: 16, borderRadius: BorderRadius.circular(4)),
+                const SizedBox(height: 12),
+                SkeletonLoader(width: 150, height: 14, borderRadius: BorderRadius.circular(4)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          // Pickup Details skeleton
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonLoader(width: 80, height: 16, borderRadius: BorderRadius.circular(4)),
+                const SizedBox(height: 12),
+                SkeletonLoader(width: double.infinity, height: 14, borderRadius: BorderRadius.circular(4)),
+                const SizedBox(height: 8),
+                SkeletonLoader(width: double.infinity, height: 14, borderRadius: BorderRadius.circular(4)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

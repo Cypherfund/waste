@@ -32,9 +32,29 @@ class NotificationsProvider extends ChangeNotifier {
   }
 
   Future<void> markAsRead(String id) async {
+    final idx = _notifications.indexWhere((n) => n.id == id);
+    if (idx != -1) {
+      final old = _notifications[idx];
+      // Update UI immediately (optimistic update)
+      _notifications[idx] = AppNotification(
+        id: old.id,
+        type: old.type,
+        title: old.title,
+        body: old.body,
+        data: old.data,
+        isRead: true,
+        sentAt: old.sentAt,
+        readAt: DateTime.now(),
+        createdAt: old.createdAt,
+      );
+      notifyListeners();
+    }
+    
+    // Send API request in background
     try {
       await _api.markAsRead(id);
-      final idx = _notifications.indexWhere((n) => n.id == id);
+    } catch (_) {
+      // Revert on error
       if (idx != -1) {
         final old = _notifications[idx];
         _notifications[idx] = AppNotification(
@@ -43,32 +63,40 @@ class NotificationsProvider extends ChangeNotifier {
           title: old.title,
           body: old.body,
           data: old.data,
-          isRead: true,
+          isRead: false,
           sentAt: old.sentAt,
-          readAt: DateTime.now(),
+          readAt: null,
           createdAt: old.createdAt,
         );
         notifyListeners();
       }
-    } catch (_) {}
+    }
   }
 
   Future<void> markAllAsRead() async {
+    // Update UI immediately (optimistic update)
+    final oldNotifications = List<AppNotification>.from(_notifications);
+    _notifications = _notifications.map((n) => AppNotification(
+          id: n.id,
+          type: n.type,
+          title: n.title,
+          body: n.body,
+          data: n.data,
+          isRead: true,
+          sentAt: n.sentAt,
+          readAt: n.readAt ?? DateTime.now(),
+          createdAt: n.createdAt,
+        )).toList();
+    notifyListeners();
+    
+    // Send API request in background
     try {
       await _api.markAllAsRead();
-      _notifications = _notifications.map((n) => AppNotification(
-            id: n.id,
-            type: n.type,
-            title: n.title,
-            body: n.body,
-            data: n.data,
-            isRead: true,
-            sentAt: n.sentAt,
-            readAt: n.readAt ?? DateTime.now(),
-            createdAt: n.createdAt,
-          )).toList();
+    } catch (_) {
+      // Revert on error
+      _notifications = oldNotifications;
       notifyListeners();
-    } catch (_) {}
+    }
   }
 
   void reset() {

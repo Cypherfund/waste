@@ -97,6 +97,7 @@ class PaymentFlowProvider extends ChangeNotifier {
     this.locationLng = locationLng;
     if (pickupType != null) this.pickupType = pickupType;
     pricingQuote = null; // reset so fresh pricing is synced from SubscriptionProvider
+    createdJob = null; // reset to prevent using old job from previous booking
     notifyListeners();
   }
 

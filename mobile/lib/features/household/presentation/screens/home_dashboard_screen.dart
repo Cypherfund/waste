@@ -9,6 +9,7 @@ import '../../../../config/app_theme.dart';
 import '../../../../providers/auth_provider.dart';
 import '../../../../providers/job_provider.dart';
 import '../../../../providers/subscription_provider.dart';
+import '../../../../providers/notifications_provider.dart';
 import '../../../../models/job.dart';
 import '../../../../widgets/bottom_navigation.dart';
 import '../../../../widgets/connectivity_dot.dart';
@@ -223,18 +224,26 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
           children: [
             const ConnectivityDot(),
             const SizedBox(width: 8),
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFFE5E7EB)),
-              ),
-              child: const Icon(
-                Icons.notifications_none_rounded,
-                size: 23,
-                color: Color(0xFF111827),
+            GestureDetector(
+              onTap: () {
+                // Mark all as read in background
+                context.read<NotificationsProvider>().markAllAsRead();
+                // Navigate to notifications screen
+                Navigator.pushNamed(context, '/notifications');
+              },
+              child: Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFFE5E7EB)),
+                ),
+                child: const Icon(
+                  Icons.notifications_none_rounded,
+                  size: 23,
+                  color: Color(0xFF111827),
+                ),
               ),
             ),
           ],

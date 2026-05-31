@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../config/app_theme.dart';
 import '../../../shared/payment_methods_setup_screen.dart';
+import '../../../../models/job.dart';
+import '../../../../providers/job_provider.dart';
 import '../../../../providers/subscription_provider.dart';
 import '../../../../providers/user_payment_methods_provider.dart';
 import '../../../../services/api/wallet_api.dart';
@@ -23,12 +25,14 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
   bool _hideCash = false;
   String? _subtitle;
   bool _isCashOnFirstPickup = false;
+  bool _isProcessing = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadPaymentMethods();
+      _loadWalletBalance();
       final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
       setState(() {
         _hideCash = (args?['hideCash'] as bool?) ?? false;
@@ -41,6 +45,11 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
   void _loadPaymentMethods() {
     final userPaymentMethodsProvider = context.read<UserPaymentMethodsProvider>();
     userPaymentMethodsProvider.loadMethods(usage: 'CASHIN');
+  }
+
+  void _loadWalletBalance() {
+    final subProvider = context.read<SubscriptionProvider>();
+    subProvider.loadWalletBalance();
   }
 
   @override
@@ -130,11 +139,10 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
 
                               const SizedBox(height: 24),
 
-                              // Cash option (hidden for wallet top-up and subscription contexts)
+                              // Cash option (hidden for wallet top-up context)
                               if ((appConfig?.cashEnabled ?? false) &&
                                   !_hideCash &&
-                                  !flowProvider.isWalletTopUpContext &&
-                                  !flowProvider.isSubscriptionContext) ...[
+                                  !flowProvider.isWalletTopUpContext) ...[
                                 Text(
                                   'Or pay with',
                                   style: TextStyle(
@@ -244,7 +252,7 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
     final isSelected = flowProvider.selectedProviderId == 'WALLET';
 
     return GestureDetector(
-      onTap: isSufficient ? () => _payWithWallet(flowProvider, subProvider, amount) : null,
+      onTap: isSufficient && !_isProcessing ? () => _payWithWallet(flowProvider, subProvider, amount) : null,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(16),
@@ -284,7 +292,16 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
                   ),
                 ),
                 const Spacer(),
-                if (isSufficient)
+                if (_isProcessing)
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Color(0xFF10B981),
+                    ),
+                  )
+                else if (isSufficient)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
@@ -343,7 +360,7 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
               ),
               const SizedBox(height: 12),
               GestureDetector(
-                onTap: () => Navigator.pushNamed(context, '/top-up-wallet'),
+                onTap: () => Navigator.pushNamed(context, '/top-up'),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   decoration: BoxDecoration(
@@ -371,27 +388,34 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  Text(
-                    'Balance: ${walletBalance.toStringAsFixed(0)} XAF',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade600,
+                  Expanded(
+                    child: Text(
+                      'Balance: ${walletBalance.toStringAsFixed(0)} XAF',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Text(
-                    'Need: ${(amount - walletBalance).toStringAsFixed(0)} XAF more',
-                    style: TextStyle(
-                      fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFFEF4444),
+                  Expanded(
+                    child: Text(
+                      'Need: ${(amount - walletBalance).toStringAsFixed(0)} XAF more',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFFEF4444),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.right,
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
               GestureDetector(
-                onTap: () => Navigator.pushNamed(context, '/top-up-wallet'),
+                onTap: () => Navigator.pushNamed(context, '/top-up'),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   decoration: BoxDecoration(
@@ -475,15 +499,28 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
 
   Widget _buildCashOption(PaymentFlowProvider flowProvider) {
     final isSelected = flowProvider.selectedProviderId == 'CASH';
+    final subProvider = context.read<SubscriptionProvider>();
+    final quote = subProvider.pricingQuote;
+    
+    // Check if this is a subscription context (no active subscription or paying for subscription)
+    final isSubscriptionContext = flowProvider.pickupType == 'monthly' || 
+                                  (quote != null && quote.planName != null);
 
     return PaymentMethodCard(
       providerId: 'CASH',
-      providerName: 'Cash to Collector',
+      providerName: isSubscriptionContext ? 'Cash on First Pickup' : 'Cash to Collector',
       mode: PaymentProviderMode.cash,
       isSelected: isSelected,
       onTap: () {
         flowProvider.selectCash();
-        Navigator.pushNamed(context, '/cash-confirmation');
+        
+        if (isSubscriptionContext) {
+          // Navigate to subscription plans with cash on first pickup flag
+          Navigator.pushNamed(context, '/subscription-plans', arguments: {'cashOnFirstPickup': true});
+        } else {
+          // Regular cash payment for one-time pickup
+          Navigator.pushNamed(context, '/cash-confirmation');
+        }
       },
       customIcon: Icons.payments_outlined,
     );
@@ -591,14 +628,14 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
     SubscriptionProvider subProvider,
     double amount,
   ) async {
-    // Show loading indicator
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(),
-      ),
-    );
+    setState(() => _isProcessing = true);
+
+    // Clear any previously selected payment method to deselect mobile money/cash
+    flowProvider.selectedProviderId = null;
+    flowProvider.selectedProviderName = null;
+    flowProvider.selectedProviderMode = null;
+    flowProvider.selectedPaymentMethodCode = null;
+    flowProvider.notifyListeners();
 
     try {
       final walletApi = context.read<WalletApi>();
@@ -612,11 +649,11 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
 
         await walletApi.paySubscriptionWithWallet(planId: planId);
 
-        Navigator.pop(context); // Close loading
         Navigator.pushNamed(
           context,
           '/payment-result',
           arguments: {
+            'resultType': PaymentResultType.success,
             'isSuccess': true,
             'isSubscription': true,
             'title': 'Subscription Activated',
@@ -624,39 +661,65 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
           },
         );
       } else {
-        // Job payment with wallet
-        final job = flowProvider.createdJob;
+        // Job payment with wallet - create job first if it doesn't exist
+        Job? job = flowProvider.createdJob;
         if (job == null) {
-          throw Exception('Job not found in payment flow');
+          final jobProvider = context.read<JobProvider>();
+          job = await jobProvider.createJob(
+            scheduledDate: flowProvider.scheduledDate!,
+            scheduledTime: flowProvider.scheduledTime!,
+            locationAddress: flowProvider.fullAddress,
+            locationLat: flowProvider.locationLat,
+            locationLng: flowProvider.locationLng,
+            notes: 'Paid with wallet',
+            paymentMode: null,
+            paymentMethod: null,
+            paymentRef: null,
+            paymentProofUrl: null,
+          );
+          
+          if (job == null) {
+            throw Exception('Failed to create job');
+          }
+          
+          flowProvider.setCreatedJob(job);
         }
 
         await walletApi.payJobWithWallet(jobId: job.id);
 
-        Navigator.pop(context); // Close loading
         Navigator.pushNamed(
           context,
           '/payment-result',
           arguments: {
+            'resultType': PaymentResultType.success,
             'isSuccess': true,
             'isJob': true,
             'title': 'Payment Successful',
             'message': 'Your payment has been processed successfully.',
+            'job': job,
           },
         );
       }
     } catch (e) {
-      Navigator.pop(context); // Close loading
+      // Show error dialog with more specific message
+      String errorMessage;
+      if (e.toString().contains('INSUFFICIENT_WALLET_BALANCE')) {
+        errorMessage = 'Insufficient wallet balance. Please top up your wallet and try again.';
+      } else if (e.toString().contains('Job is already paid')) {
+        errorMessage = 'This job has already been paid for. Please check your bookings.';
+      } else if (e.toString().contains('Job not found')) {
+        errorMessage = 'Job not found. Please try scheduling again.';
+      } else if (e.toString().contains('Subscription plan ID not found')) {
+        errorMessage = 'Subscription plan not found. Please try again.';
+      } else {
+        errorMessage = 'Payment failed. Please try again.';
+      }
 
-      // Show error dialog
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Payment Failed'),
-          content: Text(
-            e.toString().contains('INSUFFICIENT_WALLET_BALANCE')
-                ? 'Insufficient wallet balance. Please top up your wallet and try again.'
-                : 'Payment failed. Please try again.',
-          ),
+          content: Text(errorMessage),
           actions: [
             TextButton(
               onPressed: () {
@@ -669,6 +732,10 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
           ],
         ),
       );
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
     }
   }
 

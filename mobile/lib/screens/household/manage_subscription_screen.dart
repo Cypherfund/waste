@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../config/app_theme.dart';
 import '../../models/subscription.dart';
 import '../../providers/subscription_provider.dart';
+import '../../widgets/skeleton_loader.dart';
 
 String _subscriptionStatusToString(SubscriptionStatus status) {
   switch (status) {
@@ -65,7 +66,7 @@ class _ManageSubscriptionScreenState extends State<ManageSubscriptionScreen> {
         centerTitle: true,
       ),
       body: sub.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? _buildSkeletonLoader()
           : subscription == null || !subscription.isActive
               ? _buildNoSubscription()
               : ListView(
@@ -406,5 +407,50 @@ class _ManageSubscriptionScreenState extends State<ManageSubscriptionScreen> {
             backgroundColor: Colors.red.shade600),
       );
     }
+  }
+
+  Widget _buildSkeletonLoader() {
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        // Status Card skeleton
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SkeletonLoader(width: 100, height: 16, borderRadius: BorderRadius.circular(4)),
+              const SizedBox(height: 12),
+              SkeletonLoader(width: 150, height: 24, borderRadius: BorderRadius.circular(4)),
+              const SizedBox(height: 8),
+              SkeletonLoader(width: 200, height: 14, borderRadius: BorderRadius.circular(4)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        // Pickup Usage skeleton
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SkeletonLoader(width: 120, height: 16, borderRadius: BorderRadius.circular(4)),
+              const SizedBox(height: 16),
+              SkeletonLoader(width: double.infinity, height: 8, borderRadius: BorderRadius.circular(4)),
+              const SizedBox(height: 8),
+              SkeletonLoader(width: double.infinity, height: 8, borderRadius: BorderRadius.circular(4)),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }

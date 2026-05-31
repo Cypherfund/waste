@@ -7,6 +7,7 @@ import '../../widgets/app_card.dart';
 import '../../widgets/section_header.dart';
 import '../../widgets/job_status_badge.dart';
 import '../../widgets/sync_status_banner.dart';
+import '../../widgets/skeleton_loader.dart';
 import '../../models/job.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -67,12 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: AppSpacing.sm),
 
                   if (jobsProvider.isLoading && activeJobs.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.all(32),
-                      child: Center(
-                        child: CircularProgressIndicator(color: AppColors.primary),
-                      ),
-                    )
+                    _buildSkeletonLoader()
                   else if (activeJobs.isEmpty)
                     _buildEmptyState()
                   else
@@ -439,6 +435,47 @@ class _ActiveJobTile extends StatelessWidget {
           JobStatusBadge(status: job.status),
         ],
       ),
+    );
+  }
+
+  Widget _buildSkeletonLoader() {
+    return ListView.builder(
+      padding: EdgeInsets.zero,
+      physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
+      itemCount: 3,
+      itemBuilder: (context, index) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+          child: AppCard(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    SkeletonLoader(width: 100, height: 16, borderRadius: BorderRadius.circular(4)),
+                    SkeletonLoader(width: 60, height: 16, borderRadius: BorderRadius.circular(4)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                SkeletonLoader(width: double.infinity, height: 14, borderRadius: BorderRadius.circular(4)),
+                const SizedBox(height: 8),
+                SkeletonLoader(width: 150, height: 14, borderRadius: BorderRadius.circular(4)),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    SkeletonLoader(width: 40, height: 40, borderRadius: BorderRadius.circular(20)),
+                    const SizedBox(width: 12),
+                    SkeletonLoader(width: 100, height: 14, borderRadius: BorderRadius.circular(4)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

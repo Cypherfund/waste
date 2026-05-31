@@ -4,6 +4,7 @@ import '../../models/marketer_models.dart';
 import '../../providers/marketer_provider.dart';
 import 'create_lead_screen.dart';
 import '../../../../widgets/connectivity_dot.dart';
+import '../../../../widgets/skeleton_loader.dart';
 
 class MarketerLeadsScreen extends StatefulWidget {
   const MarketerLeadsScreen({super.key});
@@ -75,7 +76,7 @@ class _MarketerLeadsScreenState extends State<MarketerLeadsScreen> {
       body: Consumer<MarketerProvider>(
         builder: (context, provider, _) {
           if (provider.loading && provider.leads.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
+            return _buildSkeletonLoader();
           }
 
           if (provider.leads.isEmpty) {
@@ -106,6 +107,31 @@ class _MarketerLeadsScreenState extends State<MarketerLeadsScreen> {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildSkeletonLoader() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(12),
+      itemCount: 5,
+      itemBuilder: (context, index) {
+        return Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ListTile(
+            leading: SkeletonLoader(width: 48, height: 48, borderRadius: BorderRadius.circular(24)),
+            title: SkeletonLoader(width: 150, height: 16, borderRadius: BorderRadius.circular(4)),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 8),
+                SkeletonLoader(width: 100, height: 14, borderRadius: BorderRadius.circular(4)),
+                const SizedBox(height: 4),
+                SkeletonLoader(width: 80, height: 12, borderRadius: BorderRadius.circular(4)),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

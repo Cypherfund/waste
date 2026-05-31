@@ -64,6 +64,17 @@ class CollectorJobsProvider extends ChangeNotifier {
           (j) => j.status == JobStatus.assigned || j.status == JobStatus.inProgress)
       .toList();
 
+  List<Job> get todayJobs {
+    final today = DateTime.now();
+    return _jobs.where((j) {
+      final jobDate = DateTime.tryParse(j.scheduledDate);
+      if (jobDate == null) return false;
+      return jobDate.year == today.year &&
+          jobDate.month == today.month &&
+          jobDate.day == today.day;
+    }).toList();
+  }
+
   Job? getJobById(String id) {
     try {
       return _jobs.firstWhere((j) => j.id == id);

@@ -5,6 +5,7 @@ import '../../providers/marketer_provider.dart';
 import '../../../../providers/user_payment_methods_provider.dart';
 import '../../../../services/api/wallet_api.dart';
 import '../../../../widgets/connectivity_dot.dart';
+import '../../../../widgets/skeleton_loader.dart';
 
 class MarketerCommissionsScreen extends StatefulWidget {
   const MarketerCommissionsScreen({super.key});
@@ -69,7 +70,7 @@ class _CommissionsTab extends StatelessWidget {
     return Consumer<MarketerProvider>(
       builder: (context, provider, _) {
         if (provider.loading && provider.commissions.isEmpty) {
-          return const Center(child: CircularProgressIndicator());
+          return _buildCommissionsSkeleton();
         }
 
         if (provider.commissions.isEmpty) {
@@ -85,6 +86,31 @@ class _CommissionsTab extends StatelessWidget {
               final c = provider.commissions[index];
               return _CommissionCard(commission: c);
             },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCommissionsSkeleton() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(12),
+      itemCount: 5,
+      itemBuilder: (context, index) {
+        return Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ListTile(
+            leading: SkeletonLoader(width: 48, height: 48, borderRadius: BorderRadius.circular(24)),
+            title: SkeletonLoader(width: 120, height: 16, borderRadius: BorderRadius.circular(4)),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 8),
+                SkeletonLoader(width: 100, height: 14, borderRadius: BorderRadius.circular(4)),
+                const SizedBox(height: 4),
+                SkeletonLoader(width: 80, height: 12, borderRadius: BorderRadius.circular(4)),
+              ],
+            ),
           ),
         );
       },
@@ -145,7 +171,7 @@ class _PayoutsTab extends StatelessWidget {
     return Consumer<MarketerProvider>(
       builder: (context, provider, _) {
         if (provider.loading && provider.payouts.isEmpty) {
-          return const Center(child: CircularProgressIndicator());
+          return _buildPayoutsSkeleton();
         }
 
         return Column(
@@ -184,6 +210,34 @@ class _PayoutsTab extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildPayoutsSkeleton() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: SkeletonLoader(width: double.infinity, height: 48, borderRadius: BorderRadius.circular(8)),
+        ),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            itemCount: 5,
+            itemBuilder: (context, index) {
+              return Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  leading: SkeletonLoader(width: 48, height: 48, borderRadius: BorderRadius.circular(24)),
+                  title: SkeletonLoader(width: 100, height: 16, borderRadius: BorderRadius.circular(4)),
+                  subtitle: SkeletonLoader(width: 120, height: 14, borderRadius: BorderRadius.circular(4)),
+                  trailing: SkeletonLoader(width: 60, height: 24, borderRadius: BorderRadius.circular(4)),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 

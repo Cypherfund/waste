@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../providers/notifications_provider.dart';
 import '../../../../services/api/notifications_api.dart';
+import '../../../../widgets/skeleton_loader.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -58,7 +59,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ],
       ),
       body: provider.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? _buildSkeletonLoader()
           : provider.error != null && provider.notifications.isEmpty
               ? _buildErrorState(provider)
               : provider.notifications.isEmpty
@@ -75,6 +76,59 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         },
                       ),
                     ),
+    );
+  }
+
+  Widget _buildSkeletonLoader() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(20),
+      itemCount: 5,
+      itemBuilder: (context, index) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SkeletonLoader(
+                width: 40,
+                height: 40,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SkeletonLoader(
+                      width: double.infinity,
+                      height: 16,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    const SizedBox(height: 8),
+                    SkeletonLoader(
+                      width: double.infinity,
+                      height: 14,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    const SizedBox(height: 6),
+                    SkeletonLoader(
+                      width: 80,
+                      height: 12,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

@@ -91,7 +91,8 @@ class _CollectorHomeTabState extends State<CollectorHomeTab>
                 const SizedBox(height: 16),
                 _buildTodayOverview(earnings),
                 const SizedBox(height: 14),
-                _buildNoActiveJobCard(),
+                if (jobs.todayJobs.length > 1) _buildTodaySchedule(jobs),
+                if (jobs.todayJobs.length <= 1) _buildNoActiveJobCard(),
                 const SizedBox(height: 14),
                 _buildTodayGoalCard(),
               ],
@@ -102,6 +103,8 @@ class _CollectorHomeTabState extends State<CollectorHomeTab>
                 const SizedBox(height: 16),
                 _buildTodayOverview(earnings),
                 const SizedBox(height: 14),
+                if (jobs.todayJobs.length > 1) _buildTodaySchedule(jobs),
+                const SizedBox(height: 14),
                 _buildTodayGoalCard(),
               ],
 
@@ -110,6 +113,8 @@ class _CollectorHomeTabState extends State<CollectorHomeTab>
                 _buildActiveJobCard(activeJob),
                 const SizedBox(height: 16),
                 _buildTodayOverview(earnings),
+                const SizedBox(height: 14),
+                if (jobs.todayJobs.length > 1) _buildTodaySchedule(jobs),
                 const SizedBox(height: 14),
                 _buildNextJobCard(jobs, activeJob),
                 const SizedBox(height: 14),
@@ -818,6 +823,206 @@ class _CollectorHomeTabState extends State<CollectorHomeTab>
     String jobId,
   ) async {
     await provider.rejectJob(jobId);
+  }
+
+  Widget _buildTodaySchedule(CollectorJobsProvider jobs) {
+    final todayJobs = jobs.todayJobs;
+    if (todayJobs.isEmpty) return const SizedBox.shrink();
+
+    // Sort jobs by time
+    final sortedJobs = List<Job>.from(todayJobs);
+    sortedJobs.sort((a, b) => a.scheduledTime.compareTo(b.scheduledTime));
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.calendar_today, size: 18, color: Color(0xFF6B7280)),
+              const SizedBox(width: 8),
+              Text(
+                'Today\'s Schedule',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF111827),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${todayJobs.length} pickups',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...sortedJobs.asMap().entries.map((entry) {
+            final index = entry.key;
+            final job = entry.value;
+            final isLast = index == sortedJobs.length - 1;
+            return _buildTimelineItem(job, isLast);
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimelineItem(Job job, bool isLast) {
+    final isCompleted = job.status == JobStatus.completed ||
+        job.status == JobStatus.validated ||
+        job.status == JobStatus.rated;
+    final isActive = job.status == JobStatus.inProgress;
+    final isUpcoming = job.status == JobStatus.assigned;
+
+    Color statusColor;
+    if (isActive) {
+      statusColor = AppColors.primary;
+    } else if (isCompleted) {
+      statusColor = Colors.green;
+    } else {
+      statusColor = Colors.grey;
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Column(
+          children: [
+            Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: statusColor,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2),
+              ),
+            ),
+            if (!isLast)
+              Container(
+                width: 2,
+                height: 60,
+                color: statusColor.withValues(alpha: 0.3),
+              ),
+          ],
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Container(
+            margin: EdgeInsets.only(bottom: isLast ? 0 : 16),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isActive
+                  ? AppColors.primary.withValues(alpha: 0.05)
+                  : isCompleted
+                      ? Colors.green.withValues(alpha: 0.05)
+                      : Colors.grey.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      job.scheduledTime,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: statusColor,
+                      ),
+                    ),
+                    _buildJobStatusBadge(job.status),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  job.locationAddress,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF374151),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (job.householdName != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    job.householdName!,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF6B7280),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildJobStatusBadge(JobStatus status) {
+    String label;
+    Color color;
+    
+    switch (status) {
+      case JobStatus.assigned:
+        label = 'Upcoming';
+        color = Colors.grey;
+        break;
+      case JobStatus.inProgress:
+        label = 'Active';
+        color = AppColors.primary;
+        break;
+      case JobStatus.completed:
+      case JobStatus.validated:
+      case JobStatus.rated:
+        label = 'Done';
+        color = Colors.green;
+        break;
+      default:
+        label = '';
+        color = Colors.grey;
+    }
+
+    if (label.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
+    );
   }
 }
 

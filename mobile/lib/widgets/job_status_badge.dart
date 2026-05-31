@@ -34,7 +34,7 @@ class JobStatusBadge extends StatelessWidget {
       case JobStatus.paymentPending:
         return 'Payment Pending';
       case JobStatus.requested:
-        return 'Requested';
+        return 'Searching';
       case JobStatus.assigned:
         return 'Assigned';
       case JobStatus.inProgress:

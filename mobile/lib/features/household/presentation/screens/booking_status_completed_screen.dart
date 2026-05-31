@@ -687,12 +687,8 @@ class _BookingStatusCompletedScreenState extends State<BookingStatusCompletedScr
     if (mounted) Navigator.pop(context);
     
     if (success && mounted) {
-      // Navigate to rating screen
-      Navigator.pushReplacementNamed(
-        context,
-        '/rate-collector',
-        arguments: widget.jobId,
-      );
+      // Ask user if they want to rate now
+      _showRateDialog(widget.jobId);
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -701,6 +697,46 @@ class _BookingStatusCompletedScreenState extends State<BookingStatusCompletedScr
         ),
       );
     }
+  }
+  
+  void _showRateDialog(String jobId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Text('Pickup Confirmed!'),
+        content: const Text(
+          'Would you like to rate the collector now?',
+          style: TextStyle(fontSize: 16),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                '/home',
+                (route) => false,
+              );
+            },
+            child: const Text('Skip'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushReplacementNamed(
+                context,
+                '/rate-collector',
+                arguments: jobId,
+              );
+            },
+            child: const Text('Rate Now'),
+          ),
+        ],
+      ),
+    );
   }
   
   void _showDisputeDialog() {

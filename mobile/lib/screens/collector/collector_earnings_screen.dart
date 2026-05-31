@@ -6,6 +6,7 @@ import '../../providers/collector_earnings_provider.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/section_header.dart';
 import '../../widgets/error_banner.dart';
+import '../../widgets/skeleton_loader.dart';
 
 class CollectorEarningsScreen extends StatefulWidget {
   const CollectorEarningsScreen({super.key});
@@ -120,12 +121,7 @@ class _CollectorEarningsScreenState extends State<CollectorEarningsScreen> {
             ],
 
             if (provider.isLoading && provider.quickSummary == null)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(32),
-                  child: CircularProgressIndicator(color: AppColors.primary),
-                ),
-              ),
+              _buildSkeletonLoader(),
           ],
         ),
       ),
@@ -326,6 +322,44 @@ class _DetailChip extends StatelessWidget {
         style: AppTypography.overline.copyWith(
           color: AppColors.textPrimary,
         ),
+      ),
+    );
+  }
+
+  Widget _buildSkeletonLoader() {
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        children: [
+          // Quick summary skeleton
+          AppCard(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                SkeletonLoader(width: 100, height: 16, borderRadius: BorderRadius.circular(4)),
+                const SizedBox(height: 16),
+                SkeletonLoader(width: 150, height: 32, borderRadius: BorderRadius.circular(4)),
+                const SizedBox(height: 8),
+                SkeletonLoader(width: 120, height: 14, borderRadius: BorderRadius.circular(4)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          // Earnings card skeleton
+          AppCard(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonLoader(width: 80, height: 16, borderRadius: BorderRadius.circular(4)),
+                const SizedBox(height: 12),
+                SkeletonLoader(width: double.infinity, height: 14, borderRadius: BorderRadius.circular(4)),
+                const SizedBox(height: 8),
+                SkeletonLoader(width: 100, height: 14, borderRadius: BorderRadius.circular(4)),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

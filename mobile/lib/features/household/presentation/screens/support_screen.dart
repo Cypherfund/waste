@@ -62,7 +62,7 @@ class _SupportScreenState extends State<SupportScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Contact Options
-            _buildContactOptions(context),
+            _buildContactOptions(context, supportPhone, supportWhatsApp, supportEmail),
             
             const SizedBox(height: 32),
             
@@ -79,7 +79,7 @@ class _SupportScreenState extends State<SupportScreen> {
     );
   }
   
-  Widget _buildContactOptions(BuildContext context) {
+  Widget _buildContactOptions(BuildContext context, String supportPhone, String supportWhatsApp, String supportEmail) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

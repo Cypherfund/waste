@@ -6,8 +6,10 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:provider/provider.dart';
 
 import '../../../../config/app_theme.dart';
+import '../../../../providers/subscription_provider.dart';
 
 class ScheduleLocationScreen extends StatefulWidget {
   final Map<String, dynamic>? arguments;
@@ -42,6 +44,9 @@ class _ScheduleLocationScreenState extends State<ScheduleLocationScreen> {
   void initState() {
     super.initState();
     _getCurrentLocation();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<SubscriptionProvider>().loadWalletBalance();
+    });
   }
 
   @override

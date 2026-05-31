@@ -31,6 +31,8 @@ class _TopUpWalletScreenState extends State<TopUpWalletScreen> {
   @override
   void dispose() {
     _amountController.dispose();
+    // Clear wallet top-up context when user navigates back without completing
+    context.read<PaymentFlowProvider>().clearWalletTopUpContext();
     super.dispose();
   }
 

@@ -57,8 +57,13 @@ class _ScheduleDateTimeScreenState extends State<ScheduleDateTimeScreen> {
     _maxDate = _minDate.add(Duration(days: maxAdvanceDays));
 
     _selectedDate = _firstAvailableDate(_minDate);
-    _focusedMonth = DateTime(_selectedDate.year, _selectedDate.month);
+    _focusedMonth = DateTime(now.year, now.month); // Show current month initially
     _selectedTimeSlot = '08:00-10:00';
+
+    // Load wallet balance to ensure it's available when user reaches payment screen
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<SubscriptionProvider>().loadWalletBalance();
+    });
   }
 
   DateTime _firstAvailableDate(DateTime from) {

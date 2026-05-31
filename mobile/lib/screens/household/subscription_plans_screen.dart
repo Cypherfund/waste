@@ -4,6 +4,7 @@ import '../../config/app_theme.dart';
 import '../../providers/subscription_provider.dart';
 import '../../models/subscription.dart';
 import '../../features/household/providers/payment_flow_provider.dart';
+import '../../widgets/skeleton_loader.dart';
 
 class SubscriptionPlansScreen extends StatefulWidget {
   const SubscriptionPlansScreen({super.key});
@@ -361,6 +362,7 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
       );
     } else {
       // Normal subscription flow
+      flowProvider.clearWalletTopUpContext(); // Clear any previous top-up context
       flowProvider.setSubscriptionContext(
         plan.id,
         planPrice: plan.price.toDouble(),
@@ -369,7 +371,6 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
         context,
         '/choose-payment-method',
         arguments: {
-          'hideCash': true,
           'subtitle': 'for ${plan.name} subscription',
         },
       );
@@ -456,43 +457,15 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 120,
-              height: 20,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
+            SkeletonLoader(width: 120, height: 20, borderRadius: BorderRadius.circular(4)),
             const SizedBox(height: 8),
-            Container(
-              width: 80,
-              height: 16,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
+            SkeletonLoader(width: 80, height: 16, borderRadius: BorderRadius.circular(4)),
             const Spacer(),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  width: 60,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                Container(
-                  width: 100,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
+                SkeletonLoader(width: 60, height: 24, borderRadius: BorderRadius.circular(12)),
+                SkeletonLoader(width: 100, height: 32, borderRadius: BorderRadius.circular(16)),
               ],
             ),
           ],
@@ -517,33 +490,12 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 100,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
+                SkeletonLoader(width: 100, height: 16, borderRadius: BorderRadius.circular(4)),
                 const SizedBox(height: 4),
-                Container(
-                  width: 80,
-                  height: 14,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
+                SkeletonLoader(width: 80, height: 14, borderRadius: BorderRadius.circular(4)),
               ],
             ),
-            Container(
-              width: 80,
-              height: 28,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
+            SkeletonLoader(width: 80, height: 28, borderRadius: BorderRadius.circular(14)),
           ],
         ),
       ),
@@ -561,23 +513,9 @@ class _SubscriptionPlansScreenState extends State<SubscriptionPlansScreen> {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            Container(
-              width: 150,
-              height: 16,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
+            SkeletonLoader(width: 150, height: 16, borderRadius: BorderRadius.circular(4)),
             const Spacer(),
-            Container(
-              width: 80,
-              height: 20,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
+            SkeletonLoader(width: 80, height: 20, borderRadius: BorderRadius.circular(4)),
           ],
         ),
       ),
