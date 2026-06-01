@@ -227,7 +227,7 @@ class _OtpScreenState extends State<OtpScreen> {
 
             // Main Content
             Expanded(
-              child: Padding(
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -409,6 +409,7 @@ class _OtpScreenState extends State<OtpScreen> {
                         ),
                       ),
                     ],
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
