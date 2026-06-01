@@ -490,6 +490,9 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
                 mode: mode,
                 paymentMethodCode: method.paymentCode,
               );
+              if (mode == PaymentProviderMode.integrated) {
+                flowProvider.setPaymentPhone(method.accountNumber);
+              }
             },
           ),
         );
