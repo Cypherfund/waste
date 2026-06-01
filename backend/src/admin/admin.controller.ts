@@ -19,6 +19,7 @@ import { Request } from 'express';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { SystemCleanupService } from './services/system-cleanup.service';
+import { OtpService } from '../auth/otp.service';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UserRole } from '../common/enums/role.enum';
@@ -47,6 +48,7 @@ export class AdminController {
     private readonly countriesService: CountriesService,
     private readonly paymentService: PaymentService,
     private readonly systemCleanupService: SystemCleanupService,
+    private readonly otpService: OtpService,
   ) {}
 
   // ─── USERS ────────────────────────────────────────────────────
@@ -404,5 +406,18 @@ export class AdminController {
   @Get('system-cleanup/logs/:id')
   getCleanupLog(@Param('id', ParseUUIDPipe) id: string) {
     return this.systemCleanupService.getLog(id);
+  }
+
+  // ─── OTP LOOKUP (Support Tool) ─────────────────────────────────
+
+  @Get('support/otp')
+  async lookupOtp(@Query('phone') phone: string) {
+    const result = await this.otpService.getRecentOtp(phone);
+    return {
+      phone: result.phone,
+      otp: result.otp,
+      expiresInSeconds: result.ttl,
+      expiresInMinutes: Math.ceil(result.ttl / 60),
+    };
   }
 }

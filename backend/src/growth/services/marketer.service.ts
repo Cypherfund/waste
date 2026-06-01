@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, Logger, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -10,7 +10,7 @@ import {
 import { CreateMarketerDto, MarketerResponseDto } from '../dto';
 import { User } from '../../users/entities/user.entity';
 import { UserRole } from '../../common/enums/role.enum';
-import { SmsProvider } from '../../notifications/providers/sms.provider';
+import { SmsProvider, SMS_PROVIDER } from '../../notifications/providers/sms.provider';
 import { EmailProvider } from '../../notifications/providers/email.provider';
 import * as bcrypt from 'bcrypt';
 
@@ -28,6 +28,7 @@ export class MarketerService {
     private readonly schemeRepo: Repository<CommissionScheme>,
     @InjectRepository(MarketerSchemeAssignment)
     private readonly assignmentRepo: Repository<MarketerSchemeAssignment>,
+    @Inject(SMS_PROVIDER)
     private readonly smsProvider: SmsProvider,
     private readonly emailProvider: EmailProvider,
   ) {}

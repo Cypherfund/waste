@@ -4,7 +4,7 @@ import { useAsync } from '../hooks/useAsync';
 import Spinner from '../components/Spinner';
 import ErrorBox from '../components/ErrorBox';
 import type { SystemConfig } from '../types';
-import { Save, Check } from 'lucide-react';
+import { Save, Check, AlertTriangle } from 'lucide-react';
 
 export default function ConfigPage() {
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -115,16 +115,28 @@ export default function ConfigPage() {
                     </td>
                     <td className="px-4 py-3">
                       {isEditing ? (
-                        <input
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          className="w-full rounded border px-2 py-1 text-sm"
-                          autoFocus
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleSave(c.key);
-                            if (e.key === 'Escape') setEditingKey(null);
-                          }}
-                        />
+                        <div>
+                          <input
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            className="w-full rounded border px-2 py-1 text-sm"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSave(c.key);
+                              if (e.key === 'Escape') setEditingKey(null);
+                            }}
+                          />
+                          {c.key === 'otp.dev_mode_display_enabled' && (
+                            <div className="mt-2 flex items-start gap-2 rounded bg-red-50 p-2 text-xs text-red-700">
+                              <AlertTriangle size={14} className="mt-0.5 flex-shrink-0" />
+                              <div>
+                                <p className="font-medium">Security Warning</p>
+                                <p>This exposes OTP codes in API responses and mobile screens.</p>
+                                <p>Only enable in development/staging. Ignored in production.</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       ) : (
                         <span className="font-mono text-sm text-gray-700">
                           {c.value}

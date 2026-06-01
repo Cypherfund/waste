@@ -3,7 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotificationsService } from './notifications.service';
 import { Notification } from './entities/notification.entity';
 import { FcmProvider } from './providers/fcm.provider';
-import { SmsProvider } from './providers/sms.provider';
+import { SmsProvider, SMS_PROVIDER } from './providers/sms.provider';
 import { FeatureFlagService } from '../config/feature-flags';
 import { UsersService } from '../users/users.service';
 import { NotificationChannel, NotificationStatus } from '../common/enums/notification-channel.enum';
@@ -93,7 +93,7 @@ describe('NotificationsService', () => {
         NotificationsService,
         { provide: getRepositoryToken(Notification), useValue: notifRepo },
         { provide: FcmProvider, useValue: fcmProvider },
-        { provide: SmsProvider, useValue: smsProvider },
+        { provide: SMS_PROVIDER, useValue: smsProvider },
         { provide: FeatureFlagService, useValue: featureFlagService },
         { provide: UsersService, useValue: usersService },
         {

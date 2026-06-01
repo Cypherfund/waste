@@ -31,6 +31,7 @@ class OnboardingData {
   String? phonePrefix;      // e.g. "+237"
   String? countryCode;      // e.g. "cmr"
   bool otpVerified;
+  String? devModeOtp;       // Only set when backend returns OTP in dev mode
 
   OnboardingData({
     this.selectedRole,
@@ -38,6 +39,7 @@ class OnboardingData {
     this.phonePrefix = '+237',
     this.countryCode = 'cmr',
     this.otpVerified = false,
+    this.devModeOtp,
   });
 }
 
@@ -90,16 +92,23 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     );
   }
 
-  void _goToPhoneInput() {
+  void _goToPhoneInput({String? errorMessage}) {
     _navigatorKey.currentState?.push(
       _slide(
         PhoneInputScreen(
           initialPhone: _data.phoneNumber,
           initialCountryCode: _data.phonePrefix ?? '+237',
-          onSendCode: (phone, phonePrefix, countryCode) {
+          errorMessage: errorMessage,
+          onSendCode: (phone, phonePrefix, countryCode, error, devModeOtp) {
             _data.phoneNumber = phone;
             _data.phonePrefix = phonePrefix;
             _data.countryCode = countryCode;
+            _data.devModeOtp = devModeOtp;
+            if (error != null) {
+              // Stay on phone input and show error
+              // The phone input screen will handle showing the error
+              return;
+            }
             _goToOtp();
           },
           onBack: () => _navigatorKey.currentState?.pop(),
@@ -108,11 +117,13 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     );
   }
 
-  void _goToOtp() {
+  void _goToOtp({String? errorMessage}) {
     _navigatorKey.currentState?.push(
       _slide(
         OtpScreen(
           phoneNumber: '${_data.phonePrefix} ${_data.phoneNumber}',
+          errorMessage: errorMessage,
+          devModeOtp: _data.devModeOtp,
           onVerified: () {
             _data.otpVerified = true;
             _goToCompleteProfile();

@@ -24,6 +24,7 @@ import {
   Smartphone,
   Scale,
   FileText,
+  HeadphonesIcon,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -51,6 +52,8 @@ const NAV_ITEMS = [
   { to: '/pending-payments', label: 'Pending Payments', icon: ClipboardCheck },
   { to: '/collector-float', label: 'Collector Float', icon: Coins },
   { to: '/reconciliation', label: 'Reconciliation', icon: Scale },
+  // Support
+  { to: '/support', label: 'Support Tools', icon: HeadphonesIcon },
 ];
 
 export default function AdminLayout() {

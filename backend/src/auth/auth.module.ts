@@ -7,7 +7,12 @@ import { User } from '../users/entities/user.entity';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
+import { OtpService } from './otp.service';
+import { RedisModule } from '../redis/redis.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { GrowthModule } from '../growth/growth.module';
+import { SystemConfigModule } from '../config/system-config.module';
+
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
@@ -22,10 +27,13 @@ import { GrowthModule } from '../growth/growth.module';
       }),
     }),
     TypeOrmModule.forFeature([User]),
+    RedisModule,
+    NotificationsModule,
+    SystemConfigModule,
     forwardRef(() => GrowthModule),
   ],
   controllers: [AuthController],
-  providers: [JwtStrategy, AuthService],
-  exports: [JwtModule, PassportModule, AuthService],
+  providers: [JwtStrategy, AuthService, OtpService],
+  exports: [JwtModule, PassportModule, AuthService, OtpService],
 })
 export class AuthModule {}

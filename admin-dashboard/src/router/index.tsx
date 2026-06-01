@@ -24,6 +24,7 @@ import SystemCleanupPage from '../pages/SystemCleanupPage';
 import AppUpdatesPage from '../pages/AppUpdatesPage';
 import ReconciliationPage from '../pages/ReconciliationPage';
 import AuditLogsPage from '../pages/AuditLogsPage';
+import SupportPage from '../pages/SupportPage';
 
 export const router = createBrowserRouter([
   {
@@ -60,6 +61,7 @@ export const router = createBrowserRouter([
       { path: 'app-updates', element: <AppUpdatesPage /> },
       { path: 'reconciliation', element: <ReconciliationPage /> },
       { path: 'audit-logs', element: <AuditLogsPage /> },
+      { path: 'support', element: <SupportPage /> },
     ],
   },
 ]);

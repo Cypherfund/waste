@@ -50,6 +50,7 @@ import { MarketerSchemeAssignment } from '../growth/entities/marketer-scheme-ass
 import { FilesModule } from '../files/files.module';
 import { FileRecord } from '../files/entities/file.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { AuthModule } from '../auth/auth.module';
 import { Notification } from '../notifications/entities/notification.entity';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { UserSubscription } from '../subscriptions/entities/user-subscription.entity';
@@ -107,6 +108,7 @@ import { CollectorAvailability } from '../timeslots/entities/collector-availabil
     FilesModule,
     NotificationsModule,
     SubscriptionsModule,
+    AuthModule,
   ],
   controllers: [AdminController, ReconciliationController, AdminAuditController],
   providers: [AdminService, SystemCleanupService, ReconciliationService, ReconciliationSchedulerService, AdminAuditService],

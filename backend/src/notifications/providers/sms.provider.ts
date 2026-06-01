@@ -11,23 +11,26 @@ export interface SmsResult {
   error?: string;
 }
 
-@Injectable()
-export class SmsProvider {
-  private readonly logger = new Logger(SmsProvider.name);
+export interface SmsProvider {
+  send(message: SmsMessage): Promise<SmsResult>;
+}
 
-  /**
-   * Send an SMS message.
-   * Stubbed for now — replace with real SMS gateway (e.g. Twilio, AfricasTalking) in production.
-   */
+export const SMS_PROVIDER = 'SMS_PROVIDER';
+
+/**
+ * Stub SMS provider for testing/fallback
+ */
+@Injectable()
+export class StubSmsProvider implements SmsProvider {
+  private readonly logger = new Logger(StubSmsProvider.name);
+
   async send(message: SmsMessage): Promise<SmsResult> {
     if (!message.phone) {
       return { success: false, error: 'No phone number provided' };
     }
 
     try {
-      // TODO: Replace with real SMS gateway call
       this.logger.log(`[STUB] SMS to ${message.phone}: "${message.body.slice(0, 50)}..."`);
-
       return { success: true, messageId: `sms-stub-${Date.now()}` };
     } catch (error) {
       this.logger.error(`SMS send failed: ${error.message}`);

@@ -56,4 +56,52 @@ class AuthApi {
   Future<void> logout() async {
     await _client.dio.post('/auth/logout');
   }
+
+  /// Send OTP to phone number
+  Future<OtpResponse> sendOtp({
+    required String phone,
+  }) async {
+    final response = await _client.dio.post('/auth/otp/send', data: {
+      'phone': phone,
+    });
+    return OtpResponse.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  /// Verify OTP code
+  Future<OtpResponse> verifyOtp({
+    required String phone,
+    required String code,
+  }) async {
+    final response = await _client.dio.post('/auth/otp/verify', data: {
+      'phone': phone,
+      'code': code,
+    });
+    return OtpResponse.fromJson(response.data as Map<String, dynamic>);
+  }
+}
+
+class OtpResponse {
+  final bool success;
+  final String? message;
+  final String? error;
+  final String? otp; // Only returned in dev mode
+  final bool devMode;
+
+  OtpResponse({
+    required this.success,
+    this.message,
+    this.error,
+    this.otp,
+    this.devMode = false,
+  });
+
+  factory OtpResponse.fromJson(Map<String, dynamic> json) {
+    return OtpResponse(
+      success: json['success'] as bool,
+      message: json['message'] as String?,
+      error: json['error'] as String?,
+      otp: json['otp'] as String?,
+      devMode: json['devMode'] as bool? ?? false,
+    );
+  }
 }

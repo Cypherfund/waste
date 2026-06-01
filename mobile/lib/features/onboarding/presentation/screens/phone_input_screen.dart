@@ -2,19 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../services/api/countries_api.dart';
+import '../../../../services/api/api_client.dart';
+import '../../../../services/api/auth_api.dart';
 import '../../../../providers/countries_provider.dart';
 
 class PhoneInputScreen extends StatefulWidget {
   final String? initialPhone;
   final String initialCountryCode;
+  final String? errorMessage;
   // callback delivers phone prefix (e.g. "+237") AND the ISO country code (e.g. "cmr")
-  final void Function(String phone, String phonePrefix, String countryCode) onSendCode;
+  final void Function(String phone, String phonePrefix, String countryCode, String? errorMessage, String? devModeOtp) onSendCode;
   final VoidCallback onBack;
 
   const PhoneInputScreen({
     super.key,
     this.initialPhone,
     this.initialCountryCode = '+237',
+    this.errorMessage,
     required this.onSendCode,
     required this.onBack,
   });
@@ -28,12 +32,15 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
   String _selectedPrefix = '+237';
   String _selectedCountryCode = 'cmr';
   final _formKey = GlobalKey<FormState>();
+  bool _isLoading = false;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
     _phoneController = TextEditingController(text: widget.initialPhone ?? '');
     _selectedPrefix = widget.initialCountryCode;
+    _errorMessage = widget.errorMessage;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<CountriesProvider>().loadCountries();
     });
@@ -45,10 +52,49 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
-    widget.onSendCode(_phoneController.text.trim(), _selectedPrefix, _selectedCountryCode);
+
+    setState(() => _isLoading = true);
+
+    try {
+      final fullPhone = '$_selectedPrefix${_phoneController.text.trim()}';
+      final authApi = AuthApi(context.read<ApiClient>());
+      final response = await authApi.sendOtp(phone: fullPhone);
+
+      if (mounted) {
+        if (response.success) {
+          widget.onSendCode(
+            _phoneController.text.trim(),
+            _selectedPrefix,
+            _selectedCountryCode,
+            null,
+            response.otp, // Pass dev mode OTP if returned
+          );
+        } else {
+          setState(() => _isLoading = false);
+          widget.onSendCode(
+            _phoneController.text.trim(),
+            _selectedPrefix,
+            _selectedCountryCode,
+            response.error ?? 'Failed to send code. Please try again.',
+            null,
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        widget.onSendCode(
+          _phoneController.text.trim(),
+          _selectedPrefix,
+          _selectedCountryCode,
+          'Network error. Please check your connection and try again.',
+          null,
+        );
+      }
+    }
   }
 
   @override
@@ -107,6 +153,34 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
 
                       _buildPhoneInput(),
                       const SizedBox(height: 28),
+
+                      // Error message
+                      if (_errorMessage != null) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.red.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.error_outline, color: Colors.red.shade600, size: 18),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _errorMessage!,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.red.shade700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
 
                       _buildSendButton(),
                       const SizedBox(height: 40),
@@ -203,19 +277,29 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: _submit,
+        onPressed: _isLoading ? null : _submit,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
+          disabledBackgroundColor: AppColors.primary.withOpacity(0.6),
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
           elevation: 4,
         ),
-        child: const Text(
-          'Send Code',
-          style: TextStyle(fontSize: 16, color: Colors.white),
-        ),
+        child: _isLoading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : const Text(
+                'Send Code',
+                style: TextStyle(fontSize: 16, color: Colors.white),
+              ),
       ),
     );
   }

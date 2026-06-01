@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ForbiddenException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull, FindOptionsWhere } from 'typeorm';
 import { OnEvent } from '@nestjs/event-emitter';
@@ -6,7 +6,7 @@ import { Notification } from './entities/notification.entity';
 import { NotificationResponseDto } from './dto/notification-response.dto';
 import { NotificationFilterDto } from './dto/notification-filter.dto';
 import { FcmProvider } from './providers/fcm.provider';
-import { SmsProvider } from './providers/sms.provider';
+import { SmsProvider, SMS_PROVIDER } from './providers/sms.provider';
 import {
   getTemplate,
   CRITICAL_NOTIFICATION_TYPES,
@@ -56,6 +56,7 @@ export class NotificationsService {
     @InjectRepository(Notification)
     private readonly notifRepo: Repository<Notification>,
     private readonly fcmProvider: FcmProvider,
+    @Inject(SMS_PROVIDER)
     private readonly smsProvider: SmsProvider,
     private readonly featureFlagService: FeatureFlagService,
     private readonly usersService: UsersService,

@@ -413,3 +413,15 @@ export const auditLogsApi = {
   getById: (id: string) =>
     client.get<AdminAuditLog>(`/admin/audit-logs/${id}`).then((r) => r.data),
 };
+
+export interface OtpLookupResponse {
+  phone: string;
+  otp: string | null;
+  expiresInSeconds: number;
+  expiresInMinutes: number;
+}
+
+export const supportApi = {
+  lookupOtp: (phone: string) =>
+    client.get<OtpLookupResponse>('/admin/support/otp', { params: { phone } }).then((r) => r.data),
+};

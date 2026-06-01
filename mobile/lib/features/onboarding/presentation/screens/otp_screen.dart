@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:provider/provider.dart';
 import '../../../../config/app_theme.dart';
+import '../../../../services/api/api_client.dart';
+import '../../../../services/api/auth_api.dart';
 
 /// Screen 4 — OTP Verification
 ///
@@ -10,12 +13,16 @@ class OtpScreen extends StatefulWidget {
   final String phoneNumber;
   final VoidCallback onVerified;
   final VoidCallback onBack;
+  final String? errorMessage;
+  final String? devModeOtp; // Only set when backend returns OTP in dev mode
 
   const OtpScreen({
     super.key,
     required this.phoneNumber,
     required this.onVerified,
     required this.onBack,
+    this.errorMessage,
+    this.devModeOtp,
   });
 
   @override
@@ -27,12 +34,20 @@ class _OtpScreenState extends State<OtpScreen> {
   int _resendSeconds = 45;
   Timer? _timer;
   bool _isVerifying = false;
+  String? _errorMessage;
+  late final AuthApi _authApi;
 
   @override
   void initState() {
     super.initState();
+    _errorMessage = widget.errorMessage;
     _startTimer();
+    // Get AuthApi from context after build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _authApi = AuthApi(context.read<ApiClient>());
+    });
   }
+
 
   @override
   void dispose() {
@@ -84,12 +99,88 @@ class _OtpScreenState extends State<OtpScreen> {
   }
 
   Future<void> _verify() async {
-    setState(() => _isVerifying = true);
-    // Simulate verification delay
-    await Future.delayed(const Duration(milliseconds: 1000));
-    if (mounted) {
-      setState(() => _isVerifying = false);
-      widget.onVerified();
+    if (_code.length != 6) return;
+
+    setState(() {
+      _isVerifying = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final response = await _authApi.verifyOtp(
+        phone: widget.phoneNumber.replaceAll(' ', ''),
+        code: _code,
+      );
+
+      if (mounted) {
+        if (response.success) {
+          widget.onVerified();
+        } else {
+          setState(() {
+            _isVerifying = false;
+            _errorMessage = response.error ?? 'Verification failed. Please try again.';
+            _code = ''; // Clear code for retry
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isVerifying = false;
+          _errorMessage = 'Network error. Please try again.';
+          _code = '';
+        });
+      }
+    }
+  }
+
+  Future<void> _resendCode() async {
+    if (_resendSeconds > 0) return;
+
+    setState(() {
+      _isVerifying = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final response = await _authApi.sendOtp(
+        phone: widget.phoneNumber.replaceAll(' ', ''),
+      );
+
+      if (mounted) {
+        if (response.success) {
+          _startTimer();
+          setState(() {
+            _isVerifying = false;
+            _code = '';
+          });
+          
+          // Show dev mode OTP in snackbar if returned
+          final snackBarMessage = response.devMode && response.otp != null
+              ? 'Dev Mode: New code is ${response.otp}'
+              : (response.message ?? 'Code sent successfully');
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(snackBarMessage),
+              backgroundColor: response.devMode ? Colors.orange : Colors.green,
+              duration: response.devMode ? const Duration(seconds: 10) : const Duration(seconds: 3),
+            ),
+          );
+        } else {
+          setState(() {
+            _isVerifying = false;
+            _errorMessage = response.error ?? 'Failed to send code. Please try again.';
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isVerifying = false;
+          _errorMessage = 'Network error. Please try again.';
+        });
+      }
     }
   }
 
@@ -188,24 +279,110 @@ class _OtpScreenState extends State<OtpScreen> {
                     ),
                     const SizedBox(height: 32),
 
-                    // Timer
+                    // Dev Mode OTP Banner (only shown when backend returns OTP)
+                    if (widget.devModeOtp != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.orange.shade300, width: 2),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.developer_mode,
+                                  color: Colors.orange.shade700,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'DEV MODE',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.orange.shade700,
+                                    letterSpacing: 1,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Your verification code is:',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.orange.shade800,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              widget.devModeOtp!,
+                              style: TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.orange.shade800,
+                                letterSpacing: 8,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+
+                    // Timer / Resend
                     Center(
-                      child: Text(
-                        _resendSeconds > 0
-                            ? 'Resend code in ${_formatTimer(_resendSeconds)}'
-                            : 'Resend Code',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: _resendSeconds > 0
-                              ? Colors.black54
-                              : AppColors.primary,
-                          fontWeight: _resendSeconds > 0
-                              ? FontWeight.normal
-                              : FontWeight.w600,
+                      child: GestureDetector(
+                        onTap: _resendSeconds > 0 ? null : _resendCode,
+                        child: Text(
+                          _resendSeconds > 0
+                              ? 'Resend code in ${_formatTimer(_resendSeconds)}'
+                              : 'Resend Code',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: _resendSeconds > 0 || _isVerifying
+                                ? Colors.black54
+                                : AppColors.primary,
+                            fontWeight: _resendSeconds > 0 || _isVerifying
+                                ? FontWeight.normal
+                                : FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),
-                    
+
+                    // Error message
+                    if (_errorMessage != null) ...[
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.red.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.error_outline, color: Colors.red.shade600, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _errorMessage!,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.red.shade700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
                     if (_isVerifying) ...[
                       const SizedBox(height: 24),
                       const Center(
