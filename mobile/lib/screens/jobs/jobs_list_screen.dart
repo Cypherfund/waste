@@ -206,6 +206,44 @@ class _JobList extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildSkeletonLoader() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: 5,
+      itemBuilder: (context, index) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    SkeletonLoader(width: 100, height: 16, borderRadius: BorderRadius.circular(4)),
+                    SkeletonLoader(width: 60, height: 16, borderRadius: BorderRadius.circular(4)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                SkeletonLoader(width: double.infinity, height: 14, borderRadius: BorderRadius.circular(4)),
+                const SizedBox(height: 8),
+                SkeletonLoader(width: 150, height: 14, borderRadius: BorderRadius.circular(4)),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    SkeletonLoader(width: 40, height: 40, borderRadius: BorderRadius.circular(20)),
+                    const SizedBox(width: 12),
+                    SkeletonLoader(width: 100, height: 14, borderRadius: BorderRadius.circular(4)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
 class _JobCard extends StatelessWidget {
@@ -280,41 +318,5 @@ class _JobCard extends StatelessWidget {
     } catch (_) {
       return dateStr;
     }
-  }
-
-  Widget _buildSkeletonLoader() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: 5,
-      itemBuilder: (context, index) {
-        return AppCard(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  SkeletonLoader(width: 100, height: 16, borderRadius: BorderRadius.circular(4)),
-                  SkeletonLoader(width: 60, height: 16, borderRadius: BorderRadius.circular(4)),
-                ],
-              ),
-              const SizedBox(height: 12),
-              SkeletonLoader(width: double.infinity, height: 14, borderRadius: BorderRadius.circular(4)),
-              const SizedBox(height: 8),
-              SkeletonLoader(width: 150, height: 14, borderRadius: BorderRadius.circular(4)),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  SkeletonLoader(width: 40, height: 40, borderRadius: BorderRadius.circular(20)),
-                  const SizedBox(width: 12),
-                  SkeletonLoader(width: 100, height: 14, borderRadius: BorderRadius.circular(4)),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
-    );
   }
 }

@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:wastewise/models/job.dart';
 import 'package:wastewise/providers/collector_jobs_provider.dart';
@@ -58,7 +58,7 @@ void main() {
 
   setUpAll(() {
     registerFallbackValue(JobStatus.assigned);
-    registerFallbackValue(File('/tmp/test.jpg'));
+    registerFallbackValue(XFile('/tmp/test.jpg'));
   });
 
   setUp(() {
@@ -228,7 +228,7 @@ void main() {
 
   group('completeJob', () {
     test('uploads proof and completes job', () async {
-      final testFile = File('/tmp/proof.jpg');
+      final testFile = XFile('/tmp/proof.jpg');
       final completedJob = Job(
         id: 'job-1',
         householdId: 'hh-1',

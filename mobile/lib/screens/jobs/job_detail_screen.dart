@@ -190,6 +190,8 @@ class JobDetailScreen extends StatelessWidget {
         return Icons.cancel;
       case JobStatus.disputed:
         return Icons.gavel;
+      case JobStatus.paymentFailed:
+        return Icons.error;
     }
   }
 

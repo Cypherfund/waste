@@ -127,6 +127,44 @@ class _CollectorEarningsScreenState extends State<CollectorEarningsScreen> {
       ),
     );
   }
+
+  Widget _buildSkeletonLoader() {
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        children: [
+          // Quick summary skeleton
+          AppCard(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                SkeletonLoader(width: 100, height: 16, borderRadius: BorderRadius.circular(4)),
+                const SizedBox(height: 16),
+                SkeletonLoader(width: 150, height: 32, borderRadius: BorderRadius.circular(4)),
+                const SizedBox(height: 8),
+                SkeletonLoader(width: 120, height: 14, borderRadius: BorderRadius.circular(4)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          // Earnings card skeleton
+          AppCard(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonLoader(width: 80, height: 16, borderRadius: BorderRadius.circular(4)),
+                const SizedBox(height: 12),
+                SkeletonLoader(width: double.infinity, height: 14, borderRadius: BorderRadius.circular(4)),
+                const SizedBox(height: 8),
+                SkeletonLoader(width: 100, height: 14, borderRadius: BorderRadius.circular(4)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ─── Quick Summary ───────────────────────────────────────────────────────────
@@ -322,44 +360,6 @@ class _DetailChip extends StatelessWidget {
         style: AppTypography.overline.copyWith(
           color: AppColors.textPrimary,
         ),
-      ),
-    );
-  }
-
-  Widget _buildSkeletonLoader() {
-    return Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        children: [
-          // Quick summary skeleton
-          AppCard(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                SkeletonLoader(width: 100, height: 16, borderRadius: BorderRadius.circular(4)),
-                const SizedBox(height: 16),
-                SkeletonLoader(width: 150, height: 32, borderRadius: BorderRadius.circular(4)),
-                const SizedBox(height: 8),
-                SkeletonLoader(width: 120, height: 14, borderRadius: BorderRadius.circular(4)),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          // Earnings card skeleton
-          AppCard(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SkeletonLoader(width: 80, height: 16, borderRadius: BorderRadius.circular(4)),
-                const SizedBox(height: 12),
-                SkeletonLoader(width: double.infinity, height: 14, borderRadius: BorderRadius.circular(4)),
-                const SizedBox(height: 8),
-                SkeletonLoader(width: 100, height: 14, borderRadius: BorderRadius.circular(4)),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
