@@ -523,7 +523,7 @@ export class AdminService {
       throw new NotFoundException('Job not found');
     }
 
-    const verifiableStatuses = [PaymentStatus.PENDING, PaymentStatus.AWAITING_ADMIN_VERIFICATION];
+    const verifiableStatuses = [PaymentStatus.PENDING, PaymentStatus.AWAITING_ADMIN_VERIFICATION, PaymentStatus.PROVIDER_PENDING];
     if (!verifiableStatuses.includes(job.paymentStatus as PaymentStatus)) {
       throw new BadRequestException('Job is not pending payment verification');
     }
