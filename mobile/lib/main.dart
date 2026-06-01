@@ -410,6 +410,7 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
         ChangeNotifierProvider.value(value: _userPaymentMethodsProvider),
         ChangeNotifierProvider.value(value: _appUpdateProvider),
         ChangeNotifierProvider(create: (_) => PaymentFlowProvider()),
+        Provider.value(value: _apiClient),
         Provider.value(value: _walletApi),
         Provider.value(value: _filesApi),
         Provider.value(value: widget.connectivityService),
@@ -554,14 +555,17 @@ class _WasteWiseAppState extends State<WasteWiseApp> {
                   }
                 },
               )
-            : OnboardingFlow(
-                onComplete: () {
-                  setState(() => _onboardingCompleted = true);
-                },
-                onLogin: () {
-                  setState(() => _onboardingCompleted = true);
-                  markOnboardingCompleted();
-                },
+            : Builder(
+                builder: (context) => OnboardingFlow(
+                  apiClient: context.read<ApiClient>(),
+                  onComplete: () {
+                    setState(() => _onboardingCompleted = true);
+                  },
+                  onLogin: () {
+                    setState(() => _onboardingCompleted = true);
+                    markOnboardingCompleted();
+                  },
+                ),
               ),
         ),
       ),

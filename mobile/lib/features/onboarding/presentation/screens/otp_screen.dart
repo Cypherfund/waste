@@ -15,6 +15,7 @@ class OtpScreen extends StatefulWidget {
   final VoidCallback onBack;
   final String? errorMessage;
   final String? devModeOtp; // Only set when backend returns OTP in dev mode
+  final ApiClient apiClient;
 
   const OtpScreen({
     super.key,
@@ -23,6 +24,7 @@ class OtpScreen extends StatefulWidget {
     required this.onBack,
     this.errorMessage,
     this.devModeOtp,
+    required this.apiClient,
   });
 
   @override
@@ -41,11 +43,8 @@ class _OtpScreenState extends State<OtpScreen> {
   void initState() {
     super.initState();
     _errorMessage = widget.errorMessage;
+    _authApi = AuthApi(widget.apiClient);
     _startTimer();
-    // Get AuthApi from context after build
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _authApi = AuthApi(context.read<ApiClient>());
-    });
   }
 
 
@@ -58,6 +57,7 @@ class _OtpScreenState extends State<OtpScreen> {
   void _startTimer() {
     _resendSeconds = 45;
     _timer?.cancel();
+    print('DEBUG: Timer started, _resendSeconds = $_resendSeconds');
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) {
         t.cancel();
@@ -66,7 +66,11 @@ class _OtpScreenState extends State<OtpScreen> {
       setState(() {
         if (_resendSeconds > 0) {
           _resendSeconds--;
+          if (_resendSeconds % 10 == 0) {
+            print('DEBUG: Timer tick, _resendSeconds = $_resendSeconds');
+          }
         } else {
+          print('DEBUG: Timer expired, _resendSeconds = $_resendSeconds');
           t.cancel();
         }
       });
@@ -135,7 +139,9 @@ class _OtpScreenState extends State<OtpScreen> {
   }
 
   Future<void> _resendCode() async {
+    print('DEBUG: Resend code called, _resendSeconds = $_resendSeconds');
     if (_resendSeconds > 0) return;
+    print('DEBUG: Calling sendOtp API...');
 
     setState(() {
       _isVerifying = true;
@@ -178,7 +184,11 @@ class _OtpScreenState extends State<OtpScreen> {
       if (mounted) {
         setState(() {
           _isVerifying = false;
-          _errorMessage = 'Network error. Please try again.';
+          String errorMessage = 'Network error. Please try again.';
+          if (e.toString().contains('500') || e.toString().contains('Server error')) {
+            errorMessage = 'Server error. Please try again later or contact support.';
+          }
+          _errorMessage = errorMessage;
         });
       }
     }
@@ -337,7 +347,14 @@ class _OtpScreenState extends State<OtpScreen> {
                     // Timer / Resend
                     Center(
                       child: GestureDetector(
-                        onTap: _resendSeconds > 0 ? null : _resendCode,
+                        onTap: () {
+                          print('DEBUG: Resend Code tapped, _resendSeconds = $_resendSeconds, _isVerifying = $_isVerifying');
+                          if (_resendSeconds > 0) {
+                            print('DEBUG: Timer not expired yet, ignoring tap');
+                            return;
+                          }
+                          _resendCode();
+                        },
                         child: Text(
                           _resendSeconds > 0
                               ? 'Resend code in ${_formatTimer(_resendSeconds)}'

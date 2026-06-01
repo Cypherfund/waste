@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../../services/api/api_client.dart';
 import 'presentation/screens/welcome_screen.dart';
 import 'presentation/screens/role_selection_screen.dart';
 import 'presentation/screens/phone_input_screen.dart';
@@ -47,11 +49,13 @@ class OnboardingData {
 class OnboardingFlow extends StatefulWidget {
   final VoidCallback onComplete;
   final VoidCallback onLogin;
+  final ApiClient? apiClient;
 
   const OnboardingFlow({
     super.key,
     required this.onComplete,
     required this.onLogin,
+    this.apiClient,
   });
 
   @override
@@ -99,6 +103,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           initialPhone: _data.phoneNumber,
           initialCountryCode: _data.phonePrefix ?? '+237',
           errorMessage: errorMessage,
+          apiClient: widget.apiClient!,
           onSendCode: (phone, phonePrefix, countryCode, error, devModeOtp) {
             _data.phoneNumber = phone;
             _data.phonePrefix = phonePrefix;
@@ -124,6 +129,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           phoneNumber: '${_data.phonePrefix} ${_data.phoneNumber}',
           errorMessage: errorMessage,
           devModeOtp: _data.devModeOtp,
+          apiClient: widget.apiClient!,
           onVerified: () {
             _data.otpVerified = true;
             _goToCompleteProfile();

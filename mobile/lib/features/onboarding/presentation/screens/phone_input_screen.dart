@@ -13,6 +13,7 @@ class PhoneInputScreen extends StatefulWidget {
   // callback delivers phone prefix (e.g. "+237") AND the ISO country code (e.g. "cmr")
   final void Function(String phone, String phonePrefix, String countryCode, String? errorMessage, String? devModeOtp) onSendCode;
   final VoidCallback onBack;
+  final ApiClient apiClient;
 
   const PhoneInputScreen({
     super.key,
@@ -21,6 +22,7 @@ class PhoneInputScreen extends StatefulWidget {
     this.errorMessage,
     required this.onSendCode,
     required this.onBack,
+    required this.apiClient,
   });
 
   @override
@@ -56,15 +58,19 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
     if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
 
+    print('DEBUG: Send Code button pressed');
     setState(() => _isLoading = true);
 
     try {
       final fullPhone = '$_selectedPrefix${_phoneController.text.trim()}';
-      final authApi = AuthApi(context.read<ApiClient>());
+      print('DEBUG: Calling sendOtp with phone: $fullPhone');
+      final authApi = AuthApi(widget.apiClient);
       final response = await authApi.sendOtp(phone: fullPhone);
+      print('DEBUG: sendOtp response: success=${response.success}, error=${response.error}, otp=${response.otp}');
 
       if (mounted) {
         if (response.success) {
+          print('DEBUG: OTP sent successfully, calling onSendCode');
           widget.onSendCode(
             _phoneController.text.trim(),
             _selectedPrefix,
@@ -73,6 +79,7 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
             response.otp, // Pass dev mode OTP if returned
           );
         } else {
+          print('DEBUG: OTP send failed: ${response.error}');
           setState(() => _isLoading = false);
           widget.onSendCode(
             _phoneController.text.trim(),
@@ -84,13 +91,18 @@ class _PhoneInputScreenState extends State<PhoneInputScreen> {
         }
       }
     } catch (e) {
+      print('DEBUG: sendOtp exception: $e');
       if (mounted) {
         setState(() => _isLoading = false);
+        String errorMessage = 'Network error. Please check your connection and try again.';
+        if (e.toString().contains('500') || e.toString().contains('Server error')) {
+          errorMessage = 'Server error. Please try again later or contact support.';
+        }
         widget.onSendCode(
           _phoneController.text.trim(),
           _selectedPrefix,
           _selectedCountryCode,
-          'Network error. Please check your connection and try again.',
+          errorMessage,
           null,
         );
       }

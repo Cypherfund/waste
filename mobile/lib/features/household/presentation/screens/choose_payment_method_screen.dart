@@ -33,6 +33,7 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadPaymentMethods();
       _loadWalletBalance();
+      _loadAppConfig(); // Ensure fresh config for payment integration flag
       final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
       setState(() {
         _hideCash = (args?['hideCash'] as bool?) ?? false;
@@ -40,6 +41,11 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
         _isCashOnFirstPickup = (args?['cashOnFirstPickup'] as bool?) ?? false;
       });
     });
+  }
+
+  void _loadAppConfig() {
+    final subProvider = context.read<SubscriptionProvider>();
+    subProvider.loadPricingQuote();
   }
 
   void _loadPaymentMethods() {
