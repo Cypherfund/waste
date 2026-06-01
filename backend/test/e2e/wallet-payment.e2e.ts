@@ -361,4 +361,88 @@ describe('E2E: Wallet Payment Flow', () => {
         .expect(201);
     });
   });
+
+  // ─── PATCH /admin/jobs/:id/verify-payment ───────────────────────────────
+
+  describe('PATCH /admin/jobs/:id/verify-payment', () => {
+    let providerPendingJobId: string;
+
+    beforeEach(async () => {
+      // Create an integrated provider payment job (PROVIDER_PENDING status)
+      const jobRes = await request(httpServer)
+        .post('/api/v1/jobs')
+        .set('Authorization', `Bearer ${householdToken}`)
+        .send({
+          scheduledDate: '2025-01-15',
+          scheduledTime: '10:00',
+          locationAddress: '123 Test Street',
+          paymentMode: 'INTEGRATED_PROVIDER',
+          paymentCode: 'MTN',
+          paymentPhone: '+237699000001',
+        })
+        .expect(201);
+
+      providerPendingJobId = jobRes.body.id;
+
+      // Verify job has PROVIDER_PENDING status
+      const jobStatusRes = await dataSource.query(
+        `SELECT "status", "payment_status" FROM "jobs" WHERE id = $1`,
+        [providerPendingJobId],
+      );
+      expect(jobStatusRes.rows[0].status).toBe(JobStatus.PAYMENT_PENDING);
+      expect(jobStatusRes.rows[0].payment_status).toBe('PROVIDER_PENDING');
+    });
+
+    it('verifies PROVIDER_PENDING payment', async () => {
+      const res = await request(httpServer)
+        .patch(`/api/v1/admin/jobs/${providerPendingJobId}/verify-payment`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(res.body.status).toBe(JobStatus.REQUESTED);
+      expect(res.body.paymentStatus).toBe(PaymentStatus.VERIFIED);
+      expect(res.body.paymentVerifiedBy).toBe(adminId);
+      expect(res.body.paymentVerifiedAt).toBeDefined();
+    });
+
+    it('rejects verification for non-PAYMENT_PENDING job', async () => {
+      // Move job to REQUESTED status
+      await dataSource.query(
+        `UPDATE "jobs" SET status = 'REQUESTED' WHERE id = $1`,
+        [providerPendingJobId],
+      );
+
+      const res = await request(httpServer)
+        .patch(`/api/v1/admin/jobs/${providerPendingJobId}/verify-payment`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(res.body.message).toContain('not in PAYMENT_PENDING status');
+    });
+
+    it('rejects verification for VERIFIED payment', async () => {
+      // Verify payment first
+      await request(httpServer)
+        .patch(`/api/v1/admin/jobs/${providerPendingJobId}/verify-payment`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      // Try to verify again
+      const res = await request(httpServer)
+        .patch(`/api/v1/admin/jobs/${providerPendingJobId}/verify-payment`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(res.body.message).toContain('not pending payment verification');
+    });
+
+    it('requires admin role', async () => {
+      const res = await request(httpServer)
+        .patch(`/api/v1/admin/jobs/${providerPendingJobId}/verify-payment`)
+        .set('Authorization', `Bearer ${householdToken}`)
+        .expect(403);
+
+      expect(res.body.message).toContain('Forbidden');
+    });
+  });
 });

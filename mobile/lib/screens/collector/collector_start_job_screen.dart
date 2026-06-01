@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_theme.dart';
 import '../../models/job.dart';
 import '../../providers/collector_jobs_provider.dart';
@@ -140,12 +141,44 @@ class CollectorStartJobScreen extends StatelessWidget {
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () {},
+                  onPressed: _callCustomer,
                   icon: const Icon(Icons.phone, size: 18),
-                  label: const Text('Call Customer'),
+                  label: const Text('Call'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.primary,
                     side: const BorderSide(color: AppColors.primary),
+                    minimumSize: const Size(0, 44),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _messageCustomer,
+                  icon: const Icon(Icons.message, size: 18),
+                  label: const Text('Message'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    minimumSize: const Size(0, 44),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _whatsappCustomer,
+                  icon: const Icon(Icons.chat, size: 18),
+                  label: const Text('WhatsApp'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF25D366),
+                    side: const BorderSide(color: Color(0xFF25D366)),
                     minimumSize: const Size(0, 44),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -216,13 +249,42 @@ class CollectorStartJobScreen extends StatelessWidget {
   bool _canStartJob() {
     final scheduledDate = DateTime.tryParse(job.scheduledDate);
     if (scheduledDate == null) return true; // Allow if can't parse
-    
+
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final jobDate = DateTime(scheduledDate.year, scheduledDate.month, scheduledDate.day);
-    
+
     // Can only start on or after the scheduled date
     return !jobDate.isAfter(today);
+  }
+
+  Future<void> _callCustomer() async {
+    final phone = job.householdPhone ?? '';
+    if (phone.isEmpty) return;
+    final uri = Uri.parse('tel:$phone');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
+  }
+
+  Future<void> _messageCustomer() async {
+    final phone = job.householdPhone ?? '';
+    if (phone.isEmpty) return;
+    final uri = Uri.parse('sms:$phone');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
+  }
+
+  Future<void> _whatsappCustomer() async {
+    final phone = job.householdPhone ?? '';
+    if (phone.isEmpty) return;
+    // Remove any non-numeric characters for WhatsApp
+    final cleanPhone = phone.replaceAll(RegExp(r'[^\d+]'), '');
+    final uri = Uri.parse('https://wa.me/$cleanPhone');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 
   void _showTooEarlyDialog(BuildContext context) {

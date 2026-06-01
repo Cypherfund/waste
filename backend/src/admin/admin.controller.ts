@@ -20,6 +20,7 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { SystemCleanupService } from './services/system-cleanup.service';
 import { OtpService } from '../auth/otp.service';
+import { AdminAuditService } from './services/admin-audit.service';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UserRole } from '../common/enums/role.enum';
@@ -36,6 +37,8 @@ import { WalletService } from '../wallet/wallet.service';
 import { PayoutRequestStatus } from '../wallet/entities/payout-request.entity';
 import { CountriesService } from '../countries/countries.service';
 import { PaymentService } from '../payments/payment.service';
+import { AdminAuditAction } from './entities/admin-audit-log.entity';
+import { AdminAuditEntityType } from './entities/admin-audit-log.entity';
 
 @ApiTags('Admin')
 @ApiBearerAuth()
@@ -49,6 +52,7 @@ export class AdminController {
     private readonly paymentService: PaymentService,
     private readonly systemCleanupService: SystemCleanupService,
     private readonly otpService: OtpService,
+    private readonly adminAuditService: AdminAuditService,
   ) {}
 
   // ─── USERS ────────────────────────────────────────────────────
@@ -411,8 +415,28 @@ export class AdminController {
   // ─── OTP LOOKUP (Support Tool) ─────────────────────────────────
 
   @Get('support/otp')
-  async lookupOtp(@Query('phone') phone: string) {
+  async lookupOtp(
+    @Query('phone') phone: string,
+    @CurrentUser('sub') adminId: string,
+    @Req() req: Request,
+  ) {
     const result = await this.otpService.getRecentOtp(phone);
+
+    // Log OTP lookup for security audit
+    await this.adminAuditService.log({
+      adminId,
+      action: AdminAuditAction.OTP_LOOKUP,
+      entityType: AdminAuditEntityType.OTP_LOOKUP,
+      entityId: undefined,
+      oldValue: undefined,
+      newValue: { phone, expiresInSeconds: result.ttl },
+      metadata: { expiresInMinutes: Math.ceil(result.ttl / 60) },
+      context: {
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'] as string,
+      },
+    });
+
     return {
       phone: result.phone,
       otp: result.otp,

@@ -470,4 +470,67 @@ describe('E2E: Full Job Lifecycle', () => {
       expect(res.body.status).toBe(JobStatus.CANCELLED);
     });
   });
+
+  // ─── 10. ADMIN SUPPORT TOOLS ─────────────────────────────────────
+
+  describe('Step 10: Admin support tools', () => {
+    let testPhone: string;
+
+    beforeAll(async () => {
+      testPhone = '+237690000001';
+    });
+
+    it('should log OTP lookup for security audit', async () => {
+      // First, create an OTP by triggering a login (this will generate an OTP)
+      await request(httpServer)
+        .post('/api/v1/auth/send-otp')
+        .send({ phone: testPhone })
+        .expect(201);
+
+      // Lookup the OTP as admin
+      const res = await request(httpServer)
+        .get('/api/v1/admin/support/otp')
+        .query({ phone: testPhone })
+        .set('authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(res.body.phone).toBe(testPhone);
+      expect(res.body.otp).toBeDefined();
+      expect(res.body.expiresInSeconds).toBeDefined();
+      expect(res.body.expiresInMinutes).toBeDefined();
+
+      // Verify the lookup was logged in admin audit logs
+      const auditLogs = await dataSource.query(
+        `SELECT * FROM "admin_audit_logs"
+         WHERE "admin_id" = $1 AND "action" = 'OTP_LOOKUP'
+         ORDER BY "created_at" DESC LIMIT 1`,
+        [adminId],
+      );
+
+      expect(auditLogs.rows.length).toBeGreaterThan(0);
+      expect(auditLogs.rows[0].entity_type).toBe('OTP_LOOKUP');
+      expect(auditLogs.rows[0].new_value).toHaveProperty('phone', testPhone);
+      expect(auditLogs.rows[0].ip_address).toBeDefined();
+      expect(auditLogs.rows[0].user_agent).toBeDefined();
+    });
+
+    it('should require admin role for OTP lookup', async () => {
+      const res = await request(httpServer)
+        .get('/api/v1/admin/support/otp')
+        .query({ phone: testPhone })
+        .set('authorization', `Bearer ${householdToken}`)
+        .expect(403);
+
+      expect(res.body.message).toContain('Forbidden');
+    });
+
+    it('should require phone parameter for OTP lookup', async () => {
+      const res = await request(httpServer)
+        .get('/api/v1/admin/support/otp')
+        .set('authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(res.body.message).toContain('phone');
+    });
+  });
 });

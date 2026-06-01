@@ -108,6 +108,26 @@ class _CollectorNavigateScreenState extends State<CollectorNavigateScreen> {
     }
   }
 
+  Future<void> _messageCustomer() async {
+    final phone = widget.job.householdPhone ?? '';
+    if (phone.isEmpty) return;
+    final uri = Uri.parse('sms:$phone');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
+  }
+
+  Future<void> _whatsappCustomer() async {
+    final phone = widget.job.householdPhone ?? '';
+    if (phone.isEmpty) return;
+    // Remove any non-numeric characters for WhatsApp
+    final cleanPhone = phone.replaceAll(RegExp(r'[^\d+]'), '');
+    final uri = Uri.parse('https://wa.me/$cleanPhone');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
   void _endNavigation() {
     Navigator.pushReplacementNamed(
       context,
@@ -453,7 +473,7 @@ class _CollectorNavigateScreenState extends State<CollectorNavigateScreen> {
 
                       const SizedBox(height: 10),
 
-                      // Re-center + Call Customer
+                      // Re-center + Call Customer + Message + WhatsApp
                       Row(
                         children: [
                           Expanded(
@@ -486,7 +506,7 @@ class _CollectorNavigateScreenState extends State<CollectorNavigateScreen> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: SizedBox(
                               height: 40,
@@ -498,7 +518,7 @@ class _CollectorNavigateScreenState extends State<CollectorNavigateScreen> {
                                   color: AppColors.primary,
                                 ),
                                 label: Text(
-                                  'Call Customer',
+                                  'Call',
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w700,
@@ -508,6 +528,68 @@ class _CollectorNavigateScreenState extends State<CollectorNavigateScreen> {
                                 style: OutlinedButton.styleFrom(
                                   side: BorderSide(
                                     color: AppColors.border,
+                                    width: 1,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: SizedBox(
+                              height: 40,
+                              child: OutlinedButton.icon(
+                                onPressed: _messageCustomer,
+                                icon: Icon(
+                                  Icons.message_rounded,
+                                  size: 16,
+                                  color: AppColors.primary,
+                                ),
+                                label: Text(
+                                  'Message',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(
+                                    color: AppColors.border,
+                                    width: 1,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: SizedBox(
+                              height: 40,
+                              child: OutlinedButton.icon(
+                                onPressed: _whatsappCustomer,
+                                icon: Icon(
+                                  Icons.chat_rounded,
+                                  size: 16,
+                                  color: const Color(0xFF25D366),
+                                ),
+                                label: Text(
+                                  'WhatsApp',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF25D366),
+                                  ),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(
+                                    color: const Color(0xFF25D366),
                                     width: 1,
                                   ),
                                   shape: RoundedRectangleBorder(
