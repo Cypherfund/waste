@@ -379,7 +379,7 @@ export class ReconciliationService {
       SELECT COALESCE(SUM(amount), 0) as total
       FROM payout_requests
       WHERE status = 'APPROVED'
-      AND approved_at >= $1 AND approved_at <= $2
+      AND reviewed_at >= $1 AND reviewed_at <= $2
     `,
       [fromDate, toDate],
     );
