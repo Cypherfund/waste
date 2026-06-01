@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Download,
   Calendar,
@@ -7,11 +7,20 @@ import {
   CheckCircle,
   TrendingUp,
   TrendingDown,
+  Search,
 } from 'lucide-react';
 import { reconciliationApi } from '../services/api/admin';
 import Spinner from '../components/Spinner';
 import ErrorBox from '../components/ErrorBox';
 import type { ReconciliationSummary, UnreconciledItem } from '../types';
+
+// Helper to parse string/number values from API
+const toNum = (val: string | number | null | undefined): number => {
+  if (val === null || val === undefined) return 0;
+  if (typeof val === 'number') return val;
+  const parsed = parseFloat(val);
+  return isNaN(parsed) ? 0 : parsed;
+};
 
 interface StatCardProps {
   label: string;
@@ -19,6 +28,36 @@ interface StatCardProps {
   icon: React.ReactNode;
   color: string;
   trend?: 'up' | 'down' | 'neutral';
+}
+
+// Skeleton components for loading state
+function SkeletonCard() {
+  return (
+    <div className="flex items-center gap-4 rounded-lg border bg-white p-4 shadow-sm">
+      <div className="h-10 w-10 animate-pulse rounded-lg bg-gray-200" />
+      <div className="flex-1">
+        <div className="mb-2 h-6 w-24 animate-pulse rounded bg-gray-200" />
+        <div className="h-4 w-16 animate-pulse rounded bg-gray-200" />
+      </div>
+    </div>
+  );
+}
+
+function SkeletonTable() {
+  return (
+    <div className="rounded-lg border bg-white shadow-sm">
+      <div className="border-b px-6 py-4">
+        <div className="h-6 w-32 animate-pulse rounded bg-gray-200" />
+      </div>
+      <div className="p-6">
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-12 animate-pulse rounded bg-gray-100" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function StatCard({ label, value, icon, color, trend }: StatCardProps) {
@@ -73,9 +112,11 @@ export default function ReconciliationPage() {
     }
   };
 
-  useEffect(() => {
+  const handleSearch = () => {
     fetchSummary();
-  }, [fromDate, toDate]);
+    setShowUnreconciled(false);
+    setUnreconciledItems([]);
+  };
 
   const handleExport = async () => {
     try {
@@ -103,11 +144,9 @@ export default function ReconciliationPage() {
     }
   };
 
-  if (loading) return <Spinner />;
-  if (error) return <ErrorBox message={error} onRetry={fetchSummary} />;
 
-  const totalMoneyIn = summaries?.reduce((sum, s) => sum + s.integratedProviderPayments + s.manualProviderPayments + s.walletTopups + s.cashCollected, 0) || 0;
-  const totalMoneyOut = summaries?.reduce((sum, s) => sum + s.collectorEarnings + s.marketerCommissions + s.approvedPayouts, 0) || 0;
+  const totalMoneyIn = summaries?.reduce((sum, s) => sum + toNum(s.integratedProviderPayments) + toNum(s.manualProviderPayments) + toNum(s.walletTopups) + toNum(s.cashCollected), 0) || 0;
+  const totalMoneyOut = summaries?.reduce((sum, s) => sum + toNum(s.collectorEarnings) + toNum(s.marketerCommissions) + toNum(s.approvedPayouts), 0) || 0;
   const totalUnreconciled = summaries?.reduce((sum, s) => sum + s.unreconciledItems, 0) || 0;
 
   return (
@@ -154,85 +193,110 @@ export default function ReconciliationPage() {
               className="rounded border border-gray-300 px-3 py-1.5 text-sm"
             />
           </div>
+          <button
+            onClick={handleSearch}
+            disabled={loading}
+            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            <Search size={16} />
+            {loading ? 'Loading...' : 'Search'}
+          </button>
         </div>
       </div>
+
+      {error && <ErrorBox message={error} onRetry={handleSearch} className="mb-6" />}
 
       {/* Summary Cards */}
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          label="Total Money In (XAF)"
-          value={totalMoneyIn.toLocaleString()}
-          icon={<DollarSign size={20} className="text-green-600" />}
-          color="bg-green-50"
-          trend="up"
-        />
-        <StatCard
-          label="Total Money Out (XAF)"
-          value={totalMoneyOut.toLocaleString()}
-          icon={<DollarSign size={20} className="text-red-600" />}
-          color="bg-red-50"
-          trend="down"
-        />
-        <StatCard
-          label="Wallet Liabilities (XAF)"
-          value={summaries?.reduce((sum, s) => sum + s.walletBalanceLiabilities, 0)?.toLocaleString() || '0'}
-          icon={<AlertTriangle size={20} className="text-orange-600" />}
-          color="bg-orange-50"
-        />
-        <StatCard
-          label="Unreconciled Items"
-          value={totalUnreconciled}
-          icon={<AlertTriangle size={20} className="text-red-600" />}
-          color="bg-red-50"
-          trend={totalUnreconciled > 0 ? 'down' : 'neutral'}
-        />
+        {loading ? (
+          <>
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </>
+        ) : (
+          <>
+            <StatCard
+              label="Total Money In (XAF)"
+              value={totalMoneyIn.toLocaleString('en-US')}
+              icon={<DollarSign size={20} className="text-green-600" />}
+              color="bg-green-50"
+              trend="up"
+            />
+            <StatCard
+              label="Total Money Out (XAF)"
+              value={totalMoneyOut.toLocaleString('en-US')}
+              icon={<DollarSign size={20} className="text-red-600" />}
+              color="bg-red-50"
+              trend="down"
+            />
+            <StatCard
+              label="Wallet Liabilities (XAF)"
+              value={summaries?.reduce((sum, s) => sum + toNum(s.walletBalanceLiabilities), 0).toLocaleString('en-US') || '0'}
+              icon={<AlertTriangle size={20} className="text-orange-600" />}
+              color="bg-orange-50"
+            />
+            <StatCard
+              label="Unreconciled Items"
+              value={totalUnreconciled}
+              icon={<AlertTriangle size={20} className="text-red-600" />}
+              color="bg-red-50"
+              trend={totalUnreconciled > 0 ? 'down' : 'neutral'}
+            />
+          </>
+        )}
       </div>
 
       {/* Detailed Summary Table */}
-      <div className="mb-8 rounded-lg border bg-white shadow-sm">
-        <div className="border-b px-6 py-4">
-          <h2 className="text-lg font-semibold text-gray-800">Daily Summaries</h2>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left font-medium text-gray-500">Date</th>
-                <th className="px-6 py-3 text-right font-medium text-gray-500">Money In</th>
-                <th className="px-6 py-3 text-right font-medium text-gray-500">Money Out</th>
-                <th className="px-6 py-3 text-right font-medium text-gray-500">Wallet Liabilities</th>
-                <th className="px-6 py-3 text-right font-medium text-gray-500">Unreconciled</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {summaries?.map((summary) => (
-                <tr key={summary.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-3 font-medium text-gray-900">{summary.summaryDate}</td>
-                  <td className="px-6 py-3 text-right text-gray-700">
-                    {(summary.integratedProviderPayments + summary.manualProviderPayments + summary.walletTopups + summary.cashCollected).toLocaleString()}
-                  </td>
-                  <td className="px-6 py-3 text-right text-gray-700">
-                    {(summary.collectorEarnings + summary.marketerCommissions + summary.approvedPayouts).toLocaleString()}
-                  </td>
-                  <td className="px-6 py-3 text-right text-gray-700">{summary.walletBalanceLiabilities.toLocaleString()}</td>
-                  <td className="px-6 py-3 text-right">
-                    <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${summary.unreconciledItems > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
-                      {summary.unreconciledItems}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-              {(!summaries || summaries.length === 0) && (
+      {loading ? (
+        <SkeletonTable />
+      ) : (
+        <div className="mb-8 rounded-lg border bg-white shadow-sm">
+          <div className="border-b px-6 py-4">
+            <h2 className="text-lg font-semibold text-gray-800">Daily Summaries</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
-                    No reconciliation data for selected date range
-                  </td>
+                  <th className="px-6 py-3 text-left font-medium text-gray-500">Date</th>
+                  <th className="px-6 py-3 text-right font-medium text-gray-500">Money In</th>
+                  <th className="px-6 py-3 text-right font-medium text-gray-500">Money Out</th>
+                  <th className="px-6 py-3 text-right font-medium text-gray-500">Wallet Liabilities</th>
+                  <th className="px-6 py-3 text-right font-medium text-gray-500">Unreconciled</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y">
+                {summaries?.map((summary) => (
+                  <tr key={summary.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-3 font-medium text-gray-900">{summary.summaryDate}</td>
+                    <td className="px-6 py-3 text-right text-gray-700">
+                      {(toNum(summary.integratedProviderPayments) + toNum(summary.manualProviderPayments) + toNum(summary.walletTopups) + toNum(summary.cashCollected)).toLocaleString('en-US')}
+                    </td>
+                    <td className="px-6 py-3 text-right text-gray-700">
+                      {(toNum(summary.collectorEarnings) + toNum(summary.marketerCommissions) + toNum(summary.approvedPayouts)).toLocaleString('en-US')}
+                    </td>
+                    <td className="px-6 py-3 text-right text-gray-700">{toNum(summary.walletBalanceLiabilities).toLocaleString('en-US')}</td>
+                    <td className="px-6 py-3 text-right">
+                      <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${summary.unreconciledItems > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                        {summary.unreconciledItems}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {(!summaries || summaries.length === 0) && (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                      No reconciliation data for selected date range
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Unreconciled Items */}
       <div className="rounded-lg border bg-white shadow-sm">
@@ -271,7 +335,7 @@ export default function ReconciliationPage() {
                     <tr key={index} className="hover:bg-gray-50">
                       <td className="px-6 py-3 font-medium text-gray-900">{item.type}</td>
                       <td className="px-6 py-3 text-gray-700">{item.description}</td>
-                      <td className="px-6 py-3 text-right text-gray-700">{item.amount.toLocaleString()}</td>
+                      <td className="px-6 py-3 text-right text-gray-700">{toNum(item.amount).toLocaleString('en-US')}</td>
                       <td className="px-6 py-3 text-gray-700">{item.entityType}: {item.entityId}</td>
                       <td className="px-6 py-3 text-gray-700">{new Date(item.date).toISOString().split('T')[0]}</td>
                       <td className="px-6 py-3 text-gray-700">{item.reason}</td>

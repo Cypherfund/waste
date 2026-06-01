@@ -355,6 +355,8 @@ class _IntegratedPaymentScreenState extends State<IntegratedPaymentScreen> {
         notes: 'Integrated payment: ${flowProvider.selectedProviderName}',
         paymentMode: 'INTEGRATED_PROVIDER',
         paymentMethod: flowProvider.selectedPaymentMethodCode,
+        paymentCode: flowProvider.selectedPaymentMethodCode,
+        paymentPhone: flowProvider.paymentPhone,
       );
 
       if (!mounted) return;

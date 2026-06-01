@@ -39,8 +39,10 @@ class JobApi {
     String? notes,
     String? paymentMode,
     String? paymentMethod,
+    String? paymentCode,
     String? paymentRef,
     String? paymentProofUrl,
+    String? paymentPhone,
   }) async {
     final response = await _client.dio.post('/jobs', data: {
       'scheduledDate': scheduledDate,
@@ -51,8 +53,10 @@ class JobApi {
       if (notes != null && notes.isNotEmpty) 'notes': notes,
       if (paymentMode != null && paymentMode.isNotEmpty) 'paymentMode': paymentMode,
       if (paymentMethod != null && paymentMethod.isNotEmpty) 'paymentMethod': paymentMethod,
+      if (paymentCode != null && paymentCode.isNotEmpty) 'paymentCode': paymentCode,
       if (paymentRef != null && paymentRef.isNotEmpty) 'paymentRef': paymentRef,
       if (paymentProofUrl != null && paymentProofUrl.isNotEmpty) 'paymentProofUrl': paymentProofUrl,
+      if (paymentPhone != null && paymentPhone.isNotEmpty) 'paymentPhone': paymentPhone,
     });
     return Job.fromJson(response.data as Map<String, dynamic>);
   }

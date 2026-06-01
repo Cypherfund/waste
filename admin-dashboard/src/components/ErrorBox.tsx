@@ -3,11 +3,12 @@ import { RefreshCw } from 'lucide-react';
 interface Props {
   message: string;
   onRetry?: () => void;
+  className?: string;
 }
 
-export default function ErrorBox({ message, onRetry }: Props) {
+export default function ErrorBox({ message, onRetry, className = '' }: Props) {
   return (
-    <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
+    <div className={`rounded-lg border border-red-200 bg-red-50 p-6 text-center ${className}`}>
       <p className="mb-3 text-sm text-red-700">{message}</p>
       {onRetry && (
         <button

@@ -336,7 +336,7 @@ export const reconciliationApi = {
       .then((r) => r.data.data),
 
   saveDaily: (date: string) =>
-    client.post<{ success: boolean; data: ReconciliationSummary }>('/admin/reconciliation/daily/save', null, { params: { date } })
+    client.post<{ success: boolean; data: ReconciliationSummary }>('/admin/reconciliation/daily/save', {}, { params: { date } })
       .then((r) => r.data.data),
 
   exportCsv: async (from: string, to: string) => {
