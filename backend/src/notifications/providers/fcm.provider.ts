@@ -77,10 +77,19 @@ export class FcmProvider implements OnModuleInit {
         data: message.data ?? {},
         android: {
           priority: 'high',
+          notification: {
+            channelId: 'urgent_jobs',
+            priority: 'high',
+            sound: 'default',
+          },
         },
         apns: {
           payload: {
-            aps: { sound: 'default', badge: 1 },
+            aps: {
+              sound: 'default',
+              badge: 1,
+              category: 'urgent_jobs',
+            },
           },
         },
       });

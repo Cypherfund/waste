@@ -13,6 +13,7 @@ import {
   TemplateContext,
 } from './templates/notification.templates';
 import { FeatureFlagService, FEATURE_FLAGS } from '../config/feature-flags';
+import { SystemConfigService } from '../config/system-config.service';
 import { UsersService } from '../users/users.service';
 import { NotificationChannel, NotificationStatus } from '../common/enums/notification-channel.enum';
 import { NotificationType } from '../common/enums/notification-type.enum';
@@ -59,6 +60,7 @@ export class NotificationsService {
     @Inject(SMS_PROVIDER)
     private readonly smsProvider: SmsProvider,
     private readonly featureFlagService: FeatureFlagService,
+    private readonly systemConfigService: SystemConfigService,
     private readonly usersService: UsersService,
     private readonly sentryService: SentryService,
     private readonly businessLogger: BusinessLoggerService,
@@ -68,9 +70,11 @@ export class NotificationsService {
 
   @OnEvent(JobEvents.ASSIGNED)
   async onJobAssigned(payload: JobAssignedPayload): Promise<void> {
+    const config = await this.systemConfigService.getAssignmentConfig();
     if (payload.collectorId) {
       await this.createAndDispatch(payload.collectorId, NotificationType.JOB_ASSIGNED, {
         jobId: payload.jobId,
+        acceptTimeoutMinutes: config.acceptTimeoutMinutes,
       });
     }
     // Notify household only for manual assignments — auto-assign notifies household on JOB_ACCEPTED (when collector accepts)

@@ -11,6 +11,7 @@ export type TemplateContext = {
   householdName?: string;
   reason?: string;
   attempts?: number;
+  acceptTimeoutMinutes?: number;
   [key: string]: any;
 };
 
@@ -18,7 +19,9 @@ type TemplateFactory = (ctx: TemplateContext) => NotificationTemplate;
 
 const templates: Record<string, TemplateFactory> = {
   [NotificationType.JOB_ASSIGNED]: (ctx) => ({
-    title: 'New Job Assigned',
+    title: ctx.acceptTimeoutMinutes
+      ? `Respond within ${ctx.acceptTimeoutMinutes} minutes`
+      : 'New Job Assigned',
     body: `You have been assigned a new pickup job${ctx.jobId ? ` #${ctx.jobId.slice(0, 8)}` : ''}.`,
   }),
 
