@@ -246,9 +246,8 @@ export class PaymentService {
 
   // ── INITIATE payment ─────────────────────────────────────────────
   async initiatePayment(userId: string, dto: InitiatePaymentDto): Promise<PaymentTransaction> {
-    // Validate provider exists
-    const providers = await this.getProviders();
-    const provider = providers.find((p) => p.paymentCode === dto.paymentCode);
+    // Validate provider exists (no country filter — code is globally unique enough)
+    const provider = await this.getProviderByCode(dto.paymentCode);
     if (!provider) {
       throw new BadRequestException(`Invalid payment code: ${dto.paymentCode}`);
     }

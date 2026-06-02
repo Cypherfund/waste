@@ -37,12 +37,14 @@ class _OtpScreenState extends State<OtpScreen> {
   Timer? _timer;
   bool _isVerifying = false;
   String? _errorMessage;
+  String? _currentDevOtp;
   late final AuthApi _authApi;
 
   @override
   void initState() {
     super.initState();
     _errorMessage = widget.errorMessage;
+    _currentDevOtp = widget.devModeOtp;
     _authApi = AuthApi(widget.apiClient);
     _startTimer();
   }
@@ -159,20 +161,10 @@ class _OtpScreenState extends State<OtpScreen> {
           setState(() {
             _isVerifying = false;
             _code = '';
+            if (response.otp != null) {
+              _currentDevOtp = response.otp;
+            }
           });
-          
-          // Show dev mode OTP in snackbar if returned
-          final snackBarMessage = response.devMode && response.otp != null
-              ? 'Dev Mode: New code is ${response.otp}'
-              : (response.message ?? 'Code sent successfully');
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(snackBarMessage),
-              backgroundColor: response.devMode ? Colors.orange : Colors.green,
-              duration: response.devMode ? const Duration(seconds: 10) : const Duration(seconds: 3),
-            ),
-          );
         } else {
           setState(() {
             _isVerifying = false;
@@ -227,10 +219,11 @@ class _OtpScreenState extends State<OtpScreen> {
 
             // Main Content
             Expanded(
-              child: Padding(
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     const SizedBox(height: 24),
                     const Text(
@@ -287,10 +280,55 @@ class _OtpScreenState extends State<OtpScreen> {
                         );
                       }),
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 24),
+
+                    // Timer / Resend
+                    Center(
+                      child: _resendSeconds > 0
+                          ? Text(
+                              'Resend code in ${_formatTimer(_resendSeconds)}',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Colors.black54,
+                              ),
+                            )
+                          : TextButton(
+                              onPressed: _isVerifying ? null : () {
+                                print('DEBUG: Resend Code tapped');
+                                _resendCode();
+                              },
+                              style: TextButton.styleFrom(
+                                foregroundColor: AppColors.primary,
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  side: BorderSide(color: AppColors.primary),
+                                ),
+                              ),
+                              child: const Text(
+                                'Resend Code',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                    ),
+
+                    if (_isVerifying) ...[
+                      const SizedBox(height: 16),
+                      const Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.primary,
+                          strokeWidth: 2,
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 24),
 
                     // Dev Mode OTP Banner (only shown when backend returns OTP)
-                    if (widget.devModeOtp != null) ...[
+                    if (_currentDevOtp != null) ...[
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -330,7 +368,7 @@ class _OtpScreenState extends State<OtpScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              widget.devModeOtp!,
+                              _currentDevOtp!,
                               style: TextStyle(
                                 fontSize: 32,
                                 fontWeight: FontWeight.w800,
@@ -343,34 +381,6 @@ class _OtpScreenState extends State<OtpScreen> {
                       ),
                       const SizedBox(height: 24),
                     ],
-
-                    // Timer / Resend
-                    Center(
-                      child: GestureDetector(
-                        onTap: () {
-                          print('DEBUG: Resend Code tapped, _resendSeconds = $_resendSeconds, _isVerifying = $_isVerifying');
-                          if (_resendSeconds > 0) {
-                            print('DEBUG: Timer not expired yet, ignoring tap');
-                            return;
-                          }
-                          _resendCode();
-                        },
-                        child: Text(
-                          _resendSeconds > 0
-                              ? 'Resend code in ${_formatTimer(_resendSeconds)}'
-                              : 'Resend Code',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: _resendSeconds > 0 || _isVerifying
-                                ? Colors.black54
-                                : AppColors.primary,
-                            fontWeight: _resendSeconds > 0 || _isVerifying
-                                ? FontWeight.normal
-                                : FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
 
                     // Error message
                     if (_errorMessage != null) ...[
@@ -399,16 +409,7 @@ class _OtpScreenState extends State<OtpScreen> {
                         ),
                       ),
                     ],
-
-                    if (_isVerifying) ...[
-                      const SizedBox(height: 24),
-                      const Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.primary,
-                          strokeWidth: 2,
-                        ),
-                      ),
-                    ],
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
