@@ -292,25 +292,15 @@ class _IntegratedPaymentScreenState extends State<IntegratedPaymentScreen> {
       // ── Wallet top-up integrated payment branch ───────────────────
       if (flowProvider.isWalletTopUpContext) {
         final walletApi = context.read<WalletApi>();
-        await walletApi.topUp(
+        final topUpTx = await walletApi.topUp(
           amount: flowProvider.walletTopUpAmount!,
           paymentMethodId: flowProvider.selectedProviderId!,
         );
 
         if (!mounted) return;
 
-        flowProvider.setResultType(PaymentResultType.submitted);
-
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/payment-result',
-          (route) => route.settings.name == '/home',
-          arguments: {
-            'resultType': PaymentResultType.submitted,
-            'isWalletTopUp': true,
-            'amount': flowProvider.walletTopUpAmount,
-          },
-        );
+        flowProvider.setLinkedTransactionId(topUpTx.id);
+        Navigator.pushNamed(context, '/payment-processing');
         return;
       }
 
@@ -335,9 +325,10 @@ class _IntegratedPaymentScreenState extends State<IntegratedPaymentScreen> {
           return;
         }
 
-        // Store transaction ID if returned, then poll
+        // Store transaction ID for polling
         if (subscription.providerTransactionId != null) {
           flowProvider.setProviderTransactionId(subscription.providerTransactionId!);
+          flowProvider.setLinkedTransactionId(subscription.providerTransactionId!);
         }
         Navigator.pushNamed(context, '/payment-processing');
         return;
@@ -372,17 +363,11 @@ class _IntegratedPaymentScreenState extends State<IntegratedPaymentScreen> {
       }
 
       flowProvider.setCreatedJob(job);
-      flowProvider.setResultType(PaymentResultType.submitted);
+      if (job.transactionId != null) {
+        flowProvider.setLinkedTransactionId(job.transactionId!);
+      }
 
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        '/payment-result',
-        (route) => route.settings.name == '/home',
-        arguments: {
-          'resultType': PaymentResultType.submitted,
-          'job': job,
-        },
-      );
+      Navigator.pushNamed(context, '/payment-processing');
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

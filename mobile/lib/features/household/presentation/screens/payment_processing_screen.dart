@@ -7,9 +7,9 @@ import '../../providers/payment_flow_provider.dart';
 import '../../providers/payment_flow_enums.dart';
 
 /// Screen 3b: Payment Processing
-/// 
-/// Shows loading state while payment is being processed
-/// Polls payment status and handles success/failure states
+///
+/// Polls GET /payments/:txId/status every 5 s for up to 180 s.
+/// Navigates to PaymentResultScreen on success, failure, or timeout.
 class PaymentProcessingScreen extends StatefulWidget {
   const PaymentProcessingScreen({super.key});
 
@@ -18,138 +18,126 @@ class PaymentProcessingScreen extends StatefulWidget {
 }
 
 class _PaymentProcessingScreenState extends State<PaymentProcessingScreen> {
-  Timer? _pollingTimer;
-  bool _isCancelled = false;
-  static const Duration _pollingInterval = Duration(seconds: 3);
-  static const Duration _maxPollingDuration = Duration(minutes: 5);
+  Timer? _pollTimer;
+  Timer? _elapsedTimer;
+  bool _hasNavigated = false;
+  bool _isDisposed = false;
+
+  static const int _pollIntervalSeconds = 5;
+  static const int _maxDurationSeconds = 180;
+
   int _elapsedSeconds = 0;
+  int _pollAttempts = 0;
+  static const int _maxAttempts = _maxDurationSeconds ~/ _pollIntervalSeconds; // 36
 
   @override
   void initState() {
     super.initState();
-    _startPolling();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _start());
   }
 
   @override
   void dispose() {
-    _pollingTimer?.cancel();
+    _isDisposed = true;
+    _pollTimer?.cancel();
+    _elapsedTimer?.cancel();
     super.dispose();
   }
 
-  void _startPolling() {
-    // Start elapsed time counter
-    Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      setState(() {
-        _elapsedSeconds++;
-      });
-
-      // Check for timeout
-      if (_elapsedSeconds >= _maxPollingDuration.inSeconds) {
-        timer.cancel();
-        _handleTimeout();
-      }
+  void _start() {
+    _elapsedTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (_isDisposed) return;
+      setState(() => _elapsedSeconds++);
     });
 
-    // Start polling for payment status
-    _pollPaymentStatus();
+    _pollTimer = Timer.periodic(
+      const Duration(seconds: _pollIntervalSeconds),
+      (_) => _poll(),
+    );
+
+    // Run first poll immediately
+    _poll();
   }
 
-  Future<void> _pollPaymentStatus() async {
-    final flowProvider = context.read<PaymentFlowProvider>();
-    final providerTransactionId = flowProvider.providerTransactionId;
+  Future<void> _poll() async {
+    if (_isDisposed || _hasNavigated) return;
 
-    if (providerTransactionId == null) {
-      // No transaction ID, simulate for demo
-      await Future.delayed(const Duration(seconds: 3));
-      if (!mounted || _isCancelled) return;
-      _handlePaymentSuccess();
+    _pollAttempts++;
+
+    if (_pollAttempts > _maxAttempts) {
+      _stopTimers();
+      _navigate(PaymentResultType.pending);
       return;
     }
 
-    // Poll actual payment status
-    _pollingTimer = Timer.periodic(_pollingInterval, (timer) async {
-      if (!mounted || _isCancelled) {
-        timer.cancel();
+    final flowProvider = context.read<PaymentFlowProvider>();
+    final txId = flowProvider.linkedTransactionId;
+    final jobId = flowProvider.createdJob?.id;
+    final walletApi = context.read<WalletApi>();
+
+    try {
+      PaymentTransaction? tx;
+
+      if (txId != null) {
+        tx = await walletApi.checkTransactionStatus(txId);
+      } else if (jobId != null) {
+        tx = await walletApi.getLatestJobTransaction(jobId);
+      } else {
+        // No txId and no jobId — go to pending
+        _stopTimers();
+        _navigate(PaymentResultType.pending);
         return;
       }
 
-      try {
-        // TODO: Replace with actual API call to check payment status
-        // final status = await WalletApi().checkPaymentStatus(providerTransactionId);
-        
-        // For demo, simulate successful payment after 3 polls
-        final pollCount = _elapsedSeconds ~/ _pollingInterval.inSeconds;
-        if (pollCount >= 1) {
-          timer.cancel();
-          if (!mounted || _isCancelled) return;
-          _handlePaymentSuccess();
-        }
-      } catch (e) {
-        if (!mounted) return;
-        timer.cancel();
-        _handlePaymentError(e.toString());
+      if (_isDisposed || _hasNavigated) return;
+
+      if (tx == null) return; // Still waiting, keep polling
+
+      final status = tx.status.toUpperCase();
+      if (status == 'SUCCESS' || status == 'VERIFIED' || status == 'COMPLETED') {
+        _stopTimers();
+        _navigate(PaymentResultType.success);
+      } else if (status == 'FAILED' || status == 'REJECTED' || status == 'CANCELLED') {
+        _stopTimers();
+        _navigate(PaymentResultType.failed);
       }
-    });
+      // PENDING / AWAITING_ADMIN_VERIFICATION → keep polling
+    } catch (_) {
+      // Network error — keep polling, don't fail immediately
+    }
   }
 
-  void _handlePaymentSuccess() {
+  void _stopTimers() {
+    _pollTimer?.cancel();
+    _elapsedTimer?.cancel();
+  }
+
+  void _navigate(PaymentResultType resultType) {
+    if (_hasNavigated || !mounted) return;
+    _hasNavigated = true;
     final flowProvider = context.read<PaymentFlowProvider>();
-    final isSubscription = flowProvider.isSubscriptionContext;
     Navigator.pushReplacementNamed(
       context,
       '/payment-result',
       arguments: {
-        'resultType': PaymentResultType.success,
-        'isSubscription': isSubscription,
-        if (!isSubscription) 'job': flowProvider.createdJob,
+        'resultType': resultType,
+        'isSubscription': flowProvider.isSubscriptionContext,
+        'isWalletTopUp': flowProvider.isWalletTopUpContext,
+        'job': flowProvider.createdJob,
+        'amount': flowProvider.walletTopUpAmount,
       },
     );
   }
 
-  void _handlePaymentError(String error) {
-    final flowProvider = context.read<PaymentFlowProvider>();
-    final isSubscription = flowProvider.isSubscriptionContext;
-    Navigator.pushReplacementNamed(
-      context,
-      '/payment-result',
-      arguments: {
-        'resultType': PaymentResultType.failed,
-        'isSubscription': isSubscription,
-        'failureReason': error,
-        if (!isSubscription) 'job': flowProvider.createdJob,
-      },
-    );
+  void _checkLater() {
+    _stopTimers();
+    _navigate(PaymentResultType.pending);
   }
 
-  void _handleTimeout() {
-    final flowProvider = context.read<PaymentFlowProvider>();
-    final isSubscription = flowProvider.isSubscriptionContext;
-    Navigator.pushReplacementNamed(
-      context,
-      '/payment-result',
-      arguments: {
-        'resultType': PaymentResultType.failed,
-        'isSubscription': isSubscription,
-        'failureReason': 'Payment timed out. Please try again.',
-        if (!isSubscription) 'job': flowProvider.createdJob,
-      },
-    );
-  }
-
-  void _cancelPayment() {
-    setState(() => _isCancelled = true);
-    _pollingTimer?.cancel();
-    Navigator.pop(context);
-  }
-
-  String _formatDuration(Duration duration) {
-    final minutes = duration.inMinutes;
-    final seconds = duration.inSeconds % 60;
-    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  String _formatElapsed() {
+    final m = _elapsedSeconds ~/ 60;
+    final s = _elapsedSeconds % 60;
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -162,79 +150,82 @@ class _PaymentProcessingScreenState extends State<PaymentProcessingScreen> {
             builder: (context, flowProvider, _) {
               final providerName = flowProvider.selectedProviderName ?? 'Payment Provider';
 
-              return Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Animated loading indicator
-                  SizedBox(
-                    width: 80,
-                    height: 80,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 3,
-                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 40),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 80,
+                      height: 80,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 3,
+                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 32),
+                    const SizedBox(height: 32),
 
-                  // Processing text
-                  const Text(
-                    'Processing Payment',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF111827),
+                    const Text(
+                      'Processing Payment',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF111827),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
+                    const SizedBox(height: 8),
 
-                  // Provider name
-                  Text(
-                    'via $providerName',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade600,
+                    Text(
+                      'via $providerName',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade600,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 32),
+                    const SizedBox(height: 20),
 
-                  // Info text
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 40),
-                    child: Text(
-                      'Please wait while we process your payment. Do not close this page.',
+                    Text(
+                      'Check your phone for a payment prompt.',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey.shade500,
                       ),
                       textAlign: TextAlign.center,
                     ),
-                  ),
-                  const SizedBox(height: 48),
+                    const SizedBox(height: 6),
 
-                  // Cancel button
-                  TextButton(
-                    onPressed: _cancelPayment,
-                    child: Text(
-                      'Cancel',
+                    Text(
+                      'This may take a few moments.',
                       style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade600,
+                        fontSize: 13,
+                        color: Colors.grey.shade400,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 48),
+
+                    TextButton(
+                      onPressed: _checkLater,
+                      child: Text(
+                        "I'll check later",
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade600,
+                        ),
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 8),
 
-                  const SizedBox(height: 8),
-
-                  // Elapsed time
-                  Text(
-                    'Elapsed: ${_formatDuration(Duration(seconds: _elapsedSeconds))}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade400,
+                    Text(
+                      _formatElapsed(),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade400,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               );
             },
           ),

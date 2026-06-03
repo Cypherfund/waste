@@ -211,6 +211,7 @@ export class JobsService {
     this.logger.log(`Job created: ${saved.id} by household ${householdId} [mode=${paymentMode}]`);
 
     // Initiate integrated provider payment (stub: sets PROVIDER_PENDING; no real gateway call required for now)
+    let integratedTransactionId: string | null = null;
     if (paymentMode === PaymentMode.INTEGRATED_PROVIDER && dto.paymentCode && dto.paymentPhone) {
       try {
         const paymentTx = await this.paymentService.initiatePayment(householdId, {
@@ -220,6 +221,7 @@ export class JobsService {
           phone: dto.paymentPhone,
           jobId: saved.id,
         });
+        integratedTransactionId = paymentTx.id;
         this.logger.log(`Integrated payment initiated for job ${saved.id}: tx ${paymentTx.id}`);
       } catch (error) {
         this.logger.error(
@@ -230,7 +232,9 @@ export class JobsService {
 
     this.emitEvent(JobEvents.CREATED, saved);
 
-    return await this.toResponseDto(saved);
+    const dto_ = await this.toResponseDto(saved);
+    if (integratedTransactionId) dto_.transactionId = integratedTransactionId;
+    return dto_;
   }
 
   async findMyJobs(

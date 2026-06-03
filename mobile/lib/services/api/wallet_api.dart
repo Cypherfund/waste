@@ -385,18 +385,32 @@ class WalletApi {
     return UserPaymentMethod.fromJson(response.data as Map<String, dynamic>);
   }
 
-  Future<void> topUp({
+  Future<PaymentTransaction> topUp({
     required double amount,
     required String paymentMethodId,
     String? paymentRef,
     String? paymentProofUrl,
   }) async {
-    await _client.dio.post('/wallet/top-up', data: {
+    final response = await _client.dio.post('/wallet/top-up', data: {
       'amount': amount,
       'paymentMethodId': paymentMethodId,
       if (paymentRef != null) 'paymentRef': paymentRef,
       if (paymentProofUrl != null) 'paymentProofUrl': paymentProofUrl,
     });
+    return PaymentTransaction.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<PaymentTransaction> checkTransactionStatus(String txId) async {
+    final response = await _client.dio.get('/payments/$txId/status');
+    return PaymentTransaction.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<PaymentTransaction?> getLatestJobTransaction(String jobId) async {
+    final txList = await getMyTransactions(limit: 50);
+    final matches = txList.where((t) => t.jobId == jobId).toList();
+    if (matches.isEmpty) return null;
+    matches.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return matches.first;
   }
 
   Future<Map<String, dynamic>> payJobWithWallet({required String jobId}) async {

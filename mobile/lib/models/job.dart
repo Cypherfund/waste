@@ -72,6 +72,7 @@ class Job {
   final String? subscriptionId;
   final double? cashToCollectAmount;
   final String? cashCollectionType;
+  final String? transactionId;
 
   Job({
     required this.id,
@@ -113,6 +114,7 @@ class Job {
     this.subscriptionId,
     this.cashToCollectAmount,
     this.cashCollectionType,
+    this.transactionId,
   });
 
   factory Job.fromJson(Map<String, dynamic> json) {
@@ -170,6 +172,7 @@ class Job {
       subscriptionId: json['subscriptionId'] as String?,
       cashToCollectAmount: json['cashToCollectAmount'] != null ? double.tryParse(json['cashToCollectAmount'].toString()) : null,
       cashCollectionType: json['cashCollectionType'] as String?,
+      transactionId: json['transactionId'] as String?,
     );
   }
 

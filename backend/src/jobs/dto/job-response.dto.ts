@@ -101,4 +101,7 @@ export class JobResponseDto {
 
   @ApiProperty()
   updatedAt: Date;
+
+  @ApiPropertyOptional({ nullable: true, description: 'Payment transaction ID (integrated payments only)' })
+  transactionId?: string | null;
 }
