@@ -17,7 +17,7 @@ import { SubscriptionEvents } from '../events/events.types';
 import { Job } from '../jobs/entities/job.entity';
 import { PaymentMode } from '../common/enums/payment-mode.enum';
 import { PaymentService } from '../payments/payment.service';
-import { TransactionType } from '../payments/entities/payment-transaction.entity';
+import { TransactionType, PaymentSource } from '../payments/entities/payment-transaction.entity';
 import { CashCollectionType } from '../common/enums/cash-collection-type.enum';
 import { JobStatus } from '../common/enums/job-status.enum';
 import { SystemConfigService } from '../config/system-config.service';
@@ -125,6 +125,7 @@ export class SubscriptionsService {
           amount: plan.price,
           paymentCode: paymentFields.paymentCode,
           phone: paymentFields.paymentPhone,
+          paymentSource: PaymentSource.SUBSCRIPTION_PAYMENT,
         });
         providerTransactionId = paymentTx.id;
         this.logger.log(`Integrated payment initiated for subscription: tx ${paymentTx.id}`);
