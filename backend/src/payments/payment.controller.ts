@@ -7,6 +7,7 @@ import {
   Query,
   ParseIntPipe,
   DefaultValuePipe,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { PaymentService } from './payment.service';
@@ -64,7 +65,7 @@ export class PaymentController {
     // Verify ownership
     const tx = await this.paymentService.getTransaction(id);
     if (tx.userId !== user.sub) {
-      throw new Error('Access denied');
+      throw new ForbiddenException('Access denied');
     }
     return this.paymentService.checkTransactionStatus(id);
   }

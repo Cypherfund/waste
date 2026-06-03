@@ -1179,7 +1179,7 @@ class _PendingVariant extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                'Your request has been submitted. We\'ll update your booking once the payment clears.',
+                'Your request has been submitted. We\'ll update it once the payment clears.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,

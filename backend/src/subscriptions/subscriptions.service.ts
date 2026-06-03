@@ -16,6 +16,8 @@ import { PaymentStatus } from '../common/enums/payment-status.enum';
 import { SubscriptionEvents } from '../events/events.types';
 import { Job } from '../jobs/entities/job.entity';
 import { PaymentMode } from '../common/enums/payment-mode.enum';
+import { PaymentService } from '../payments/payment.service';
+import { TransactionType } from '../payments/entities/payment-transaction.entity';
 import { CashCollectionType } from '../common/enums/cash-collection-type.enum';
 import { JobStatus } from '../common/enums/job-status.enum';
 import { SystemConfigService } from '../config/system-config.service';
@@ -41,6 +43,7 @@ export class SubscriptionsService {
     private readonly businessLogger: BusinessLoggerService,
     @Optional()
     private readonly adminAuditService?: AdminAuditService,
+    private readonly paymentService: PaymentService,
   ) {}
 
   async listPlans(): Promise<SubscriptionPlan[]> {
@@ -103,6 +106,27 @@ export class SubscriptionsService {
     const mondayStr = monday.toISOString().split('T')[0];
 
     const requiresPayment = !!paymentFields?.paymentMode;
+    const isIntegrated = paymentFields?.paymentMode === PaymentMode.INTEGRATED_PROVIDER;
+
+    // For integrated payments, initiate payment transaction before creating subscription
+    let providerTransactionId: string | null = paymentFields?.providerTransactionId ?? null;
+    if (isIntegrated && paymentFields?.paymentPhone) {
+      try {
+        const paymentTx = await this.paymentService.initiatePayment(userId, {
+          type: TransactionType.CASHIN,
+          amount: plan.price,
+          paymentCode: 'MTN_MOMO', // Default for subscription; can be made configurable
+          phone: paymentFields.paymentPhone,
+        });
+        providerTransactionId = paymentTx.id;
+        this.logger.log(`Integrated payment initiated for subscription: tx ${paymentTx.id}`);
+      } catch (error) {
+        this.logger.error(`Failed to initiate integrated payment for subscription: ${error.message}`);
+        throw new BadRequestException(
+          'Could not initiate payment. Please try another payment method or contact support.'
+        );
+      }
+    }
 
     const sub = this.subRepo.create({
       userId,
@@ -117,7 +141,7 @@ export class SubscriptionsService {
       paymentRef: paymentFields?.paymentRef ?? null,
       paymentProofUrl: paymentFields?.paymentProofUrl ?? null,
       paymentPhone: paymentFields?.paymentPhone ?? null,
-      providerTransactionId: paymentFields?.providerTransactionId ?? null,
+      providerTransactionId,
     });
 
     const saved = await this.subRepo.save(sub);

@@ -210,7 +210,7 @@ export class JobsService {
     const saved = await this.jobRepo.save(job);
     this.logger.log(`Job created: ${saved.id} by household ${householdId} [mode=${paymentMode}]`);
 
-    // Initiate integrated provider payment (stub: sets PROVIDER_PENDING; no real gateway call required for now)
+    // Initiate integrated provider payment
     let integratedTransactionId: string | null = null;
     if (paymentMode === PaymentMode.INTEGRATED_PROVIDER && dto.paymentCode && dto.paymentPhone) {
       try {
@@ -226,6 +226,13 @@ export class JobsService {
       } catch (error) {
         this.logger.error(
           `Failed to initiate integrated payment for job ${saved.id}: ${error.message}`,
+        );
+        // Mark job as failed since payment couldn't be initiated
+        saved.status = JobStatus.PAYMENT_FAILED;
+        saved.paymentStatus = PaymentStatus.FAILED;
+        await this.jobRepo.save(saved);
+        throw new BadRequestException(
+          'Could not initiate payment. Please try another payment method or contact support.'
         );
       }
     }
