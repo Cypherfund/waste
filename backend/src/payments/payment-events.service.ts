@@ -309,7 +309,6 @@ export class PaymentEventsService {
     }
 
     sub.paymentStatus = PaymentStatus.REJECTED;
-    sub.failureReason = reason || 'Payment failed';
     await this.subRepo.save(sub);
 
     this.logger.log(`Subscription ${sub.id} payment failed: ${reason}`);

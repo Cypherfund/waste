@@ -5,6 +5,7 @@ import { Repository, DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Job } from '../jobs/entities/job.entity';
 import { User } from '../users/entities/user.entity';
+import { UserSubscription } from '../subscriptions/entities/user-subscription.entity';
 import {
   PaymentTransaction,
   TransactionStatus,
@@ -61,6 +62,13 @@ describe('PaymentEventsService', () => {
           provide: getRepositoryToken(WalletLedger),
           useValue: {
             create: jest.fn(),
+            save: jest.fn(),
+          },
+        },
+        {
+          provide: getRepositoryToken(UserSubscription),
+          useValue: {
+            findOne: jest.fn(),
             save: jest.fn(),
           },
         },
