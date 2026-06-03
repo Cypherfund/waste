@@ -205,6 +205,9 @@ export const pendingPaymentsApi = {
         });
       }),
 
+  checkPaymentStatus: (jobId: string) =>
+    client.post<{ gatewayStatus: string; jobPaymentStatus: string; autoVerified: boolean; message: string }>(`/admin/jobs/${jobId}/check-payment-status`).then((r) => r.data),
+
   verify: (item: PendingPayment) => {
     if (item.paymentSource === 'WALLET_TOPUP' && item.transactionId) {
       return client.post(`/admin/wallet-top-up/${item.transactionId}/approve`).then((r) => r.data);

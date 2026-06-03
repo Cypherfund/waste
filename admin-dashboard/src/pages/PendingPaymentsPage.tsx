@@ -5,7 +5,7 @@ import Spinner from '../components/Spinner';
 import ErrorBox from '../components/ErrorBox';
 import HelpGuide from '../components/HelpGuide';
 import type { PendingPayment } from '../types';
-import { CheckCircle, XCircle, ExternalLink, RefreshCw } from 'lucide-react';
+import { CheckCircle, XCircle, ExternalLink, RefreshCw, Search } from 'lucide-react';
 
 type FilterTab = 'all' | 'job' | 'subscription' | 'wallet';
 
@@ -19,6 +19,7 @@ const MODE_LABEL: Record<string, string> = {
 const STATUS_BADGE: Record<string, string> = {
   PENDING: 'bg-amber-100 text-amber-700',
   AWAITING_ADMIN_VERIFICATION: 'bg-blue-100 text-blue-700',
+  PROVIDER_PENDING: 'bg-indigo-100 text-indigo-700',
   VERIFIED: 'bg-green-100 text-green-700',
   REJECTED: 'bg-red-100 text-red-700',
   FAILED: 'bg-red-100 text-red-700',
@@ -41,6 +42,7 @@ export default function PendingPaymentsPage() {
   const [rejectItem, setRejectItem] = useState<PendingPayment | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [feedback, setFeedback] = useState('');
+  const [statusResults, setStatusResults] = useState<Record<string, { gatewayStatus: string; autoVerified: boolean; message: string }>>({});
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
 
   const fetchPayments = useCallback(() => pendingPaymentsApi.list(), []);
@@ -70,6 +72,23 @@ export default function PendingPaymentsPage() {
       run();
     } catch (e: unknown) {
       setFeedback((e as Error).message ?? 'Error verifying payment');
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const handleCheckStatus = async (p: PendingPayment) => {
+    const id = p.jobId!;
+    setActionId(id);
+    try {
+      const result = await pendingPaymentsApi.checkPaymentStatus(id);
+      setStatusResults((prev) => ({ ...prev, [id]: result }));
+      if (result.autoVerified) {
+        setFeedback(`Payment confirmed by gateway — job ${id.slice(0, 8)} auto-verified.`);
+        run();
+      }
+    } catch (e: unknown) {
+      setFeedback((e as Error).message ?? 'Error checking payment status');
     } finally {
       setActionId(null);
     }
@@ -257,24 +276,58 @@ export default function PendingPaymentsPage() {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex gap-1">
-                        <button
-                          onClick={() => handleVerify(p)}
-                          disabled={actionId === id}
-                          title="Verify payment"
-                          className="rounded p-1 text-green-600 hover:bg-green-50 disabled:opacity-40"
-                        >
-                          <CheckCircle size={16} />
-                        </button>
-                        <button
-                          onClick={() => { setRejectItem(p); setRejectReason(''); }}
-                          disabled={actionId === id}
-                          title="Reject payment"
-                          className="rounded p-1 text-red-500 hover:bg-red-50 disabled:opacity-40"
-                        >
-                          <XCircle size={16} />
-                        </button>
-                      </div>
+                      {p.paymentStatus === 'PROVIDER_PENDING' && p.paymentSource === 'JOB_PAYMENT' ? (
+                        <div className="flex flex-col gap-1">
+                          <button
+                            onClick={() => handleCheckStatus(p)}
+                            disabled={actionId === id}
+                            title="Check gateway status"
+                            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50 disabled:opacity-40"
+                          >
+                            <Search size={13} /> Check Status
+                          </button>
+                          {statusResults[id] && (
+                            <span className={`text-xs leading-tight ${statusResults[id].autoVerified ? 'text-green-600' : statusResults[id].gatewayStatus === 'FAILED' ? 'text-red-500' : 'text-amber-600'}`}>
+                              {statusResults[id].message}
+                            </span>
+                          )}
+                          <button
+                            onClick={() => handleVerify(p)}
+                            disabled={actionId === id}
+                            title="Manually verify payment"
+                            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-green-600 hover:bg-green-50 disabled:opacity-40"
+                          >
+                            <CheckCircle size={13} /> Manual Verify
+                          </button>
+                          <button
+                            onClick={() => { setRejectItem(p); setRejectReason(''); }}
+                            disabled={actionId === id}
+                            title="Reject payment"
+                            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-red-500 hover:bg-red-50 disabled:opacity-40"
+                          >
+                            <XCircle size={13} /> Reject
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => handleVerify(p)}
+                            disabled={actionId === id}
+                            title="Verify payment"
+                            className="rounded p-1 text-green-600 hover:bg-green-50 disabled:opacity-40"
+                          >
+                            <CheckCircle size={16} />
+                          </button>
+                          <button
+                            onClick={() => { setRejectItem(p); setRejectReason(''); }}
+                            disabled={actionId === id}
+                            title="Reject payment"
+                            className="rounded p-1 text-red-500 hover:bg-red-50 disabled:opacity-40"
+                          >
+                            <XCircle size={16} />
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 );

@@ -112,6 +112,18 @@ export class AdminController {
 
   // ─── PAYMENT VERIFICATION ──────────────────────────────────────
 
+  @Post('jobs/:id/check-payment-status')
+  checkProviderPaymentStatus(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('sub') adminId: string,
+    @Req() req: Request,
+  ) {
+    return this.adminService.checkProviderPaymentStatus(id, adminId, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] as string,
+    });
+  }
+
   @Patch('jobs/:id/verify-payment')
   verifyPayment(
     @Param('id', ParseUUIDPipe) id: string,
