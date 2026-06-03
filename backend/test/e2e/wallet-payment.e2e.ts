@@ -33,6 +33,7 @@ import { JobStatus } from '../../src/common/enums/job-status.enum';
 import { PaymentStatus } from '../../src/common/enums/payment-status.enum';
 import { SubscriptionStatus } from '../../src/common/enums/subscription-status.enum';
 import { createTestUser, loginAndGetToken } from '../helpers/test-utils';
+import { PaymentService } from '../../src/payments/payment.service';
 
 describe('E2E: Wallet Payment Flow', () => {
   let householdToken: string;
@@ -368,29 +369,44 @@ describe('E2E: Wallet Payment Flow', () => {
     let providerPendingJobId: string;
 
     beforeEach(async () => {
+      // Ensure no active subscription covers the job
+      await dataSource.query(`TRUNCATE TABLE "user_subscriptions" CASCADE`);
+      
+      // Verify no subscription exists
+      const subCheck = await dataSource.query(`SELECT * FROM "user_subscriptions" WHERE "user_id" = $1 AND "status" = 'ACTIVE'`, [householdId]);
+      console.log('Active subscriptions before job creation:', subCheck.rows);
+      
       // Create an integrated provider payment job (PROVIDER_PENDING status)
       const jobRes = await request(httpServer)
         .post('/api/v1/jobs')
         .set('Authorization', `Bearer ${householdToken}`)
         .send({
-          scheduledDate: '2025-01-15',
+          scheduledDate: '2026-12-31',
           scheduledTime: '10:00',
           locationAddress: '123 Test Street',
           paymentMode: 'INTEGRATED_PROVIDER',
+          paymentMethod: 'MTN',
           paymentCode: 'MTN',
           paymentPhone: '+237699000001',
-        })
-        .expect(201);
+        });
+      
+      if (jobRes.status !== 201) {
+        console.log('Job creation failed:', jobRes.status, jobRes.body);
+      }
 
       providerPendingJobId = jobRes.body.id;
+      console.log('Created job ID:', providerPendingJobId);
+      console.log('Job body:', jobRes.body);
 
       // Verify job has PROVIDER_PENDING status
+      await new Promise(r => setTimeout(r, 100)); // Small delay for transaction commit
       const jobStatusRes = await dataSource.query(
-        `SELECT "status", "payment_status" FROM "jobs" WHERE id = $1`,
+        `SELECT status, payment_status FROM jobs WHERE id = $1`,
         [providerPendingJobId],
       );
-      expect(jobStatusRes.rows[0].status).toBe(JobStatus.PAYMENT_PENDING);
-      expect(jobStatusRes.rows[0].payment_status).toBe('PROVIDER_PENDING');
+      console.log('Query result:', jobStatusRes);
+      expect(jobStatusRes[0]?.status).toBe(JobStatus.PAYMENT_PENDING);
+      expect(jobStatusRes[0]?.payment_status).toBe('PROVIDER_PENDING');
     });
 
     it('verifies PROVIDER_PENDING payment', async () => {

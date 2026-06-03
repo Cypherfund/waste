@@ -8,6 +8,7 @@ import { INestApplication } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import * as request from 'supertest';
 import * as dotenv from 'dotenv';
+import { PaymentService } from '../src/payments/payment.service';
 
 // Load test environment variables
 dotenv.config({ path: './.env.test' });
@@ -34,6 +35,18 @@ beforeAll(async () => {
   })
     .overrideProvider(APP_GUARD)
     .useValue([])
+    .overrideProvider(PaymentService)
+    .useValue({
+      initiatePayment: jest.fn().mockResolvedValue({ id: 'mock-tx-id', status: 'PENDING' }),
+      getTransaction: jest.fn().mockResolvedValue({ id: 'mock-tx-id', status: 'PENDING' }),
+      checkTransactionStatus: jest.fn().mockResolvedValue({ id: 'mock-tx-id', status: 'PENDING' }),
+      getProviderByCode: jest.fn().mockImplementation((code) => Promise.resolve({
+        paymentCode: code,
+        providerName: 'Test Provider',
+        integrationEnabled: true,
+        isEnabled: true,
+      })),
+    })
     .compile();
 
   app = moduleFixture.createNestApplication();

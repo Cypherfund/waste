@@ -192,6 +192,7 @@ describe('SubscriptionsService', () => {
       await service.subscribe('user-1', 'plan-1', {
         paymentMode: 'INTEGRATED_PROVIDER',
         paymentPhone: '+237612345678',
+        paymentCode: 'MTN_MOMO',
       });
 
       expect(subRepo.create).toHaveBeenCalledWith(
