@@ -23,6 +23,7 @@ class SubscriptionApi {
     String? paymentRef,
     String? paymentProofUrl,
     String? paymentPhone,
+    String? paymentCode,
     String? providerTransactionId,
   }) async {
     final data = <String, dynamic>{'planId': planId};
@@ -30,6 +31,7 @@ class SubscriptionApi {
     if (paymentRef != null) data['paymentRef'] = paymentRef;
     if (paymentProofUrl != null) data['paymentProofUrl'] = paymentProofUrl;
     if (paymentPhone != null) data['paymentPhone'] = paymentPhone;
+    if (paymentCode != null) data['paymentCode'] = paymentCode;
     if (providerTransactionId != null) data['providerTransactionId'] = providerTransactionId;
     final response = await _client.dio.post(
       '/subscriptions/subscribe',

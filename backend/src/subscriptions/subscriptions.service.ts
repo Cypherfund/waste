@@ -41,9 +41,9 @@ export class SubscriptionsService {
     private readonly systemConfigService: SystemConfigService,
     private readonly sentryService: SentryService,
     private readonly businessLogger: BusinessLoggerService,
+    private readonly paymentService: PaymentService,
     @Optional()
     private readonly adminAuditService?: AdminAuditService,
-    private readonly paymentService: PaymentService,
   ) {}
 
   async listPlans(): Promise<SubscriptionPlan[]> {
@@ -64,6 +64,7 @@ export class SubscriptionsService {
       paymentRef?: string;
       paymentProofUrl?: string;
       paymentPhone?: string;
+      paymentCode?: string;
       providerTransactionId?: string;
     },
   ): Promise<UserSubscription> {
@@ -108,14 +109,21 @@ export class SubscriptionsService {
     const requiresPayment = !!paymentFields?.paymentMode;
     const isIntegrated = paymentFields?.paymentMode === PaymentMode.INTEGRATED_PROVIDER;
 
+    // Validate integrated payment required fields
+    if (isIntegrated) {
+      if (!paymentFields?.paymentPhone || !paymentFields?.paymentCode) {
+        throw new BadRequestException('paymentPhone and paymentCode are required for integrated subscription payment');
+      }
+    }
+
     // For integrated payments, initiate payment transaction before creating subscription
     let providerTransactionId: string | null = paymentFields?.providerTransactionId ?? null;
-    if (isIntegrated && paymentFields?.paymentPhone) {
+    if (isIntegrated && paymentFields?.paymentPhone && paymentFields?.paymentCode) {
       try {
         const paymentTx = await this.paymentService.initiatePayment(userId, {
           type: TransactionType.CASHIN,
           amount: plan.price,
-          paymentCode: 'MTN_MOMO', // Default for subscription; can be made configurable
+          paymentCode: paymentFields.paymentCode,
           phone: paymentFields.paymentPhone,
         });
         providerTransactionId = paymentTx.id;

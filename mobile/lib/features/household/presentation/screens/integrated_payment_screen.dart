@@ -311,6 +311,7 @@ class _IntegratedPaymentScreenState extends State<IntegratedPaymentScreen> {
           planId: flowProvider.subscriptionPlanId!,
           paymentMode: 'INTEGRATED_PROVIDER',
           paymentPhone: flowProvider.paymentPhone,
+          paymentCode: flowProvider.selectedPaymentMethodCode,
         );
 
         if (!mounted) return;
