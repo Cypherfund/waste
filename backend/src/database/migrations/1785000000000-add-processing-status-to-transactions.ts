@@ -65,7 +65,7 @@ export class AddProcessingStatusToTransactions1785000000000 implements Migration
           WHEN "processing_attempts" = 0 THEN 1
           ELSE "processing_attempts"
         END
-      WHERE "status" IN ('SUCCESS', 'VERIFIED', 'FAILED')
+      WHERE "status" IN ('SUCCESS', 'FAILED')
     `);
   }
 
