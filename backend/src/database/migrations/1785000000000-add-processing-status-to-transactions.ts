@@ -15,11 +15,7 @@ export class AddProcessingStatusToTransactions1785000000000 implements Migration
 
     // Add PROCESSING value if enum already exists (for environments with earlier migration version)
     await queryRunner.query(`
-      DO $$ BEGIN
-        ALTER TYPE "processing_status_enum" ADD VALUE IF NOT EXISTS 'PROCESSING';
-      EXCEPTION
-        WHEN invalid_object_definition THEN null;
-      END $$
+      ALTER TYPE "processing_status_enum" ADD VALUE IF NOT EXISTS 'PROCESSING'
     `);
 
     // Add processing_status column
