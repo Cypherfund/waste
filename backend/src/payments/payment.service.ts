@@ -418,14 +418,16 @@ export class PaymentService {
 
     // Idempotency: skip if already processed and downstream complete
     // Allow retry if status is SUCCESS but processing is not COMPLETED
+    // Skip if currently being processed (PROCESSING status)
     const needsProcessing =
       transaction.status === TransactionStatus.PENDING ||
       (transaction.status === TransactionStatus.SUCCESS &&
-        transaction.processingStatus !== ProcessingStatus.COMPLETED);
+        transaction.processingStatus !== ProcessingStatus.COMPLETED &&
+        transaction.processingStatus !== ProcessingStatus.PROCESSING);
 
     if (!needsProcessing) {
       this.logger.log(
-        `Transaction ${transaction.id} already fully processed (status: ${transaction.status}, processing: ${transaction.processingStatus})`,
+        `Transaction ${transaction.id} already fully processed or being processed (status: ${transaction.status}, processing: ${transaction.processingStatus})`,
       );
       return;
     }
@@ -451,9 +453,9 @@ export class PaymentService {
         this.logger.log(`Retrying downstream processing for transaction: ${transaction.id}`);
       }
 
-      // Increment attempts and set status to PENDING before every processing attempt
+      // Increment attempts and set status to PROCESSING before every processing attempt
       transaction.processingAttempts += 1;
-      transaction.processingStatus = ProcessingStatus.PENDING;
+      transaction.processingStatus = ProcessingStatus.PROCESSING;
       await this.transactionRepo.save(transaction);
 
       // Emit event for downstream processing (await to ensure state is updated before mobile polls)
@@ -606,7 +608,8 @@ export class PaymentService {
     let effectiveStatus = transaction.status;
     if (
       transaction.status === TransactionStatus.SUCCESS &&
-      transaction.processingStatus !== ProcessingStatus.COMPLETED
+      (transaction.processingStatus !== ProcessingStatus.COMPLETED &&
+       transaction.processingStatus !== ProcessingStatus.PROCESSING)
     ) {
       effectiveStatus = TransactionStatus.PENDING;
     }
@@ -796,8 +799,8 @@ export class PaymentService {
         }
 
         // Re-check status - may have been processed by another process (gateway callback)
-        if (lockedTx.processingStatus === ProcessingStatus.COMPLETED) {
-          this.logger.log(`Transaction ${tx.id} already completed by another process`);
+        if (lockedTx.processingStatus === ProcessingStatus.COMPLETED || lockedTx.processingStatus === ProcessingStatus.PROCESSING) {
+          this.logger.log(`Transaction ${tx.id} already being processed by another process`);
           return null;
         }
 
@@ -807,9 +810,9 @@ export class PaymentService {
           return null;
         }
 
-        // Claim the transaction - increment attempts and set to PENDING
+        // Claim the transaction - increment attempts and set to PROCESSING (exclusive claim)
         lockedTx.processingAttempts += 1;
-        lockedTx.processingStatus = ProcessingStatus.PENDING;
+        lockedTx.processingStatus = ProcessingStatus.PROCESSING;
         await em.save(lockedTx);
 
         this.logger.log(`Claimed transaction ${tx.id} for retry (attempt ${lockedTx.processingAttempts}/${maxAttempts})`);

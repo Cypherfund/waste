@@ -7,7 +7,7 @@ export class AddProcessingStatusToTransactions1785000000000 implements Migration
     // Create processing_status enum
     await queryRunner.query(`
       DO $$ BEGIN
-        CREATE TYPE "processing_status_enum" AS ENUM ('PENDING', 'COMPLETED', 'FAILED');
+        CREATE TYPE "processing_status_enum" AS ENUM ('PENDING', 'PROCESSING', 'COMPLETED', 'FAILED');
       EXCEPTION
         WHEN duplicate_object THEN null;
       END $$
