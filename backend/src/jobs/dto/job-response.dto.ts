@@ -96,6 +96,12 @@ export class JobResponseDto {
   @ApiPropertyOptional({ nullable: true })
   cancelledAt: Date | null;
 
+  @ApiPropertyOptional({ nullable: true })
+  paymentVerifiedBy: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  paymentVerifiedAt: Date | null;
+
   @ApiProperty()
   createdAt: Date;
 

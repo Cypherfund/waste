@@ -1043,6 +1043,8 @@ export class JobsService {
       completedAt: job.completedAt,
       validatedAt: job.validatedAt,
       cancelledAt: job.cancelledAt,
+      paymentVerifiedBy: job.paymentVerifiedBy,
+      paymentVerifiedAt: job.paymentVerifiedAt,
       createdAt: job.createdAt,
       updatedAt: job.updatedAt,
     };

@@ -46,6 +46,8 @@ beforeAll(async () => {
         integrationEnabled: true,
         isEnabled: true,
       })),
+      getProviders: jest.fn().mockResolvedValue([]),
+      isPaymentIntegrationEnabled: jest.fn().mockResolvedValue(false),
     })
     .compile();
 
@@ -95,6 +97,7 @@ beforeAll(async () => {
     'campaign_commission_schemes',
     'budget_transactions',
     'reconciliation_summaries',
+    'admin_audit_logs',
   ];
 
   for (const table of tables) {
