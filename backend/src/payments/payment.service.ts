@@ -7,7 +7,7 @@ import {
   Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan } from 'typeorm';
+import { Repository, LessThan, DataSource } from 'typeorm';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { AxiosResponse } from 'axios';
@@ -16,10 +16,12 @@ import {
   TransactionStatus,
   TransactionType,
   PaymentSource,
+  ProcessingStatus,
 } from './entities/payment-transaction.entity';
 import { PaymentProviderEntity } from './entities/payment-provider.entity';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import { PaymentCallbackDto } from './dto/payment-callback.dto';
+import { TransactionStatusResponseDto } from './dto/transaction-status-response.dto';
 import {
   PaymentProvider,
   GatewayInitiateResponse,
@@ -48,6 +50,7 @@ export class PaymentService {
     private readonly eventEmitter: EventEmitter2,
     private readonly sentryService: SentryService,
     private readonly businessLogger: BusinessLoggerService,
+    private readonly dataSource: DataSource,
     @Optional()
     private readonly adminAuditService?: AdminAuditService,
   ) {}
@@ -413,10 +416,18 @@ export class PaymentService {
       return; // Don't throw - we want to return 200 to stop retries
     }
 
-    // Idempotency: only process if still pending
-    if (transaction.status !== TransactionStatus.PENDING) {
+    // Idempotency: skip if already processed and downstream complete
+    // Allow retry if status is SUCCESS but processing is not COMPLETED
+    // Skip if currently being processed (PROCESSING status)
+    const needsProcessing =
+      transaction.status === TransactionStatus.PENDING ||
+      (transaction.status === TransactionStatus.SUCCESS &&
+        transaction.processingStatus !== ProcessingStatus.COMPLETED &&
+        transaction.processingStatus !== ProcessingStatus.PROCESSING);
+
+    if (!needsProcessing) {
       this.logger.log(
-        `Transaction ${transaction.id} already processed (status: ${transaction.status})`,
+        `Transaction ${transaction.id} already fully processed or being processed (status: ${transaction.status}, processing: ${transaction.processingStatus})`,
       );
       return;
     }
@@ -432,10 +443,20 @@ export class PaymentService {
     transaction.callbackReceivedAt = new Date();
 
     if (payload.status === TransactionStatus.SUCCESS) {
-      transaction.status = TransactionStatus.SUCCESS;
-      this.logger.log(`Payment SUCCESS: ${transaction.id}`);
+      // If retrying a SUCCESS transaction with incomplete processing, skip status update
+      const isRetry = transaction.status === TransactionStatus.SUCCESS;
 
-      // Save transaction state first to ensure accurate record
+      if (!isRetry) {
+        transaction.status = TransactionStatus.SUCCESS;
+        this.logger.log(`Payment SUCCESS: ${transaction.id}`);
+      } else {
+        this.logger.log(`Retrying downstream processing for transaction: ${transaction.id}`);
+      }
+
+      // Increment attempts and set status to PROCESSING before every processing attempt
+      transaction.processingAttempts += 1;
+      transaction.processingStatus = ProcessingStatus.PROCESSING;
+      transaction.processingStartedAt = new Date();
       await this.transactionRepo.save(transaction);
 
       // Emit event for downstream processing (await to ensure state is updated before mobile polls)
@@ -449,6 +470,13 @@ export class PaymentService {
           jobId: transaction.jobId,
           payoutRequestId: transaction.payoutRequestId,
         });
+
+        // Mark processing as completed
+        transaction.processingStatus = ProcessingStatus.COMPLETED;
+        transaction.processedAt = new Date();
+        transaction.processingFailureReason = null;
+        transaction.processingStartedAt = null;
+        await this.transactionRepo.save(transaction);
       } catch (error) {
         this.logger.error(`Downstream processing failed for payment success: ${error.message}`);
 
@@ -469,7 +497,13 @@ export class PaymentService {
           errorMessage: `Payment success downstream processing failed: ${error.message}`,
         });
 
-        // Re-throw to trigger gateway retry - payment was received but benefit not applied
+        // Mark processing as failed but keep transaction as SUCCESS
+        transaction.processingStatus = ProcessingStatus.FAILED;
+        transaction.processingFailureReason = error.message;
+        transaction.processingStartedAt = null;
+        await this.transactionRepo.save(transaction);
+
+        // Re-throw to trigger gateway retry
         throw error;
       }
       return;
@@ -522,7 +556,7 @@ export class PaymentService {
     await this.transactionRepo.save(transaction);
   }
 
-  // ── CHECK transaction status ─────────────────────────────────────
+  // ── CHECK transaction status (returns entity for internal use) ─────────────────────────────────────
   async checkTransactionStatus(transactionId: string): Promise<PaymentTransaction> {
     const transaction = await this.transactionRepo.findOne({
       where: { id: transactionId },
@@ -532,7 +566,7 @@ export class PaymentService {
       throw new NotFoundException('Transaction not found');
     }
 
-    // If already terminal state, return as-is
+    // If already terminal gateway state, return as-is (processing status tracked separately)
     if (transaction.status !== TransactionStatus.PENDING) {
       return transaction;
     }
@@ -566,6 +600,42 @@ export class PaymentService {
     }
 
     return transaction;
+  }
+
+  // ── GET effective transaction status for mobile (considers processing state) ─────────────────────────────────────
+  async getEffectiveStatus(transactionId: string): Promise<TransactionStatusResponseDto> {
+    const transaction = await this.checkTransactionStatus(transactionId);
+
+    // Calculate effective status for mobile display
+    // SUCCESS with incomplete processing should appear as PENDING to user
+    let effectiveStatus = transaction.status;
+    if (
+      transaction.status === TransactionStatus.SUCCESS &&
+      (transaction.processingStatus !== ProcessingStatus.COMPLETED &&
+       transaction.processingStatus !== ProcessingStatus.PROCESSING)
+    ) {
+      effectiveStatus = TransactionStatus.PENDING;
+    }
+
+    return {
+      id: transaction.id,
+      status: effectiveStatus,
+      gatewayStatus: transaction.status,
+      processingStatus: transaction.processingStatus,
+      processingAttempts: transaction.processingAttempts,
+      amount: transaction.amount,
+      currency: transaction.currency,
+      type: transaction.type,
+      paymentSource: transaction.paymentSource,
+      createdAt: transaction.createdAt,
+      updatedAt: transaction.updatedAt,
+      callbackReceivedAt: transaction.callbackReceivedAt,
+      processedAt: transaction.processedAt,
+      failureReason: transaction.failureReason,
+      processingFailureReason: transaction.processingFailureReason,
+      paymentCode: transaction.paymentCode,
+      jobId: transaction.jobId,
+    };
   }
 
   // ── POLL pending transactions (cron job) ───────────────────────────
@@ -688,5 +758,152 @@ export class PaymentService {
   // ── Look up a provider by payment code ───────────────────────────
   async getProviderByCode(paymentCode: string): Promise<PaymentProviderEntity | null> {
     return this.providerRepo.findOne({ where: { paymentCode, isEnabled: true } });
+  }
+
+  // ── RETRY incomplete downstream processing (scheduled job) ───────────────────────────
+  async retryIncompleteProcessing(): Promise<void> {
+    const maxAttempts = await this.systemConfigService.getNumber(
+      'payment.downstream_max_attempts',
+      5,
+    );
+
+    // Recover stale PROCESSING claims (abandoned due to crash)
+    // Transactions stuck in PROCESSING for more than 10 minutes are marked as FAILED
+    const staleThreshold = new Date(Date.now() - 10 * 60 * 1000); // 10 minutes ago
+    const staleRecoveryResult = await this.transactionRepo
+      .createQueryBuilder()
+      .update(PaymentTransaction)
+      .set({
+        processingStatus: ProcessingStatus.FAILED,
+        processingFailureReason: 'Processing claim timed out',
+      })
+      .where('"status" = :status', { status: TransactionStatus.SUCCESS })
+      .andWhere('"processing_status" = :processingStatus', { processingStatus: ProcessingStatus.PROCESSING })
+      .andWhere('"processing_started_at" < :threshold', { threshold: staleThreshold })
+      .execute();
+
+    if (staleRecoveryResult.affected && staleRecoveryResult.affected > 0) {
+      this.logger.log(`Recovered ${staleRecoveryResult.affected} stale PROCESSING claims`);
+    }
+
+    // Find SUCCESS transactions with incomplete processing that haven't exceeded max attempts
+    const incomplete = await this.transactionRepo.find({
+      where: [
+        {
+          status: TransactionStatus.SUCCESS,
+          processingStatus: ProcessingStatus.PENDING,
+          processingAttempts: LessThan(maxAttempts),
+        },
+        {
+          status: TransactionStatus.SUCCESS,
+          processingStatus: ProcessingStatus.FAILED,
+          processingAttempts: LessThan(maxAttempts),
+        },
+      ],
+    });
+
+    for (const tx of incomplete) {
+      this.logger.log(`Retrying downstream processing for transaction ${tx.id} (attempt ${tx.processingAttempts + 1}/${maxAttempts})`);
+
+      // Stage 1: Claim transaction in a short transaction with lock
+      const claimed = await this.dataSource.transaction(async (em: any) => {
+        // Lock transaction row for atomic claim
+        const lockedTx = await em
+          .getRepository(PaymentTransaction)
+          .createQueryBuilder('t')
+          .where('t.id = :id', { id: tx.id })
+          .setLock('pessimistic_write')
+          .getOne();
+
+        if (!lockedTx) {
+          this.logger.warn(`Transaction ${tx.id} not found during retry`);
+          return null;
+        }
+
+        // Re-check status - may have been processed by another process (gateway callback)
+        if (lockedTx.processingStatus === ProcessingStatus.COMPLETED || lockedTx.processingStatus === ProcessingStatus.PROCESSING) {
+          this.logger.log(`Transaction ${tx.id} already being processed by another process`);
+          return null;
+        }
+
+        // Check if still within max attempts (may have been incremented by another process)
+        if (lockedTx.processingAttempts >= maxAttempts) {
+          this.logger.log(`Transaction ${tx.id} already at max attempts`);
+          return null;
+        }
+
+        // Claim the transaction - increment attempts and set to PROCESSING (exclusive claim)
+        lockedTx.processingAttempts += 1;
+        lockedTx.processingStatus = ProcessingStatus.PROCESSING;
+        lockedTx.processingStartedAt = new Date();
+        await em.save(lockedTx);
+
+        this.logger.log(`Claimed transaction ${tx.id} for retry (attempt ${lockedTx.processingAttempts}/${maxAttempts})`);
+
+        return lockedTx;
+      });
+
+      if (!claimed) {
+        continue; // Skip if not claimed (already processed or at max attempts)
+      }
+
+      // Stage 2: Process downstream (outside transaction, lock released)
+      try {
+        await this.eventEmitter.emitAsync('payment.success', {
+          transactionId: claimed.id,
+          userId: claimed.userId,
+          type: claimed.type,
+          paymentSource: claimed.paymentSource,
+          amount: claimed.amount,
+          jobId: claimed.jobId,
+          payoutRequestId: claimed.payoutRequestId,
+        });
+
+        // Stage 3: Mark as completed
+        await this.transactionRepo.update(claimed.id, {
+          processingStatus: ProcessingStatus.COMPLETED,
+          processedAt: new Date(),
+          processingFailureReason: null,
+          processingStartedAt: null,
+        });
+
+        this.logger.log(`Downstream processing completed for transaction ${tx.id}`);
+      } catch (error: any) {
+        this.logger.error(`Scheduled retry failed for transaction ${tx.id}: ${error.message}`);
+
+        // Log to monitoring
+        this.sentryService.captureException(error, {
+          transactionId: claimed.id,
+          userId: claimed.userId,
+          context: 'scheduled downstream retry',
+          attempt: claimed.processingAttempts,
+        });
+
+        // Stage 3: Mark as failed (separate update, won't roll back)
+        await this.transactionRepo.update(claimed.id, {
+          processingStatus: ProcessingStatus.FAILED,
+          processingFailureReason: error.message,
+          processingStartedAt: null,
+        });
+
+        // Alert admin if max attempts reached
+        if (claimed.processingAttempts >= maxAttempts) {
+          this.businessLogger.logFailure(BusinessEventType.DOWNSTREAM_PROCESSING_FAILED, {
+            userId: claimed.userId,
+            transactionId: claimed.id,
+            amount: claimed.amount,
+            errorMessage: `Max retry attempts (${maxAttempts}) reached. Transaction requires manual intervention.`,
+            metadata: { processingAttempts: claimed.processingAttempts },
+          });
+
+          this.logger.error(`Transaction ${tx.id} reached max retry attempts. Admin intervention required.`);
+        }
+        // Continue to next transaction (don't throw)
+      }
+    }
+
+    if (incomplete.length > 0) {
+      this.logger.log(`Processed ${incomplete.length} transactions with incomplete downstream processing`);
+    }
   }
 }

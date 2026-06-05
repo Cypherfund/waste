@@ -39,4 +39,20 @@ export class PaymentSchedulerService {
       this.logger.error(`Failed to timeout stale transactions: ${error.message}`);
     }
   }
+
+  // ── Retry incomplete downstream processing every 2 minutes ───────
+  @Cron('*/2 * * * *')
+  async handleIncompleteProcessingRetry(): Promise<void> {
+    const enabled = await this.paymentService.isPaymentIntegrationEnabled();
+    if (!enabled) {
+      return; // Skip if payment integration is disabled
+    }
+
+    this.logger.debug('Retrying incomplete payment processing...');
+    try {
+      await this.paymentService.retryIncompleteProcessing();
+    } catch (error) {
+      this.logger.error(`Failed to retry incomplete payment processing: ${error.message}`);
+    }
+  }
 }
