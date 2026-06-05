@@ -631,7 +631,7 @@ export class PaymentService {
       gatewayStatus: transaction.status,
       processingStatus: transaction.processingStatus,
       processingAttempts: transaction.processingAttempts,
-      amount: transaction.amount,
+      amount: Number(transaction.amount),
       currency: transaction.currency,
       type: transaction.type,
       paymentSource: transaction.paymentSource,

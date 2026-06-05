@@ -127,6 +127,21 @@ describe('PaymentService', () => {
     });
   });
 
+  describe('getEffectiveStatus', () => {
+    it('returns amount as a number when the database decimal is loaded as a string', async () => {
+      transactionRepo.findOne.mockResolvedValue({
+        ...pendingTransaction,
+        amount: '1000.00',
+        status: TransactionStatus.SUCCESS,
+        processingStatus: ProcessingStatus.COMPLETED,
+      });
+
+      const result = await service.getEffectiveStatus('tx-1');
+
+      expect(result.amount).toBe(1000);
+    });
+  });
+
   describe('handleCallback', () => {
     it('looks up provider callbacks by the original transaction ref first', async () => {
       transactionRepo.findOne.mockResolvedValueOnce({ ...pendingTransaction });
