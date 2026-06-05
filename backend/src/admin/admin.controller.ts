@@ -13,6 +13,7 @@ import {
   ParseUUIDPipe,
   ParseIntPipe,
   DefaultValuePipe,
+  BadRequestException,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { Request } from 'express';
@@ -432,6 +433,9 @@ export class AdminController {
     @CurrentUser('sub') adminId: string,
     @Req() req: Request,
   ) {
+    if (!phone || phone.trim() === '') {
+      throw new BadRequestException('phone parameter is required');
+    }
     const result = await this.otpService.getRecentOtp(phone);
 
     // Log OTP lookup for security audit

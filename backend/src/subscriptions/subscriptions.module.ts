@@ -7,11 +7,13 @@ import { SubscriptionsController } from './subscriptions.controller';
 import { PricingService } from './pricing.service';
 import { Job } from '../jobs/entities/job.entity';
 import { SystemConfigModule } from '../config/system-config.module';
+import { PaymentsModule } from '../payments/payments.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([SubscriptionPlan, UserSubscription, Job]),
     SystemConfigModule,
+    PaymentsModule,
   ],
   controllers: [SubscriptionsController],
   providers: [SubscriptionsService, PricingService],

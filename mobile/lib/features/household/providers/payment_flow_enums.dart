@@ -19,4 +19,5 @@ enum PaymentResultType {
   success,      // Integrated payment successful
   failed,       // Payment failed/rejected
   cash,         // Cash booking created
+  pending,      // Integrated payment timed out — still awaiting gateway confirmation
 }

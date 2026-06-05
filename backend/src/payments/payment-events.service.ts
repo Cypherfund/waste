@@ -7,12 +7,15 @@ import {
   TransactionType,
   TransactionStatus,
   PaymentTransaction,
+  PaymentSource,
 } from './entities/payment-transaction.entity';
 import { Job } from '../jobs/entities/job.entity';
 import { JobStatus } from '../common/enums/job-status.enum';
 import { PaymentStatus } from '../common/enums/payment-status.enum';
-import { PaymentEvents, PaymentFailedPayload } from '../events/events.types';
+import { SubscriptionStatus } from '../common/enums/subscription-status.enum';
+import { PaymentEvents, PaymentFailedPayload, SubscriptionEvents } from '../events/events.types';
 import { User } from '../users/entities/user.entity';
+import { UserSubscription } from '../subscriptions/entities/user-subscription.entity';
 import {
   WalletLedger,
   WalletLedgerDirection,
@@ -32,6 +35,8 @@ export class PaymentEventsService {
     private readonly userRepo: Repository<User>,
     @InjectRepository(WalletLedger)
     private readonly walletLedgerRepo: Repository<WalletLedger>,
+    @InjectRepository(UserSubscription)
+    private readonly subRepo: Repository<UserSubscription>,
     private readonly eventEmitter: EventEmitter2,
     private readonly dataSource: DataSource,
     private readonly sentryService: SentryService,
@@ -44,6 +49,7 @@ export class PaymentEventsService {
     transactionId: string;
     userId: string;
     type: TransactionType;
+    paymentSource?: PaymentSource;
     amount: number;
     jobId?: string | null;
     payoutRequestId?: string | null;
@@ -75,6 +81,10 @@ export class PaymentEventsService {
     if (payload.type === TransactionType.WALLET_TOPUP) {
       await this.handleWalletTopUpSuccess(payload.transactionId, payload.userId, payload.amount);
     }
+    // Handle subscription payments via integrated provider
+    else if (payload.paymentSource === PaymentSource.SUBSCRIPTION_PAYMENT) {
+      await this.handleSubscriptionPaymentSuccess(payload.transactionId, payload.userId);
+    }
     // Handle job payments via integrated provider
     else if (payload.type === TransactionType.CASHIN && payload.jobId) {
       await this.handleJobPaymentSuccess(payload.jobId);
@@ -87,6 +97,7 @@ export class PaymentEventsService {
     transactionId: string;
     userId: string;
     type: TransactionType;
+    paymentSource?: PaymentSource;
     amount: number;
     jobId?: string | null;
     payoutRequestId?: string | null;
@@ -117,8 +128,12 @@ export class PaymentEventsService {
       reason: payload.reason,
     });
 
-    // Currently only CASHIN (job payments) is implemented via gateway
-    if (payload.type === TransactionType.CASHIN && payload.jobId) {
+    // Handle subscription payment failure
+    if (payload.paymentSource === PaymentSource.SUBSCRIPTION_PAYMENT) {
+      await this.handleSubscriptionPaymentFailure(payload.transactionId, payload.userId, payload.reason);
+    }
+    // Handle job payment failure
+    else if (payload.type === TransactionType.CASHIN && payload.jobId) {
       await this.handleJobPaymentFailure(payload.jobId, payload.reason);
     }
   }
@@ -240,6 +255,73 @@ export class PaymentEventsService {
       timestamp: new Date(),
     };
     this.eventEmitter.emit(PaymentEvents.FAILED, payload);
+  }
+
+  // ── Subscription payment success ───────────────────────────────
+  private async handleSubscriptionPaymentSuccess(
+    transactionId: string,
+    userId: string,
+  ): Promise<void> {
+    const sub = await this.subRepo.findOne({
+      where: { userId, providerTransactionId: transactionId },
+      relations: ['plan'],
+    });
+    if (!sub) {
+      this.logger.warn(`Subscription not found for payment success: tx ${transactionId}`);
+      return;
+    }
+
+    const today = new Date();
+    const monday = this.getMondayOfWeek(today);
+    const mondayStr = monday.toISOString().split('T')[0];
+
+    sub.status = SubscriptionStatus.ACTIVE;
+    sub.paymentStatus = PaymentStatus.VERIFIED;
+    sub.remainingPickupsThisWeek = sub.plan?.pickupsPerWeek ?? 0;
+    sub.weekResetDate = mondayStr;
+    await this.subRepo.save(sub);
+
+    this.logger.log(`Subscription ${sub.id} activated after payment success`);
+
+    // Emit subscription paid event
+    this.eventEmitter.emit(SubscriptionEvents.PAID, {
+      subscriptionId: sub.id,
+      userId: sub.userId,
+      planId: sub.planId,
+      planName: sub.plan?.name ?? null,
+      amount: Number(sub.plan?.price ?? 0),
+      timestamp: new Date(),
+    });
+  }
+
+  // ── Subscription payment failure ───────────────────────────────
+  private async handleSubscriptionPaymentFailure(
+    transactionId: string,
+    userId: string,
+    reason?: string,
+  ): Promise<void> {
+    const sub = await this.subRepo.findOne({
+      where: { userId, providerTransactionId: transactionId },
+    });
+    if (!sub) {
+      this.logger.warn(`Subscription not found for payment failure: tx ${transactionId}`);
+      return;
+    }
+
+    sub.paymentStatus = PaymentStatus.REJECTED;
+    await this.subRepo.save(sub);
+
+    this.logger.log(`Subscription ${sub.id} payment failed: ${reason}`);
+  }
+
+  // ── Helper: Get Monday of current week ─────────────────────────
+  private getMondayOfWeek(date: Date): Date {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    d.setDate(diff);
+    d.setHours(0, 0, 0, 0);
+    return d;
   }
 
   // Note: Payout (cashout) handling is admin-only until cashout API is available.

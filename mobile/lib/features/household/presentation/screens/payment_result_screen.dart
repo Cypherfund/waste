@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../config/app_theme.dart';
+import '../../../../config/app_config.dart';
 import '../../../../models/job.dart';
 import '../../../../models/subscription.dart';
 import '../../providers/payment_flow_provider.dart';
@@ -30,6 +32,15 @@ class PaymentResultScreen extends StatelessWidget {
     final subscription = arguments['subscription'] as UserSubscription?;
     final job = arguments['job'] as Job?;
     final amount = arguments['amount'] as double?;
+
+    // Pending (timeout) variant — shared across all contexts
+    if (resultType == PaymentResultType.pending) {
+      return _PendingVariant(
+        isSubscription: isSubscription,
+        isWalletTopUp: isWalletTopUp,
+        job: job,
+      );
+    }
 
     // Wallet top-up result variants
     if (isWalletTopUp) {
@@ -78,6 +89,12 @@ class PaymentResultScreen extends StatelessWidget {
       case PaymentResultType.cash:
         final isFree = arguments['isFree'] as bool? ?? false;
         return _CashVariant(job: job, isFree: isFree);
+      case PaymentResultType.pending:
+        return _PendingVariant(
+          isSubscription: isSubscription,
+          isWalletTopUp: isWalletTopUp,
+          job: job,
+        );
     }
   }
 }
@@ -1102,6 +1119,109 @@ class _SubscriptionFailedVariant extends StatelessWidget {
                   Navigator.pushNamedAndRemoveUntil(context, '/review-pickup', (_) => false);
                 },
                 child: Text('Pay Once for Now', style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Variant E: Pending (polling timed out — payment still being confirmed)
+class _PendingVariant extends StatelessWidget {
+  final bool isSubscription;
+  final bool isWalletTopUp;
+  final Job? job;
+
+  const _PendingVariant({
+    this.isSubscription = false,
+    this.isWalletTopUp = false,
+    this.job,
+  });
+
+  Future<void> _contactSupport() async {
+    final phone = Uri.encodeComponent(AppConfig.supportWhatsApp);
+    final url = Uri.parse('https://wa.me/$phone');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF8E1),
+                  borderRadius: BorderRadius.circular(40),
+                ),
+                child: const Icon(Icons.schedule, size: 40, color: Color(0xFFFFA000)),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Payment is still being confirmed',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF111827),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Your request has been submitted. We\'ll update it once the payment clears.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 52),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    elevation: 0,
+                  ),
+                  onPressed: () {
+                    final fp = context.read<PaymentFlowProvider>();
+                    fp.reset();
+                    Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false);
+                  },
+                  child: const Text(
+                    'Back to Home',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextButton.icon(
+                onPressed: _contactSupport,
+                icon: const Icon(Icons.support_agent, size: 18),
+                label: const Text(
+                  'Contact Support',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.grey.shade700,
+                ),
               ),
             ],
           ),

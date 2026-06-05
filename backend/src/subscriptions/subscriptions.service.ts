@@ -16,6 +16,8 @@ import { PaymentStatus } from '../common/enums/payment-status.enum';
 import { SubscriptionEvents } from '../events/events.types';
 import { Job } from '../jobs/entities/job.entity';
 import { PaymentMode } from '../common/enums/payment-mode.enum';
+import { PaymentService } from '../payments/payment.service';
+import { TransactionType, PaymentSource } from '../payments/entities/payment-transaction.entity';
 import { CashCollectionType } from '../common/enums/cash-collection-type.enum';
 import { JobStatus } from '../common/enums/job-status.enum';
 import { SystemConfigService } from '../config/system-config.service';
@@ -39,6 +41,7 @@ export class SubscriptionsService {
     private readonly systemConfigService: SystemConfigService,
     private readonly sentryService: SentryService,
     private readonly businessLogger: BusinessLoggerService,
+    private readonly paymentService: PaymentService,
     @Optional()
     private readonly adminAuditService?: AdminAuditService,
   ) {}
@@ -61,6 +64,7 @@ export class SubscriptionsService {
       paymentRef?: string;
       paymentProofUrl?: string;
       paymentPhone?: string;
+      paymentCode?: string;
       providerTransactionId?: string;
     },
   ): Promise<UserSubscription> {
@@ -103,6 +107,35 @@ export class SubscriptionsService {
     const mondayStr = monday.toISOString().split('T')[0];
 
     const requiresPayment = !!paymentFields?.paymentMode;
+    const isIntegrated = paymentFields?.paymentMode === PaymentMode.INTEGRATED_PROVIDER;
+
+    // Validate integrated payment required fields
+    if (isIntegrated) {
+      if (!paymentFields?.paymentPhone || !paymentFields?.paymentCode) {
+        throw new BadRequestException('paymentPhone and paymentCode are required for integrated subscription payment');
+      }
+    }
+
+    // For integrated payments, initiate payment transaction before creating subscription
+    let providerTransactionId: string | null = paymentFields?.providerTransactionId ?? null;
+    if (isIntegrated && paymentFields?.paymentPhone && paymentFields?.paymentCode) {
+      try {
+        const paymentTx = await this.paymentService.initiatePayment(userId, {
+          type: TransactionType.CASHIN,
+          amount: plan.price,
+          paymentCode: paymentFields.paymentCode,
+          phone: paymentFields.paymentPhone,
+          paymentSource: PaymentSource.SUBSCRIPTION_PAYMENT,
+        });
+        providerTransactionId = paymentTx.id;
+        this.logger.log(`Integrated payment initiated for subscription: tx ${paymentTx.id}`);
+      } catch (error) {
+        this.logger.error(`Failed to initiate integrated payment for subscription: ${error.message}`);
+        throw new BadRequestException(
+          'Could not initiate payment. Please try another payment method or contact support.'
+        );
+      }
+    }
 
     const sub = this.subRepo.create({
       userId,
@@ -117,7 +150,7 @@ export class SubscriptionsService {
       paymentRef: paymentFields?.paymentRef ?? null,
       paymentProofUrl: paymentFields?.paymentProofUrl ?? null,
       paymentPhone: paymentFields?.paymentPhone ?? null,
-      providerTransactionId: paymentFields?.providerTransactionId ?? null,
+      providerTransactionId,
     });
 
     const saved = await this.subRepo.save(sub);

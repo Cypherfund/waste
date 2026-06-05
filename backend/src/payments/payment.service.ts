@@ -435,16 +435,47 @@ export class PaymentService {
       transaction.status = TransactionStatus.SUCCESS;
       this.logger.log(`Payment SUCCESS: ${transaction.id}`);
 
-      // Emit event for downstream processing
-      this.eventEmitter.emit('payment.success', {
-        transactionId: transaction.id,
-        userId: transaction.userId,
-        type: transaction.type,
-        amount: transaction.amount,
-        jobId: transaction.jobId,
-        payoutRequestId: transaction.payoutRequestId,
-      });
-    } else if (payload.status === TransactionStatus.FAILED) {
+      // Save transaction state first to ensure accurate record
+      await this.transactionRepo.save(transaction);
+
+      // Emit event for downstream processing (await to ensure state is updated before mobile polls)
+      try {
+        await this.eventEmitter.emitAsync('payment.success', {
+          transactionId: transaction.id,
+          userId: transaction.userId,
+          type: transaction.type,
+          paymentSource: transaction.paymentSource,
+          amount: transaction.amount,
+          jobId: transaction.jobId,
+          payoutRequestId: transaction.payoutRequestId,
+        });
+      } catch (error) {
+        this.logger.error(`Downstream processing failed for payment success: ${error.message}`);
+
+        // Log to Sentry for monitoring
+        this.sentryService.captureException(error, {
+          transactionId: transaction.id,
+          userId: transaction.userId,
+          paymentSource: transaction.paymentSource,
+          amount: transaction.amount,
+          context: 'payment.success downstream processing',
+        });
+
+        // Log to business logger for audit trail
+        this.businessLogger.logFailure(BusinessEventType.DOWNSTREAM_PROCESSING_FAILED, {
+          userId: transaction.userId,
+          transactionId: transaction.id,
+          amount: transaction.amount,
+          errorMessage: `Payment success downstream processing failed: ${error.message}`,
+        });
+
+        // Re-throw to trigger gateway retry - payment was received but benefit not applied
+        throw error;
+      }
+      return;
+    }
+
+    if (payload.status === TransactionStatus.FAILED) {
       transaction.status = TransactionStatus.FAILED;
       transaction.failureReason = 'Gateway reported failure';
       this.logger.log(`Payment FAILED: ${transaction.id}`);
@@ -457,22 +488,37 @@ export class PaymentService {
         errorMessage: transaction.failureReason,
       });
 
-      this.eventEmitter.emit('payment.failed', {
-        transactionId: transaction.id,
-        userId: transaction.userId,
-        type: transaction.type,
-        amount: transaction.amount,
-        jobId: transaction.jobId,
-        payoutRequestId: transaction.payoutRequestId,
-        reason: transaction.failureReason,
-      });
-    } else {
-      // PENDING - no change needed
-      this.logger.log(`Callback status PENDING for transaction: ${transaction.id}`);
+      // Save transaction state first
       await this.transactionRepo.save(transaction);
+
+      // Emit event for downstream processing
+      try {
+        await this.eventEmitter.emitAsync('payment.failed', {
+          transactionId: transaction.id,
+          userId: transaction.userId,
+          type: transaction.type,
+          paymentSource: transaction.paymentSource,
+          amount: transaction.amount,
+          jobId: transaction.jobId,
+          payoutRequestId: transaction.payoutRequestId,
+          reason: transaction.failureReason,
+        });
+      } catch (error) {
+        this.logger.error(`Downstream processing failed for payment failure: ${error.message}`);
+
+        this.sentryService.captureException(error, {
+          transactionId: transaction.id,
+          userId: transaction.userId,
+          context: 'payment.failed downstream processing',
+        });
+
+        // Log but don't throw - payment already failed, just cleanup that failed
+      }
       return;
     }
 
+    // PENDING - no change needed, just save callback timestamp
+    this.logger.log(`Callback status PENDING for transaction: ${transaction.id}`);
     await this.transactionRepo.save(transaction);
   }
 
@@ -570,15 +616,28 @@ export class PaymentService {
 
       this.logger.log(`Transaction ${tx.id} auto-failed due to timeout`);
 
-      this.eventEmitter.emit('payment.failed', {
-        transactionId: tx.id,
-        userId: tx.userId,
-        type: tx.type,
-        amount: tx.amount,
-        jobId: tx.jobId,
-        payoutRequestId: tx.payoutRequestId,
-        reason: 'Timeout',
-      });
+      try {
+        await this.eventEmitter.emitAsync('payment.failed', {
+          transactionId: tx.id,
+          userId: tx.userId,
+          type: tx.type,
+          paymentSource: tx.paymentSource,
+          amount: tx.amount,
+          jobId: tx.jobId,
+          payoutRequestId: tx.payoutRequestId,
+          reason: 'Timeout',
+        });
+      } catch (error) {
+        this.logger.error(`Downstream processing failed for timeout: ${error.message}`);
+
+        this.sentryService.captureException(error, {
+          transactionId: tx.id,
+          userId: tx.userId,
+          context: 'payment.timeout downstream processing',
+        });
+
+        // Log but don't throw - this is a background job
+      }
     }
   }
 
