@@ -435,8 +435,8 @@ export class PaymentService {
       transaction.status = TransactionStatus.SUCCESS;
       this.logger.log(`Payment SUCCESS: ${transaction.id}`);
 
-      // Emit event for downstream processing
-      this.eventEmitter.emit('payment.success', {
+      // Emit event for downstream processing (await to ensure state is updated before mobile polls)
+      await this.eventEmitter.emitAsync('payment.success', {
         transactionId: transaction.id,
         userId: transaction.userId,
         type: transaction.type,
@@ -458,7 +458,7 @@ export class PaymentService {
         errorMessage: transaction.failureReason,
       });
 
-      this.eventEmitter.emit('payment.failed', {
+      await this.eventEmitter.emitAsync('payment.failed', {
         transactionId: transaction.id,
         userId: transaction.userId,
         type: transaction.type,
@@ -572,7 +572,7 @@ export class PaymentService {
 
       this.logger.log(`Transaction ${tx.id} auto-failed due to timeout`);
 
-      this.eventEmitter.emit('payment.failed', {
+      await this.eventEmitter.emitAsync('payment.failed', {
         transactionId: tx.id,
         userId: tx.userId,
         type: tx.type,
