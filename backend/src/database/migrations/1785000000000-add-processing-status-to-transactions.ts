@@ -37,6 +37,12 @@ export class AddProcessingStatusToTransactions1785000000000 implements Migration
       ADD COLUMN IF NOT EXISTS "processing_attempts" integer DEFAULT 0
     `);
 
+    // Add processing_started_at column
+    await queryRunner.query(`
+      ALTER TABLE "payment_transactions"
+      ADD COLUMN IF NOT EXISTS "processing_started_at" timestamptz
+    `);
+
     // Create index for querying by processing status
     await queryRunner.query(`
       CREATE INDEX IF NOT EXISTS "IDX_payment_transactions_processing_status"
@@ -60,6 +66,10 @@ export class AddProcessingStatusToTransactions1785000000000 implements Migration
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     // Remove columns
+    await queryRunner.query(`
+      ALTER TABLE "payment_transactions"
+      DROP COLUMN IF EXISTS "processing_started_at"
+    `);
     await queryRunner.query(`
       ALTER TABLE "payment_transactions"
       DROP COLUMN IF EXISTS "processing_attempts"

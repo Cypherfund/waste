@@ -124,6 +124,9 @@ export class PaymentTransaction {
   @Column({ type: 'int', default: 0, name: 'processing_attempts' })
   processingAttempts: number;
 
+  @Column({ type: 'timestamptz', nullable: true, name: 'processing_started_at' })
+  processingStartedAt: Date | null;
+
   @Column({ type: 'varchar', length: 100, nullable: true, name: 'payment_ref' })
   paymentRef: string | null;
 

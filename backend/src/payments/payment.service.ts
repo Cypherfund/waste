@@ -456,6 +456,7 @@ export class PaymentService {
       // Increment attempts and set status to PROCESSING before every processing attempt
       transaction.processingAttempts += 1;
       transaction.processingStatus = ProcessingStatus.PROCESSING;
+      transaction.processingStartedAt = new Date();
       await this.transactionRepo.save(transaction);
 
       // Emit event for downstream processing (await to ensure state is updated before mobile polls)
@@ -764,6 +765,25 @@ export class PaymentService {
       5,
     );
 
+    // Recover stale PROCESSING claims (abandoned due to crash)
+    // Transactions stuck in PROCESSING for more than 10 minutes are marked as FAILED
+    const staleThreshold = new Date(Date.now() - 10 * 60 * 1000); // 10 minutes ago
+    const staleRecoveryResult = await this.transactionRepo
+      .createQueryBuilder()
+      .update(PaymentTransaction)
+      .set({
+        processingStatus: ProcessingStatus.FAILED,
+        processingFailureReason: 'Processing claim timed out',
+      })
+      .where('status = :status', { status: TransactionStatus.SUCCESS })
+      .andWhere('processingStatus = :processingStatus', { processingStatus: ProcessingStatus.PROCESSING })
+      .andWhere('processingStartedAt < :threshold', { threshold: staleThreshold })
+      .execute();
+
+    if (staleRecoveryResult.affected && staleRecoveryResult.affected > 0) {
+      this.logger.log(`Recovered ${staleRecoveryResult.affected} stale PROCESSING claims`);
+    }
+
     // Find SUCCESS transactions with incomplete processing that haven't exceeded max attempts
     const incomplete = await this.transactionRepo.find({
       where: [
@@ -813,6 +833,7 @@ export class PaymentService {
         // Claim the transaction - increment attempts and set to PROCESSING (exclusive claim)
         lockedTx.processingAttempts += 1;
         lockedTx.processingStatus = ProcessingStatus.PROCESSING;
+        lockedTx.processingStartedAt = new Date();
         await em.save(lockedTx);
 
         this.logger.log(`Claimed transaction ${tx.id} for retry (attempt ${lockedTx.processingAttempts}/${maxAttempts})`);
