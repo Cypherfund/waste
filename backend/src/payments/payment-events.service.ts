@@ -245,6 +245,7 @@ export class PaymentEventsService {
 
     job.paymentStatus = PaymentStatus.REJECTED;
     job.paymentRejectionReason = reason || 'Payment failed';
+    job.status = JobStatus.PAYMENT_FAILED;
     await this.jobRepo.save(job);
 
     this.logger.log(`Job ${jobId} payment failed: ${reason}`);

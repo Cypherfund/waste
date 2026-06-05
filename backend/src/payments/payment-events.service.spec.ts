@@ -8,12 +8,15 @@ import { User } from '../users/entities/user.entity';
 import { UserSubscription } from '../subscriptions/entities/user-subscription.entity';
 import {
   PaymentTransaction,
+  PaymentSource,
   TransactionStatus,
   TransactionType,
 } from './entities/payment-transaction.entity';
 import { WalletLedger } from '../wallet/entities/wallet-ledger.entity';
 import { SentryService } from '../sentry/sentry.service';
 import { BusinessLoggerService } from '../common/services/business-logger.service';
+import { JobStatus } from '../common/enums/job-status.enum';
+import { PaymentStatus } from '../common/enums/payment-status.enum';
 
 describe('PaymentEventsService', () => {
   let service: PaymentEventsService;
@@ -112,6 +115,42 @@ describe('PaymentEventsService', () => {
     userRepo = module.get(getRepositoryToken(User));
     dataSource = module.get(DataSource);
     eventEmitter = module.get(EventEmitter2);
+  });
+
+  describe('integrated job payment failure', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('marks the job as PAYMENT_FAILED and payment as REJECTED', async () => {
+      const job = {
+        id: 'job-1',
+        householdId: 'user-1',
+        status: JobStatus.PAYMENT_PENDING,
+        paymentStatus: PaymentStatus.PROVIDER_PENDING,
+        paymentRejectionReason: null,
+      };
+      jobRepo.findOne.mockResolvedValue(job as any);
+      jobRepo.save.mockImplementation(async (saved) => saved as any);
+
+      await service.onPaymentFailed({
+        transactionId: 'txn-1',
+        userId: 'user-1',
+        type: TransactionType.CASHIN,
+        paymentSource: PaymentSource.JOB_PAYMENT,
+        amount: 1000,
+        jobId: 'job-1',
+        reason: 'Gateway reported failure',
+      });
+
+      expect(jobRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: JobStatus.PAYMENT_FAILED,
+          paymentStatus: PaymentStatus.REJECTED,
+          paymentRejectionReason: 'Gateway reported failure',
+        }),
+      );
+    });
   });
 
   describe('integrated wallet top-up callback idempotency', () => {

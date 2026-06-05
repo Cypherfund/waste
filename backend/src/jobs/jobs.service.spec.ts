@@ -259,6 +259,38 @@ describe('JobsService - Pricing Integration', () => {
       );
     });
 
+    it('should allow a new booking when same-date existing job is PAYMENT_FAILED', async () => {
+      const pricingQuote = {
+        quotedPrice: 500,
+        pricingType: PricingType.PAY_PER_PICKUP,
+        isCoveredBySubscription: false,
+        remainingPickupsThisWeek: null,
+        planName: null,
+        perPickupPrice: 500,
+        subscriptionPrice: 3500,
+        subscriptionSavingsMessage: null,
+      };
+      pricingService.getQuoteForUser.mockResolvedValue(pricingQuote);
+      jobRepo.findOne.mockResolvedValue(null);
+
+      const dto = makeCreateJobDto();
+      await service.create('hh-1', dto);
+
+      expect(jobRepo.findOne).toHaveBeenCalledWith({
+        where: expect.objectContaining({
+          householdId: 'hh-1',
+          scheduledDate: dto.scheduledDate,
+        }),
+      });
+      const duplicateWhere = jobRepo.findOne.mock.calls[0][0].where;
+      expect(JSON.stringify(duplicateWhere.status)).not.toContain(JobStatus.PAYMENT_FAILED);
+      expect(jobRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: JobStatus.REQUESTED,
+        }),
+      );
+    });
+
     it('should emit job created event', async () => {
       const pricingQuote = {
         quotedPrice: 500,
