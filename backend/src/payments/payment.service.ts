@@ -435,17 +435,28 @@ export class PaymentService {
       transaction.status = TransactionStatus.SUCCESS;
       this.logger.log(`Payment SUCCESS: ${transaction.id}`);
 
+      // Save transaction state first to ensure accurate record
+      await this.transactionRepo.save(transaction);
+
       // Emit event for downstream processing (await to ensure state is updated before mobile polls)
-      await this.eventEmitter.emitAsync('payment.success', {
-        transactionId: transaction.id,
-        userId: transaction.userId,
-        type: transaction.type,
-        paymentSource: transaction.paymentSource,
-        amount: transaction.amount,
-        jobId: transaction.jobId,
-        payoutRequestId: transaction.payoutRequestId,
-      });
-    } else if (payload.status === TransactionStatus.FAILED) {
+      try {
+        await this.eventEmitter.emitAsync('payment.success', {
+          transactionId: transaction.id,
+          userId: transaction.userId,
+          type: transaction.type,
+          paymentSource: transaction.paymentSource,
+          amount: transaction.amount,
+          jobId: transaction.jobId,
+          payoutRequestId: transaction.payoutRequestId,
+        });
+      } catch (error) {
+        this.logger.error(`Downstream processing failed for payment success: ${error.message}`);
+        // Transaction is already saved as SUCCESS; downstream error is logged but doesn't affect state
+      }
+      return;
+    }
+
+    if (payload.status === TransactionStatus.FAILED) {
       transaction.status = TransactionStatus.FAILED;
       transaction.failureReason = 'Gateway reported failure';
       this.logger.log(`Payment FAILED: ${transaction.id}`);
@@ -458,23 +469,29 @@ export class PaymentService {
         errorMessage: transaction.failureReason,
       });
 
-      await this.eventEmitter.emitAsync('payment.failed', {
-        transactionId: transaction.id,
-        userId: transaction.userId,
-        type: transaction.type,
-        paymentSource: transaction.paymentSource,
-        amount: transaction.amount,
-        jobId: transaction.jobId,
-        payoutRequestId: transaction.payoutRequestId,
-        reason: transaction.failureReason,
-      });
-    } else {
-      // PENDING - no change needed
-      this.logger.log(`Callback status PENDING for transaction: ${transaction.id}`);
+      // Save transaction state first
       await this.transactionRepo.save(transaction);
+
+      // Emit event for downstream processing
+      try {
+        await this.eventEmitter.emitAsync('payment.failed', {
+          transactionId: transaction.id,
+          userId: transaction.userId,
+          type: transaction.type,
+          paymentSource: transaction.paymentSource,
+          amount: transaction.amount,
+          jobId: transaction.jobId,
+          payoutRequestId: transaction.payoutRequestId,
+          reason: transaction.failureReason,
+        });
+      } catch (error) {
+        this.logger.error(`Downstream processing failed for payment failure: ${error.message}`);
+      }
       return;
     }
 
+    // PENDING - no change needed, just save callback timestamp
+    this.logger.log(`Callback status PENDING for transaction: ${transaction.id}`);
     await this.transactionRepo.save(transaction);
   }
 
@@ -572,16 +589,20 @@ export class PaymentService {
 
       this.logger.log(`Transaction ${tx.id} auto-failed due to timeout`);
 
-      await this.eventEmitter.emitAsync('payment.failed', {
-        transactionId: tx.id,
-        userId: tx.userId,
-        type: tx.type,
-        paymentSource: tx.paymentSource,
-        amount: tx.amount,
-        jobId: tx.jobId,
-        payoutRequestId: tx.payoutRequestId,
-        reason: 'Timeout',
-      });
+      try {
+        await this.eventEmitter.emitAsync('payment.failed', {
+          transactionId: tx.id,
+          userId: tx.userId,
+          type: tx.type,
+          paymentSource: tx.paymentSource,
+          amount: tx.amount,
+          jobId: tx.jobId,
+          payoutRequestId: tx.payoutRequestId,
+          reason: 'Timeout',
+        });
+      } catch (error) {
+        this.logger.error(`Downstream processing failed for timeout: ${error.message}`);
+      }
     }
   }
 
