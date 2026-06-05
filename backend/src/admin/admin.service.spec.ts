@@ -27,6 +27,8 @@ import { FraudFlagStatus } from '../common/enums/fraud-type.enum';
 import { FraudSeverity } from '../common/enums/fraud-severity.enum';
 import { DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { PaymentService } from '../payments/payment.service';
+import { PaymentStatus } from '../common/enums/payment-status.enum';
 
 describe('AdminService', () => {
   let service: AdminService;
@@ -46,6 +48,7 @@ describe('AdminService', () => {
   let paymentTransactionRepo: any;
   let mockDataSource: any;
   let mockEntityManager: any;
+  let paymentService: any;
 
   const mockQb = () => ({
     select: jest.fn().mockReturnThis(),
@@ -82,6 +85,7 @@ describe('AdminService', () => {
 
     assignmentService = {
       manualAssign: jest.fn().mockResolvedValue(undefined),
+      autoAssign: jest.fn().mockResolvedValue(undefined),
     };
 
     disputesService = {
@@ -174,6 +178,11 @@ describe('AdminService', () => {
     paymentTransactionRepo = {
       createQueryBuilder: jest.fn(),
       find: jest.fn().mockResolvedValue([]),
+      findOne: jest.fn().mockResolvedValue(null),
+    };
+
+    paymentService = {
+      checkTransactionStatus: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -188,6 +197,7 @@ describe('AdminService', () => {
         { provide: FeatureFlagService, useValue: featureFlagService },
         { provide: EventEmitter2, useValue: { emit: jest.fn(), emitAsync: jest.fn() } },
         { provide: AdminAuditService, useValue: { log: jest.fn() } },
+        { provide: PaymentService, useValue: paymentService },
         { provide: getRepositoryToken(Job), useValue: jobRepo },
         { provide: getRepositoryToken(Dispute), useValue: disputeRepo },
         { provide: getRepositoryToken(Earning), useValue: earningRepo },
@@ -539,6 +549,27 @@ describe('AdminService', () => {
       expect(result.data[0].paymentSource).toBe('JOB_PAYMENT');
     });
 
+    it('includes PROVIDER_PENDING jobs in pending payments list', async () => {
+      const providerPendingJob = makeJob({ paymentStatus: PaymentStatus.PROVIDER_PENDING, paymentMode: 'INTEGRATED_PROVIDER' });
+      jobRepo.find.mockResolvedValue([providerPendingJob]);
+      subRepo.find = jest.fn().mockResolvedValue([]);
+
+      const result = await service.listPendingPaymentJobs();
+
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].paymentSource).toBe('JOB_PAYMENT');
+    });
+
+    it('queries jobs with PROVIDER_PENDING in the paymentStatus filter', async () => {
+      jobRepo.find.mockResolvedValue([]);
+      subRepo.find = jest.fn().mockResolvedValue([]);
+
+      await service.listPendingPaymentJobs();
+
+      const callArgs = jobRepo.find.mock.calls[0][0];
+      expect(JSON.stringify(callArgs.where.paymentStatus)).toContain('PROVIDER_PENDING');
+    });
+
     it('tags subscription rows with paymentSource: SUBSCRIPTION_PAYMENT', async () => {
       jobRepo.find.mockResolvedValue([]);
       subRepo.find = jest.fn().mockResolvedValue([makePendingSub()]);
@@ -584,6 +615,122 @@ describe('AdminService', () => {
       const result = await service.listPendingPaymentJobs();
 
       expect(result.data).toHaveLength(2);
+    });
+  });
+
+  // ─── PROVIDER PAYMENT STATUS CHECK ─────────────────────────────────
+
+  describe('checkProviderPaymentStatus()', () => {
+    const providerJob = (): any => ({
+      id: 'job-p1',
+      paymentStatus: PaymentStatus.PROVIDER_PENDING,
+      status: 'PAYMENT_PENDING',
+      quotedPrice: 1500,
+      householdId: 'hh-1',
+    });
+
+    const providerTx = (): any => ({
+      id: 'tx-p1',
+      jobId: 'job-p1',
+      status: 'PENDING',
+      gatewayTransactionId: 'gw-123',
+    });
+
+    it('throws NotFoundException when job not found', async () => {
+      jobRepo.findOne = jest.fn().mockResolvedValue(null);
+
+      await expect(service.checkProviderPaymentStatus('bad-id', 'admin-1')).rejects.toThrow('Job not found');
+    });
+
+    it('throws BadRequestException when job is not PROVIDER_PENDING', async () => {
+      jobRepo.findOne = jest.fn().mockResolvedValue({ ...providerJob(), paymentStatus: PaymentStatus.AWAITING_ADMIN_VERIFICATION });
+
+      await expect(service.checkProviderPaymentStatus('job-p1', 'admin-1')).rejects.toThrow('not PROVIDER_PENDING');
+    });
+
+    it('returns UNKNOWN status when no transaction is linked', async () => {
+      jobRepo.findOne = jest.fn().mockResolvedValue(providerJob());
+      paymentTransactionRepo.findOne = jest.fn().mockResolvedValue(null);
+
+      const result = await service.checkProviderPaymentStatus('job-p1', 'admin-1');
+
+      expect(result.gatewayStatus).toBe('UNKNOWN');
+      expect(result.autoVerified).toBe(false);
+    });
+
+    it('returns PENDING message when gateway status is still PENDING', async () => {
+      jobRepo.findOne = jest.fn().mockResolvedValue(providerJob());
+      paymentTransactionRepo.findOne = jest.fn().mockResolvedValue(providerTx());
+      paymentService.checkTransactionStatus.mockResolvedValue({ ...providerTx(), status: 'PENDING' });
+
+      const result = await service.checkProviderPaymentStatus('job-p1', 'admin-1');
+
+      expect(result.gatewayStatus).toBe('PENDING');
+      expect(result.autoVerified).toBe(false);
+      expect(result.message).toMatch(/still pending/i);
+    });
+
+    it('returns FAILED message when gateway status is FAILED', async () => {
+      jobRepo.findOne = jest.fn().mockResolvedValue(providerJob());
+      paymentTransactionRepo.findOne = jest.fn().mockResolvedValue(providerTx());
+      paymentService.checkTransactionStatus.mockResolvedValue({ ...providerTx(), status: 'FAILED' });
+
+      const result = await service.checkProviderPaymentStatus('job-p1', 'admin-1');
+
+      expect(result.gatewayStatus).toBe('FAILED');
+      expect(result.autoVerified).toBe(false);
+      expect(result.message).toMatch(/failed/i);
+    });
+
+    it('auto-verifies job and returns autoVerified=true when gateway reports SUCCESS', async () => {
+      jobRepo.findOne = jest.fn()
+        .mockResolvedValueOnce(providerJob())   // checkProviderPaymentStatus lookup
+        .mockResolvedValueOnce(providerJob())   // verifyPayment lookup
+        .mockResolvedValueOnce({ ...providerJob(), paymentStatus: PaymentStatus.VERIFIED, status: 'REQUESTED' }); // verifyPayment save reload
+      paymentTransactionRepo.findOne = jest.fn().mockResolvedValue(providerTx());
+      paymentService.checkTransactionStatus.mockResolvedValue({ ...providerTx(), status: 'SUCCESS' });
+      jobsService.toResponseDto = jest.fn().mockResolvedValue({ id: 'job-p1', status: 'REQUESTED', paymentStatus: PaymentStatus.VERIFIED });
+      jobRepo.save = jest.fn().mockResolvedValue({ ...providerJob(), paymentStatus: PaymentStatus.VERIFIED, status: 'REQUESTED' });
+
+      const result = await service.checkProviderPaymentStatus('job-p1', 'admin-1');
+
+      expect(result.gatewayStatus).toBe('SUCCESS');
+      expect(result.autoVerified).toBe(true);
+      expect(result.message).toMatch(/auto/i);
+    });
+  });
+
+  // ─── LISTJOBS EXCLUDES PROVIDER_PENDING BY DEFAULT ─────────────────
+
+  describe('listJobs() PROVIDER_PENDING exclusion', () => {
+    it('excludes PROVIDER_PENDING from default unfiltered listing', async () => {
+      jobRepo.findAndCount.mockResolvedValue([[], 0]);
+
+      await service.listJobs({});
+
+      const callArgs = jobRepo.findAndCount.mock.calls[0][0];
+      // paymentStatus filter should be applied to exclude PROVIDER_PENDING
+      expect(callArgs.where.paymentStatus).toBeDefined();
+      expect(JSON.stringify(callArgs.where.paymentStatus)).not.toContain('PROVIDER_PENDING');
+    });
+
+    it('shows PROVIDER_PENDING jobs when paymentStatus filter is explicitly set', async () => {
+      jobRepo.findAndCount.mockResolvedValue([[], 0]);
+
+      await service.listJobs({ paymentStatus: PaymentStatus.PROVIDER_PENDING as any });
+
+      const callArgs = jobRepo.findAndCount.mock.calls[0][0];
+      expect(callArgs.where.paymentStatus).toBe(PaymentStatus.PROVIDER_PENDING);
+    });
+
+    it('shows all statuses when status filter is set without paymentStatus', async () => {
+      jobRepo.findAndCount.mockResolvedValue([[], 0]);
+
+      await service.listJobs({ status: JobStatus.COMPLETED });
+
+      const callArgs = jobRepo.findAndCount.mock.calls[0][0];
+      // When status is set but paymentStatus is not, the exclusion filter is applied
+      expect(callArgs.where.status).toBe(JobStatus.COMPLETED);
     });
   });
 

@@ -483,9 +483,9 @@ describe('E2E: Full Job Lifecycle', () => {
     it('should log OTP lookup for security audit', async () => {
       // First, create an OTP by triggering a login (this will generate an OTP)
       await request(httpServer)
-        .post('/api/v1/auth/send-otp')
+        .post('/api/v1/auth/otp/send')
         .send({ phone: testPhone })
-        .expect(201);
+        .expect(200);
 
       // Lookup the OTP as admin
       const res = await request(httpServer)
@@ -507,11 +507,11 @@ describe('E2E: Full Job Lifecycle', () => {
         [adminId],
       );
 
-      expect(auditLogs.rows.length).toBeGreaterThan(0);
-      expect(auditLogs.rows[0].entity_type).toBe('OTP_LOOKUP');
-      expect(auditLogs.rows[0].new_value).toHaveProperty('phone', testPhone);
-      expect(auditLogs.rows[0].ip_address).toBeDefined();
-      expect(auditLogs.rows[0].user_agent).toBeDefined();
+      expect(auditLogs.length).toBeGreaterThan(0);
+      expect(auditLogs[0].entity_type).toBe('OTP_LOOKUP');
+      expect(auditLogs[0].new_value).toHaveProperty('phone', testPhone);
+      expect(auditLogs[0].ip_address).toBeDefined();
+      expect(auditLogs[0].user_agent).toBeDefined();
     });
 
     it('should require admin role for OTP lookup', async () => {

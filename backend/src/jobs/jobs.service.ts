@@ -210,7 +210,8 @@ export class JobsService {
     const saved = await this.jobRepo.save(job);
     this.logger.log(`Job created: ${saved.id} by household ${householdId} [mode=${paymentMode}]`);
 
-    // Initiate integrated provider payment (stub: sets PROVIDER_PENDING; no real gateway call required for now)
+    // Initiate integrated provider payment
+    let integratedTransactionId: string | null = null;
     if (paymentMode === PaymentMode.INTEGRATED_PROVIDER && dto.paymentCode && dto.paymentPhone) {
       try {
         const paymentTx = await this.paymentService.initiatePayment(householdId, {
@@ -220,17 +221,27 @@ export class JobsService {
           phone: dto.paymentPhone,
           jobId: saved.id,
         });
+        integratedTransactionId = paymentTx.id;
         this.logger.log(`Integrated payment initiated for job ${saved.id}: tx ${paymentTx.id}`);
       } catch (error) {
         this.logger.error(
           `Failed to initiate integrated payment for job ${saved.id}: ${error.message}`,
+        );
+        // Mark job as failed since payment couldn't be initiated
+        saved.status = JobStatus.PAYMENT_FAILED;
+        saved.paymentStatus = PaymentStatus.FAILED;
+        await this.jobRepo.save(saved);
+        throw new BadRequestException(
+          'Could not initiate payment. Please try another payment method or contact support.'
         );
       }
     }
 
     this.emitEvent(JobEvents.CREATED, saved);
 
-    return await this.toResponseDto(saved);
+    const dto_ = await this.toResponseDto(saved);
+    if (integratedTransactionId) dto_.transactionId = integratedTransactionId;
+    return dto_;
   }
 
   async findMyJobs(
@@ -1032,6 +1043,8 @@ export class JobsService {
       completedAt: job.completedAt,
       validatedAt: job.validatedAt,
       cancelledAt: job.cancelledAt,
+      paymentVerifiedBy: job.paymentVerifiedBy,
+      paymentVerifiedAt: job.paymentVerifiedAt,
       createdAt: job.createdAt,
       updatedAt: job.updatedAt,
     };

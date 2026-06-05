@@ -113,6 +113,7 @@ class SubscriptionProvider extends ChangeNotifier {
     String? paymentRef,
     String? paymentProofUrl,
     String? paymentPhone,
+    String? paymentCode,
     String? providerTransactionId,
   }) async {
     _isActing = true;
@@ -125,6 +126,7 @@ class SubscriptionProvider extends ChangeNotifier {
         paymentRef: paymentRef,
         paymentProofUrl: paymentProofUrl,
         paymentPhone: paymentPhone,
+        paymentCode: paymentCode,
         providerTransactionId: providerTransactionId,
       );
       _subscription = subscription;

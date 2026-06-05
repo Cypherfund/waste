@@ -13,6 +13,7 @@ import {
   ParseUUIDPipe,
   ParseIntPipe,
   DefaultValuePipe,
+  BadRequestException,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { Request } from 'express';
@@ -111,6 +112,18 @@ export class AdminController {
   }
 
   // ─── PAYMENT VERIFICATION ──────────────────────────────────────
+
+  @Post('jobs/:id/check-payment-status')
+  checkProviderPaymentStatus(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('sub') adminId: string,
+    @Req() req: Request,
+  ) {
+    return this.adminService.checkProviderPaymentStatus(id, adminId, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] as string,
+    });
+  }
 
   @Patch('jobs/:id/verify-payment')
   verifyPayment(
@@ -420,6 +433,9 @@ export class AdminController {
     @CurrentUser('sub') adminId: string,
     @Req() req: Request,
   ) {
+    if (!phone || phone.trim() === '') {
+      throw new BadRequestException('phone parameter is required');
+    }
     const result = await this.otpService.getRecentOtp(phone);
 
     // Log OTP lookup for security audit

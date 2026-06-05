@@ -96,9 +96,18 @@ export class JobResponseDto {
   @ApiPropertyOptional({ nullable: true })
   cancelledAt: Date | null;
 
+  @ApiPropertyOptional({ nullable: true })
+  paymentVerifiedBy: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  paymentVerifiedAt: Date | null;
+
   @ApiProperty()
   createdAt: Date;
 
   @ApiProperty()
   updatedAt: Date;
+
+  @ApiPropertyOptional({ nullable: true, description: 'Payment transaction ID (integrated payments only)' })
+  transactionId?: string | null;
 }

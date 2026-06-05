@@ -43,6 +43,7 @@ class PaymentFlowProvider extends ChangeNotifier {
   // Integrated payment details
   String? paymentPhone;
   String? providerTransactionId;
+  String? linkedTransactionId;
 
   // Subscription context
   bool isSubscriptionContext = false;
@@ -158,6 +159,12 @@ class PaymentFlowProvider extends ChangeNotifier {
   /// Set provider transaction ID
   void setProviderTransactionId(String id) {
     providerTransactionId = id;
+    notifyListeners();
+  }
+
+  /// Set linked payment transaction ID (used for polling on processing screen)
+  void setLinkedTransactionId(String id) {
+    linkedTransactionId = id;
     notifyListeners();
   }
 
@@ -284,6 +291,7 @@ class PaymentFlowProvider extends ChangeNotifier {
     paymentProofUrl = null;
     paymentPhone = null;
     providerTransactionId = null;
+    linkedTransactionId = null;
     createdJob = null;
     resultType = null;
     isSubscriptionContext = false;

@@ -11,7 +11,7 @@ export default new DataSource({
   port: parseInt(process.env.DATABASE_PORT || '5432', 10),
   username: process.env.DATABASE_USERNAME || 'waste_user',
   password: process.env.DATABASE_PASSWORD || 'waste_dev_pass',
-  database: process.env.DATABASE_NAME || 'waste_management',
+  database: process.env.DATABASE_NAME || 'waste_management_test',
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
   migrations: [__dirname + '/migrations/*{.ts,.js}'],
   synchronize: process.env.NODE_ENV !== 'test' && process.env.NODE_ENV !== 'production',

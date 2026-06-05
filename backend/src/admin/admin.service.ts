@@ -18,6 +18,7 @@ import {
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { UsersService } from '../users/users.service';
 import { JobsService } from '../jobs/jobs.service';
+import { PaymentService } from '../payments/payment.service';
 import { AssignmentService } from '../assignment/assignment.service';
 import { DisputesService } from '../disputes/disputes.service';
 import { FraudService } from '../fraud/fraud.service';
@@ -65,6 +66,7 @@ export class AdminService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jobsService: JobsService,
+    private readonly paymentService: PaymentService,
     private readonly assignmentService: AssignmentService,
     private readonly disputesService: DisputesService,
     private readonly fraudService: FraudService,
@@ -162,6 +164,7 @@ export class AdminService {
           paymentStatus: In([
             PaymentStatus.PENDING,
             PaymentStatus.AWAITING_ADMIN_VERIFICATION,
+            PaymentStatus.PROVIDER_PENDING,
           ]) as any,
         },
         relations: ['household', 'collector'],
@@ -232,11 +235,83 @@ export class AdminService {
     return { data: combined, meta: { total: combined.length, page: 1, limit: 200 } };
   }
 
+  async checkProviderPaymentStatus(
+    jobId: string,
+    adminId: string,
+    context?: AuditRequestContext,
+  ): Promise<{ gatewayStatus: string; jobPaymentStatus: string; autoVerified: boolean; message: string }> {
+    const job = await this.jobRepo.findOne({ where: { id: jobId } });
+    if (!job) throw new NotFoundException('Job not found');
+
+    if (job.paymentStatus !== PaymentStatus.PROVIDER_PENDING) {
+      throw new BadRequestException(
+        `Job payment status is '${job.paymentStatus}', not PROVIDER_PENDING. Use verify-payment for manual verification.`,
+      );
+    }
+
+    // Find the linked payment transaction
+    const tx = await this.paymentTransactionRepo.findOne({
+      where: { jobId },
+      order: { createdAt: 'DESC' },
+    });
+
+    if (!tx) {
+      return {
+        gatewayStatus: 'UNKNOWN',
+        jobPaymentStatus: job.paymentStatus,
+        autoVerified: false,
+        message: 'No payment transaction found for this job. Use Manual Verify if payment was confirmed.',
+      };
+    }
+
+    // Poll gateway for latest status
+    const updatedTx = await this.paymentService.checkTransactionStatus(tx.id);
+
+    if (updatedTx.status === 'SUCCESS') {
+      // Auto-verify the job
+      await this.verifyPayment(jobId, adminId, context);
+      return {
+        gatewayStatus: 'SUCCESS',
+        jobPaymentStatus: PaymentStatus.VERIFIED,
+        autoVerified: true,
+        message: 'Gateway confirmed payment. Job has been automatically verified and moved to REQUESTED.',
+      };
+    }
+
+    if (updatedTx.status === 'FAILED') {
+      return {
+        gatewayStatus: 'FAILED',
+        jobPaymentStatus: job.paymentStatus,
+        autoVerified: false,
+        message: 'Gateway reported payment as FAILED. Use Reject to mark this job as payment failed.',
+      };
+    }
+
+    return {
+      gatewayStatus: updatedTx.status,
+      jobPaymentStatus: job.paymentStatus,
+      autoVerified: false,
+      message: 'Payment is still pending with the gateway. Ask the user to confirm payment on their phone, then try again.',
+    };
+  }
+
   async listJobs(filters: AdminJobFilterDto): Promise<PaginatedResponse<JobResponseDto>> {
     const where: FindOptionsWhere<Job> = {};
 
     if (filters.status) where.status = filters.status;
     if (filters.paymentStatus) where.paymentStatus = filters.paymentStatus;
+
+    // Exclude PROVIDER_PENDING jobs from default listing — they belong in Pending Payments
+    if (!filters.paymentStatus && !filters.status) {
+      where.paymentStatus = In([
+        PaymentStatus.PENDING,
+        PaymentStatus.AWAITING_ADMIN_VERIFICATION,
+        PaymentStatus.VERIFIED,
+        PaymentStatus.REJECTED,
+        PaymentStatus.FAILED,
+        PaymentStatus.NOT_REQUIRED,
+      ]) as any;
+    }
     if (filters.collectorId) where.collectorId = filters.collectorId;
     if (filters.householdId) where.householdId = filters.householdId;
 
@@ -578,7 +653,7 @@ export class AdminService {
       throw new NotFoundException('Job not found');
     }
 
-    const pendingStatuses = [PaymentStatus.PENDING, PaymentStatus.AWAITING_ADMIN_VERIFICATION];
+    const pendingStatuses = [PaymentStatus.PENDING, PaymentStatus.AWAITING_ADMIN_VERIFICATION, PaymentStatus.PROVIDER_PENDING];
     if (!pendingStatuses.includes(job.paymentStatus as PaymentStatus)) {
       throw new BadRequestException('Job is not pending payment verification');
     }

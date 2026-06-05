@@ -14,6 +14,7 @@ import { SubscriptionEvents } from '../events/events.types';
 import { SystemConfigService } from '../config/system-config.service';
 import { SentryService } from '../sentry/sentry.service';
 import { BusinessLoggerService } from '../common/services/business-logger.service';
+import { PaymentService } from '../payments/payment.service';
 
 describe('SubscriptionsService', () => {
   let service: SubscriptionsService;
@@ -94,6 +95,12 @@ describe('SubscriptionsService', () => {
             logWarning: jest.fn(),
             logInfo: jest.fn(),
             extractRequestContext: jest.fn(),
+          },
+        },
+        {
+          provide: PaymentService,
+          useValue: {
+            initiatePayment: jest.fn().mockResolvedValue({ id: 'mock-tx-id' }),
           },
         },
       ],
@@ -181,17 +188,17 @@ describe('SubscriptionsService', () => {
       expect(eventEmitter.emit).not.toHaveBeenCalled();
     });
 
-    it('stores paymentPhone for integrated payments', async () => {
+    it('initiates payment and stores transaction ID for integrated payments', async () => {
       await service.subscribe('user-1', 'plan-1', {
         paymentMode: 'INTEGRATED_PROVIDER',
         paymentPhone: '+237612345678',
-        providerTransactionId: 'prov-tx-999',
+        paymentCode: 'MTN_MOMO',
       });
 
       expect(subRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
           paymentPhone: '+237612345678',
-          providerTransactionId: 'prov-tx-999',
+          providerTransactionId: 'mock-tx-id',
           status: SubscriptionStatus.PENDING_PAYMENT,
         }),
       );

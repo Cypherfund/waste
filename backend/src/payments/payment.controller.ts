@@ -7,11 +7,13 @@ import {
   Query,
   ParseIntPipe,
   DefaultValuePipe,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { PaymentService } from './payment.service';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import { PaymentCallbackDto } from './dto/payment-callback.dto';
+import { TransactionStatusResponseDto } from './dto/transaction-status-response.dto';
 import { CurrentUser, JwtPayload } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { PaymentProviderEntity } from './entities/payment-provider.entity';
@@ -60,13 +62,14 @@ export class PaymentController {
   async checkStatus(
     @CurrentUser() user: JwtPayload,
     @Param('id') id: string,
-  ): Promise<PaymentTransaction> {
+  ): Promise<TransactionStatusResponseDto> {
     // Verify ownership
     const tx = await this.paymentService.getTransaction(id);
     if (tx.userId !== user.sub) {
-      throw new Error('Access denied');
+      throw new ForbiddenException('Access denied');
     }
-    return this.paymentService.checkTransactionStatus(id);
+    // Return effective status that considers downstream processing state
+    return this.paymentService.getEffectiveStatus(id);
   }
 
   // ── GET user transactions ─────────────────────────────────────

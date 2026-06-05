@@ -5,6 +5,7 @@ import { Notification } from './entities/notification.entity';
 import { FcmProvider } from './providers/fcm.provider';
 import { SmsProvider, SMS_PROVIDER } from './providers/sms.provider';
 import { FeatureFlagService } from '../config/feature-flags';
+import { SystemConfigService } from '../config/system-config.service';
 import { UsersService } from '../users/users.service';
 import { NotificationChannel, NotificationStatus } from '../common/enums/notification-channel.enum';
 import { NotificationType } from '../common/enums/notification-type.enum';
@@ -46,6 +47,7 @@ describe('NotificationsService', () => {
   let fcmProvider: Partial<FcmProvider>;
   let smsProvider: Partial<SmsProvider>;
   let featureFlagService: Partial<FeatureFlagService>;
+  let systemConfigService: Partial<SystemConfigService>;
   let usersService: Partial<UsersService>;
 
   beforeEach(async () => {
@@ -79,6 +81,12 @@ describe('NotificationsService', () => {
       isEnabled: jest.fn().mockResolvedValue(false), // SMS off by default
     };
 
+    systemConfigService = {
+      getAssignmentConfig: jest.fn().mockResolvedValue({
+        acceptTimeoutMinutes: 5,
+      }),
+    } as Partial<SystemConfigService>;
+
     usersService = {
       findById: jest.fn().mockResolvedValue({
         id: 'user-1',
@@ -95,6 +103,7 @@ describe('NotificationsService', () => {
         { provide: FcmProvider, useValue: fcmProvider },
         { provide: SMS_PROVIDER, useValue: smsProvider },
         { provide: FeatureFlagService, useValue: featureFlagService },
+        { provide: SystemConfigService, useValue: systemConfigService },
         { provide: UsersService, useValue: usersService },
         {
           provide: SentryService,

@@ -9,6 +9,7 @@ import { EmailProvider } from './providers/email.provider';
 import { TermiiProvider } from './providers/termii.provider';
 import { AfricasTalkingProvider } from './providers/africas-talking.provider';
 import { WhatsAppProvider } from './providers/whatsapp.provider';
+import { NexahProvider } from './providers/nexah.provider';
 import { StubSmsProvider, SMS_PROVIDER } from './providers/sms.provider';
 import { UsersModule } from '../users/users.module';
 
@@ -30,6 +31,8 @@ import { UsersModule } from '../users/users.module';
             return new AfricasTalkingProvider(configService);
           case 'whatsapp':
             return new WhatsAppProvider(configService);
+          case 'nexah':
+            return new NexahProvider(configService);
           case 'stub':
           default:
             return new StubSmsProvider();

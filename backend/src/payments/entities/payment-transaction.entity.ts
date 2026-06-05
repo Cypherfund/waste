@@ -31,6 +31,13 @@ export enum TransactionStatus {
   VERIFIED = 'VERIFIED',
 }
 
+export enum ProcessingStatus {
+  PENDING = 'PENDING',
+  PROCESSING = 'PROCESSING',
+  COMPLETED = 'COMPLETED',
+  FAILED = 'FAILED',
+}
+
 @Entity('payment_transactions')
 export class PaymentTransaction {
   @PrimaryGeneratedColumn('uuid')
@@ -99,6 +106,26 @@ export class PaymentTransaction {
 
   @Column({ type: 'text', nullable: true, name: 'failure_reason' })
   failureReason: string | null;
+
+  @Column({
+    type: 'enum',
+    enum: ProcessingStatus,
+    default: ProcessingStatus.PENDING,
+    name: 'processing_status',
+  })
+  processingStatus: ProcessingStatus;
+
+  @Column({ type: 'text', nullable: true, name: 'processing_failure_reason' })
+  processingFailureReason: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true, name: 'processed_at' })
+  processedAt: Date | null;
+
+  @Column({ type: 'int', default: 0, name: 'processing_attempts' })
+  processingAttempts: number;
+
+  @Column({ type: 'timestamptz', nullable: true, name: 'processing_started_at' })
+  processingStartedAt: Date | null;
 
   @Column({ type: 'varchar', length: 100, nullable: true, name: 'payment_ref' })
   paymentRef: string | null;

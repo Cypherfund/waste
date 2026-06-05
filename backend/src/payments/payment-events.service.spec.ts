@@ -5,6 +5,7 @@ import { Repository, DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Job } from '../jobs/entities/job.entity';
 import { User } from '../users/entities/user.entity';
+import { UserSubscription } from '../subscriptions/entities/user-subscription.entity';
 import {
   PaymentTransaction,
   TransactionStatus,
@@ -61,6 +62,14 @@ describe('PaymentEventsService', () => {
           provide: getRepositoryToken(WalletLedger),
           useValue: {
             create: jest.fn(),
+            save: jest.fn(),
+            findOne: jest.fn(),
+          },
+        },
+        {
+          provide: getRepositoryToken(UserSubscription),
+          useValue: {
+            findOne: jest.fn(),
             save: jest.fn(),
           },
         },
@@ -132,7 +141,7 @@ describe('PaymentEventsService', () => {
           return { createQueryBuilder: jest.fn(() => mockLockedQuery) } as any;
         }
         if (entity === WalletLedger) {
-          return { create: jest.fn(), save: jest.fn() } as any;
+          return { create: jest.fn(), save: jest.fn(), findOne: jest.fn().mockResolvedValue(null) } as any;
         }
         return {} as any;
       });
@@ -165,8 +174,27 @@ describe('PaymentEventsService', () => {
     });
 
     it('is idempotent - second callback does not credit wallet again', async () => {
-      // First call - transaction is PENDING
+      // Mock wallet ledger to return no existing entry on first call
+      const mockWalletLedgerRepo = {
+        findOne: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockReturnValue({}),
+        save: jest.fn().mockResolvedValue({}),
+      };
+
+      // First call - transaction is PENDING, no existing ledger
       mockLockedQuery.getOne.mockResolvedValueOnce(mockTransaction).mockResolvedValueOnce(mockUser);
+      mockEntityManager.getRepository.mockImplementation((entity: any) => {
+        if (entity === PaymentTransaction) {
+          return { createQueryBuilder: jest.fn(() => mockLockedQuery) } as any;
+        }
+        if (entity === User) {
+          return { createQueryBuilder: jest.fn(() => mockLockedQuery) } as any;
+        }
+        if (entity === WalletLedger) {
+          return mockWalletLedgerRepo;
+        }
+        return {} as any;
+      });
 
       await service.onPaymentSuccess({
         transactionId: 'txn-1',
@@ -177,12 +205,13 @@ describe('PaymentEventsService', () => {
 
       const executeCallCount = mockUpdateQuery.execute.mock.calls.length;
 
-      // Second call - transaction is now VERIFIED
+      // Second call - simulate ledger already exists (idempotency check)
       mockLockedQuery.getOne.mockReset();
       mockLockedQuery.getOne.mockResolvedValue({
         ...mockTransaction,
         status: TransactionStatus.VERIFIED,
       });
+      mockWalletLedgerRepo.findOne.mockResolvedValueOnce({ id: 'ledger-1' }); // Existing ledger
 
       await service.onPaymentSuccess({
         transactionId: 'txn-1',
@@ -191,7 +220,7 @@ describe('PaymentEventsService', () => {
         amount: 5000,
       });
 
-      // Execute should not be called again
+      // Execute should not be called again (idempotency via ledger check)
       expect(mockUpdateQuery.execute.mock.calls.length).toBe(executeCallCount);
     });
 

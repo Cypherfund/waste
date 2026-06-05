@@ -34,6 +34,7 @@ export class SubscriptionsController {
       paymentRef?: string;
       paymentProofUrl?: string;
       paymentPhone?: string;
+      paymentCode?: string;
       providerTransactionId?: string;
     },
   ) {

@@ -12,10 +12,11 @@ import { Job } from '../jobs/entities/job.entity';
 import { User } from '../users/entities/user.entity';
 import { UsersModule } from '../users/users.module';
 import { WalletLedger } from '../wallet/entities/wallet-ledger.entity';
+import { UserSubscription } from '../subscriptions/entities/user-subscription.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([PaymentTransaction, PaymentProviderEntity, Job, User, WalletLedger]),
+    TypeOrmModule.forFeature([PaymentTransaction, PaymentProviderEntity, Job, User, WalletLedger, UserSubscription]),
     HttpModule,
     SystemConfigModule,
     UsersModule,
