@@ -16,6 +16,7 @@ import {
   TransactionStatus,
   TransactionType,
   PaymentSource,
+  ProcessingStatus,
 } from './entities/payment-transaction.entity';
 import { PaymentProviderEntity } from './entities/payment-provider.entity';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
@@ -413,10 +414,16 @@ export class PaymentService {
       return; // Don't throw - we want to return 200 to stop retries
     }
 
-    // Idempotency: only process if still pending
-    if (transaction.status !== TransactionStatus.PENDING) {
+    // Idempotency: skip if already processed and downstream complete
+    // Allow retry if status is SUCCESS but processing is not COMPLETED
+    const needsProcessing =
+      transaction.status === TransactionStatus.PENDING ||
+      (transaction.status === TransactionStatus.SUCCESS &&
+        transaction.processingStatus !== ProcessingStatus.COMPLETED);
+
+    if (!needsProcessing) {
       this.logger.log(
-        `Transaction ${transaction.id} already processed (status: ${transaction.status})`,
+        `Transaction ${transaction.id} already fully processed (status: ${transaction.status}, processing: ${transaction.processingStatus})`,
       );
       return;
     }
@@ -432,11 +439,20 @@ export class PaymentService {
     transaction.callbackReceivedAt = new Date();
 
     if (payload.status === TransactionStatus.SUCCESS) {
-      transaction.status = TransactionStatus.SUCCESS;
-      this.logger.log(`Payment SUCCESS: ${transaction.id}`);
+      // If retrying a SUCCESS transaction with incomplete processing, skip status update
+      const isRetry = transaction.status === TransactionStatus.SUCCESS;
 
-      // Save transaction state first to ensure accurate record
-      await this.transactionRepo.save(transaction);
+      if (!isRetry) {
+        transaction.status = TransactionStatus.SUCCESS;
+        transaction.processingStatus = ProcessingStatus.PENDING;
+        this.logger.log(`Payment SUCCESS: ${transaction.id}`);
+
+        // Save transaction state first to ensure accurate record
+        await this.transactionRepo.save(transaction);
+      } else {
+        this.logger.log(`Retrying downstream processing for transaction: ${transaction.id}`);
+        transaction.processingAttempts += 1;
+      }
 
       // Emit event for downstream processing (await to ensure state is updated before mobile polls)
       try {
@@ -449,6 +465,12 @@ export class PaymentService {
           jobId: transaction.jobId,
           payoutRequestId: transaction.payoutRequestId,
         });
+
+        // Mark processing as completed
+        transaction.processingStatus = ProcessingStatus.COMPLETED;
+        transaction.processedAt = new Date();
+        transaction.processingFailureReason = null;
+        await this.transactionRepo.save(transaction);
       } catch (error) {
         this.logger.error(`Downstream processing failed for payment success: ${error.message}`);
 
@@ -469,7 +491,12 @@ export class PaymentService {
           errorMessage: `Payment success downstream processing failed: ${error.message}`,
         });
 
-        // Re-throw to trigger gateway retry - payment was received but benefit not applied
+        // Mark processing as failed but keep transaction as SUCCESS
+        transaction.processingStatus = ProcessingStatus.FAILED;
+        transaction.processingFailureReason = error.message;
+        await this.transactionRepo.save(transaction);
+
+        // Re-throw to trigger gateway retry
         throw error;
       }
       return;
