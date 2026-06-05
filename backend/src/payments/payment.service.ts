@@ -475,6 +475,7 @@ export class PaymentService {
         transaction.processingStatus = ProcessingStatus.COMPLETED;
         transaction.processedAt = new Date();
         transaction.processingFailureReason = null;
+        transaction.processingStartedAt = null;
         await this.transactionRepo.save(transaction);
       } catch (error) {
         this.logger.error(`Downstream processing failed for payment success: ${error.message}`);
@@ -499,6 +500,7 @@ export class PaymentService {
         // Mark processing as failed but keep transaction as SUCCESS
         transaction.processingStatus = ProcessingStatus.FAILED;
         transaction.processingFailureReason = error.message;
+        transaction.processingStartedAt = null;
         await this.transactionRepo.save(transaction);
 
         // Re-throw to trigger gateway retry
@@ -775,9 +777,9 @@ export class PaymentService {
         processingStatus: ProcessingStatus.FAILED,
         processingFailureReason: 'Processing claim timed out',
       })
-      .where('status = :status', { status: TransactionStatus.SUCCESS })
-      .andWhere('processingStatus = :processingStatus', { processingStatus: ProcessingStatus.PROCESSING })
-      .andWhere('processingStartedAt < :threshold', { threshold: staleThreshold })
+      .where('"status" = :status', { status: TransactionStatus.SUCCESS })
+      .andWhere('"processing_status" = :processingStatus', { processingStatus: ProcessingStatus.PROCESSING })
+      .andWhere('"processing_started_at" < :threshold', { threshold: staleThreshold })
       .execute();
 
     if (staleRecoveryResult.affected && staleRecoveryResult.affected > 0) {
@@ -862,6 +864,7 @@ export class PaymentService {
           processingStatus: ProcessingStatus.COMPLETED,
           processedAt: new Date(),
           processingFailureReason: null,
+          processingStartedAt: null,
         });
 
         this.logger.log(`Downstream processing completed for transaction ${tx.id}`);
@@ -880,6 +883,7 @@ export class PaymentService {
         await this.transactionRepo.update(claimed.id, {
           processingStatus: ProcessingStatus.FAILED,
           processingFailureReason: error.message,
+          processingStartedAt: null,
         });
 
         // Alert admin if max attempts reached
