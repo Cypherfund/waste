@@ -273,9 +273,17 @@ export class PaymentEventsService {
       return;
     }
 
+    // Idempotency: skip if already active (already processed)
+    if (sub.status === SubscriptionStatus.ACTIVE && sub.paymentStatus === PaymentStatus.VERIFIED) {
+      this.logger.log(`Subscription ${sub.id} already active for user ${userId}`);
+      return;
+    }
+
     const today = new Date();
     const monday = this.getMondayOfWeek(today);
     const mondayStr = monday.toISOString().split('T')[0];
+
+    const wasInactive = sub.status !== SubscriptionStatus.ACTIVE;
 
     sub.status = SubscriptionStatus.ACTIVE;
     sub.paymentStatus = PaymentStatus.VERIFIED;
@@ -285,15 +293,17 @@ export class PaymentEventsService {
 
     this.logger.log(`Subscription ${sub.id} activated after payment success`);
 
-    // Emit subscription paid event
-    this.eventEmitter.emit(SubscriptionEvents.PAID, {
-      subscriptionId: sub.id,
-      userId: sub.userId,
-      planId: sub.planId,
-      planName: sub.plan?.name ?? null,
-      amount: Number(sub.plan?.price ?? 0),
-      timestamp: new Date(),
-    });
+    // Emit subscription paid event only on first activation
+    if (wasInactive) {
+      this.eventEmitter.emit(SubscriptionEvents.PAID, {
+        subscriptionId: sub.id,
+        userId: sub.userId,
+        planId: sub.planId,
+        planName: sub.plan?.name ?? null,
+        amount: Number(sub.plan?.price ?? 0),
+        timestamp: new Date(),
+      });
+    }
   }
 
   // ── Subscription payment failure ───────────────────────────────
