@@ -16,31 +16,45 @@ export class AddProcessingStatusToTransactions1785000000000 implements Migration
     // Add processing_status column
     await queryRunner.query(`
       ALTER TABLE "payment_transactions"
-      ADD COLUMN "processing_status" "processing_status_enum" DEFAULT 'PENDING'
+      ADD COLUMN IF NOT EXISTS "processing_status" "processing_status_enum" DEFAULT 'PENDING'
     `);
 
     // Add processing_failure_reason column
     await queryRunner.query(`
       ALTER TABLE "payment_transactions"
-      ADD COLUMN "processing_failure_reason" text
+      ADD COLUMN IF NOT EXISTS "processing_failure_reason" text
     `);
 
     // Add processed_at column
     await queryRunner.query(`
       ALTER TABLE "payment_transactions"
-      ADD COLUMN "processed_at" timestamptz
+      ADD COLUMN IF NOT EXISTS "processed_at" timestamptz
     `);
 
     // Add processing_attempts column
     await queryRunner.query(`
       ALTER TABLE "payment_transactions"
-      ADD COLUMN "processing_attempts" integer DEFAULT 0
+      ADD COLUMN IF NOT EXISTS "processing_attempts" integer DEFAULT 0
     `);
 
     // Create index for querying by processing status
     await queryRunner.query(`
-      CREATE INDEX "IDX_payment_transactions_processing_status"
+      CREATE INDEX IF NOT EXISTS "IDX_payment_transactions_processing_status"
       ON "payment_transactions"("processing_status")
+    `);
+
+    // Backfill historical transactions - mark completed ones as COMPLETED
+    // These are transactions that were already processed before this feature
+    await queryRunner.query(`
+      UPDATE "payment_transactions"
+      SET
+        "processing_status" = 'COMPLETED',
+        "processed_at" = COALESCE("callback_received_at", "updated_at", "created_at"),
+        "processing_attempts" = CASE
+          WHEN "processing_attempts" = 0 THEN 1
+          ELSE "processing_attempts"
+        END
+      WHERE "status" IN ('SUCCESS', 'VERIFIED', 'FAILED')
     `);
   }
 
@@ -67,6 +81,9 @@ export class AddProcessingStatusToTransactions1785000000000 implements Migration
     await queryRunner.query(`
       DROP INDEX IF EXISTS "IDX_payment_transactions_processing_status"
     `);
+
+    // Note: Dropping columns is sufficient; dropping the enum type
+    // will fail if any columns still reference it, which is handled by IF EXISTS
 
     // Drop enum
     await queryRunner.query(`

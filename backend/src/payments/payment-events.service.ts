@@ -178,11 +178,13 @@ export class PaymentEventsService {
         return;
       }
 
-      // Idempotency: only process if still pending
-      if (transaction.status !== TransactionStatus.PENDING) {
-        this.logger.log(
-          `Transaction ${transactionId} already processed (status: ${transaction.status})`,
-        );
+      // Idempotency: check wallet ledger for existing entry
+      const existingLedger = await em
+        .getRepository(WalletLedger)
+        .findOne({ where: { paymentTransactionId: transactionId } });
+
+      if (existingLedger) {
+        this.logger.log(`Wallet top-up ${transactionId} already credited`);
         return;
       }
 
@@ -210,7 +212,7 @@ export class PaymentEventsService {
         .where('id = :id', { id: userId })
         .execute();
 
-      // Mark transaction as verified
+      // Mark transaction as verified (successful processing)
       transaction.status = TransactionStatus.VERIFIED;
       await em.save(transaction);
 
