@@ -451,7 +451,26 @@ export class PaymentService {
         });
       } catch (error) {
         this.logger.error(`Downstream processing failed for payment success: ${error.message}`);
-        // Transaction is already saved as SUCCESS; downstream error is logged but doesn't affect state
+
+        // Log to Sentry for monitoring
+        this.sentryService.captureException(error, {
+          transactionId: transaction.id,
+          userId: transaction.userId,
+          paymentSource: transaction.paymentSource,
+          amount: transaction.amount,
+          context: 'payment.success downstream processing',
+        });
+
+        // Log to business logger for audit trail
+        this.businessLogger.logFailure(BusinessEventType.DOWNSTREAM_PROCESSING_FAILED, {
+          userId: transaction.userId,
+          transactionId: transaction.id,
+          amount: transaction.amount,
+          errorMessage: `Payment success downstream processing failed: ${error.message}`,
+        });
+
+        // Re-throw to trigger gateway retry - payment was received but benefit not applied
+        throw error;
       }
       return;
     }
@@ -486,6 +505,14 @@ export class PaymentService {
         });
       } catch (error) {
         this.logger.error(`Downstream processing failed for payment failure: ${error.message}`);
+
+        this.sentryService.captureException(error, {
+          transactionId: transaction.id,
+          userId: transaction.userId,
+          context: 'payment.failed downstream processing',
+        });
+
+        // Log but don't throw - payment already failed, just cleanup that failed
       }
       return;
     }
@@ -602,6 +629,14 @@ export class PaymentService {
         });
       } catch (error) {
         this.logger.error(`Downstream processing failed for timeout: ${error.message}`);
+
+        this.sentryService.captureException(error, {
+          transactionId: tx.id,
+          userId: tx.userId,
+          context: 'payment.timeout downstream processing',
+        });
+
+        // Log but don't throw - this is a background job
       }
     }
   }
