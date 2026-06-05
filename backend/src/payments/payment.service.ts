@@ -780,8 +780,8 @@ export class PaymentService {
     for (const tx of incomplete) {
       this.logger.log(`Retrying downstream processing for transaction ${tx.id} (attempt ${tx.processingAttempts + 1}/${maxAttempts})`);
 
-      // Use transaction with locking to prevent concurrent processing by gateway callback
-      await this.dataSource.transaction(async (em: any) => {
+      // Stage 1: Claim transaction in a short transaction with lock
+      const claimed = await this.dataSource.transaction(async (em: any) => {
         // Lock transaction row for atomic claim
         const lockedTx = await em
           .getRepository(PaymentTransaction)
@@ -792,19 +792,19 @@ export class PaymentService {
 
         if (!lockedTx) {
           this.logger.warn(`Transaction ${tx.id} not found during retry`);
-          return;
+          return null;
         }
 
         // Re-check status - may have been processed by another process (gateway callback)
         if (lockedTx.processingStatus === ProcessingStatus.COMPLETED) {
           this.logger.log(`Transaction ${tx.id} already completed by another process`);
-          return;
+          return null;
         }
 
         // Check if still within max attempts (may have been incremented by another process)
         if (lockedTx.processingAttempts >= maxAttempts) {
           this.logger.log(`Transaction ${tx.id} already at max attempts`);
-          return;
+          return null;
         }
 
         // Claim the transaction - increment attempts and set to PENDING
@@ -814,61 +814,64 @@ export class PaymentService {
 
         this.logger.log(`Claimed transaction ${tx.id} for retry (attempt ${lockedTx.processingAttempts}/${maxAttempts})`);
 
-        // Retry downstream processing
-        try {
-          await this.eventEmitter.emitAsync('payment.success', {
-            transactionId: lockedTx.id,
-            userId: lockedTx.userId,
-            type: lockedTx.type,
-            paymentSource: lockedTx.paymentSource,
-            amount: lockedTx.amount,
-            jobId: lockedTx.jobId,
-            payoutRequestId: lockedTx.payoutRequestId,
-          });
-
-          // Mark as completed
-          lockedTx.processingStatus = ProcessingStatus.COMPLETED;
-          lockedTx.processedAt = new Date();
-          lockedTx.processingFailureReason = null;
-          await em.save(lockedTx);
-
-          this.logger.log(`Downstream processing completed for transaction ${tx.id}`);
-        } catch (error) {
-          this.logger.error(`Scheduled retry failed for transaction ${tx.id}: ${error.message}`);
-
-          // Log to monitoring
-          this.sentryService.captureException(error, {
-            transactionId: lockedTx.id,
-            userId: lockedTx.userId,
-            context: 'scheduled downstream retry',
-            attempt: lockedTx.processingAttempts,
-          });
-
-          // Mark as failed
-          lockedTx.processingStatus = ProcessingStatus.FAILED;
-          lockedTx.processingFailureReason = error.message;
-          await em.save(lockedTx);
-
-          // Alert admin if max attempts reached
-          if (lockedTx.processingAttempts >= maxAttempts) {
-            this.businessLogger.logFailure(BusinessEventType.DOWNSTREAM_PROCESSING_FAILED, {
-              userId: lockedTx.userId,
-              transactionId: lockedTx.id,
-              amount: lockedTx.amount,
-              errorMessage: `Max retry attempts (${maxAttempts}) reached. Transaction requires manual intervention.`,
-              metadata: { processingAttempts: lockedTx.processingAttempts },
-            });
-
-            this.logger.error(`Transaction ${tx.id} reached max retry attempts. Admin intervention required.`);
-          }
-
-          // Re-throw to mark transaction as failed in this transaction
-          throw error;
-        }
-      }).catch((error: any) => {
-        this.logger.error(`Transaction retry failed for ${tx.id}: ${error.message}`);
-        // Don't throw - continue with other transactions
+        return lockedTx;
       });
+
+      if (!claimed) {
+        continue; // Skip if not claimed (already processed or at max attempts)
+      }
+
+      // Stage 2: Process downstream (outside transaction, lock released)
+      try {
+        await this.eventEmitter.emitAsync('payment.success', {
+          transactionId: claimed.id,
+          userId: claimed.userId,
+          type: claimed.type,
+          paymentSource: claimed.paymentSource,
+          amount: claimed.amount,
+          jobId: claimed.jobId,
+          payoutRequestId: claimed.payoutRequestId,
+        });
+
+        // Stage 3: Mark as completed
+        await this.transactionRepo.update(claimed.id, {
+          processingStatus: ProcessingStatus.COMPLETED,
+          processedAt: new Date(),
+          processingFailureReason: null,
+        });
+
+        this.logger.log(`Downstream processing completed for transaction ${tx.id}`);
+      } catch (error: any) {
+        this.logger.error(`Scheduled retry failed for transaction ${tx.id}: ${error.message}`);
+
+        // Log to monitoring
+        this.sentryService.captureException(error, {
+          transactionId: claimed.id,
+          userId: claimed.userId,
+          context: 'scheduled downstream retry',
+          attempt: claimed.processingAttempts,
+        });
+
+        // Stage 3: Mark as failed (separate update, won't roll back)
+        await this.transactionRepo.update(claimed.id, {
+          processingStatus: ProcessingStatus.FAILED,
+          processingFailureReason: error.message,
+        });
+
+        // Alert admin if max attempts reached
+        if (claimed.processingAttempts >= maxAttempts) {
+          this.businessLogger.logFailure(BusinessEventType.DOWNSTREAM_PROCESSING_FAILED, {
+            userId: claimed.userId,
+            transactionId: claimed.id,
+            amount: claimed.amount,
+            errorMessage: `Max retry attempts (${maxAttempts}) reached. Transaction requires manual intervention.`,
+            metadata: { processingAttempts: claimed.processingAttempts },
+          });
+
+          this.logger.error(`Transaction ${tx.id} reached max retry attempts. Admin intervention required.`);
+        }
+        // Continue to next transaction (don't throw)
+      }
     }
 
     if (incomplete.length > 0) {
