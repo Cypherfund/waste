@@ -727,8 +727,13 @@ class _ManualPaymentScreenState extends State<ManualPaymentScreen> {
       }
     } catch (e) {
       if (mounted) {
+        final errorMessage = _getErrorMessage(e);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to submit: $e')),
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red.shade600,
+            duration: const Duration(seconds: 4),
+          ),
         );
       }
     } finally {
@@ -736,6 +741,38 @@ class _ManualPaymentScreenState extends State<ManualPaymentScreen> {
         setState(() => _isCreatingJob = false);
       }
     }
+  }
+
+  String _getErrorMessage(dynamic error) {
+    if (error == null) return 'An unknown error occurred';
+
+    final errorString = error.toString();
+
+    // Handle common error patterns
+    if (errorString.contains('Payment reference is required')) {
+      return 'Payment reference is required. Please enter a reference number.';
+    }
+    if (errorString.contains('paymentRef is required')) {
+      return 'Payment reference is required. Please enter a reference number.';
+    }
+    if (errorString.contains('paymentProofUrl is required')) {
+      return 'Payment proof is required. Please upload a payment receipt.';
+    }
+    if (errorString.contains('Payment provider')) {
+      return 'Payment provider error. Please try a different payment method.';
+    }
+    if (errorString.contains('network') || errorString.contains('connection')) {
+      return 'Network error. Please check your connection and try again.';
+    }
+    if (errorString.contains('timeout')) {
+      return 'Request timed out. Please try again.';
+    }
+    if (errorString.contains('upload') || errorString.contains('file')) {
+      return 'File upload failed. Please try again with a different file.';
+    }
+
+    // Return a user-friendly message for other errors
+    return 'Submission failed. Please try again or contact support.';
   }
 
   Future<void> _openWhatsApp(String phone) async {

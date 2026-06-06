@@ -40,6 +40,7 @@ import { CountriesService } from '../countries/countries.service';
 import { PaymentService } from '../payments/payment.service';
 import { AdminAuditAction } from './entities/admin-audit-log.entity';
 import { AdminAuditEntityType } from './entities/admin-audit-log.entity';
+import { FeatureFlagService } from '../config/feature-flags';
 
 @ApiTags('Admin')
 @ApiBearerAuth()
@@ -54,6 +55,7 @@ export class AdminController {
     private readonly systemCleanupService: SystemCleanupService,
     private readonly otpService: OtpService,
     private readonly adminAuditService: AdminAuditService,
+    private readonly featureFlagService: FeatureFlagService,
   ) {}
 
   // ─── USERS ────────────────────────────────────────────────────
@@ -208,6 +210,11 @@ export class AdminController {
       ipAddress: req.ip,
       userAgent: req.headers['user-agent'] as string,
     });
+  }
+
+  @Post('config/purge-cache')
+  purgeCache(@Body() body: { flagKey?: string }) {
+    return this.featureFlagService.clearCache(body.flagKey);
   }
 
   // ─── EARNINGS / PAYOUTS ────────────────────────────────────────

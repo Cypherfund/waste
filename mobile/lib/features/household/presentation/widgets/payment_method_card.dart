@@ -13,6 +13,7 @@ class PaymentMethodCard extends StatelessWidget {
   final VoidCallback onTap;
   final IconData? customIcon;
   final String? imageUrl;
+  final String? maskedAccountNumber;
 
   const PaymentMethodCard({
     super.key,
@@ -23,6 +24,7 @@ class PaymentMethodCard extends StatelessWidget {
     required this.onTap,
     this.customIcon,
     this.imageUrl,
+    this.maskedAccountNumber,
   });
 
   @override
@@ -95,15 +97,26 @@ class PaymentMethodCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    _getSubtitle(),
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: isSelected 
-                          ? AppColors.primary.withOpacity(0.8)
-                          : const Color(0xFF6B7280),
+                  if (maskedAccountNumber != null && maskedAccountNumber!.isNotEmpty)
+                    Text(
+                      maskedAccountNumber!,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isSelected
+                            ? AppColors.primary.withOpacity(0.8)
+                            : const Color(0xFF6B7280),
+                      ),
+                    )
+                  else
+                    Text(
+                      _getSubtitle(),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isSelected
+                            ? AppColors.primary.withOpacity(0.8)
+                            : const Color(0xFF6B7280),
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),

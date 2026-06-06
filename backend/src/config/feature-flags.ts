@@ -36,4 +36,21 @@ export class FeatureFlagService {
   async setFlag(flagKey: string, enabled: boolean): Promise<void> {
     await this.redis.set(`ff:${flagKey}`, String(enabled), 'EX', 60);
   }
+
+  async clearCache(flagKey?: string): Promise<{ cleared: number }> {
+    try {
+      if (flagKey) {
+        await this.redis.del(`ff:${flagKey}`);
+        return { cleared: 1 };
+      } else {
+        const keys = await this.redis.keys('ff:*');
+        if (keys.length > 0) {
+          await this.redis.del(...keys);
+        }
+        return { cleared: keys.length };
+      }
+    } catch (error) {
+      throw new Error(`Failed to clear feature flag cache: ${error.message}`);
+    }
+  }
 }

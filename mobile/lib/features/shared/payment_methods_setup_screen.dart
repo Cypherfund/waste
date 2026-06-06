@@ -138,16 +138,12 @@ class _PaymentMethodsSetupScreenState extends State<PaymentMethodsSetupScreen> {
           }
 
           final allProviders = _getProviders();
-          final groupedMethods = <String, List<UserPaymentMethod>>{};
-          for (final method in methods) {
-            groupedMethods.putIfAbsent(method.paymentCode.toLowerCase(), () => []).add(method);
-          }
 
           return ListView(
             padding: const EdgeInsets.all(20),
             children: [
               // ── Saved methods ──────────────────────────────────────
-              if (groupedMethods.isNotEmpty) ...[
+              if (methods.isNotEmpty) ...[
                 Text(
                   'Saved Methods',
                   style: TextStyle(
@@ -158,11 +154,11 @@ class _PaymentMethodsSetupScreenState extends State<PaymentMethodsSetupScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                ...groupedMethods.entries.map((entry) {
+                ...methods.map((method) {
                   final providerObj = allProviders
-                      .where((p) => p.paymentCode.toLowerCase() == entry.key)
+                      .where((p) => p.paymentCode.toLowerCase() == method.paymentCode.toLowerCase())
                       .firstOrNull;
-                  return _buildMethodCard(entry.value.first, providerObj);
+                  return _buildMethodCard(method, providerObj);
                 }),
                 const SizedBox(height: 24),
               ],
@@ -182,7 +178,7 @@ class _PaymentMethodsSetupScreenState extends State<PaymentMethodsSetupScreen> {
                 ...allProviders.map((p) => _buildProviderTile(p)),
               ],
 
-              if (allProviders.isEmpty && groupedMethods.isEmpty)
+              if (allProviders.isEmpty && methods.isEmpty)
                 Center(
                   child: Padding(
                     padding: const EdgeInsets.only(top: 80),

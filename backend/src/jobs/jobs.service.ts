@@ -154,12 +154,15 @@ export class JobsService {
         );
       }
 
-      if (provider.integrationEnabled && dto.paymentCode && dto.paymentPhone) {
+      const integrationEnabled =
+        provider.integrationEnabled && (await this.paymentService.isPaymentIntegrationEnabled());
+
+      if (integrationEnabled && dto.paymentCode && dto.paymentPhone) {
         // 3a. Integrated provider
         paymentMode = PaymentMode.INTEGRATED_PROVIDER;
         initialStatus = JobStatus.PAYMENT_PENDING;
         paymentStatus = PaymentStatus.PROVIDER_PENDING;
-      } else if (!provider.integrationEnabled) {
+      } else if (!integrationEnabled) {
         // 3b. Manual provider
         if (!dto.paymentRef) {
           throw new BadRequestException('paymentRef is required for manual provider payments');

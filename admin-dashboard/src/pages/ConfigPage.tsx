@@ -4,13 +4,14 @@ import { useAsync } from '../hooks/useAsync';
 import Spinner from '../components/Spinner';
 import ErrorBox from '../components/ErrorBox';
 import type { SystemConfig } from '../types';
-import { Save, Check, AlertTriangle } from 'lucide-react';
+import { Save, Check, AlertTriangle, RefreshCw } from 'lucide-react';
 
 export default function ConfigPage() {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [saving, setSaving] = useState(false);
+  const [purging, setPurging] = useState(false);
   const [feedback, setFeedback] = useState('');
 
   const fetchConfig = useCallback(
@@ -40,11 +41,43 @@ export default function ConfigPage() {
     }
   };
 
+  const handlePurgeCache = async () => {
+    setPurging(true);
+    try {
+      const result = await configApi.purgeCache();
+      setFeedback(`Cleared ${result.cleared} feature flag cache entries.`);
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || 'Cache purge failed';
+      setFeedback(`Error: ${typeof msg === 'string' ? msg : JSON.stringify(msg)}`);
+    } finally {
+      setPurging(false);
+    }
+  };
+
   return (
     <div>
-      <h1 className="mb-4 text-2xl font-bold text-gray-900">
-        System Configuration
-      </h1>
+      <div className="mb-4 flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900">
+          System Configuration
+        </h1>
+        <button
+          onClick={handlePurgeCache}
+          disabled={purging}
+          className="inline-flex items-center gap-2 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+        >
+          {purging ? (
+            <>
+              <RefreshCw size={14} className="animate-spin" /> Purging...
+            </>
+          ) : (
+            <>
+              <RefreshCw size={14} /> Purge Feature Flag Cache
+            </>
+          )}
+        </button>
+      </div>
 
       {categories.length > 0 && (
         <div className="mb-4">

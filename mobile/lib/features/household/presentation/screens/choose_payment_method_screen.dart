@@ -489,6 +489,7 @@ class _ChoosePaymentMethodScreenState extends State<ChoosePaymentMethodScreen> {
             mode: mode,
             isSelected: isSelected,
             imageUrl: providerConfig?.imageUrl,
+            maskedAccountNumber: method.maskedAccountNumber,
             onTap: () {
               flowProvider.selectPaymentMethod(
                 providerId: method.id,

@@ -77,6 +77,9 @@ class _IntegratedPaymentScreenState extends State<IntegratedPaymentScreen> {
                     mode: PaymentProviderMode.integrated,
                     isSelected: true,
                     imageUrl: imageUrl,
+                    maskedAccountNumber: flowProvider.paymentPhone != null
+                        ? _maskAccountNumber(flowProvider.paymentPhone!)
+                        : null,
                     onTap: () {},
                   ),
 
@@ -371,10 +374,12 @@ class _IntegratedPaymentScreenState extends State<IntegratedPaymentScreen> {
       Navigator.pushNamed(context, '/payment-processing');
     } catch (e) {
       if (!mounted) return;
+      final errorMessage = _getErrorMessage(e);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to initiate payment: $e'),
+          content: Text(errorMessage),
           backgroundColor: Colors.red.shade600,
+          duration: const Duration(seconds: 4),
         ),
       );
     } finally {
@@ -382,5 +387,41 @@ class _IntegratedPaymentScreenState extends State<IntegratedPaymentScreen> {
         setState(() => _isProcessing = false);
       }
     }
+  }
+
+  String _getErrorMessage(dynamic error) {
+    if (error == null) return 'An unknown error occurred';
+
+    final errorString = error.toString();
+
+    // Handle common error patterns
+    if (errorString.contains('Payment reference is required')) {
+      return 'Payment reference is required. Please use manual payment method.';
+    }
+    if (errorString.contains('paymentRef is required')) {
+      return 'Payment reference is required. Please use manual payment method.';
+    }
+    if (errorString.contains('paymentProofUrl is required')) {
+      return 'Payment proof is required. Please upload a payment receipt.';
+    }
+    if (errorString.contains('Payment provider')) {
+      return 'Payment provider error. Please try a different payment method.';
+    }
+    if (errorString.contains('network') || errorString.contains('connection')) {
+      return 'Network error. Please check your connection and try again.';
+    }
+    if (errorString.contains('timeout')) {
+      return 'Request timed out. Please try again.';
+    }
+
+    // Return a user-friendly message for other errors
+    return 'Payment failed. Please try again or contact support.';
+  }
+
+  String _maskAccountNumber(String accountNumber) {
+    if (accountNumber.length <= 6) return accountNumber;
+    final start = accountNumber.substring(0, accountNumber.length - 4);
+    final end = accountNumber.substring(accountNumber.length - 4);
+    return '${start.substring(0, start.length - 3)} *** $end';
   }
 }

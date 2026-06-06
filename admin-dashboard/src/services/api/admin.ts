@@ -99,6 +99,9 @@ export const configApi = {
 
   update: (key: string, value: string) =>
     client.put(`/admin/config/${key}`, { value }).then((r) => r.data),
+
+  purgeCache: (flagKey?: string) =>
+    client.post<{ cleared: number }>('/admin/config/purge-cache', { flagKey }).then((r) => r.data),
 };
 
 export const earningsApi = {
