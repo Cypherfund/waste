@@ -8,7 +8,7 @@ export class RepairStuckRejectedProviderJobs1786000000000 implements MigrationIn
       UPDATE "jobs"
       SET "status" = 'PAYMENT_FAILED',
           "updated_at" = NOW()
-      WHERE "status" = 'PAYMENT_PENDING'
+      WHERE "status"::text = 'PAYMENT_PENDING'
         AND "payment_status" IN ('REJECTED', 'FAILED')
     `);
   }
