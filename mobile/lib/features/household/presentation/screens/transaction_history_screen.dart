@@ -300,12 +300,6 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                   color: isCredit ? Colors.green.shade700 : Colors.red.shade700,
                 ),
               ),
-              const SizedBox(height: 4),
-              Icon(
-                Icons.chevron_right,
-                color: Colors.grey.shade400,
-                size: 20,
-              ),
             ],
           ),
         ],

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'api_client.dart';
 
 class PayoutMethod {
@@ -257,19 +258,32 @@ class PaymentTransaction {
     this.description,
   });
 
-  factory PaymentTransaction.fromJson(Map<String, dynamic> j) => PaymentTransaction(
-        id: j['id'] as String,
-        type: j['type'] as String,
-        amount: (j['amount'] as num).toDouble(),
-        status: j['status'] as String,
-        createdAt: DateTime.parse(j['createdAt'] as String? ?? j['created_at'] as String),
-        providerName: j['providerName'] as String? ?? j['provider_name'] as String?,
-        paymentCode: j['paymentCode'] as String? ?? j['payment_code'] as String?,
-        jobId: j['jobId'] as String? ?? j['job_id'] as String?,
-        description: j['description'] as String?,
-      );
+  factory PaymentTransaction.fromJson(Map<String, dynamic> j) {
+    try {
+      final createdAtStr = j['createdAt'] as String? ?? j['created_at'] as String?;
+      final amountValue = j['amount'];
+      final amount = amountValue is String 
+          ? double.tryParse(amountValue) ?? 0.0 
+          : (amountValue as num?)?.toDouble() ?? 0.0;
+      return PaymentTransaction(
+          id: j['id'] as String? ?? '',
+          type: j['type'] as String? ?? '',
+          amount: amount,
+          status: j['status'] as String? ?? '',
+          createdAt: createdAtStr != null ? DateTime.parse(createdAtStr) : DateTime.now(),
+          providerName: j['providerName'] as String? ?? j['provider_name'] as String?,
+          paymentCode: j['paymentCode'] as String? ?? j['payment_code'] as String?,
+          jobId: j['jobId'] as String? ?? j['job_id'] as String?,
+          description: j['description'] as String?,
+        );
+    } catch (e) {
+      debugPrint('PaymentTransaction.fromJson error: $e');
+      debugPrint('JSON data: $j');
+      rethrow;
+    }
+  }
 
-  bool get isCredit => type == 'CASHIN' || type == 'REFUND';
+  bool get isCredit => type == 'CASHIN' || type == 'REFUND' || type == 'WALLET_TOPUP';
   bool get isDebit => type == 'CASHOUT' || type == 'PAYMENT';
 }
 
