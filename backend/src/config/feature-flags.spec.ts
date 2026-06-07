@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { FeatureFlagService } from './feature-flags';
+import { SystemConfigService } from './system-config.service';
 
 describe('FeatureFlagService', () => {
   let service: FeatureFlagService;
@@ -12,6 +13,9 @@ describe('FeatureFlagService', () => {
   };
   let configService: {
     get: jest.Mock;
+  };
+  let systemConfigService: {
+    getBoolean: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -26,6 +30,10 @@ describe('FeatureFlagService', () => {
       get: jest.fn(),
     };
 
+    systemConfigService = {
+      getBoolean: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         FeatureFlagService,
@@ -36,6 +44,10 @@ describe('FeatureFlagService', () => {
         {
           provide: ConfigService,
           useValue: configService,
+        },
+        {
+          provide: SystemConfigService,
+          useValue: systemConfigService,
         },
       ],
     }).compile();
@@ -55,6 +67,7 @@ describe('FeatureFlagService', () => {
 
       expect(redis.get).toHaveBeenCalledWith('ff:test.flag');
       expect(result).toBe(true);
+      expect(systemConfigService.getBoolean).not.toHaveBeenCalled();
     });
 
     it('should return cached false value', async () => {
@@ -63,22 +76,54 @@ describe('FeatureFlagService', () => {
       const result = await service.isEnabled('test.flag', true);
 
       expect(result).toBe(false);
+      expect(systemConfigService.getBoolean).not.toHaveBeenCalled();
     });
 
-    it('should return default value when cache miss', async () => {
+    it('should fall back to database when cache miss and cache the value', async () => {
       redis.get.mockResolvedValue(null);
-
-      const result = await service.isEnabled('test.flag', true);
-
-      expect(result).toBe(true);
-    });
-
-    it('should return default value when Redis error', async () => {
-      redis.get.mockRejectedValue(new Error('Redis error'));
+      systemConfigService.getBoolean.mockResolvedValue(true);
+      redis.set.mockResolvedValue('OK');
 
       const result = await service.isEnabled('test.flag', false);
 
-      expect(result).toBe(false);
+      expect(redis.get).toHaveBeenCalledWith('ff:test.flag');
+      expect(systemConfigService.getBoolean).toHaveBeenCalledWith('test.flag', false);
+      expect(redis.set).toHaveBeenCalledWith('ff:test.flag', 'true', 'EX', 60);
+      expect(result).toBe(true);
+    });
+
+    it('should fall back to database when Redis error', async () => {
+      redis.get.mockRejectedValue(new Error('Redis error'));
+      systemConfigService.getBoolean.mockResolvedValue(true);
+      redis.set.mockResolvedValue('OK');
+
+      const result = await service.isEnabled('test.flag', false);
+
+      expect(systemConfigService.getBoolean).toHaveBeenCalledWith('test.flag', false);
+      expect(redis.set).toHaveBeenCalledWith('ff:test.flag', 'true', 'EX', 60);
+      expect(result).toBe(true);
+    });
+
+    it('should return default value when database also fails', async () => {
+      redis.get.mockResolvedValue(null);
+      systemConfigService.getBoolean.mockRejectedValue(new Error('DB error'));
+
+      const result = await service.isEnabled('test.flag', true);
+
+      expect(systemConfigService.getBoolean).toHaveBeenCalledWith('test.flag', true);
+      expect(result).toBe(true);
+    });
+
+    it('should continue even if caching fails after database read', async () => {
+      redis.get.mockResolvedValue(null);
+      systemConfigService.getBoolean.mockResolvedValue(true);
+      redis.set.mockRejectedValue(new Error('Cache error'));
+
+      const result = await service.isEnabled('test.flag', false);
+
+      expect(systemConfigService.getBoolean).toHaveBeenCalledWith('test.flag', false);
+      expect(redis.set).toHaveBeenCalledWith('ff:test.flag', 'true', 'EX', 60);
+      expect(result).toBe(true);
     });
   });
 

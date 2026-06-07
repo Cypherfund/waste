@@ -1,6 +1,7 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import Redis from 'ioredis';
 import { ConfigService } from '@nestjs/config';
+import { SystemConfigService } from './system-config.service';
 
 export const FEATURE_FLAGS = {
   COLLECTOR_SELF_REGISTRATION: 'feature.collector_self_registration',
@@ -15,9 +16,12 @@ export const FEATURE_FLAGS = {
 
 @Injectable()
 export class FeatureFlagService {
+  private readonly logger = new Logger(FeatureFlagService.name);
+
   constructor(
     @Inject('REDIS_CLIENT') private readonly redis: Redis,
     private readonly configService: ConfigService,
+    private readonly systemConfigService: SystemConfigService,
   ) {}
 
   async isEnabled(flagKey: string, defaultValue = true): Promise<boolean> {
@@ -26,11 +30,25 @@ export class FeatureFlagService {
       if (cached !== null) {
         return cached === 'true';
       }
-    } catch {
-      // Redis unavailable — fall back to default
+    } catch (error) {
+      this.logger.warn(`Redis unavailable for feature flag ${flagKey}, falling back to database`);
     }
 
-    return defaultValue;
+    // Fall back to database when Redis cache is empty or unavailable
+    try {
+      const dbValue = await this.systemConfigService.getBoolean(flagKey, defaultValue);
+      // Cache the value in Redis for future reads
+      try {
+        await this.redis.set(`ff:${flagKey}`, String(dbValue), 'EX', 60);
+      } catch (cacheError) {
+        // Ignore cache errors - we still have the value from database
+        this.logger.warn(`Failed to cache feature flag ${flagKey} in Redis`);
+      }
+      return dbValue;
+    } catch (dbError) {
+      this.logger.error(`Failed to read feature flag ${flagKey} from database`, dbError);
+      return defaultValue;
+    }
   }
 
   async setFlag(flagKey: string, enabled: boolean): Promise<void> {
