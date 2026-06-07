@@ -262,10 +262,10 @@ class PaymentTransaction {
         type: j['type'] as String,
         amount: (j['amount'] as num).toDouble(),
         status: j['status'] as String,
-        createdAt: DateTime.parse(j['createdAt'] as String),
-        providerName: j['providerName'] as String?,
-        paymentCode: j['paymentCode'] as String?,
-        jobId: j['jobId'] as String?,
+        createdAt: DateTime.parse(j['createdAt'] as String? ?? j['created_at'] as String),
+        providerName: j['providerName'] as String? ?? j['provider_name'] as String?,
+        paymentCode: j['paymentCode'] as String? ?? j['payment_code'] as String?,
+        jobId: j['jobId'] as String? ?? j['job_id'] as String?,
         description: j['description'] as String?,
       );
 
