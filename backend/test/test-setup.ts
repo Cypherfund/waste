@@ -47,7 +47,7 @@ beforeAll(async () => {
         isEnabled: true,
       })),
       getProviders: jest.fn().mockResolvedValue([]),
-      isPaymentIntegrationEnabled: jest.fn().mockResolvedValue(false),
+      isPaymentIntegrationEnabled: jest.fn().mockResolvedValue(true),
     })
     .compile();
 
