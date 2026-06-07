@@ -6,7 +6,7 @@ export class RepairStuckRejectedProviderJobs1786000000000 implements MigrationIn
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       UPDATE "jobs"
-      SET "status" = 'PAYMENT_FAILED',
+      SET "status" = 'PAYMENT_FAILED'::text::"jobs_status_enum",
           "updated_at" = NOW()
       WHERE "status"::text = 'PAYMENT_PENDING'
         AND "payment_status" IN ('REJECTED', 'FAILED')
