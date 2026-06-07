@@ -3,6 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { OtpService } from './otp.service';
 import { SystemConfigService } from '../config/system-config.service';
 import { SmsProvider } from '../notifications/providers/sms.provider';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { Otp } from './entities/otp.entity';
 
 // ─── Mocks ──────────────────────────────────────────────────────
 
@@ -32,6 +34,15 @@ const createMockSystemConfigService = (devModeEnabled: boolean = false) => ({
   getBoolean: jest.fn().mockResolvedValue(devModeEnabled),
 });
 
+const createMockOtpRepo = () => ({
+  create: jest.fn(),
+  save: jest.fn(),
+  delete: jest.fn(),
+  findOne: jest.fn(),
+  update: jest.fn(),
+  createQueryBuilder: jest.fn(),
+});
+
 // ─── Tests ──────────────────────────────────────────────────────
 
 describe('OtpService', () => {
@@ -45,6 +56,7 @@ describe('OtpService', () => {
     const mockSmsProvider = createMockSmsProvider();
     const mockConfigService = createMockConfigService(configOverrides);
     const mockSystemConfigService = createMockSystemConfigService(sysConfigDevMode);
+    const mockOtpRepo = createMockOtpRepo();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -53,6 +65,7 @@ describe('OtpService', () => {
         { provide: 'SMS_PROVIDER', useValue: mockSmsProvider },
         { provide: ConfigService, useValue: mockConfigService },
         { provide: SystemConfigService, useValue: mockSystemConfigService },
+        { provide: getRepositoryToken(Otp), useValue: mockOtpRepo },
       ],
     }).compile();
 
@@ -62,6 +75,7 @@ describe('OtpService', () => {
       mockSmsProvider,
       mockConfigService,
       mockSystemConfigService,
+      mockOtpRepo,
     };
   };
 
@@ -162,6 +176,37 @@ describe('OtpService', () => {
         expect.any(String),
       );
     });
+
+    it('should fall back to database when Redis fails during sendOtp', async () => {
+      // Arrange
+      const { service, mockRedis, mockOtpRepo } = await createTestingModule();
+      mockRedis.setex = jest.fn().mockRejectedValue(new Error('Redis error'));
+      mockOtpRepo.create.mockReturnValue({ phone: '+237612345678', code: '123456' });
+      mockOtpRepo.save.mockResolvedValue({});
+
+      // Act
+      const result = await service.sendOtp('+237612345678');
+
+      // Assert
+      expect(result.success).toBe(true);
+      expect(mockOtpRepo.delete).toHaveBeenCalled();
+      expect(mockOtpRepo.create).toHaveBeenCalled();
+      expect(mockOtpRepo.save).toHaveBeenCalled();
+    });
+
+    it('should return error when both Redis and database fail during sendOtp', async () => {
+      // Arrange
+      const { service, mockRedis, mockOtpRepo } = await createTestingModule();
+      mockRedis.setex = jest.fn().mockRejectedValue(new Error('Redis error'));
+      mockOtpRepo.delete.mockRejectedValue(new Error('DB error'));
+
+      // Act
+      const result = await service.sendOtp('+237612345678');
+
+      // Assert
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Failed to generate verification code');
+    });
   });
 
   describe('verifyOtp', () => {
@@ -214,6 +259,49 @@ describe('OtpService', () => {
 
       // Assert
       expect(mockRedis.del).toHaveBeenCalledWith('otp:+237612345678');
+    });
+
+    it('should fall back to database when Redis fails during verifyOtp', async () => {
+      // Arrange
+      const { service, mockRedis, mockOtpRepo } = await createTestingModule();
+      mockRedis.get = jest.fn().mockRejectedValue(new Error('Redis error'));
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue({ code: '123456' }),
+      };
+      mockOtpRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      // Act
+      const result = await service.verifyOtp('+237612345678', '123456');
+
+      // Assert
+      expect(result.success).toBe(true);
+      expect(mockOtpRepo.createQueryBuilder).toHaveBeenCalled();
+      expect(mockOtpRepo.update).toHaveBeenCalled();
+    });
+
+    it('should mark OTP as verified in database when verified from database', async () => {
+      // Arrange
+      const { service, mockRedis, mockOtpRepo } = await createTestingModule();
+      mockRedis.get = jest.fn().mockResolvedValue(null);
+      const mockQueryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue({ code: '123456' }),
+      };
+      mockOtpRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      // Act
+      await service.verifyOtp('+237612345678', '123456');
+
+      // Assert
+      expect(mockOtpRepo.update).toHaveBeenCalledWith(
+        { phone: '+237612345678', verified: false },
+        { verified: true, verifiedAt: expect.any(Date) },
+      );
     });
   });
 
