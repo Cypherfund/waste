@@ -4,7 +4,7 @@ export class RepairStuckRejectedProviderJobs1786000000000 implements MigrationIn
   name = 'RepairStuckRejectedProviderJobs1786000000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    const enumAddedInCurrentTransaction = await queryRunner.query(`
+    const isEnumAddedInTransaction = await queryRunner.query(`
       SELECT 1
       FROM pg_enum e
       INNER JOIN pg_type t ON t.oid = e.enumtypid
@@ -14,12 +14,7 @@ export class RepairStuckRejectedProviderJobs1786000000000 implements MigrationIn
       LIMIT 1
     `);
 
-    if (enumAddedInCurrentTransaction.length > 0) {
-      console.log(
-        'RepairStuckRejectedProviderJobs: skipping because PAYMENT_FAILED was added in this transaction.',
-      );
-      return;
-    }
+    if (isEnumAddedInTransaction.length > 0) return;
 
     await queryRunner.query(`
       UPDATE "jobs"
