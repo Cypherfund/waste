@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../providers/auth_provider.dart';
 import '../../../../providers/job_provider.dart';
@@ -15,6 +16,28 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  PackageInfo _packageInfo = PackageInfo(
+    appName: 'KmerTrash',
+    packageName: 'com.kmertrash.wastewise',
+    version: '1.0.1',
+    buildNumber: '8',
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPackageInfo();
+  }
+
+  Future<void> _loadPackageInfo() async {
+    final info = await PackageInfo.fromPlatform();
+    if (mounted) {
+      setState(() {
+        _packageInfo = info;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -392,7 +415,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                     SizedBox(height: 8),
-                    Text('Version 1.0.0'),
+                    Text('Version ${_packageInfo.version}'),
                     SizedBox(height: 16),
                     Text(
                       'A smart waste management solution connecting households with waste collectors for efficient and sustainable waste disposal.',

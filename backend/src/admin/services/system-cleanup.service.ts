@@ -86,7 +86,7 @@ export interface CleanupAnalysis {
     commissionTransactions: number;
     marketerPayoutRequests: number;
   };
-  marketingBudgets: { campaigns: number; budgetPeriods: number; budgetTransactions: number };
+  marketingBudgets: { budgetPeriods: number; budgetTransactions: number };
   payments: {
     paymentTransactions: number;
     earnings: number;
@@ -348,7 +348,7 @@ export class SystemCleanupService {
         commissionTransactions: 0,
         marketerPayoutRequests: 0,
       },
-      marketingBudgets: { campaigns: 0, budgetPeriods: 0, budgetTransactions: 0 },
+      marketingBudgets: { budgetPeriods: 0, budgetTransactions: 0 },
       payments: { paymentTransactions: 0, earnings: 0, payoutRequests: 0, collectorFloatLedger: 0 },
       files: { unusedFiles: 0 },
       notifications: { notifications: 0, marketerNotifications: 0 },
@@ -457,7 +457,6 @@ export class SystemCleanupService {
     }
 
     if (components.marketingBudgets) {
-      analysis.marketingBudgets.campaigns = await this.marketingCampaignRepo.count();
       analysis.marketingBudgets.budgetPeriods = await this.marketingBudgetPeriodRepo.count();
       analysis.marketingBudgets.budgetTransactions = await this.budgetTransactionRepo.count();
     }
@@ -553,7 +552,7 @@ export class SystemCleanupService {
         commissionTransactions: 0,
         marketerPayoutRequests: 0,
       },
-      marketingBudgets: { campaigns: 0, budgetPeriods: 0, budgetTransactions: 0 },
+      marketingBudgets: { budgetPeriods: 0, budgetTransactions: 0 },
       payments: { paymentTransactions: 0, earnings: 0, payoutRequests: 0, collectorFloatLedger: 0 },
       files: { unusedFiles: 0 },
       notifications: { notifications: 0, marketerNotifications: 0 },
@@ -720,14 +719,6 @@ export class SystemCleanupService {
         deletedCounts.marketingBudgets.budgetTransactions = await this.deleteCount(
           queryRunner,
           this.budgetTransactionRepo,
-          {},
-          dryRun,
-          errors,
-          true,
-        );
-        deletedCounts.marketingBudgets.campaigns = await this.deleteCount(
-          queryRunner,
-          this.marketingCampaignRepo,
           {},
           dryRun,
           errors,

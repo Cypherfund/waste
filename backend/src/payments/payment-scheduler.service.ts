@@ -24,8 +24,8 @@ export class PaymentSchedulerService {
     }
   }
 
-  // ── Timeout stale pending transactions every minute ────────────
-  @Cron(CronExpression.EVERY_MINUTE)
+  // ── Timeout stale pending transactions every 10 minute ────────────
+  @Cron(CronExpression.EVERY_10_MINUTES)
   async handleStaleTransactionTimeout(): Promise<void> {
     const enabled = await this.paymentService.isPaymentIntegrationEnabled();
     if (!enabled) {

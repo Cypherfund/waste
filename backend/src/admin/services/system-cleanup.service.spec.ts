@@ -312,6 +312,7 @@ describe('SystemCleanupService', () => {
       expect(Object.keys(components)).not.toContain('commissionSchemes');
       expect(Object.keys(components)).not.toContain('migrations');
       expect(Object.keys(components)).not.toContain('systemCleanupLogs');
+      expect(Object.keys(components)).not.toContain('campaigns');
     });
   });
 
