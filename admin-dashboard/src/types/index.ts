@@ -404,6 +404,7 @@ export interface MarketingCampaign {
   createdAt: string;
   updatedAt: string;
   marketerAssignments?: CampaignMarketerAssignment[];
+  commissionSchemes?: CommissionScheme[];
 }
 
 export interface CampaignMarketerAssignment {

@@ -455,7 +455,7 @@ export default function MarketingCampaignsPage() {
                             <Users size={16} />
                           </button>
                           <button
-                            onClick={() => { setSelectedCampaign(c); setShowAssignSchemes(true); setAssignSchemesForm({ schemeIds: [] }); }}
+                            onClick={() => { setSelectedCampaign(c); setShowAssignSchemes(true); setAssignSchemesForm({ schemeIds: c.commissionSchemes?.map(s => s.id) || [] }); }}
                             className="rounded p-1.5 text-purple-500 hover:bg-purple-50"
                             title="Assign Schemes"
                           >

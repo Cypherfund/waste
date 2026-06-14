@@ -231,7 +231,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         onTap: () {
                           if (widget.onSignUp != null) {
                             widget.onSignUp!();
-                          } else {
+                          } else if (mounted) {
                             Navigator.pushNamed(context, '/register');
                           }
                         },
